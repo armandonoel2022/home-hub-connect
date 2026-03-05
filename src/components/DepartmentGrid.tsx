@@ -326,49 +326,55 @@ const DepartmentGrid = () => {
       </div>
 
       {/* Leader Modal */}
-      {showLeader && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-card rounded-xl w-full max-w-sm shadow-2xl overflow-hidden">
-            <div className="h-2 w-full" style={{ background: "hsl(220 15% 30%)" }} />
-            <div className="flex items-center justify-between p-5 border-b border-border">
-              <h2 className="font-heading font-bold text-lg text-card-foreground">{showLeader.name}</h2>
-              <button onClick={() => setShowLeader(null)} className="p-1 hover:bg-muted rounded-lg">
-                <X className="h-5 w-5 text-muted-foreground" />
-              </button>
-            </div>
-            <div className="p-6 flex flex-col items-center text-center">
-              <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center mb-4 overflow-hidden border-4 border-border">
-                {showLeader.leader.photo ? (
-                  <img src={showLeader.leader.photo} alt={showLeader.leader.name} className="w-full h-full object-cover" />
-                ) : (
-                  <User className="h-10 w-10 text-muted-foreground" />
-                )}
+      {showLeader && (() => {
+        const leaderUser = allUsers.find((u) => u.department === showLeader.name && u.isDepartmentLeader);
+        const leader = leaderUser
+          ? { name: leaderUser.fullName, position: leaderUser.position, photo: leaderUser.photoUrl, fleetPhone: leaderUser.fleetPhone || "", email: leaderUser.email }
+          : showLeader.leader;
+        return (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-card rounded-xl w-full max-w-sm shadow-2xl overflow-hidden">
+              <div className="h-2 w-full" style={{ background: "hsl(220 15% 30%)" }} />
+              <div className="flex items-center justify-between p-5 border-b border-border">
+                <h2 className="font-heading font-bold text-lg text-card-foreground">{showLeader.name}</h2>
+                <button onClick={() => setShowLeader(null)} className="p-1 hover:bg-muted rounded-lg">
+                  <X className="h-5 w-5 text-muted-foreground" />
+                </button>
               </div>
-              <h3 className="font-heading font-bold text-xl text-card-foreground">{showLeader.leader.name}</h3>
-              <p className="text-sm text-muted-foreground mt-1">{showLeader.leader.position}</p>
-              <div className="mt-4 w-full space-y-3">
-                <div className="flex items-center gap-3 bg-muted rounded-lg p-3">
-                  <Phone className="h-4 w-4 text-gold shrink-0" />
-                  <div className="text-left">
-                    <p className="text-[10px] text-muted-foreground">Flota</p>
-                    <p className="text-sm font-medium text-card-foreground">{showLeader.leader.fleetPhone || "—"}</p>
+              <div className="p-6 flex flex-col items-center text-center">
+                <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center mb-4 overflow-hidden border-4 border-border">
+                  {leader.photo ? (
+                    <img src={leader.photo} alt={leader.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="h-10 w-10 text-muted-foreground" />
+                  )}
+                </div>
+                <h3 className="font-heading font-bold text-xl text-card-foreground">{leader.name}</h3>
+                <p className="text-sm text-muted-foreground mt-1">{leader.position}</p>
+                <div className="mt-4 w-full space-y-3">
+                  <div className="flex items-center gap-3 bg-muted rounded-lg p-3">
+                    <Phone className="h-4 w-4 text-gold shrink-0" />
+                    <div className="text-left">
+                      <p className="text-[10px] text-muted-foreground">Flota</p>
+                      <p className="text-sm font-medium text-card-foreground">{leader.fleetPhone || "—"}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 bg-muted rounded-lg p-3">
+                    <Mail className="h-4 w-4 text-gold shrink-0" />
+                    <div className="text-left">
+                      <p className="text-[10px] text-muted-foreground">Correo</p>
+                      <p className="text-sm font-medium text-card-foreground">{leader.email}</p>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 bg-muted rounded-lg p-3">
-                  <Mail className="h-4 w-4 text-gold shrink-0" />
-                  <div className="text-left">
-                    <p className="text-[10px] text-muted-foreground">Correo</p>
-                    <p className="text-sm font-medium text-card-foreground">{showLeader.leader.email}</p>
-                  </div>
-                </div>
               </div>
-            </div>
-            <div className="p-5 border-t border-border flex justify-end">
-              <button onClick={() => setShowLeader(null)} className="btn-gold text-sm">Cerrar</button>
+              <div className="p-5 border-t border-border flex justify-end">
+                <button onClick={() => setShowLeader(null)} className="btn-gold text-sm">Cerrar</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </section>
   );
 };
