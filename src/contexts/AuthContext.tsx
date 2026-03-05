@@ -8,12 +8,16 @@ interface AuthContextType {
   logout: () => void;
   isLoading: boolean;
   hasAccess: (department: string) => boolean;
+  // User management
+  allUsers: IntranetUser[];
+  addUser: (u: IntranetUser) => void;
+  updateUser: (id: string, data: Partial<IntranetUser>) => void;
+  deleteUser: (id: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// Mock users for development — replace with SQL Server auth tomorrow
-const MOCK_USERS: IntranetUser[] = [
+const INITIAL_USERS: IntranetUser[] = [
   {
     id: "USR-001",
     fullName: "Administrador SafeOne",
@@ -38,8 +42,8 @@ const MOCK_USERS: IntranetUser[] = [
   },
   {
     id: "USR-005",
-    fullName: "Remit",
-    email: "remit@safeone.com.do",
+    fullName: "Remit López",
+    email: "rlopez@safeone.com.do",
     department: "Operaciones",
     position: "Gerente de Operaciones",
     birthday: "01-10",
@@ -74,23 +78,31 @@ const MOCK_USERS: IntranetUser[] = [
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<IntranetUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [allUsers, setAllUsers] = useState<IntranetUser[]>(() => {
+    const stored = localStorage.getItem("safeone_all_users");
+    if (stored) {
+      try { return JSON.parse(stored); } catch {}
+    }
+    return INITIAL_USERS;
+  });
+
+  // Persist users list
+  useEffect(() => {
+    localStorage.setItem("safeone_all_users", JSON.stringify(allUsers));
+  }, [allUsers]);
 
   useEffect(() => {
     const stored = localStorage.getItem("safeone_user");
     if (stored) {
-      try {
-        setUser(JSON.parse(stored));
-      } catch {}
+      try { setUser(JSON.parse(stored)); } catch {}
     }
     setIsLoading(false);
   }, []);
 
   const login = async (username: string, password: string): Promise<boolean> => {
-    // TODO: Replace with SQL Server API call
-    console.log("Login attempt:", username, "pass length:", password.length);
     if (password.trim().toLowerCase() !== "safeone") return false;
-    const found = MOCK_USERS.find(
-      (u) => u.email.toLowerCase() === username.toLowerCase() || u.fullName.toLowerCase() === username.toLowerCase()
+    const found = allUsers.find(
+      (u) => u.email.toLowerCase() === username.trim().toLowerCase() || u.fullName.toLowerCase() === username.trim().toLowerCase()
     );
     if (found) {
       setUser(found);
@@ -113,8 +125,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return user.allowedDepartments.includes(department);
   };
 
+  const addUser = (u: IntranetUser) => setAllUsers((prev) => [...prev, u]);
+
+  const updateUser = (id: string, data: Partial<IntranetUser>) => {
+    setAllUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...data } : u)));
+    // If editing the currently logged in user, update session
+    if (user?.id === id) {
+      const updated = { ...user, ...data };
+      setUser(updated);
+      localStorage.setItem("safeone_user", JSON.stringify(updated));
+    }
+  };
+
+  const deleteUser = (id: string) => {
+    setAllUsers((prev) => prev.filter((u) => u.id !== id));
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading, hasAccess }}>
+    <AuthContext.Provider value={{ user, login, logout, isLoading, hasAccess, allUsers, addUser, updateUser, deleteUser }}>
       {children}
     </AuthContext.Provider>
   );

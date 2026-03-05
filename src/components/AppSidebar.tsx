@@ -9,6 +9,7 @@ import {
   FileCheck,
   ShoppingCart,
   Users,
+  UserCog,
   Bell,
   ChevronLeft,
   ChevronRight,
@@ -30,6 +31,10 @@ const navItems = [
   { title: "Solicitudes Compra", url: "/solicitudes-compra", icon: ShoppingCart },
   { title: "Solicitudes Personal", url: "/solicitudes-personal", icon: Users },
   { title: "BASC", url: "/basc", icon: FileCheck },
+];
+
+const adminItems = [
+  { title: "Gestión Usuarios", url: "/admin/usuarios", icon: UserCog },
 ];
 
 const AppSidebar = () => {
@@ -162,6 +167,35 @@ const AppSidebar = () => {
             </NavLink>
           );
         })}
+
+        {/* Admin section */}
+        {user?.isAdmin && (
+          <>
+            {!collapsed && (
+              <div className="pt-3 pb-1 px-3">
+                <p className="text-[10px] font-semibold text-muted-foreground tracking-widest uppercase">Administración</p>
+              </div>
+            )}
+            {adminItems.map((item) => {
+              const isActive = location.pathname === item.url;
+              return (
+                <NavLink
+                  key={item.url}
+                  to={item.url}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
+                    isActive
+                      ? "bg-charcoal-light text-gold font-semibold"
+                      : "text-muted-foreground hover:text-secondary-foreground hover:bg-charcoal-light/50"
+                  }`}
+                  activeClassName=""
+                >
+                  <item.icon className="h-5 w-5 shrink-0" />
+                  {!collapsed && <span>{item.title}</span>}
+                </NavLink>
+              );
+            })}
+          </>
+        )}
       </nav>
 
       {/* Logout */}

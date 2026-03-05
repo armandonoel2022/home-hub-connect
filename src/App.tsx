@@ -15,6 +15,7 @@ import Operations from "./pages/Operations";
 import BASC from "./pages/BASC";
 import PurchaseRequests from "./pages/PurchaseRequests";
 import HiringRequests from "./pages/HiringRequests";
+import UserManagement from "./pages/UserManagement";
 import LoginPage from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import type { IntranetUser } from "./lib/types";
@@ -64,6 +65,7 @@ function ProtectedRoutes() {
         <Route path="/solicitudes-compra" element={<PurchaseRequests />} />
         <Route path="/solicitudes-personal" element={<HiringRequests />} />
         <Route path="/basc" element={<BASC />} />
+        <Route path="/admin/usuarios" element={<UserManagement />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </>
