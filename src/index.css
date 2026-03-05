@@ -140,7 +140,8 @@
 }
 
 @media print {
-  .no-print, nav, footer, .sidebar { display: none !important; }
-  body { background: white !important; }
-  .print-area { border: none !important; box-shadow: none !important; }
+  .no-print, nav, footer, .sidebar, header { display: none !important; }
+  body { background: white !important; color: black !important; }
+  .print-area { border: none !important; box-shadow: none !important; padding: 0 !important; }
+  .print-footer-block { display: block !important; }
 }
