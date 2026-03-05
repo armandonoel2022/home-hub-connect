@@ -195,6 +195,9 @@ const DepartmentGrid = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {departments.map((dept) => {
           const Icon = dept.icon;
+          const leaderUser = allUsers.find((u) => u.department === dept.name && u.isDepartmentLeader);
+          const teamMembers = allUsers.filter((u) => u.department === dept.name && !u.isDepartmentLeader);
+          const reportsToUser = leaderUser?.reportsTo ? allUsers.find((u) => u.id === leaderUser.reportsTo) : null;
           return (
             <div key={dept.name} className="card-department group border-2" style={{ borderColor: "hsl(220 15% 30%)" }} id={`dept-${dept.name.toLowerCase().replace(/\s+/g, "-")}`}>
               <div className="px-5 py-4 flex items-center gap-4" style={{ background: "hsl(220 15% 30%)" }}>
@@ -219,6 +222,18 @@ const DepartmentGrid = () => {
                     Ver Líder del Departamento
                   </button>
                   <button
+                    onClick={() => setShowTeam(showTeam === dept.name ? null : dept.name)}
+                    className="flex items-center justify-between text-xs font-semibold px-3 py-2 rounded-lg bg-muted hover:bg-border transition-colors text-card-foreground"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Users className="h-3.5 w-3.5" />
+                      Equipo de Trabajo
+                    </span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gold/20 gold-accent-text">
+                      {teamMembers.length + (leaderUser ? 1 : 0)}
+                    </span>
+                  </button>
+                  <button
                     onClick={() => setShowFiles(showFiles === dept.name ? null : dept.name)}
                     className="flex items-center justify-between text-xs font-semibold px-3 py-2 rounded-lg bg-muted hover:bg-border transition-colors text-card-foreground"
                   >
@@ -231,6 +246,42 @@ const DepartmentGrid = () => {
                     )}
                   </button>
                 </div>
+
+                {/* Expandable team section */}
+                {showTeam === dept.name && (
+                  <div className="mt-3 border-t border-border pt-3 space-y-2">
+                    {reportsToUser && (
+                      <div className="flex items-center gap-2 text-[11px] bg-muted/50 rounded-lg px-3 py-2 mb-2">
+                        <ChevronRight className="h-3 w-3 text-gold" />
+                        <span className="text-muted-foreground">Reporta a:</span>
+                        <span className="font-semibold text-card-foreground">{reportsToUser.fullName}</span>
+                        <span className="text-muted-foreground">({reportsToUser.position})</span>
+                      </div>
+                    )}
+                    {leaderUser && (
+                      <div className="flex items-center gap-2 text-[11px] bg-gold/10 rounded-lg px-3 py-2">
+                        <Shield className="h-3 w-3 text-gold" />
+                        <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0">
+                          {leaderUser.photoUrl ? <img src={leaderUser.photoUrl} alt="" className="w-full h-full object-cover" /> : <User className="h-3 w-3 text-muted-foreground" />}
+                        </div>
+                        <span className="font-semibold text-card-foreground">{leaderUser.fullName}</span>
+                        <span className="text-gold text-[10px] font-medium ml-auto">Líder</span>
+                      </div>
+                    )}
+                    {teamMembers.map((m) => (
+                      <div key={m.id} className="flex items-center gap-2 text-[11px] px-3 py-1.5">
+                        <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0">
+                          {m.photoUrl ? <img src={m.photoUrl} alt="" className="w-full h-full object-cover" /> : <User className="h-3 w-3 text-muted-foreground" />}
+                        </div>
+                        <span className="text-card-foreground">{m.fullName}</span>
+                        <span className="text-muted-foreground ml-auto truncate max-w-[100px]">{m.position}</span>
+                      </div>
+                    ))}
+                    {!leaderUser && teamMembers.length === 0 && (
+                      <p className="text-[11px] text-muted-foreground text-center py-2">No hay miembros registrados</p>
+                    )}
+                  </div>
+                )}
 
                 {/* Inline file manager */}
                 {showFiles === dept.name && (
