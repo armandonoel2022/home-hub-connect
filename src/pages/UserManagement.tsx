@@ -177,7 +177,14 @@ const UserManagementPage = () => {
                           <span className="font-medium text-card-foreground">{u.fullName}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
+                      <td className="px-4 py-3">
+                        {u.extension ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-mono bg-muted px-2 py-1 rounded">
+                            <Phone className="h-3 w-3 text-gold" />{u.extension}
+                          </span>
+                        ) : <span className="text-muted-foreground">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">{u.email || "—"}</td>
                       <td className="px-4 py-3 text-muted-foreground">{u.department}</td>
                       <td className="px-4 py-3 text-muted-foreground">{u.position}</td>
                       <td className="px-4 py-3">
