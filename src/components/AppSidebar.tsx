@@ -7,14 +7,18 @@ import {
   Smartphone,
   Shield,
   FileCheck,
+  ShoppingCart,
+  Users,
+  Bell,
   ChevronLeft,
   ChevronRight,
   LogOut,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNotifications } from "@/contexts/NotificationContext";
 
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
@@ -23,13 +27,18 @@ const navItems = [
   { title: "Flotilla Vehicular", url: "/flotilla", icon: Truck },
   { title: "Flota Celular", url: "/flota-celular", icon: Smartphone },
   { title: "Personal Armado", url: "/operaciones", icon: Shield },
+  { title: "Solicitudes Compra", url: "/solicitudes-compra", icon: ShoppingCart },
+  { title: "Solicitudes Personal", url: "/solicitudes-personal", icon: Users },
   { title: "BASC", url: "/basc", icon: FileCheck },
 ];
 
 const AppSidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
 
   return (
     <aside
@@ -51,12 +60,84 @@ const AppSidebar = () => {
         )}
       </div>
 
-      {/* User greeting */}
+      {/* User greeting + notification bell */}
       {user && !collapsed && (
         <div className="px-4 py-3 border-b border-charcoal-light">
-          <p className="text-xs text-muted-foreground">Bienvenido,</p>
-          <p className="text-sm font-heading font-semibold text-secondary-foreground truncate">{user.fullName}</p>
-          <p className="text-[10px] text-muted-foreground truncate">{user.department}</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">Bienvenido,</p>
+              <p className="text-sm font-heading font-semibold text-secondary-foreground truncate">{user.fullName}</p>
+              <p className="text-[10px] text-muted-foreground truncate">{user.department}</p>
+            </div>
+            <button
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="relative p-2 rounded-lg text-muted-foreground hover:text-gold hover:bg-charcoal-light/50 transition-colors"
+            >
+              <Bell className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Notification bell for collapsed */}
+      {user && collapsed && (
+        <div className="flex justify-center py-3 border-b border-charcoal-light">
+          <button
+            onClick={() => setShowNotifications(!showNotifications)}
+            className="relative p-2 rounded-lg text-muted-foreground hover:text-gold hover:bg-charcoal-light/50 transition-colors"
+          >
+            <Bell className="h-5 w-5" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Notification Panel */}
+      {showNotifications && (
+        <div className="absolute left-full top-0 ml-2 w-80 max-h-[80vh] bg-card rounded-xl shadow-2xl border border-border z-50 overflow-hidden">
+          <div className="flex items-center justify-between p-4 border-b border-border">
+            <h3 className="font-heading font-bold text-card-foreground">Notificaciones</h3>
+            {unreadCount > 0 && (
+              <button onClick={markAllAsRead} className="text-xs gold-accent-text hover:underline">
+                Marcar todas como leídas
+              </button>
+            )}
+          </div>
+          <div className="overflow-y-auto max-h-[60vh]">
+            {notifications.length === 0 ? (
+              <p className="p-4 text-sm text-muted-foreground text-center">Sin notificaciones</p>
+            ) : (
+              notifications.map((n) => (
+                <button
+                  key={n.id}
+                  onClick={() => {
+                    markAsRead(n.id);
+                    navigate(n.actionUrl);
+                    setShowNotifications(false);
+                  }}
+                  className={`w-full text-left p-4 border-b border-border hover:bg-muted/50 transition-colors ${!n.read ? "bg-gold/5" : ""}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${!n.read ? "bg-gold" : "bg-transparent"}`} />
+                    <div>
+                      <p className="text-sm font-medium text-card-foreground">{n.title}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{n.message}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">{new Date(n.createdAt).toLocaleString()}</p>
+                    </div>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
         </div>
       )}
 
