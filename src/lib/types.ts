@@ -107,6 +107,9 @@ export interface IntranetUser {
   photoUrl: string;
   allowedDepartments: string[];
   isAdmin: boolean;
+  isDepartmentLeader?: boolean;
+  reportsTo?: string; // user ID of the person they report to
+  fleetPhone?: string;
 }
 
 export const TICKET_CATEGORIES: TicketCategory[] = [
@@ -133,12 +136,13 @@ export const DEPARTMENTS = [
   "Gerencia General",
   "Gerencia Comercial",
   "Recursos Humanos",
+  "Operaciones",
   "Servicio al Cliente",
   "Calidad",
   "Cuentas por Cobrar",
   "Contabilidad",
   "Tecnología y Monitoreo",
-  "Operaciones",
+  "Seguridad Electrónica",
 ];
 
 // ─── Purchase Requests ───

@@ -15,6 +15,9 @@ const emptyForm = (): Partial<IntranetUser> => ({
   photoUrl: "",
   allowedDepartments: [],
   isAdmin: false,
+  isDepartmentLeader: false,
+  reportsTo: "",
+  fleetPhone: "",
 });
 
 const UserManagementPage = () => {
@@ -62,6 +65,9 @@ const UserManagementPage = () => {
         photoUrl: form.photoUrl || "",
         allowedDepartments: form.allowedDepartments || [form.department || DEPARTMENTS[0]],
         isAdmin: form.isAdmin || false,
+        isDepartmentLeader: form.isDepartmentLeader || false,
+        reportsTo: form.reportsTo || "",
+        fleetPhone: form.fleetPhone || "",
       };
       addUser(newUser);
     }
@@ -174,6 +180,11 @@ const UserManagementPage = () => {
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${u.isAdmin ? "bg-gold/20 gold-accent-text" : "bg-muted text-muted-foreground"}`}>
                           {u.isAdmin ? "Admin" : "Usuario"}
                         </span>
+                        {u.isDepartmentLeader && (
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground ml-1">
+                            Líder
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
@@ -212,6 +223,7 @@ const UserManagementPage = () => {
                   { key: "fullName", label: "Nombre Completo *", type: "text" },
                   { key: "email", label: "Correo Electrónico *", type: "email" },
                   { key: "position", label: "Cargo", type: "text" },
+                  { key: "fleetPhone", label: "Teléfono Flota", type: "text", placeholder: "Ej: +1 809-555-0010" },
                   { key: "birthday", label: "Cumpleaños (MM-DD)", type: "text", placeholder: "Ej: 07-15" },
                 ].map(({ key, label, type, placeholder }) => (
                   <div key={key}>
@@ -283,6 +295,36 @@ const UserManagementPage = () => {
                     <span className="font-medium">Administrador</span>
                     <span className="text-muted-foreground ml-2 text-xs">(acceso total a todos los módulos)</span>
                   </label>
+                </div>
+
+                <div className="flex items-center gap-3 bg-muted rounded-lg p-4">
+                  <input
+                    type="checkbox"
+                    id="isDepartmentLeader"
+                    checked={form.isDepartmentLeader || false}
+                    onChange={(e) => setForm({ ...form, isDepartmentLeader: e.target.checked })}
+                    className="w-4 h-4 rounded accent-gold"
+                  />
+                  <label htmlFor="isDepartmentLeader" className="text-sm text-card-foreground">
+                    <span className="font-medium">Líder de Departamento</span>
+                    <span className="text-muted-foreground ml-2 text-xs">(aparece como líder en el dashboard)</span>
+                  </label>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Reporta a</label>
+                  <select
+                    value={form.reportsTo || ""}
+                    onChange={(e) => setForm({ ...form, reportsTo: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none"
+                  >
+                    <option value="">— Sin asignar —</option>
+                    {allUsers
+                      .filter((u) => u.id !== (editing?.id || ""))
+                      .map((u) => (
+                        <option key={u.id} value={u.id}>{u.fullName} — {u.position}</option>
+                      ))}
+                  </select>
                 </div>
               </div>
               <div className="p-5 border-t border-border flex gap-3 justify-end">
