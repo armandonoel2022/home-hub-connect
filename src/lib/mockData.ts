@@ -86,3 +86,11 @@ export const mockArmedPersonnel: ArmedPersonnel[] = [
   { id: "AP-003", name: "Miguel Ángel Torres", photo: "", location: "Sede Sur - Garita 2", position: "Oficial de Seguridad", weaponType: "Escopeta", weaponSerial: "ESC-2023-015", weaponBrand: "Remington", weaponCaliber: "12 Gauge", licenseNumber: "LIC-2023-0890", licenseExpiry: "2026-12-31", assignedDate: "2023-08-20", status: "Activo" },
   { id: "AP-004", name: "Luis Hernández", photo: "", location: "Sede Principal - Ronda", position: "Oficial de Seguridad", weaponType: "Pistola", weaponSerial: "PST-2023-008", weaponBrand: "Glock", weaponCaliber: "9mm", licenseNumber: "LIC-2023-0567", licenseExpiry: "2026-08-15", assignedDate: "2023-05-10", status: "Licencia" },
 ];
+
+export const mockPhones: PhoneDevice[] = [
+  { id: "PH-001", imei: "354123098765432", serial: "SM-A54-001", brand: "Samsung", model: "Galaxy A54", status: "Activo", assignedTo: "María López", department: "Servicio al Cliente", acquisitionDate: "2025-01-15", phoneNumber: "+505 8888-0001", notes: "" },
+  { id: "PH-002", imei: "354123098765433", serial: "IP15-002", brand: "Apple", model: "iPhone 15", status: "Activo", assignedTo: "Gerente General", department: "Gerencia General", acquisitionDate: "2024-11-20", phoneNumber: "+505 8888-0002", notes: "" },
+  { id: "PH-003", imei: "354123098765434", serial: "SM-A34-003", brand: "Samsung", model: "Galaxy A34", status: "Disponible", assignedTo: null, department: null, acquisitionDate: "2025-02-10", phoneNumber: "", notes: "En almacén" },
+  { id: "PH-004", imei: "354123098765435", serial: "XM-NOTE12-004", brand: "Xiaomi", model: "Redmi Note 12", status: "En Reparación", assignedTo: null, department: "Operaciones", acquisitionDate: "2024-08-05", phoneNumber: "+505 8888-0004", notes: "Pantalla rota" },
+  { id: "PH-005", imei: "354123098765436", serial: "SM-A14-005", brand: "Samsung", model: "Galaxy A14", status: "Activo", assignedTo: "Carlos Méndez", department: "Contabilidad", acquisitionDate: "2025-03-01", phoneNumber: "+505 8888-0005", notes: "" },
+];
