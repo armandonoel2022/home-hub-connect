@@ -218,6 +218,7 @@ const UserManagementPage = () => {
                   { key: "fullName", label: "Nombre Completo *", type: "text" },
                   { key: "email", label: "Correo Electrónico *", type: "email" },
                   { key: "position", label: "Cargo", type: "text" },
+                  { key: "fleetPhone", label: "Teléfono Flota", type: "text", placeholder: "Ej: +1 809-555-0010" },
                   { key: "birthday", label: "Cumpleaños (MM-DD)", type: "text", placeholder: "Ej: 07-15" },
                 ].map(({ key, label, type, placeholder }) => (
                   <div key={key}>
