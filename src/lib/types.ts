@@ -107,6 +107,9 @@ export interface IntranetUser {
   photoUrl: string;
   allowedDepartments: string[];
   isAdmin: boolean;
+  isDepartmentLeader?: boolean;
+  reportsTo?: string; // user ID of the person they report to
+  fleetPhone?: string;
 }
 
 export const TICKET_CATEGORIES: TicketCategory[] = [
