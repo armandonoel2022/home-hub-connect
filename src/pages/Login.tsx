@@ -22,7 +22,9 @@ const LoginPage = () => {
     setLoading(true);
     const ok = await login(username.trim(), password);
     setLoading(false);
-    if (!ok) {
+    if (ok) {
+      navigate("/", { replace: true });
+    } else {
       setError("Usuario o contraseña incorrectos");
     }
   };
