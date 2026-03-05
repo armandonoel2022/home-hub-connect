@@ -30,6 +30,25 @@ const UserManagementPage = () => {
   const [editing, setEditing] = useState<IntranetUser | null>(null);
   const [form, setForm] = useState<Partial<IntranetUser>>(emptyForm());
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!["image/jpeg", "image/png"].includes(file.type)) {
+      alert("Solo se permiten archivos JPG o PNG");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const url = ev.target?.result as string;
+      setPhotoPreview(url);
+      setForm({ ...form, photoUrl: url });
+    };
+    reader.readAsDataURL(file);
+  };
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
   // Only admins can access
   if (!user?.isAdmin) return <Navigate to="/" replace />;
