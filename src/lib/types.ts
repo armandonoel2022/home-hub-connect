@@ -73,6 +73,7 @@ export interface ArmedPersonnel {
   weaponSerial: string;
   weaponBrand: string;
   weaponCaliber: string;
+  ammunitionCount: number;
   licenseNumber: string;
   licenseExpiry: string;
   assignedDate: string;
