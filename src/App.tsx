@@ -15,6 +15,7 @@ import Operations from "./pages/Operations";
 import BASC from "./pages/BASC";
 import PurchaseRequests from "./pages/PurchaseRequests";
 import HiringRequests from "./pages/HiringRequests";
+import HRForms from "./pages/HRForms";
 import UserManagement from "./pages/UserManagement";
 import LoginPage from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -64,6 +65,7 @@ function ProtectedRoutes() {
         <Route path="/operaciones" element={<Operations />} />
         <Route path="/solicitudes-compra" element={<PurchaseRequests />} />
         <Route path="/solicitudes-personal" element={<HiringRequests />} />
+        <Route path="/rrhh/formularios" element={<HRForms />} />
         <Route path="/basc" element={<BASC />} />
         <Route path="/admin/usuarios" element={<UserManagement />} />
         <Route path="*" element={<NotFound />} />
