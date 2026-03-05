@@ -15,6 +15,9 @@ const emptyForm = (): Partial<IntranetUser> => ({
   photoUrl: "",
   allowedDepartments: [],
   isAdmin: false,
+  isDepartmentLeader: false,
+  reportsTo: "",
+  fleetPhone: "",
 });
 
 const UserManagementPage = () => {
