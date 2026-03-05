@@ -48,7 +48,6 @@ const UserManagementPage = () => {
     };
     reader.readAsDataURL(file);
   };
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
   // Only admins can access
   if (!user?.isAdmin) return <Navigate to="/" replace />;
