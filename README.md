@@ -1,73 +1,119 @@
-# Welcome to your Lovable project
+# SafeOne Intranet Corporativa
 
-## Project info
+Sistema de intranet corporativa para **SafeOne Security Company**, diseñado para centralizar la gestión operativa, administrativa y tecnológica de la empresa.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## 🏢 Módulos
 
-## How can I edit this code?
+### Dashboard
+- Vista general con tarjetas por departamento
+- Información dinámica de líderes de departamento
+- Sección expandible de equipo de trabajo y jerarquía de reportes
+- Anuncios corporativos y cumpleaños del día
+- Accesos rápidos a recursos internos
 
-There are several ways of editing your application.
+### Tickets IT
+- Creación y seguimiento de tickets de soporte técnico
+- Categorías: Red, Asignación de Equipos, Instalación de Software, Impresión, Flotas, etc.
+- Prioridades con SLA automático (Baja: 72h, Media: 24h, Alta: 8h, Crítica: 2h)
+- Estados: Abierto → En Progreso → En Espera → Resuelto → Cerrado
 
-**Use Lovable**
+### Inventario IT
+- Registro de equipos: computadoras, monitores, impresoras, equipos de red
+- Control de estados: Disponible, Asignado, En Reparación, Dado de Baja
+- Asignación por usuario y departamento
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+### Flotilla Vehicular
+- Gestión de vehículos corporativos
+- Seguimiento de kilometraje, estado y asignación
+- Historial de mantenimiento
 
-Changes made via Lovable will be committed automatically to this repo.
+### Flota Celular
+- Control de dispositivos móviles corporativos
+- Registro de IMEI, número telefónico y asignación
+- Estados de dispositivo y seguimiento
 
-**Use your preferred IDE**
+### Personal Armado (BASC)
+- Registro de personal con armas asignadas
+- Control de licencias y fechas de vencimiento
+- Información de armamento: tipo, serial, marca, calibre
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Solicitudes de Compra
+- Flujo de aprobación por monto (hasta RD$50k → Jefe Directo, superior → Gerencia General)
+- Adjuntos de cotizaciones
+- Estados: Pendiente → En Revisión → Aprobada/Rechazada
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Solicitudes de Personal
+- Requisiciones de contratación con flujo de aprobación multinivel
+- Aprobación por Gerente de Área → Gerencia General → RRHH
+- Seguimiento de entrevistas y estado del proceso
 
-Follow these steps:
+### Gestión de Usuarios (Admin)
+- CRUD de usuarios del sistema
+- Asignación de departamentos y permisos
+- Configuración de líderes de departamento y jerarquía de reportes
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## 🔔 Notificaciones
+- Sistema de notificaciones en tiempo real en el sidebar
+- Alertas para aprobaciones pendientes, tickets y solicitudes
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+## 🔐 Autenticación
+- Login por correo o nombre de usuario
+- Control de acceso por departamento
+- Roles: Administrador y Usuario estándar
 
-# Step 3: Install the necessary dependencies.
-npm i
+## 🛠 Stack Tecnológico
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+| Tecnología | Uso |
+|---|---|
+| React 18 | Framework UI |
+| TypeScript | Tipado estático |
+| Vite | Build tool |
+| Tailwind CSS | Estilos utilitarios |
+| shadcn/ui | Componentes UI |
+| React Router | Navegación SPA |
+| Recharts | Gráficos y visualizaciones |
+| Lucide React | Iconografía |
+
+## 📁 Estructura del Proyecto
+
+```
+src/
+├── assets/          # Imágenes y recursos estáticos
+├── components/      # Componentes reutilizables
+│   └── ui/          # Componentes base (shadcn/ui)
+├── contexts/        # Contextos React (Auth, Notifications)
+├── hooks/           # Hooks personalizados
+├── lib/             # Utilidades, tipos y datos mock
+└── pages/           # Páginas/vistas principales
+```
+
+## 🚀 Instalación
+
+```bash
+# Clonar el repositorio
+git clone <URL_DEL_REPOSITORIO>
+
+# Instalar dependencias
+npm install
+
+# Iniciar servidor de desarrollo
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## 📋 Departamentos
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+- Administración
+- Gerencia General
+- Gerencia Comercial
+- Recursos Humanos
+- Operaciones
+- Servicio al Cliente
+- Calidad
+- Cuentas por Cobrar
+- Contabilidad
+- Tecnología y Monitoreo
+- Seguridad Electrónica
 
-**Use GitHub Codespaces**
+---
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+**SafeOne Security Company** — Departamento de Tecnología y Monitoreo
