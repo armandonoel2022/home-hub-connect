@@ -291,6 +291,36 @@ const UserManagementPage = () => {
                     <span className="text-muted-foreground ml-2 text-xs">(acceso total a todos los módulos)</span>
                   </label>
                 </div>
+
+                <div className="flex items-center gap-3 bg-muted rounded-lg p-4">
+                  <input
+                    type="checkbox"
+                    id="isDepartmentLeader"
+                    checked={form.isDepartmentLeader || false}
+                    onChange={(e) => setForm({ ...form, isDepartmentLeader: e.target.checked })}
+                    className="w-4 h-4 rounded accent-gold"
+                  />
+                  <label htmlFor="isDepartmentLeader" className="text-sm text-card-foreground">
+                    <span className="font-medium">Líder de Departamento</span>
+                    <span className="text-muted-foreground ml-2 text-xs">(aparece como líder en el dashboard)</span>
+                  </label>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Reporta a</label>
+                  <select
+                    value={form.reportsTo || ""}
+                    onChange={(e) => setForm({ ...form, reportsTo: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none"
+                  >
+                    <option value="">— Sin asignar —</option>
+                    {allUsers
+                      .filter((u) => u.id !== (editing?.id || ""))
+                      .map((u) => (
+                        <option key={u.id} value={u.id}>{u.fullName} — {u.position}</option>
+                      ))}
+                  </select>
+                </div>
               </div>
               <div className="p-5 border-t border-border flex gap-3 justify-end">
                 <button onClick={() => { setShowForm(false); setEditing(null); }} className="px-5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">
