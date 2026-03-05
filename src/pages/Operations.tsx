@@ -198,6 +198,7 @@ const OperationsPage = () => {
                     ["Tipo de Arma", selected.weaponType],
                     ["Marca", selected.weaponBrand],
                     ["Calibre", selected.weaponCaliber],
+                    ["Municiones", String(selected.ammunitionCount)],
                     ["Serial Arma", selected.weaponSerial],
                     ["Nro. Licencia", selected.licenseNumber],
                     ["Venc. Licencia", selected.licenseExpiry],
