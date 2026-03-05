@@ -132,6 +132,7 @@ export const DEPARTMENTS = [
   "Administración",
   "Gerencia General",
   "Gerencia Comercial",
+  "Recursos Humanos",
   "Servicio al Cliente",
   "Calidad",
   "Cuentas por Cobrar",
