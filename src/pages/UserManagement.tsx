@@ -65,6 +65,9 @@ const UserManagementPage = () => {
         photoUrl: form.photoUrl || "",
         allowedDepartments: form.allowedDepartments || [form.department || DEPARTMENTS[0]],
         isAdmin: form.isAdmin || false,
+        isDepartmentLeader: form.isDepartmentLeader || false,
+        reportsTo: form.reportsTo || "",
+        fleetPhone: form.fleetPhone || "",
       };
       addUser(newUser);
     }
