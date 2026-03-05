@@ -38,6 +38,9 @@ const mockHiringRequests: HiringRequest[] = [
     contractType: "Indefinido",
     urgency: "Normal",
     requirements: "Experiencia en ventas B2B, licencia de conducir, disponibilidad para viajar",
+    hasVehicle: false,
+    vehicleType: "",
+    residentialZone: "",
     requestedBy: "Carlos Méndez",
     requestedAt: "2026-03-02T09:00:00",
     status: "Pendiente Gerencia General",
@@ -57,6 +60,9 @@ const mockHiringRequests: HiringRequest[] = [
     contractType: "Indefinido",
     urgency: "Urgente",
     requirements: "Porte de armas vigente, experiencia mínima 2 años en seguridad privada",
+    hasVehicle: true,
+    vehicleType: "Motor",
+    residentialZone: "Santo Domingo Norte",
     requestedBy: "Remit",
     requestedAt: "2026-03-04T08:00:00",
     status: "Pendiente Gerente Área",
@@ -87,6 +93,9 @@ const HiringRequestsPage = () => {
     contractType: "Indefinido" as HiringRequest["contractType"],
     urgency: "Normal" as HiringRequest["urgency"],
     requirements: "",
+    hasVehicle: false,
+    vehicleType: "",
+    residentialZone: "",
   });
 
   const handleSubmit = () => {
@@ -114,7 +123,7 @@ const HiringRequestsPage = () => {
       actionUrl: "/solicitudes-personal",
     });
     setShowForm(false);
-    setForm({ positionTitle: "", department: user?.department || "", justification: "", salaryRange: "", contractType: "Indefinido", urgency: "Normal", requirements: "" });
+    setForm({ positionTitle: "", department: user?.department || "", justification: "", salaryRange: "", contractType: "Indefinido", urgency: "Normal", requirements: "", hasVehicle: false, vehicleType: "", residentialZone: "" });
   };
 
   const advanceStatus = (req: HiringRequest, approved: boolean) => {
@@ -273,6 +282,8 @@ const HiringRequestsPage = () => {
                     ...(selected.gmApproval ? [["Aprobado GG", `${selected.gmApproval.by} — ${new Date(selected.gmApproval.at).toLocaleDateString()}`]] : []),
                     ...(selected.interviewDate ? [["Entrevista", new Date(selected.interviewDate).toLocaleDateString()]] : []),
                     ...(selected.rejectionReason ? [["Motivo Rechazo", selected.rejectionReason]] : []),
+                    ...(selected.residentialZone ? [["Zona Residencia", selected.residentialZone]] : []),
+                    ["Tiene Vehículo", selected.hasVehicle ? `Sí — ${selected.vehicleType}` : "No"],
                   ].map(([label, val]) => (
                     <div key={label} className="bg-muted rounded-lg p-3">
                       <span className="text-xs text-muted-foreground block">{label}</span>
@@ -390,6 +401,33 @@ const HiringRequestsPage = () => {
                 <div>
                   <label className="text-sm font-medium text-card-foreground block mb-1.5">Requisitos del Puesto</label>
                   <textarea value={form.requirements} onChange={(e) => setForm({ ...form, requirements: e.target.value })} rows={3} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none resize-none" placeholder="Experiencia, habilidades, certificaciones..." />
+                </div>
+
+                {/* Campos especiales para vigilantes */}
+                <div className="border-t border-border pt-4">
+                  <h4 className="text-sm font-heading font-bold text-card-foreground mb-3">Información adicional (Vigilantes / Operaciones)</h4>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-card-foreground block mb-1.5">Zona de Residencia</label>
+                      <input type="text" placeholder="Ej: Santo Domingo Norte, Los Alcarrizos..." value={form.residentialZone} onChange={(e) => setForm({ ...form, residentialZone: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" />
+                    </div>
+                    <div className="flex items-center gap-3 bg-muted rounded-lg p-4">
+                      <input type="checkbox" id="hasVehicle" checked={form.hasVehicle} onChange={(e) => setForm({ ...form, hasVehicle: e.target.checked })} className="w-4 h-4 rounded accent-gold" />
+                      <label htmlFor="hasVehicle" className="text-sm text-card-foreground font-medium">¿Tiene vehículo o motor propio?</label>
+                    </div>
+                    {form.hasVehicle && (
+                      <div>
+                        <label className="text-sm font-medium text-card-foreground block mb-1.5">Tipo de Vehículo</label>
+                        <select value={form.vehicleType} onChange={(e) => setForm({ ...form, vehicleType: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none">
+                          <option value="">Seleccionar...</option>
+                          <option>Motor</option>
+                          <option>Carro</option>
+                          <option>Camioneta</option>
+                          <option>Otro</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="p-5 border-t border-border flex gap-3 justify-end">

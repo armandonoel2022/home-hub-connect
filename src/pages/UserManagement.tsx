@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { DEPARTMENTS } from "@/lib/types";
 import type { IntranetUser } from "@/lib/types";
-import { Plus, X, Search, Pencil, Trash2, User, Shield, Mail, Building2, Phone } from "lucide-react";
+import { Plus, X, Search, Pencil, Trash2, User, Shield, Mail, Building2, Phone, Upload, Image } from "lucide-react";
 import { Navigate } from "react-router-dom";
 
 const emptyForm = (): Partial<IntranetUser> => ({
@@ -30,6 +30,24 @@ const UserManagementPage = () => {
   const [editing, setEditing] = useState<IntranetUser | null>(null);
   const [form, setForm] = useState<Partial<IntranetUser>>(emptyForm());
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!["image/jpeg", "image/png"].includes(file.type)) {
+      alert("Solo se permiten archivos JPG o PNG");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const url = ev.target?.result as string;
+      setPhotoPreview(url);
+      setForm({ ...form, photoUrl: url });
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Only admins can access
   if (!user?.isAdmin) return <Navigate to="/" replace />;
@@ -44,12 +62,14 @@ const UserManagementPage = () => {
   const openAdd = () => {
     setEditing(null);
     setForm(emptyForm());
+    setPhotoPreview("");
     setShowForm(true);
   };
 
   const openEdit = (u: IntranetUser) => {
     setEditing(u);
     setForm({ ...u });
+    setPhotoPreview(u.photoUrl || "");
     setShowForm(true);
   };
 
@@ -230,6 +250,30 @@ const UserManagementPage = () => {
                 </button>
               </div>
               <div className="p-5 space-y-4">
+                {/* Photo upload */}
+                <div>
+                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Foto de Perfil</label>
+                  <div className="flex items-center gap-4">
+                    <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center overflow-hidden border-2 border-dashed border-border">
+                      {photoPreview ? (
+                        <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
+                      ) : (
+                        <Image className="h-8 w-8 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div>
+                      <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png" onChange={handlePhotoUpload} className="hidden" />
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-sm font-medium text-card-foreground hover:bg-border transition-colors"
+                      >
+                        <Upload className="h-4 w-4" />
+                        Subir foto (JPG/PNG)
+                      </button>
+                    </div>
+                  </div>
+                </div>
                 {[
                   { key: "fullName", label: "Nombre Completo *", type: "text" },
                   { key: "email", label: "Correo Electrónico", type: "email" },
