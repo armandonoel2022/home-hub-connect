@@ -129,8 +129,13 @@ const departments: Department[] = [
   },
 ];
 
+const DEPT_ROUTES: Record<string, string> = {
+  "Recursos Humanos": "/rrhh/formularios",
+};
+
 const DepartmentGrid = () => {
   const { allUsers } = useAuth();
+  const navigate = useNavigate();
   const [showLeader, setShowLeader] = useState<Department | null>(null);
   const [showFiles, setShowFiles] = useState<string | null>(null);
   const [showTeam, setShowTeam] = useState<string | null>(null);
