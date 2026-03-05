@@ -16,6 +16,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+const USERS_VERSION = "v2-full-roster";
+
 const INITIAL_USERS: IntranetUser[] = [
   // ═══════════════════════════════════════════
   // GERENCIA GENERAL — Aurelio Pérez (CEO)
