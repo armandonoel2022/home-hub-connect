@@ -15,6 +15,7 @@ import Operations from "./pages/Operations";
 import BASC from "./pages/BASC";
 import PurchaseRequests from "./pages/PurchaseRequests";
 import HiringRequests from "./pages/HiringRequests";
+import HRForms from "./pages/HRForms";
 import UserManagement from "./pages/UserManagement";
 import LoginPage from "./pages/Login";
 import NotFound from "./pages/NotFound";
