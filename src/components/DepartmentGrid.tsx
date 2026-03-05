@@ -186,8 +186,8 @@ const DepartmentGrid = () => {
         {departments.map((dept) => {
           const Icon = dept.icon;
           return (
-            <div key={dept.name} className="card-department group" id={`dept-${dept.name.toLowerCase().replace(/\s+/g, "-")}`}>
-              <div className="px-5 py-4 flex items-center gap-4" style={{ background: `hsl(${dept.color})` }}>
+            <div key={dept.name} className="card-department group border-2" style={{ borderColor: "hsl(220 15% 30%)" }} id={`dept-${dept.name.toLowerCase().replace(/\s+/g, "-")}`}>
+              <div className="px-5 py-4 flex items-center gap-4" style={{ background: "hsl(220 15% 30%)" }}>
                 <div className="p-2.5 rounded-xl bg-white/20">
                   <Icon className="h-5 w-5 text-white" />
                 </div>
@@ -268,7 +268,7 @@ const DepartmentGrid = () => {
       {showLeader && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-card rounded-xl w-full max-w-sm shadow-2xl overflow-hidden">
-            <div className="h-2 w-full" style={{ background: `hsl(${showLeader.color})` }} />
+            <div className="h-2 w-full" style={{ background: "hsl(220 15% 30%)" }} />
             <div className="flex items-center justify-between p-5 border-b border-border">
               <h2 className="font-heading font-bold text-lg text-card-foreground">{showLeader.name}</h2>
               <button onClick={() => setShowLeader(null)} className="p-1 hover:bg-muted rounded-lg">
