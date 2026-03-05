@@ -460,10 +460,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<IntranetUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [allUsers, setAllUsers] = useState<IntranetUser[]>(() => {
-    const stored = localStorage.getItem("safeone_all_users");
-    if (stored) {
-      try { return JSON.parse(stored); } catch {}
+    const storedVersion = localStorage.getItem("safeone_users_version");
+    if (storedVersion === USERS_VERSION) {
+      const stored = localStorage.getItem("safeone_all_users");
+      if (stored) {
+        try { return JSON.parse(stored); } catch {}
+      }
     }
+    // Reset to new data when version changes
+    localStorage.setItem("safeone_users_version", USERS_VERSION);
+    localStorage.removeItem("safeone_all_users");
     return INITIAL_USERS;
   });
 
