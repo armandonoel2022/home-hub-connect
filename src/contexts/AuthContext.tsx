@@ -39,6 +39,9 @@ const INITIAL_USERS: IntranetUser[] = [
     photoUrl: "",
     allowedDepartments: DEPARTMENTS,
     isAdmin: true,
+    isDepartmentLeader: true,
+    reportsTo: "",
+    fleetPhone: "+1 809-555-0020",
   },
   {
     id: "USR-005",
@@ -50,6 +53,9 @@ const INITIAL_USERS: IntranetUser[] = [
     photoUrl: "",
     allowedDepartments: ["Operaciones"],
     isAdmin: false,
+    isDepartmentLeader: true,
+    reportsTo: "",
+    fleetPhone: "+1 809-555-0010",
   },
   {
     id: "USR-003",
