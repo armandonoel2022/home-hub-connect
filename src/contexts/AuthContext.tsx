@@ -37,6 +37,17 @@ const MOCK_USERS: IntranetUser[] = [
     isAdmin: true,
   },
   {
+    id: "USR-005",
+    fullName: "Remit",
+    email: "remit@safeone.com.do",
+    department: "Operaciones",
+    position: "Gerente de Operaciones",
+    birthday: "01-10",
+    photoUrl: "",
+    allowedDepartments: ["Operaciones"],
+    isAdmin: false,
+  },
+  {
     id: "USR-003",
     fullName: "María López",
     email: "maria.lopez@safeone.com.do",
