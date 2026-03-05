@@ -123,7 +123,7 @@ const HiringRequestsPage = () => {
       actionUrl: "/solicitudes-personal",
     });
     setShowForm(false);
-    setForm({ positionTitle: "", department: user?.department || "", justification: "", salaryRange: "", contractType: "Indefinido", urgency: "Normal", requirements: "" });
+    setForm({ positionTitle: "", department: user?.department || "", justification: "", salaryRange: "", contractType: "Indefinido", urgency: "Normal", requirements: "", hasVehicle: false, vehicleType: "", residentialZone: "" });
   };
 
   const advanceStatus = (req: HiringRequest, approved: boolean) => {
