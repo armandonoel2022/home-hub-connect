@@ -204,6 +204,9 @@ export interface HiringRequest {
   contractType: "Indefinido" | "Temporal" | "Proyecto";
   urgency: "Normal" | "Urgente";
   requirements: string;
+  hasVehicle: boolean;
+  vehicleType: string;
+  residentialZone: string;
   requestedBy: string;
   requestedAt: string;
   status: HiringRequestStatus;
