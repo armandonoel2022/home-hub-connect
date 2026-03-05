@@ -93,6 +93,9 @@ const HiringRequestsPage = () => {
     contractType: "Indefinido" as HiringRequest["contractType"],
     urgency: "Normal" as HiringRequest["urgency"],
     requirements: "",
+    hasVehicle: false,
+    vehicleType: "",
+    residentialZone: "",
   });
 
   const handleSubmit = () => {
