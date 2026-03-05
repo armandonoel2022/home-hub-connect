@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { NotificationProvider } from "@/contexts/NotificationContext";
 import BirthdayOverlay from "@/components/BirthdayOverlay";
 import Index from "./pages/Index";
 import Tickets from "./pages/Tickets";
@@ -12,10 +13,11 @@ import Fleet from "./pages/Fleet";
 import PhoneFleet from "./pages/PhoneFleet";
 import Operations from "./pages/Operations";
 import BASC from "./pages/BASC";
+import PurchaseRequests from "./pages/PurchaseRequests";
+import HiringRequests from "./pages/HiringRequests";
 import LoginPage from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import type { IntranetUser } from "./lib/types";
-import { DEPARTMENTS } from "./lib/types";
 
 const queryClient = new QueryClient();
 
@@ -23,12 +25,9 @@ const queryClient = new QueryClient();
 const getBirthdayUsers = (): IntranetUser[] => {
   const today = new Date();
   const todayStr = `${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-  
-  // Mock: Carlos Méndez has birthday on 03-05
   const allUsers: IntranetUser[] = [
-    { id: "USR-003", fullName: "Carlos Méndez", email: "carlos.mendez@safeone.com", department: "Contabilidad", position: "Contador", birthday: "03-05", photoUrl: "", allowedDepartments: ["Contabilidad"], isAdmin: false },
+    { id: "USR-004", fullName: "Carlos Méndez", email: "carlos.mendez@safeone.com", department: "Contabilidad", position: "Contador", birthday: "03-05", photoUrl: "", allowedDepartments: ["Contabilidad"], isAdmin: false },
   ];
-  
   return allUsers.filter((u) => u.birthday === todayStr);
 };
 
@@ -62,6 +61,8 @@ function ProtectedRoutes() {
         <Route path="/flotilla" element={<Fleet />} />
         <Route path="/flota-celular" element={<PhoneFleet />} />
         <Route path="/operaciones" element={<Operations />} />
+        <Route path="/solicitudes-compra" element={<PurchaseRequests />} />
+        <Route path="/solicitudes-personal" element={<HiringRequests />} />
         <Route path="/basc" element={<BASC />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
@@ -77,10 +78,12 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/*" element={<ProtectedRoutes />} />
-            </Routes>
+            <NotificationProvider>
+              <Routes>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/*" element={<ProtectedRoutes />} />
+              </Routes>
+            </NotificationProvider>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
