@@ -151,9 +151,10 @@ const UserManagementPage = () => {
           <div className="bg-card rounded-lg border border-border overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead>
+                 <thead>
                   <tr className="border-b border-border bg-muted/50">
                     <th className="text-left px-4 py-3 font-heading font-semibold text-card-foreground">Usuario</th>
+                    <th className="text-left px-4 py-3 font-heading font-semibold text-card-foreground">Ext.</th>
                     <th className="text-left px-4 py-3 font-heading font-semibold text-card-foreground">Correo</th>
                     <th className="text-left px-4 py-3 font-heading font-semibold text-card-foreground">Departamento</th>
                     <th className="text-left px-4 py-3 font-heading font-semibold text-card-foreground">Cargo</th>
