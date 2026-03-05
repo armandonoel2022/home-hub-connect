@@ -15,7 +15,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 20% 10%;
 
-    --primary: 42 85% 42%;
+    --primary: 42 100% 50%;
     --primary-foreground: 220 20% 10%;
 
     --secondary: 220 15% 18%;
@@ -24,31 +24,31 @@
     --muted: 220 10% 92%;
     --muted-foreground: 220 10% 45%;
 
-    --accent: 42 80% 45%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 42 90% 55%;
+    --accent-foreground: 220 20% 10%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 220 13% 88%;
     --input: 220 13% 88%;
-    --ring: 42 85% 42%;
+    --ring: 42 100% 50%;
 
     --radius: 0.625rem;
 
     --sidebar-background: 220 15% 18%;
     --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 42 85% 42%;
-    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-primary: 42 100% 50%;
+    --sidebar-primary-foreground: 220 20% 10%;
     --sidebar-accent: 220 15% 24%;
     --sidebar-accent-foreground: 0 0% 95%;
     --sidebar-border: 220 15% 25%;
-    --sidebar-ring: 42 85% 42%;
+    --sidebar-ring: 42 100% 50%;
 
     /* Custom tokens */
-    --gold: 42 85% 42%;
-    --gold-light: 42 85% 55%;
-    --gold-dark: 42 85% 32%;
+    --gold: 42 100% 50%;
+    --gold-light: 42 100% 65%;
+    --gold-dark: 42 100% 40%;
     --charcoal: 220 15% 18%;
     --charcoal-light: 220 12% 28%;
     --charcoal-dark: 220 18% 10%;
@@ -57,7 +57,7 @@
     --font-heading: 'Montserrat', sans-serif;
     --font-body: 'Open Sans', sans-serif;
 
-    --gradient-gold: linear-gradient(135deg, hsl(42 85% 42%), hsl(42 85% 55%));
+    --gradient-gold: linear-gradient(135deg, hsl(42 100% 50%), hsl(42 100% 65%));
     --gradient-dark: linear-gradient(135deg, hsl(220 18% 10%), hsl(220 15% 22%));
     --gradient-hero: linear-gradient(to right, hsla(220, 18%, 10%, 0.85), hsla(220, 15%, 18%, 0.6));
     --shadow-card: 0 2px 12px -2px hsla(220, 15%, 18%, 0.08);
@@ -72,19 +72,19 @@
     --card-foreground: 0 0% 95%;
     --popover: 220 15% 15%;
     --popover-foreground: 0 0% 95%;
-    --primary: 42 85% 42%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 42 100% 50%;
+    --primary-foreground: 220 20% 10%;
     --secondary: 220 15% 22%;
     --secondary-foreground: 0 0% 95%;
     --muted: 220 15% 20%;
     --muted-foreground: 220 10% 60%;
-    --accent: 42 80% 45%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 42 90% 55%;
+    --accent-foreground: 220 20% 10%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 95%;
     --border: 220 15% 22%;
     --input: 220 15% 22%;
-    --ring: 42 85% 42%;
+    --ring: 42 100% 50%;
   }
 }
 
