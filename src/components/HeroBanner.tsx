@@ -1,7 +1,9 @@
 import bannerImg from "@/assets/safeone-building.jpeg";
 import { Shield, Clock, Users } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const HeroBanner = () => {
+  const { user } = useAuth();
   const today = new Date();
   const dateStr = today.toLocaleDateString("es-ES", {
     weekday: "long",
