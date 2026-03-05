@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import logo from "@/assets/safeone-logo.png";
 import { Lock, User, LogIn } from "lucide-react";
 
 const LoginPage = () => {
-  const { login } = useAuth();
+  const { login, user } = useAuth();
+  const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -20,7 +22,9 @@ const LoginPage = () => {
     setLoading(true);
     const ok = await login(username.trim(), password);
     setLoading(false);
-    if (!ok) {
+    if (ok) {
+      navigate("/", { replace: true });
+    } else {
       setError("Usuario o contraseña incorrectos");
     }
   };
