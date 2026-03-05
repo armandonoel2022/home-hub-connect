@@ -211,7 +211,12 @@ const DepartmentGrid = () => {
                   <Icon className="h-5 w-5 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-heading font-bold text-white text-base leading-tight">{dept.name}</h3>
+                  <h3
+                    className={cn("font-heading font-bold text-white text-base leading-tight", DEPT_ROUTES[dept.name] && "cursor-pointer hover:underline")}
+                    onClick={() => DEPT_ROUTES[dept.name] && navigate(DEPT_ROUTES[dept.name])}
+                  >
+                    {dept.name}
+                  </h3>
                   <p className="text-white/75 text-sm mt-0.5 truncate">{dept.description}</p>
                 </div>
               </div>

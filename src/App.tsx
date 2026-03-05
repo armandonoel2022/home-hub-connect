@@ -65,6 +65,7 @@ function ProtectedRoutes() {
         <Route path="/operaciones" element={<Operations />} />
         <Route path="/solicitudes-compra" element={<PurchaseRequests />} />
         <Route path="/solicitudes-personal" element={<HiringRequests />} />
+        <Route path="/rrhh/formularios" element={<HRForms />} />
         <Route path="/basc" element={<BASC />} />
         <Route path="/admin/usuarios" element={<UserManagement />} />
         <Route path="*" element={<NotFound />} />
