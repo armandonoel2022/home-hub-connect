@@ -266,6 +266,7 @@ const OperationsPage = () => {
                   { key: "weaponBrand", label: "Marca del Arma" },
                   { key: "weaponCaliber", label: "Calibre" },
                   { key: "weaponSerial", label: "Serial del Arma *" },
+                  { key: "ammunitionCount", label: "Cantidad de Municiones" },
                   { key: "licenseNumber", label: "Nro. de Licencia" },
                 ].map(({ key, label }) => (
                   <div key={key}>
