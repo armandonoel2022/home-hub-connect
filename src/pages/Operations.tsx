@@ -140,6 +140,14 @@ const OperationsPage = () => {
                 </div>
                 <div className="mt-4 pt-3 border-t border-border grid grid-cols-2 gap-2 text-xs">
                   <div>
+                    <span className="text-muted-foreground block">Ubicación</span>
+                    <span className="font-medium text-card-foreground">{p.location}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block">Supervisor</span>
+                    <span className="font-medium text-card-foreground">{p.supervisor || "—"}</span>
+                  </div>
+                  <div>
                     <span className="text-muted-foreground block">Arma</span>
                     <span className="font-medium text-card-foreground">{p.weaponBrand} {p.weaponType}</span>
                   </div>
@@ -148,12 +156,12 @@ const OperationsPage = () => {
                     <span className="font-medium text-card-foreground">{p.weaponCaliber}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground block">Cel. Empresa</span>
-                    <span className="font-mono text-card-foreground">{p.fleetPhone || "—"}</span>
+                    <span className="text-muted-foreground block">Municiones</span>
+                    <span className="font-medium text-card-foreground">{p.ammunitionCount}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground block">Licencia</span>
-                    <span className="font-mono text-card-foreground">{p.licenseNumber}</span>
+                    <span className="text-muted-foreground block">Cel. Empresa</span>
+                    <span className="font-mono text-card-foreground">{p.fleetPhone || "—"}</span>
                   </div>
                 </div>
               </div>
