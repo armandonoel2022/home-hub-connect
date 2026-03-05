@@ -136,12 +136,13 @@ export const DEPARTMENTS = [
   "Gerencia General",
   "Gerencia Comercial",
   "Recursos Humanos",
+  "Operaciones",
   "Servicio al Cliente",
   "Calidad",
   "Cuentas por Cobrar",
   "Contabilidad",
   "Tecnología y Monitoreo",
-  "Operaciones",
+  "Seguridad Electrónica",
 ];
 
 // ─── Purchase Requests ───
