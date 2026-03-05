@@ -140,3 +140,84 @@ export const DEPARTMENTS = [
   "Tecnología y Monitoreo",
   "Operaciones",
 ];
+
+// ─── Purchase Requests ───
+export type PurchaseRequestStatus = "Pendiente" | "Aprobada" | "Rechazada" | "En Revisión";
+
+export interface PurchaseItem {
+  name: string;
+  description: string;
+  quantity: number;
+  estimatedPrice: number;
+}
+
+export interface PurchaseRequest {
+  id: string;
+  title: string;
+  items: PurchaseItem[];
+  totalAmount: number;
+  justification: string;
+  department: string;
+  requestedBy: string;
+  requestedAt: string;
+  status: PurchaseRequestStatus;
+  approvalLevel: "Jefe Directo" | "Gerencia General";
+  approvedBy: string | null;
+  approvedAt: string | null;
+  rejectionReason: string | null;
+  quotationFiles: string[]; // file names
+  notes: string;
+}
+
+// Approval thresholds (configurable later)
+export const PURCHASE_APPROVAL_THRESHOLDS = {
+  directManager: 50000, // Up to 50k → jefe directo
+  generalManager: Infinity, // Above 50k → Gerencia General
+};
+
+// ─── Hiring Requests ───
+export type HiringRequestStatus =
+  | "Borrador"
+  | "Pendiente Gerente Área"
+  | "Aprobada Gerente Área"
+  | "Pendiente Gerencia General"
+  | "Aprobada Gerencia General"
+  | "Rechazada"
+  | "En Proceso RRHH"
+  | "Entrevista Programada"
+  | "Completada";
+
+export interface HiringRequest {
+  id: string;
+  positionTitle: string;
+  department: string;
+  justification: string;
+  salaryRange: string;
+  contractType: "Indefinido" | "Temporal" | "Proyecto";
+  urgency: "Normal" | "Urgente";
+  requirements: string;
+  requestedBy: string;
+  requestedAt: string;
+  status: HiringRequestStatus;
+  managerApproval: { by: string; at: string; approved: boolean } | null;
+  gmApproval: { by: string; at: string; approved: boolean } | null;
+  rejectionReason: string | null;
+  interviewDate: string | null;
+  interviewNotes: string;
+  notes: string;
+}
+
+// ─── Notifications ───
+export type NotificationType = "purchase" | "hiring" | "info";
+
+export interface AppNotification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  relatedId: string; // ID of the request
+  forUserId: string;
+  read: boolean;
+  createdAt: string;
+  actionUrl: string;
+}
