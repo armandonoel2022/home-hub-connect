@@ -1,3 +1,4 @@
+import AppLayout from "@/components/AppLayout";
 import Navbar from "@/components/Navbar";
 import HeroBanner from "@/components/HeroBanner";
 import DepartmentGrid from "@/components/DepartmentGrid";
@@ -7,14 +8,16 @@ import Footer from "@/components/Footer";
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Navbar />
-      <HeroBanner />
-      <DepartmentGrid />
-      <QuickLinks />
-      <Announcements />
-      <Footer />
-    </div>
+    <AppLayout>
+      <div className="flex flex-col min-h-screen">
+        <Navbar />
+        <HeroBanner />
+        <DepartmentGrid />
+        <QuickLinks />
+        <Announcements />
+        <Footer />
+      </div>
+    </AppLayout>
   );
 };
 
