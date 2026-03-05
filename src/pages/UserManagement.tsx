@@ -3,7 +3,7 @@ import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { DEPARTMENTS } from "@/lib/types";
 import type { IntranetUser } from "@/lib/types";
-import { Plus, X, Search, Pencil, Trash2, User, Shield, Mail, Building2 } from "lucide-react";
+import { Plus, X, Search, Pencil, Trash2, User, Shield, Mail, Building2, Phone } from "lucide-react";
 import { Navigate } from "react-router-dom";
 
 const emptyForm = (): Partial<IntranetUser> => ({
@@ -18,6 +18,9 @@ const emptyForm = (): Partial<IntranetUser> => ({
   isDepartmentLeader: false,
   reportsTo: "",
   fleetPhone: "",
+  extension: "",
+  shift: "",
+  team: "",
 });
 
 const UserManagementPage = () => {
@@ -148,9 +151,10 @@ const UserManagementPage = () => {
           <div className="bg-card rounded-lg border border-border overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead>
+                 <thead>
                   <tr className="border-b border-border bg-muted/50">
                     <th className="text-left px-4 py-3 font-heading font-semibold text-card-foreground">Usuario</th>
+                    <th className="text-left px-4 py-3 font-heading font-semibold text-card-foreground">Ext.</th>
                     <th className="text-left px-4 py-3 font-heading font-semibold text-card-foreground">Correo</th>
                     <th className="text-left px-4 py-3 font-heading font-semibold text-card-foreground">Departamento</th>
                     <th className="text-left px-4 py-3 font-heading font-semibold text-card-foreground">Cargo</th>
@@ -173,7 +177,14 @@ const UserManagementPage = () => {
                           <span className="font-medium text-card-foreground">{u.fullName}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
+                      <td className="px-4 py-3">
+                        {u.extension ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-mono bg-muted px-2 py-1 rounded">
+                            <Phone className="h-3 w-3 text-gold" />{u.extension}
+                          </span>
+                        ) : <span className="text-muted-foreground">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">{u.email || "—"}</td>
                       <td className="px-4 py-3 text-muted-foreground">{u.department}</td>
                       <td className="px-4 py-3 text-muted-foreground">{u.position}</td>
                       <td className="px-4 py-3">
@@ -221,9 +232,12 @@ const UserManagementPage = () => {
               <div className="p-5 space-y-4">
                 {[
                   { key: "fullName", label: "Nombre Completo *", type: "text" },
-                  { key: "email", label: "Correo Electrónico *", type: "email" },
+                  { key: "email", label: "Correo Electrónico", type: "email" },
                   { key: "position", label: "Cargo", type: "text" },
+                  { key: "extension", label: "Extensión Telefónica", type: "text", placeholder: "Ej: 201" },
                   { key: "fleetPhone", label: "Teléfono Flota", type: "text", placeholder: "Ej: +1 809-555-0010" },
+                  { key: "shift", label: "Turno", type: "text", placeholder: "Ej: Turno día, Mañana, Noche" },
+                  { key: "team", label: "Equipo", type: "text", placeholder: "Ej: Sede Central, ALNAP, Banco Caribe" },
                   { key: "birthday", label: "Cumpleaños (MM-DD)", type: "text", placeholder: "Ej: 07-15" },
                 ].map(({ key, label, type, placeholder }) => (
                   <div key={key}>

@@ -110,6 +110,9 @@ export interface IntranetUser {
   isDepartmentLeader?: boolean;
   reportsTo?: string; // user ID of the person they report to
   fleetPhone?: string;
+  extension?: string; // internal phone extension
+  shift?: string; // turno de trabajo
+  team?: string; // equipo asignado (e.g. "ALNAP", "Banco Caribe")
 }
 
 export const TICKET_CATEGORIES: TicketCategory[] = [

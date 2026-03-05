@@ -56,77 +56,77 @@ const departments: Department[] = [
     icon: Building2,
     description: "Gestión administrativa y recursos",
     color: "42 100% 50%",
-    leader: { name: "Pendiente", position: "Gerente Administrativo", photo: "", fleetPhone: "", email: "admin@safeone.com.do" },
+    leader: { name: "Chrisnel Fabian", position: "Gerente Administrativo", photo: "", fleetPhone: "", email: "Cfabiancxc@safeone.com.do" },
   },
   {
     name: "Gerencia General",
     icon: Briefcase,
     description: "Dirección y estrategia corporativa",
     color: "220 15% 30%",
-    leader: { name: "Pendiente", position: "Gerente General", photo: "", fleetPhone: "", email: "gerencia@safeone.com.do" },
+    leader: { name: "Aurelio Pérez", position: "Gerente General", photo: "", fleetPhone: "", email: "Aperez@safeone.com.do" },
   },
   {
     name: "Gerencia Comercial",
     icon: TrendingUp,
     description: "Ventas y desarrollo de negocio",
     color: "160 60% 40%",
-    leader: { name: "Pendiente", position: "Gerente Comercial", photo: "", fleetPhone: "", email: "comercial@safeone.com.do" },
+    leader: { name: "Samuel A. Pérez", position: "Gerente Comercial", photo: "", fleetPhone: "", email: "Sperez@safeone.com.do" },
   },
   {
     name: "Recursos Humanos",
     icon: Users,
     description: "Gestión del talento y bienestar laboral",
     color: "330 60% 50%",
-    leader: { name: "Pendiente", position: "Gerente de RRHH", photo: "", fleetPhone: "", email: "rrhh@safeone.com.do" },
+    leader: { name: "Dilia Aguasvivas", position: "Gerente de RRHH", photo: "", fleetPhone: "", email: "Daguasvivas@safeone.com.do" },
   },
   {
     name: "Operaciones",
     icon: Shield,
     description: "Logística y operaciones de campo",
     color: "100 50% 40%",
-    leader: { name: "Remit", position: "Gerente de Operaciones", photo: "", fleetPhone: "+1 809-555-0010", email: "remit@safeone.com.do" },
+    leader: { name: "Remit López", position: "Gerente de Operaciones", photo: "", fleetPhone: "+1 809-555-0010", email: "Rlopez@safeone.com.do" },
   },
   {
     name: "Servicio al Cliente",
     icon: Headphones,
     description: "Atención y soporte al cliente",
     color: "200 70% 50%",
-    leader: { name: "Pendiente", position: "Gerente de Servicio", photo: "", fleetPhone: "", email: "servicio@safeone.com.do" },
+    leader: { name: "Perla González", position: "Encargada de Servicio al Cliente", photo: "", fleetPhone: "", email: "serviciocliente@safeone.com.do" },
   },
   {
     name: "Calidad",
     icon: CheckCircle,
-    description: "Control y aseguramiento de calidad",
+    description: "Calidad, Cumplimiento y Mejora Continua",
     color: "280 50% 50%",
-    leader: { name: "Pendiente", position: "Gerente de Calidad", photo: "", fleetPhone: "", email: "calidad@safeone.com.do" },
+    leader: { name: "Bilianny Fernández", position: "Encargada CCM", photo: "", fleetPhone: "", email: "Bfernandez@safeone.com.do" },
   },
   {
     name: "Cuentas por Cobrar",
     icon: DollarSign,
     description: "Gestión de cobros y facturación",
     color: "15 80% 55%",
-    leader: { name: "Pendiente", position: "Encargado de Cobros", photo: "", fleetPhone: "", email: "cobros@safeone.com.do" },
+    leader: { name: "Christy Fernández", position: "Encargada de CxC", photo: "", fleetPhone: "", email: "Cxc@safeone.com.do" },
   },
   {
     name: "Contabilidad",
     icon: Calculator,
     description: "Finanzas y registros contables",
     color: "340 60% 50%",
-    leader: { name: "Pendiente", position: "Contador General", photo: "", fleetPhone: "", email: "contabilidad@safeone.com.do" },
+    leader: { name: "Xuxa Lugo", position: "Contadora", photo: "", fleetPhone: "", email: "contabilidad@safeone.com.do" },
   },
   {
     name: "Tecnología y Monitoreo",
     icon: Monitor,
     description: "Sistemas, CCTV y monitoreo",
     color: "190 70% 45%",
-    leader: { name: "Anoel", position: "IT Manager", photo: "", fleetPhone: "+1 809-555-0020", email: "anoel@safeone.com.do" },
+    leader: { name: "Armando Noel", position: "Encargado de Tecnología y Monitoreo", photo: "", fleetPhone: "+1 809-555-0020", email: "Anoel@safeone.com.do" },
   },
   {
     name: "Seguridad Electrónica",
     icon: Settings,
     description: "Sistemas de seguridad y alarmas",
     color: "250 40% 45%",
-    leader: { name: "Pendiente", position: "Gerente de Seguridad Electrónica", photo: "", fleetPhone: "", email: "seguridad.electronica@safeone.com.do" },
+    leader: { name: "Luis Ovalles", position: "Encargado de Seguridad Electrónica", photo: "", fleetPhone: "", email: "Lovalles@safeone.com.do" },
   },
 ];
 
@@ -286,6 +286,15 @@ const DepartmentGrid = () => {
                           {m.photoUrl ? <img src={m.photoUrl} alt="" className="w-full h-full object-cover" /> : <User className="h-3 w-3 text-muted-foreground" />}
                         </div>
                         <span className="text-card-foreground">{m.fullName}</span>
+                        {m.extension && (
+                          <span className="text-[9px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground">Ext.{m.extension}</span>
+                        )}
+                        {m.team && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-gold/10 gold-accent-text">{m.team}</span>
+                        )}
+                        {m.shift && (
+                          <span className="text-[9px] text-muted-foreground italic">{m.shift}</span>
+                        )}
                         <span className="text-muted-foreground ml-auto truncate max-w-[100px]">{m.position}</span>
                       </div>
                     ))}
