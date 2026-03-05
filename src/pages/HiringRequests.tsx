@@ -400,6 +400,33 @@ const HiringRequestsPage = () => {
                   <label className="text-sm font-medium text-card-foreground block mb-1.5">Requisitos del Puesto</label>
                   <textarea value={form.requirements} onChange={(e) => setForm({ ...form, requirements: e.target.value })} rows={3} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none resize-none" placeholder="Experiencia, habilidades, certificaciones..." />
                 </div>
+
+                {/* Campos especiales para vigilantes */}
+                <div className="border-t border-border pt-4">
+                  <h4 className="text-sm font-heading font-bold text-card-foreground mb-3">Información adicional (Vigilantes / Operaciones)</h4>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-card-foreground block mb-1.5">Zona de Residencia</label>
+                      <input type="text" placeholder="Ej: Santo Domingo Norte, Los Alcarrizos..." value={form.residentialZone} onChange={(e) => setForm({ ...form, residentialZone: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" />
+                    </div>
+                    <div className="flex items-center gap-3 bg-muted rounded-lg p-4">
+                      <input type="checkbox" id="hasVehicle" checked={form.hasVehicle} onChange={(e) => setForm({ ...form, hasVehicle: e.target.checked })} className="w-4 h-4 rounded accent-gold" />
+                      <label htmlFor="hasVehicle" className="text-sm text-card-foreground font-medium">¿Tiene vehículo o motor propio?</label>
+                    </div>
+                    {form.hasVehicle && (
+                      <div>
+                        <label className="text-sm font-medium text-card-foreground block mb-1.5">Tipo de Vehículo</label>
+                        <select value={form.vehicleType} onChange={(e) => setForm({ ...form, vehicleType: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none">
+                          <option value="">Seleccionar...</option>
+                          <option>Motor</option>
+                          <option>Carro</option>
+                          <option>Camioneta</option>
+                          <option>Otro</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
               <div className="p-5 border-t border-border flex gap-3 justify-end">
                 <button onClick={() => setShowForm(false)} className="px-5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">Cancelar</button>
