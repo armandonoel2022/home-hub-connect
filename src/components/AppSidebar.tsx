@@ -6,6 +6,7 @@ import {
   Truck,
   Smartphone,
   Shield,
+  FileCheck,
   ChevronLeft,
   ChevronRight,
   LogOut,
