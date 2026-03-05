@@ -11,6 +11,7 @@ import Inventory from "./pages/Inventory";
 import Fleet from "./pages/Fleet";
 import PhoneFleet from "./pages/PhoneFleet";
 import Operations from "./pages/Operations";
+import BASC from "./pages/BASC";
 import LoginPage from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import type { IntranetUser } from "./lib/types";
