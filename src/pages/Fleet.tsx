@@ -53,7 +53,7 @@ const FleetPage = () => {
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
                 <h1 className="font-heading font-bold text-2xl text-secondary-foreground">
-                  Flotas <span className="gold-accent-text">Vehiculares</span>
+                  Flotilla <span className="gold-accent-text">Vehicular</span>
                 </h1>
                 <p className="text-muted-foreground text-sm mt-1">Inventario y asignación de vehículos</p>
               </div>

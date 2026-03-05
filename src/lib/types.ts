@@ -75,6 +75,36 @@ export interface ArmedPersonnel {
   status: "Activo" | "Licencia" | "Inactivo";
 }
 
+// Phone Fleet
+export type PhoneStatus = "Activo" | "Disponible" | "En Reparación" | "Dado de Baja";
+
+export interface PhoneDevice {
+  id: string;
+  imei: string;
+  serial: string;
+  brand: string;
+  model: string;
+  status: PhoneStatus;
+  assignedTo: string | null;
+  department: string | null;
+  acquisitionDate: string;
+  phoneNumber: string;
+  notes: string;
+}
+
+// Users
+export interface IntranetUser {
+  id: string;
+  fullName: string;
+  email: string;
+  department: string;
+  position: string;
+  birthday: string; // MM-DD format
+  photoUrl: string;
+  allowedDepartments: string[];
+  isAdmin: boolean;
+}
+
 export const TICKET_CATEGORIES: TicketCategory[] = [
   "Red",
   "Asignación de Equipos (Nuevos)",

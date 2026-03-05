@@ -4,29 +4,34 @@ import {
   Ticket,
   Package,
   Truck,
+  Smartphone,
   Shield,
   ChevronLeft,
   ChevronRight,
+  LogOut,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Tickets IT", url: "/tickets", icon: Ticket },
   { title: "Inventario IT", url: "/inventario", icon: Package },
-  { title: "Flotas", url: "/flotas", icon: Truck },
+  { title: "Flotilla Vehicular", url: "/flotilla", icon: Truck },
+  { title: "Flota Celular", url: "/flota-celular", icon: Smartphone },
   { title: "Personal Armado", url: "/operaciones", icon: Shield },
 ];
 
 const AppSidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const { user, logout } = useAuth();
 
   return (
     <aside
-      className={`sticky top-0 h-screen flex flex-col transition-all duration-300 ${
+      className={`sticky top-0 h-screen flex flex-col transition-all duration-300 shrink-0 ${
         collapsed ? "w-[68px]" : "w-60"
       }`}
       style={{ background: "var(--gradient-dark)" }}
@@ -44,8 +49,17 @@ const AppSidebar = () => {
         )}
       </div>
 
+      {/* User greeting */}
+      {user && !collapsed && (
+        <div className="px-4 py-3 border-b border-charcoal-light">
+          <p className="text-xs text-muted-foreground">Bienvenido,</p>
+          <p className="text-sm font-heading font-semibold text-secondary-foreground truncate">{user.fullName}</p>
+          <p className="text-[10px] text-muted-foreground truncate">{user.department}</p>
+        </div>
+      )}
+
       {/* Nav */}
-      <nav className="flex-1 py-4 px-2 space-y-1">
+      <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = location.pathname === item.url;
           return (
@@ -66,6 +80,17 @@ const AppSidebar = () => {
           );
         })}
       </nav>
+
+      {/* Logout */}
+      {user && (
+        <button
+          onClick={logout}
+          className="flex items-center gap-3 mx-2 mb-2 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-destructive hover:bg-charcoal-light/50 transition-all"
+        >
+          <LogOut className="h-5 w-5 shrink-0" />
+          {!collapsed && <span>Cerrar Sesión</span>}
+        </button>
+      )}
 
       {/* Collapse toggle */}
       <button

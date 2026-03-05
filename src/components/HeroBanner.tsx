@@ -1,7 +1,9 @@
 import bannerImg from "@/assets/safeone-building.jpeg";
 import { Shield, Clock, Users } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const HeroBanner = () => {
+  const { user } = useAuth();
   const today = new Date();
   const dateStr = today.toLocaleDateString("es-ES", {
     weekday: "long",
@@ -20,7 +22,7 @@ const HeroBanner = () => {
       <div className="hero-overlay absolute inset-0" />
       <div className="relative z-10 h-full max-w-7xl mx-auto px-4 sm:px-6 flex flex-col justify-center">
         <p className="text-gold font-heading font-semibold text-sm uppercase tracking-widest mb-2">
-          Bienvenido a la Intranet
+          {user ? `Hola, ${user.fullName.split(" ")[0]}` : "Bienvenido a la Intranet"}
         </p>
         <h1 className="font-heading font-black text-3xl md:text-5xl text-secondary-foreground leading-tight">
           SafeOne Security

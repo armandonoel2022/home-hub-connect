@@ -2,15 +2,70 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import BirthdayOverlay from "@/components/BirthdayOverlay";
 import Index from "./pages/Index";
 import Tickets from "./pages/Tickets";
 import Inventory from "./pages/Inventory";
 import Fleet from "./pages/Fleet";
+import PhoneFleet from "./pages/PhoneFleet";
 import Operations from "./pages/Operations";
+import LoginPage from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import type { IntranetUser } from "./lib/types";
+import { DEPARTMENTS } from "./lib/types";
 
 const queryClient = new QueryClient();
+
+// Mock birthday users — replace with API call
+const getBirthdayUsers = (): IntranetUser[] => {
+  const today = new Date();
+  const todayStr = `${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  
+  // Mock: Carlos Méndez has birthday on 03-05
+  const allUsers: IntranetUser[] = [
+    { id: "USR-003", fullName: "Carlos Méndez", email: "carlos.mendez@safeone.com", department: "Contabilidad", position: "Contador", birthday: "03-05", photoUrl: "", allowedDepartments: ["Contabilidad"], isAdmin: false },
+  ];
+  
+  return allUsers.filter((u) => u.birthday === todayStr);
+};
+
+function ProtectedRoutes() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-muted-foreground text-sm">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  const birthdayUsers = getBirthdayUsers();
+
+  return (
+    <>
+      <BirthdayOverlay birthdayUsers={birthdayUsers} />
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/tickets" element={<Tickets />} />
+        <Route path="/inventario" element={<Inventory />} />
+        <Route path="/flotilla" element={<Fleet />} />
+        <Route path="/flota-celular" element={<PhoneFleet />} />
+        <Route path="/operaciones" element={<Operations />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </>
+  );
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -18,14 +73,12 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/tickets" element={<Tickets />} />
-          <Route path="/inventario" element={<Inventory />} />
-          <Route path="/flotas" element={<Fleet />} />
-          <Route path="/operaciones" element={<Operations />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/*" element={<ProtectedRoutes />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
