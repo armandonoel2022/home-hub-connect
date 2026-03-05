@@ -250,6 +250,30 @@ const UserManagementPage = () => {
                 </button>
               </div>
               <div className="p-5 space-y-4">
+                {/* Photo upload */}
+                <div>
+                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Foto de Perfil</label>
+                  <div className="flex items-center gap-4">
+                    <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center overflow-hidden border-2 border-dashed border-border">
+                      {photoPreview ? (
+                        <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
+                      ) : (
+                        <Image className="h-8 w-8 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div>
+                      <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png" onChange={handlePhotoUpload} className="hidden" />
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-sm font-medium text-card-foreground hover:bg-border transition-colors"
+                      >
+                        <Upload className="h-4 w-4" />
+                        Subir foto (JPG/PNG)
+                      </button>
+                    </div>
+                  </div>
+                </div>
                 {[
                   { key: "fullName", label: "Nombre Completo *", type: "text" },
                   { key: "email", label: "Correo Electrónico", type: "email" },
