@@ -9,6 +9,7 @@ import {
   FileCheck,
   ShoppingCart,
   Users,
+  UserCog,
   Bell,
   ChevronLeft,
   ChevronRight,
