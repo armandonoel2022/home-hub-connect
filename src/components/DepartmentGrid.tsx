@@ -286,6 +286,15 @@ const DepartmentGrid = () => {
                           {m.photoUrl ? <img src={m.photoUrl} alt="" className="w-full h-full object-cover" /> : <User className="h-3 w-3 text-muted-foreground" />}
                         </div>
                         <span className="text-card-foreground">{m.fullName}</span>
+                        {m.extension && (
+                          <span className="text-[9px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground">Ext.{m.extension}</span>
+                        )}
+                        {m.team && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-gold/10 gold-accent-text">{m.team}</span>
+                        )}
+                        {m.shift && (
+                          <span className="text-[9px] text-muted-foreground italic">{m.shift}</span>
+                        )}
                         <span className="text-muted-foreground ml-auto truncate max-w-[100px]">{m.position}</span>
                       </div>
                     ))}
