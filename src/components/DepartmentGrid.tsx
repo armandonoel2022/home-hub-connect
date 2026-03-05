@@ -187,20 +187,17 @@ const DepartmentGrid = () => {
           const Icon = dept.icon;
           return (
             <div key={dept.name} className="card-department group" id={`dept-${dept.name.toLowerCase().replace(/\s+/g, "-")}`}>
-              <div className="h-1 w-full" style={{ background: `hsl(${dept.color})` }} />
-              <div className="p-6">
-                <div className="flex items-start gap-4">
-                  <div
-                    className="p-3 rounded-xl transition-transform duration-300 group-hover:scale-110"
-                    style={{ background: `hsla(${dept.color}, 0.1)` }}
-                  >
-                    <Icon className="h-6 w-6" style={{ color: `hsl(${dept.color})` }} />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-heading font-bold text-card-foreground text-base">{dept.name}</h3>
-                    <p className="text-muted-foreground text-sm mt-1">{dept.description}</p>
-                  </div>
+              <div className="px-5 py-4 flex items-center gap-4" style={{ background: `hsl(${dept.color})` }}>
+                <div className="p-2.5 rounded-xl bg-white/20">
+                  <Icon className="h-5 w-5 text-white" />
                 </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-heading font-bold text-white text-base leading-tight">{dept.name}</h3>
+                  <p className="text-white/75 text-sm mt-0.5 truncate">{dept.description}</p>
+                </div>
+              </div>
+              <div className="p-6">
+                <div></div>
 
                 {/* Action buttons */}
                 <div className="mt-4 flex flex-col gap-2">
