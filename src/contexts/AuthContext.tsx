@@ -76,7 +76,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (username: string, password: string): Promise<boolean> => {
     // TODO: Replace with SQL Server API call
-    if (password !== "safeone") return false;
+    console.log("Login attempt:", username, "pass length:", password.length);
+    if (password.trim().toLowerCase() !== "safeone") return false;
     const found = MOCK_USERS.find(
       (u) => u.email.toLowerCase() === username.toLowerCase() || u.fullName.toLowerCase() === username.toLowerCase()
     );
