@@ -33,7 +33,7 @@ const UserManagementPage = () => {
   const [photoPreview, setPhotoPreview] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const compressImage = (file: File, maxSize = 150): Promise<string> => {
+  const compressImage = (file: File, maxSize = 300): Promise<string> => {
     return new Promise((resolve) => {
       const img = new window.Image();
       const reader = new FileReader();
@@ -44,8 +44,10 @@ const UserManagementPage = () => {
           canvas.width = img.width * scale;
           canvas.height = img.height * scale;
           const ctx = canvas.getContext("2d")!;
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = "high";
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL("image/jpeg", 0.7));
+          resolve(canvas.toDataURL("image/jpeg", 0.92));
         };
         img.src = ev.target?.result as string;
       };
