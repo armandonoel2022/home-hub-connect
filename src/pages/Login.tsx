@@ -79,7 +79,8 @@ const LoginPage = () => {
           </button>
 
           <p className="text-xs text-muted-foreground text-center mt-4">
-            Demo: usa <strong>admin@safeone.com</strong> o <strong>carlos.mendez@safeone.com</strong>
+            Demo: <strong>tecnologia@safeone.com.do</strong> o <strong>anoel@safeone.com.do</strong><br />
+            Contraseña: <strong>safeone</strong>
           </p>
         </form>
       </div>

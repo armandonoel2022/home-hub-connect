@@ -74,9 +74,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  const login = async (username: string, _password: string): Promise<boolean> => {
+  const login = async (username: string, password: string): Promise<boolean> => {
     // TODO: Replace with SQL Server API call
-    // const res = await authApi.login(username, password);
+    if (password !== "safeone") return false;
     const found = MOCK_USERS.find(
       (u) => u.email.toLowerCase() === username.toLowerCase() || u.fullName.toLowerCase() === username.toLowerCase()
     );
