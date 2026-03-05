@@ -187,7 +187,7 @@ const DepartmentGrid = () => {
           const Icon = dept.icon;
           return (
             <div key={dept.name} className="card-department group" id={`dept-${dept.name.toLowerCase().replace(/\s+/g, "-")}`}>
-              <div className="px-5 py-4 flex items-center gap-4" style={{ background: `hsl(${dept.color})` }}>
+              <div className="px-5 py-4 flex items-center gap-4" style={{ background: "hsl(220 15% 30%)" }}>
                 <div className="p-2.5 rounded-xl bg-white/20">
                   <Icon className="h-5 w-5 text-white" />
                 </div>
