@@ -282,6 +282,8 @@ const HiringRequestsPage = () => {
                     ...(selected.gmApproval ? [["Aprobado GG", `${selected.gmApproval.by} — ${new Date(selected.gmApproval.at).toLocaleDateString()}`]] : []),
                     ...(selected.interviewDate ? [["Entrevista", new Date(selected.interviewDate).toLocaleDateString()]] : []),
                     ...(selected.rejectionReason ? [["Motivo Rechazo", selected.rejectionReason]] : []),
+                    ...(selected.residentialZone ? [["Zona Residencia", selected.residentialZone]] : []),
+                    ["Tiene Vehículo", selected.hasVehicle ? `Sí — ${selected.vehicleType}` : "No"],
                   ].map(([label, val]) => (
                     <div key={label} className="bg-muted rounded-lg p-3">
                       <span className="text-xs text-muted-foreground block">{label}</span>

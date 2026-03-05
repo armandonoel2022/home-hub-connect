@@ -70,6 +70,7 @@ const UserManagementPage = () => {
   const openEdit = (u: IntranetUser) => {
     setEditing(u);
     setForm({ ...u });
+    setPhotoPreview(u.photoUrl || "");
     setShowForm(true);
   };
 
