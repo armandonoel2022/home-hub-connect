@@ -33,6 +33,10 @@ const navItems = [
   { title: "BASC", url: "/basc", icon: FileCheck },
 ];
 
+const adminItems = [
+  { title: "Gestión Usuarios", url: "/admin/usuarios", icon: UserCog },
+];
+
 const AppSidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
