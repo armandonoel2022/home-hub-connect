@@ -62,6 +62,7 @@ function ProtectedRoutes() {
         <Route path="/flotilla" element={<Fleet />} />
         <Route path="/flota-celular" element={<PhoneFleet />} />
         <Route path="/operaciones" element={<Operations />} />
+        <Route path="/basc" element={<BASC />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </>

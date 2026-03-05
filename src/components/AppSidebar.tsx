@@ -23,6 +23,7 @@ const navItems = [
   { title: "Flotilla Vehicular", url: "/flotilla", icon: Truck },
   { title: "Flota Celular", url: "/flota-celular", icon: Smartphone },
   { title: "Personal Armado", url: "/operaciones", icon: Shield },
+  { title: "BASC", url: "/basc", icon: FileCheck },
 ];
 
 const AppSidebar = () => {

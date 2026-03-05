@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import AppLayout from "@/components/AppLayout";
 import { mockArmedPersonnel } from "@/lib/mockData";
 import type { ArmedPersonnel } from "@/lib/types";
-import { Search, Plus, Shield, User, MapPin, X } from "lucide-react";
+import { Search, Plus, User, MapPin, X, Phone, Upload, Image } from "lucide-react";
 
 const statusColors: Record<string, string> = {
   Activo: "bg-emerald-50 text-emerald-700",
@@ -16,22 +16,45 @@ const OperationsPage = () => {
   const [selected, setSelected] = useState<ArmedPersonnel | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState<Partial<ArmedPersonnel>>({ status: "Activo" });
+  const [photoPreview, setPhotoPreview] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filtered = personnel.filter(
     (p) =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       p.location.toLowerCase().includes(search.toLowerCase()) ||
-      p.weaponSerial.toLowerCase().includes(search.toLowerCase())
+      p.weaponSerial.toLowerCase().includes(search.toLowerCase()) ||
+      p.supervisor.toLowerCase().includes(search.toLowerCase())
   );
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!["image/jpeg", "image/png"].includes(file.type)) {
+      alert("Solo se permiten archivos JPG o PNG");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const url = ev.target?.result as string;
+      setPhotoPreview(url);
+      setForm({ ...form, photo: url });
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleAdd = () => {
     if (!form.name || !form.location || !form.weaponSerial) return;
     const newP: ArmedPersonnel = {
       id: `AP-${String(personnel.length + 1).padStart(3, "0")}`,
       name: form.name || "",
-      photo: "",
+      photo: form.photo || "",
       location: form.location || "",
       position: form.position || "Oficial de Seguridad",
+      supervisor: form.supervisor || "",
+      fleetPhone: form.fleetPhone || "",
+      personalPhone: form.personalPhone || "",
+      address: form.address || "",
       weaponType: form.weaponType || "",
       weaponSerial: form.weaponSerial || "",
       weaponBrand: form.weaponBrand || "",
@@ -44,6 +67,7 @@ const OperationsPage = () => {
     setPersonnel([newP, ...personnel]);
     setShowAdd(false);
     setForm({ status: "Activo" });
+    setPhotoPreview("");
   };
 
   return (
@@ -72,7 +96,7 @@ const OperationsPage = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Buscar por nombre, ubicación o serial de arma..."
+              placeholder="Buscar por nombre, ubicación, supervisor o serial..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-card border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none"
@@ -86,7 +110,7 @@ const OperationsPage = () => {
               <div className="h-1 w-full bg-secondary" />
               <div className="p-5">
                 <div className="flex items-start gap-4">
-                  <div className="w-14 h-14 rounded-xl bg-muted flex items-center justify-center shrink-0">
+                  <div className="w-14 h-14 rounded-xl bg-muted flex items-center justify-center shrink-0 overflow-hidden">
                     {p.photo ? (
                       <img src={p.photo} alt={p.name} className="w-full h-full rounded-xl object-cover" />
                     ) : (
@@ -105,6 +129,12 @@ const OperationsPage = () => {
                       <MapPin className="h-3 w-3" />
                       {p.location}
                     </div>
+                    {p.supervisor && (
+                      <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                        <User className="h-3 w-3" />
+                        Supervisor: {p.supervisor}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="mt-4 pt-3 border-t border-border grid grid-cols-2 gap-2 text-xs">
@@ -117,8 +147,8 @@ const OperationsPage = () => {
                     <span className="font-medium text-card-foreground">{p.weaponCaliber}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground block">Serial</span>
-                    <span className="font-mono text-card-foreground">{p.weaponSerial}</span>
+                    <span className="text-muted-foreground block">Cel. Empresa</span>
+                    <span className="font-mono text-card-foreground">{p.fleetPhone || "—"}</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground block">Licencia</span>
@@ -133,19 +163,29 @@ const OperationsPage = () => {
         {/* Detail Modal */}
         {selected && (
           <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-            <div className="bg-card rounded-xl w-full max-w-lg shadow-2xl">
+            <div className="bg-card rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
               <div className="flex items-center justify-between p-5 border-b border-border">
                 <h2 className="font-heading font-bold text-lg text-card-foreground">{selected.name}</h2>
                 <button onClick={() => setSelected(null)} className="p-1 hover:bg-muted rounded-lg">
                   <X className="h-5 w-5 text-muted-foreground" />
                 </button>
               </div>
+              {/* Photo */}
+              {selected.photo && (
+                <div className="px-5 pt-5 flex justify-center">
+                  <img src={selected.photo} alt={selected.name} className="w-28 h-28 rounded-xl object-cover border-2 border-border" />
+                </div>
+              )}
               <div className="p-5">
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   {[
                     ["Cargo", selected.position],
                     ["Ubicación", selected.location],
+                    ["Supervisor", selected.supervisor],
                     ["Estado", selected.status],
+                    ["Cel. Empresa", selected.fleetPhone || "—"],
+                    ["Cel. Personal", selected.personalPhone || "—"],
+                    ["Dirección", selected.address || "—"],
                     ["Tipo de Arma", selected.weaponType],
                     ["Marca", selected.weaponBrand],
                     ["Calibre", selected.weaponCaliber],
@@ -174,15 +214,44 @@ const OperationsPage = () => {
             <div className="bg-card rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
               <div className="flex items-center justify-between p-5 border-b border-border">
                 <h2 className="font-heading font-bold text-lg text-card-foreground">Registrar Personal Armado</h2>
-                <button onClick={() => setShowAdd(false)} className="p-1 hover:bg-muted rounded-lg">
+                <button onClick={() => { setShowAdd(false); setPhotoPreview(""); }} className="p-1 hover:bg-muted rounded-lg">
                   <X className="h-5 w-5 text-muted-foreground" />
                 </button>
               </div>
               <div className="p-5 space-y-4">
+                {/* Photo upload */}
+                <div>
+                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Foto</label>
+                  <div className="flex items-center gap-4">
+                    <div className="w-20 h-20 rounded-xl bg-muted flex items-center justify-center overflow-hidden border-2 border-dashed border-border">
+                      {photoPreview ? (
+                        <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
+                      ) : (
+                        <Image className="h-8 w-8 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div>
+                      <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png" onChange={handlePhotoUpload} className="hidden" />
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-sm font-medium text-card-foreground hover:bg-border transition-colors"
+                      >
+                        <Upload className="h-4 w-4" />
+                        Subir foto (JPG/PNG)
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
                 {[
                   { key: "name", label: "Nombre Completo *" },
                   { key: "position", label: "Cargo" },
-                  { key: "location", label: "Ubicación *" },
+                  { key: "location", label: "Ubicación / Puesto *" },
+                  { key: "supervisor", label: "Supervisor" },
+                  { key: "fleetPhone", label: "Celular de Empresa (Flota)" },
+                  { key: "personalPhone", label: "Celular Personal" },
+                  { key: "address", label: "Dirección" },
                   { key: "weaponType", label: "Tipo de Arma" },
                   { key: "weaponBrand", label: "Marca del Arma" },
                   { key: "weaponCaliber", label: "Calibre" },
@@ -215,7 +284,7 @@ const OperationsPage = () => {
                 </div>
               </div>
               <div className="p-5 border-t border-border flex gap-3 justify-end">
-                <button onClick={() => setShowAdd(false)} className="px-5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">Cancelar</button>
+                <button onClick={() => { setShowAdd(false); setPhotoPreview(""); }} className="px-5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">Cancelar</button>
                 <button onClick={handleAdd} className="btn-gold text-sm">Registrar</button>
               </div>
             </div>

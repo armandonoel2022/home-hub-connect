@@ -65,6 +65,10 @@ export interface ArmedPersonnel {
   photo: string;
   location: string;
   position: string;
+  supervisor: string;
+  fleetPhone: string;
+  personalPhone: string;
+  address: string;
   weaponType: string;
   weaponSerial: string;
   weaponBrand: string;
