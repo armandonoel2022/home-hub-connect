@@ -129,8 +129,10 @@ const departments: Department[] = [
 ];
 
 const DepartmentGrid = () => {
+  const { allUsers } = useAuth();
   const [showLeader, setShowLeader] = useState<Department | null>(null);
   const [showFiles, setShowFiles] = useState<string | null>(null);
+  const [showTeam, setShowTeam] = useState<string | null>(null);
   const [deptFolders, setDeptFolders] = useState<Record<string, DeptFolder[]>>(() => {
     const init: Record<string, DeptFolder[]> = {};
     departments.forEach((d) => {
