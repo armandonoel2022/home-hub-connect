@@ -232,9 +232,12 @@ const UserManagementPage = () => {
               <div className="p-5 space-y-4">
                 {[
                   { key: "fullName", label: "Nombre Completo *", type: "text" },
-                  { key: "email", label: "Correo Electrónico *", type: "email" },
+                  { key: "email", label: "Correo Electrónico", type: "email" },
                   { key: "position", label: "Cargo", type: "text" },
+                  { key: "extension", label: "Extensión Telefónica", type: "text", placeholder: "Ej: 201" },
                   { key: "fleetPhone", label: "Teléfono Flota", type: "text", placeholder: "Ej: +1 809-555-0010" },
+                  { key: "shift", label: "Turno", type: "text", placeholder: "Ej: Turno día, Mañana, Noche" },
+                  { key: "team", label: "Equipo", type: "text", placeholder: "Ej: Sede Central, ALNAP, Banco Caribe" },
                   { key: "birthday", label: "Cumpleaños (MM-DD)", type: "text", placeholder: "Ej: 07-15" },
                 ].map(({ key, label, type, placeholder }) => (
                   <div key={key}>
