@@ -180,6 +180,11 @@ const UserManagementPage = () => {
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${u.isAdmin ? "bg-gold/20 gold-accent-text" : "bg-muted text-muted-foreground"}`}>
                           {u.isAdmin ? "Admin" : "Usuario"}
                         </span>
+                        {u.isDepartmentLeader && (
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground ml-1">
+                            Líder
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
