@@ -32,14 +32,14 @@
 
     --border: 220 13% 88%;
     --input: 220 13% 88%;
-    --ring: 42 100% 50%;
+    --ring: 42 85% 42%;
 
     --radius: 0.625rem;
 
     --sidebar-background: 220 15% 18%;
     --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 42 100% 50%;
-    --sidebar-primary-foreground: 220 20% 10%;
+    --sidebar-primary: 42 85% 42%;
+    --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 220 15% 24%;
     --sidebar-accent-foreground: 0 0% 95%;
     --sidebar-border: 220 15% 25%;
