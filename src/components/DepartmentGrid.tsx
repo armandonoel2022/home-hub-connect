@@ -118,6 +118,13 @@ const departments: Department[] = [
     color: "190 70% 45%",
     leader: { name: "Anoel", position: "IT Manager", photo: "", fleetPhone: "+1 809-555-0020", email: "anoel@safeone.com.do" },
   },
+  {
+    name: "Seguridad Electrónica",
+    icon: Settings,
+    description: "Sistemas de seguridad y alarmas",
+    color: "250 40% 45%",
+    leader: { name: "Pendiente", position: "Gerente de Seguridad Electrónica", photo: "", fleetPhone: "", email: "seguridad.electronica@safeone.com.do" },
+  },
 ];
 
 const DepartmentGrid = () => {
