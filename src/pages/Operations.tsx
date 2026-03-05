@@ -59,6 +59,7 @@ const OperationsPage = () => {
       weaponSerial: form.weaponSerial || "",
       weaponBrand: form.weaponBrand || "",
       weaponCaliber: form.weaponCaliber || "",
+      ammunitionCount: form.ammunitionCount || 0,
       licenseNumber: form.licenseNumber || "",
       licenseExpiry: form.licenseExpiry || "",
       assignedDate: form.assignedDate || new Date().toISOString().split("T")[0],
