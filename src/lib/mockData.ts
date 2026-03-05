@@ -1,4 +1,4 @@
-import type { Ticket, Equipment, Vehicle, ArmedPersonnel } from "./types";
+import type { Ticket, Equipment, Vehicle, ArmedPersonnel, PhoneDevice } from "./types";
 
 export const mockTickets: Ticket[] = [
   {
