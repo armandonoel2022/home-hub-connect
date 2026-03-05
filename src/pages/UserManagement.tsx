@@ -63,6 +63,7 @@ const UserManagementPage = () => {
   const openAdd = () => {
     setEditing(null);
     setForm(emptyForm());
+    setPhotoPreview("");
     setShowForm(true);
   };
 
