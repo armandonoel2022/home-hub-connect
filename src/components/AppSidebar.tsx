@@ -28,6 +28,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
+import { useChatContext } from "@/contexts/ChatContext";
 import GlobalSearch from "@/components/GlobalSearch";
 
 const navItems = [
@@ -61,6 +62,8 @@ const AppSidebar = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const { totalUnread: chatUnread } = useChatContext();
+  const combinedUnread = unreadCount + chatUnread;
 
   return (
     <aside
@@ -96,9 +99,9 @@ const AppSidebar = () => {
               className="relative p-2 rounded-lg text-muted-foreground hover:text-gold hover:bg-charcoal-light/50 transition-colors"
             >
               <Bell className="h-5 w-5" />
-              {unreadCount > 0 && (
+              {combinedUnread > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
-                  {unreadCount}
+                  {combinedUnread}
                 </span>
               )}
             </button>
@@ -114,11 +117,11 @@ const AppSidebar = () => {
             className="relative p-2 rounded-lg text-muted-foreground hover:text-gold hover:bg-charcoal-light/50 transition-colors"
           >
             <Bell className="h-5 w-5" />
-            {unreadCount > 0 && (
+            {combinedUnread > 0 && (
               <span className="absolute -top-0.5 -right-0.5 w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
-                {unreadCount}
-              </span>
-            )}
+                {combinedUnread}
+                </span>
+              )}
           </button>
         </div>
       )}
