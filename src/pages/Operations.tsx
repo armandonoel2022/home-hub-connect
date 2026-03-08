@@ -3,7 +3,7 @@ import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { mockArmedPersonnel } from "@/lib/mockData";
 import type { ArmedPersonnel } from "@/lib/types";
-import { Search, Plus, User, MapPin, X, Phone, Upload, Image, Lock, Trash2 } from "lucide-react";
+import { Search, Plus, User, MapPin, X, Phone, Upload, Image, Lock, Trash2, Pencil } from "lucide-react";
 
 const statusColors: Record<string, string> = {
   Activo: "bg-emerald-50 text-emerald-700",
@@ -17,6 +17,7 @@ const OperationsPage = () => {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<ArmedPersonnel | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Partial<ArmedPersonnel>>({ status: "Activo" });
   const [photoPreview, setPhotoPreview] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -86,6 +87,48 @@ const OperationsPage = () => {
     };
     setPersonnel([newP, ...personnel]);
     setShowAdd(false);
+    setEditingId(null);
+    setForm({ status: "Activo" });
+    setPhotoPreview("");
+  };
+
+  const handleStartEdit = (p: ArmedPersonnel) => {
+    setForm({ ...p });
+    setPhotoPreview(p.photo || "");
+    setEditingId(p.id);
+    setShowAdd(true);
+    setSelected(null);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingId || !form.name || !form.location || !form.weaponSerial) return;
+    setPersonnel((prev) =>
+      prev.map((p) =>
+        p.id === editingId
+          ? {
+              ...p,
+              name: form.name || p.name,
+              photo: form.photo || p.photo,
+              location: form.location || p.location,
+              position: form.position || p.position,
+              supervisor: form.supervisor || p.supervisor,
+              fleetPhone: form.fleetPhone || "",
+              personalPhone: form.personalPhone || "",
+              address: form.address || "",
+              weaponType: form.weaponType || "",
+              weaponSerial: form.weaponSerial || p.weaponSerial,
+              weaponBrand: form.weaponBrand || "",
+              weaponCaliber: form.weaponCaliber || "",
+              ammunitionCount: form.ammunitionCount || 0,
+              licenseNumber: form.licenseNumber || "",
+              licenseExpiry: form.licenseExpiry || "",
+              status: (form.status as ArmedPersonnel["status"]) || p.status,
+            }
+          : p
+      )
+    );
+    setShowAdd(false);
+    setEditingId(null);
     setForm({ status: "Activo" });
     setPhotoPreview("");
   };
@@ -184,7 +227,17 @@ const OperationsPage = () => {
                   </div>
                 </div>
                 {user?.isAdmin && (
-                  <div className="mt-3 pt-3 border-t border-border flex justify-end">
+                  <div className="mt-3 pt-3 border-t border-border flex justify-end gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStartEdit(p);
+                      }}
+                      className="p-1.5 rounded-lg hover:bg-blue-50 text-muted-foreground hover:text-blue-600 transition-colors text-xs flex items-center gap-1"
+                      title="Editar"
+                    >
+                      <Pencil className="h-3.5 w-3.5" /> Editar
+                    </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -246,7 +299,12 @@ const OperationsPage = () => {
                   ))}
                 </div>
               </div>
-              <div className="p-5 border-t border-border flex justify-end">
+              <div className="p-5 border-t border-border flex justify-end gap-2">
+                {user?.isAdmin && (
+                  <button onClick={() => handleStartEdit(selected)} className="px-4 py-2 rounded-lg text-sm font-medium bg-muted text-card-foreground hover:bg-border transition-colors flex items-center gap-1.5">
+                    <Pencil className="h-3.5 w-3.5" /> Editar
+                  </button>
+                )}
                 <button onClick={() => setSelected(null)} className="btn-gold text-sm">Cerrar</button>
               </div>
             </div>
@@ -258,8 +316,8 @@ const OperationsPage = () => {
           <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
             <div className="bg-card rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
               <div className="flex items-center justify-between p-5 border-b border-border">
-                <h2 className="font-heading font-bold text-lg text-card-foreground">Registrar Personal Armado</h2>
-                <button onClick={() => { setShowAdd(false); setPhotoPreview(""); }} className="p-1 hover:bg-muted rounded-lg">
+                <h2 className="font-heading font-bold text-lg text-card-foreground">{editingId ? "Editar Personal Armado" : "Registrar Personal Armado"}</h2>
+                <button onClick={() => { setShowAdd(false); setEditingId(null); setPhotoPreview(""); setForm({ status: "Activo" }); }} className="p-1 hover:bg-muted rounded-lg">
                   <X className="h-5 w-5 text-muted-foreground" />
                 </button>
               </div>
@@ -330,8 +388,8 @@ const OperationsPage = () => {
                 </div>
               </div>
               <div className="p-5 border-t border-border flex gap-3 justify-end">
-                <button onClick={() => { setShowAdd(false); setPhotoPreview(""); }} className="px-5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">Cancelar</button>
-                <button onClick={handleAdd} className="btn-gold text-sm">Registrar</button>
+                <button onClick={() => { setShowAdd(false); setEditingId(null); setPhotoPreview(""); setForm({ status: "Activo" }); }} className="px-5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">Cancelar</button>
+                <button onClick={editingId ? handleSaveEdit : handleAdd} className="btn-gold text-sm">{editingId ? "Guardar Cambios" : "Registrar"}</button>
               </div>
             </div>
           </div>
