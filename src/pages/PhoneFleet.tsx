@@ -96,8 +96,8 @@ const PhoneFleetPage = () => {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
-                    {["ID", "Marca / Modelo", "IMEI", "Serial", "Nro. Teléfono", "Estado", "Asignado a", "Departamento", "Adquisición"].map((h) => (
-                      <th key={h} className="text-left px-4 py-3 font-heading font-semibold text-muted-foreground text-xs uppercase tracking-wider whitespace-nowrap">{h}</th>
+                    {["ID", "Marca / Modelo", "IMEI", "Serial", "Nro. Teléfono", "Estado", "Asignado a", "Departamento", "Adquisición", ...(user?.isAdmin ? [""] : [])].map((h, i) => (
+                      <th key={`${h}-${i}`} className="text-left px-4 py-3 font-heading font-semibold text-muted-foreground text-xs uppercase tracking-wider whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
