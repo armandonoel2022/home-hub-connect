@@ -28,6 +28,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
+import GlobalSearch from "@/components/GlobalSearch";
 
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
