@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import type { IntranetUser } from "@/lib/types";
+import type { IntranetUser, OffboardingReason } from "@/lib/types";
 import { DEPARTMENTS } from "@/lib/types";
 
 interface AuthContextType {
@@ -9,9 +9,13 @@ interface AuthContextType {
   isLoading: boolean;
   hasAccess: (department: string) => boolean;
   allUsers: IntranetUser[];
+  activeUsers: IntranetUser[];
+  inactiveUsers: IntranetUser[];
   addUser: (u: IntranetUser) => void;
   updateUser: (id: string, data: Partial<IntranetUser>) => void;
   deleteUser: (id: string) => void;
+  offboardUser: (id: string, reason: OffboardingReason, notes: string) => void;
+  reactivateUser: (id: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
