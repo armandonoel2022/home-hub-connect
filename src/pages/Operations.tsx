@@ -87,6 +87,48 @@ const OperationsPage = () => {
     };
     setPersonnel([newP, ...personnel]);
     setShowAdd(false);
+    setEditingId(null);
+    setForm({ status: "Activo" });
+    setPhotoPreview("");
+  };
+
+  const handleStartEdit = (p: ArmedPersonnel) => {
+    setForm({ ...p });
+    setPhotoPreview(p.photo || "");
+    setEditingId(p.id);
+    setShowAdd(true);
+    setSelected(null);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingId || !form.name || !form.location || !form.weaponSerial) return;
+    setPersonnel((prev) =>
+      prev.map((p) =>
+        p.id === editingId
+          ? {
+              ...p,
+              name: form.name || p.name,
+              photo: form.photo || p.photo,
+              location: form.location || p.location,
+              position: form.position || p.position,
+              supervisor: form.supervisor || p.supervisor,
+              fleetPhone: form.fleetPhone || "",
+              personalPhone: form.personalPhone || "",
+              address: form.address || "",
+              weaponType: form.weaponType || "",
+              weaponSerial: form.weaponSerial || p.weaponSerial,
+              weaponBrand: form.weaponBrand || "",
+              weaponCaliber: form.weaponCaliber || "",
+              ammunitionCount: form.ammunitionCount || 0,
+              licenseNumber: form.licenseNumber || "",
+              licenseExpiry: form.licenseExpiry || "",
+              status: (form.status as ArmedPersonnel["status"]) || p.status,
+            }
+          : p
+      )
+    );
+    setShowAdd(false);
+    setEditingId(null);
     setForm({ status: "Activo" });
     setPhotoPreview("");
   };
