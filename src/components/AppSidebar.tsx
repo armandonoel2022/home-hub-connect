@@ -62,6 +62,8 @@ const AppSidebar = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const { totalUnread: chatUnread } = useChatContext();
+  const combinedUnread = unreadCount + chatUnread;
 
   return (
     <aside
