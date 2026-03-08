@@ -112,6 +112,7 @@ const App = () => {
                 </Routes>
                 <ChatWindow />
                 <ChatNotificationToast />
+                <PanicButton />
               </ChatProvider>
             </NotificationProvider>
           </AuthProvider>
