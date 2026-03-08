@@ -3,15 +3,44 @@ import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
 import type { PurchaseRequest, PurchaseItem } from "@/lib/types";
-import { DEPARTMENTS, PURCHASE_APPROVAL_THRESHOLDS } from "@/lib/types";
-import { Plus, X, ShoppingCart, Check, XCircle, FileText, Upload, Eye, Clock, Trash2 } from "lucide-react";
+import { DEPARTMENTS, PURCHASE_APPROVAL_THRESHOLDS, PURCHASE_STEPS, PURCHASE_STEP_LABELS } from "@/lib/types";
+import { Plus, X, ShoppingCart, Check, XCircle, FileText, Upload, Eye, Clock, Trash2, ArrowRight, Timer } from "lucide-react";
 
 const statusColors: Record<string, string> = {
   Pendiente: "bg-amber-50 text-amber-700",
+  "Aprobada Jefe": "bg-blue-50 text-blue-700",
+  "Pendiente GG": "bg-amber-50 text-amber-700",
   Aprobada: "bg-emerald-50 text-emerald-700",
+  "En Proceso Compra": "bg-purple-50 text-purple-700",
+  Completada: "bg-emerald-50 text-emerald-700",
   Rechazada: "bg-red-50 text-red-700",
-  "En Revisión": "bg-blue-50 text-blue-700",
 };
+
+function getElapsedTime(from: string, to?: string | null): string {
+  const start = new Date(from).getTime();
+  const end = to ? new Date(to).getTime() : Date.now();
+  const diffMs = end - start;
+  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+  if (hours >= 24) {
+    const days = Math.floor(hours / 24);
+    const remainHours = hours % 24;
+    return `${days}d ${remainHours}h`;
+  }
+  return `${hours}h ${minutes}m`;
+}
+
+function getStepsForRequest(req: PurchaseRequest): string[] {
+  if (req.approvalLevel === "Jefe Directo") {
+    return PURCHASE_STEPS.filter((s) => s !== "Pendiente GG");
+  }
+  return [...PURCHASE_STEPS];
+}
+
+function getStepIndex(req: PurchaseRequest): number {
+  const steps = getStepsForRequest(req);
+  return steps.indexOf(req.status);
+}
 
 const mockRequests: PurchaseRequest[] = [
   {
@@ -25,9 +54,13 @@ const mockRequests: PurchaseRequest[] = [
     requestedAt: "2026-03-04T10:00:00",
     status: "Pendiente",
     approvalLevel: "Gerencia General",
-    approvedBy: null,
-    approvedAt: null,
+    managerApproval: null,
+    gmApproval: null,
+    purchaseStartedAt: null,
+    completedAt: null,
     rejectionReason: null,
+    rejectedBy: null,
+    rejectedAt: null,
     quotationFiles: ["cotizacion_motorola.pdf", "cotizacion_kenwood.pdf"],
     notes: "",
   },
@@ -43,11 +76,15 @@ const mockRequests: PurchaseRequest[] = [
     department: "Administración",
     requestedBy: "María López",
     requestedAt: "2026-03-03T14:00:00",
-    status: "Aprobada",
+    status: "Aprobada Jefe",
     approvalLevel: "Jefe Directo",
-    approvedBy: "Gerente de Administración",
-    approvedAt: "2026-03-03T16:00:00",
+    managerApproval: { by: "Gerente de Administración", at: "2026-03-03T16:00:00", approved: true },
+    gmApproval: null,
+    purchaseStartedAt: null,
+    completedAt: null,
     rejectionReason: null,
+    rejectedBy: null,
+    rejectedAt: null,
     quotationFiles: ["cotizacion_toner.pdf"],
     notes: "",
   },
@@ -58,14 +95,12 @@ const PurchaseRequestsPage = () => {
   const { addNotification } = useNotifications();
   const [requests, setRequests] = useState<PurchaseRequest[]>(mockRequests);
 
-  // Non-admins only see their own requests
   const visibleRequests = user?.isAdmin ? requests : requests.filter((r) => r.requestedBy === user?.fullName);
   const [showForm, setShowForm] = useState(false);
   const [selected, setSelected] = useState<PurchaseRequest | null>(null);
-  const [showApproval, setShowApproval] = useState<PurchaseRequest | null>(null);
+  const [showAction, setShowAction] = useState<PurchaseRequest | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
 
-  // Form state
   const [form, setForm] = useState({
     title: "",
     justification: "",
@@ -98,9 +133,13 @@ const PurchaseRequestsPage = () => {
       requestedAt: new Date().toISOString(),
       status: "Pendiente",
       approvalLevel,
-      approvedBy: null,
-      approvedAt: null,
+      managerApproval: null,
+      gmApproval: null,
+      purchaseStartedAt: null,
+      completedAt: null,
       rejectionReason: null,
+      rejectedBy: null,
+      rejectedAt: null,
       quotationFiles: form.quotationFiles,
       notes: "",
     };
@@ -108,44 +147,137 @@ const PurchaseRequestsPage = () => {
     addNotification({
       type: "purchase",
       title: "Nueva Solicitud de Compra",
-      message: `${user?.fullName} solicita compra: ${form.title} por RD$${totalAmount.toLocaleString()}`,
+      message: `${user?.fullName} solicita compra: ${form.title} por RD$${totalAmount.toLocaleString()}. Requiere aprobación de ${approvalLevel}.`,
       relatedId: newReq.id,
-      forUserId: "USR-001", // Goes to GM
+      forUserId: "USR-001",
       actionUrl: "/solicitudes-compra",
     });
     setShowForm(false);
     setForm({ title: "", justification: "", department: user?.department || "", items: [{ name: "", description: "", quantity: 1, estimatedPrice: 0 }], quotationFiles: [] });
   };
 
-  const handleApprove = (req: PurchaseRequest) => {
-    setRequests(requests.map((r) => r.id === req.id ? { ...r, status: "Aprobada" as const, approvedBy: user?.fullName || "", approvedAt: new Date().toISOString() } : r));
-    addNotification({
-      type: "purchase",
-      title: "Solicitud Aprobada ✅",
-      message: `Tu solicitud "${req.title}" ha sido aprobada por ${user?.fullName}`,
-      relatedId: req.id,
-      forUserId: "USR-005",
-      actionUrl: "/solicitudes-compra",
-    });
-    setShowApproval(null);
-  };
+  const advanceStatus = (req: PurchaseRequest, approved: boolean) => {
+    let updates: Partial<PurchaseRequest> = {};
+    let newStatus = req.status;
 
-  const handleReject = (req: PurchaseRequest) => {
-    if (!rejectionReason) return;
-    setRequests(requests.map((r) => r.id === req.id ? { ...r, status: "Rechazada" as const, rejectionReason } : r));
-    addNotification({
-      type: "purchase",
-      title: "Solicitud Rechazada ❌",
-      message: `Tu solicitud "${req.title}" fue rechazada: ${rejectionReason}`,
-      relatedId: req.id,
-      forUserId: "USR-005",
-      actionUrl: "/solicitudes-compra",
-    });
-    setShowApproval(null);
+    if (!approved) {
+      newStatus = "Rechazada";
+      updates.rejectionReason = rejectionReason;
+      updates.rejectedBy = user?.fullName || "";
+      updates.rejectedAt = new Date().toISOString();
+      addNotification({
+        type: "purchase",
+        title: "Solicitud de Compra Rechazada ❌",
+        message: `Tu solicitud "${req.title}" fue rechazada por ${user?.fullName}: ${rejectionReason}`,
+        relatedId: req.id,
+        forUserId: "USR-005",
+        actionUrl: "/solicitudes-compra",
+      });
+    } else {
+      switch (req.status) {
+        case "Pendiente":
+          updates.managerApproval = { by: user?.fullName || "", at: new Date().toISOString(), approved: true };
+          if (req.approvalLevel === "Gerencia General") {
+            newStatus = "Pendiente GG";
+            addNotification({
+              type: "purchase",
+              title: "Aprobación de Jefe Directo ✅",
+              message: `Solicitud "${req.title}" aprobada por jefe directo. Pendiente aprobación de Gerencia General (monto: RD$${req.totalAmount.toLocaleString()}).`,
+              relatedId: req.id,
+              forUserId: "USR-001",
+              actionUrl: "/solicitudes-compra",
+            });
+          } else {
+            newStatus = "Aprobada Jefe";
+            addNotification({
+              type: "purchase",
+              title: "Solicitud Aprobada ✅",
+              message: `Tu solicitud "${req.title}" ha sido aprobada por ${user?.fullName}. Procede a gestión de compra.`,
+              relatedId: req.id,
+              forUserId: "USR-005",
+              actionUrl: "/solicitudes-compra",
+            });
+          }
+          break;
+        case "Pendiente GG":
+          newStatus = "Aprobada";
+          updates.gmApproval = { by: user?.fullName || "", at: new Date().toISOString(), approved: true };
+          addNotification({
+            type: "purchase",
+            title: "Aprobación Gerencia General ✅",
+            message: `Solicitud "${req.title}" aprobada por Gerencia General (RD$${req.totalAmount.toLocaleString()}). Procede a gestión de compra.`,
+            relatedId: req.id,
+            forUserId: "USR-005",
+            actionUrl: "/solicitudes-compra",
+          });
+          break;
+        case "Aprobada Jefe":
+        case "Aprobada":
+          newStatus = "En Proceso Compra";
+          updates.purchaseStartedAt = new Date().toISOString();
+          addNotification({
+            type: "purchase",
+            title: "Compra en Proceso 🛒",
+            message: `La compra "${req.title}" está siendo gestionada. Se notificará al completarse.`,
+            relatedId: req.id,
+            forUserId: "USR-005",
+            actionUrl: "/solicitudes-compra",
+          });
+          break;
+        case "En Proceso Compra":
+          newStatus = "Completada";
+          updates.completedAt = new Date().toISOString();
+          addNotification({
+            type: "purchase",
+            title: "Compra Completada ✅",
+            message: `La compra "${req.title}" ha sido completada y recibida. Tiempo total: ${getElapsedTime(req.requestedAt)}.`,
+            relatedId: req.id,
+            forUserId: "USR-005",
+            actionUrl: "/solicitudes-compra",
+          });
+          break;
+      }
+    }
+
+    setRequests(requests.map((r) => r.id === req.id ? { ...r, ...updates, status: newStatus } : r));
+    setShowAction(null);
     setRejectionReason("");
   };
 
+  const getActionLabel = (status: string) => {
+    switch (status) {
+      case "Pendiente": return "Aprobar (Jefe)";
+      case "Pendiente GG": return "Aprobar (GG)";
+      case "Aprobada Jefe":
+      case "Aprobada": return "Iniciar Compra";
+      case "En Proceso Compra": return "Marcar Completada";
+      default: return "Aprobar";
+    }
+  };
+
   const formatCurrency = (n: number) => `RD$${n.toLocaleString()}`;
+
+  // Time tracking data for a request
+  const getTimelineData = (req: PurchaseRequest) => {
+    const timeline: { label: string; from: string; to: string | null; elapsed: string }[] = [];
+    if (req.managerApproval?.at) {
+      timeline.push({ label: "Solicitud → Aprobación Jefe", from: req.requestedAt, to: req.managerApproval.at, elapsed: getElapsedTime(req.requestedAt, req.managerApproval.at) });
+    }
+    if (req.gmApproval?.at && req.managerApproval?.at) {
+      timeline.push({ label: "Aprobación Jefe → Aprobación GG", from: req.managerApproval.at, to: req.gmApproval.at, elapsed: getElapsedTime(req.managerApproval.at, req.gmApproval.at) });
+    }
+    if (req.purchaseStartedAt) {
+      const prevStep = req.gmApproval?.at || req.managerApproval?.at || req.requestedAt;
+      timeline.push({ label: "Aprobación → Inicio Compra", from: prevStep, to: req.purchaseStartedAt, elapsed: getElapsedTime(prevStep, req.purchaseStartedAt) });
+    }
+    if (req.completedAt && req.purchaseStartedAt) {
+      timeline.push({ label: "Compra → Completada", from: req.purchaseStartedAt, to: req.completedAt, elapsed: getElapsedTime(req.purchaseStartedAt, req.completedAt) });
+    }
+    if (req.rejectedAt) {
+      timeline.push({ label: "Solicitud → Rechazada", from: req.requestedAt, to: req.rejectedAt, elapsed: getElapsedTime(req.requestedAt, req.rejectedAt) });
+    }
+    return timeline;
+  };
 
   return (
     <AppLayout>
@@ -160,7 +292,7 @@ const PurchaseRequestsPage = () => {
                   <h1 className="font-heading font-bold text-2xl text-secondary-foreground">
                     Solicitudes de <span className="gold-accent-text">Compra</span>
                   </h1>
-                  <p className="text-muted-foreground text-sm mt-1">Gestión y aprobación de compras con cotizaciones</p>
+                  <p className="text-muted-foreground text-sm mt-1">Flujo: Solicitud → Jefe Directo → Gerencia General (si &gt;RD$50k) → Compra → Completada</p>
                 </div>
               </div>
               <button onClick={() => setShowForm(true)} className="btn-gold flex items-center gap-2">
@@ -172,12 +304,13 @@ const PurchaseRequestsPage = () => {
         </div>
 
         {/* Stats */}
-        <div className="px-6 py-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="px-6 py-4 grid grid-cols-2 md:grid-cols-5 gap-3">
           {[
             { label: "Total", value: visibleRequests.length },
-            { label: "Pendientes", value: visibleRequests.filter((r) => r.status === "Pendiente").length },
-            { label: "Aprobadas", value: visibleRequests.filter((r) => r.status === "Aprobada").length },
-            { label: "Rechazadas", value: visibleRequests.filter((r) => r.status === "Rechazada").length },
+            { label: "Pendientes", value: visibleRequests.filter((r) => r.status.startsWith("Pendiente")).length },
+            { label: "Aprobadas", value: visibleRequests.filter((r) => ["Aprobada Jefe", "Aprobada"].includes(r.status)).length },
+            { label: "En Proceso", value: visibleRequests.filter((r) => r.status === "En Proceso Compra").length },
+            { label: "Completadas", value: visibleRequests.filter((r) => r.status === "Completada").length },
           ].map((s) => (
             <div key={s.label} className="bg-card rounded-lg p-4 border border-border">
               <p className="text-xs text-muted-foreground">{s.label}</p>
@@ -188,56 +321,92 @@ const PurchaseRequestsPage = () => {
 
         {/* List */}
         <div className="px-6 pb-8 space-y-3">
-          {visibleRequests.map((req) => (
-            <div key={req.id} className="bg-card rounded-lg border border-border overflow-hidden hover:shadow-md transition-shadow">
-              <div className="h-1 w-full bg-secondary" />
-              <div className="p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-mono text-muted-foreground">{req.id}</span>
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusColors[req.status]}`}>{req.status}</span>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{req.approvalLevel}</span>
-                    </div>
-                    <h3 className="font-heading font-bold text-card-foreground">{req.title}</h3>
-                    <p className="text-sm text-muted-foreground mt-1">{req.department} · {req.requestedBy} · {new Date(req.requestedAt).toLocaleDateString()}</p>
-                    <div className="flex items-center gap-4 mt-2">
-                      <span className="text-lg font-heading font-bold gold-accent-text">{formatCurrency(req.totalAmount)}</span>
-                      <span className="text-xs text-muted-foreground">{req.items.length} artículo(s)</span>
-                      {req.quotationFiles.length > 0 && (
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <FileText className="h-3 w-3" /> {req.quotationFiles.length} cotización(es)
+          {visibleRequests.map((req) => {
+            const steps = getStepsForRequest(req);
+            const currentIdx = getStepIndex(req);
+            const isTerminal = req.status === "Completada" || req.status === "Rechazada";
+            const totalElapsed = getElapsedTime(req.requestedAt, req.completedAt || req.rejectedAt);
+
+            return (
+              <div key={req.id} className="bg-card rounded-lg border border-border overflow-hidden hover:shadow-md transition-shadow">
+                <div className={`h-1 w-full ${req.status === "Rechazada" ? "bg-destructive" : req.status === "Completada" ? "bg-emerald-500" : "bg-secondary"}`} />
+                <div className="p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="text-xs font-mono text-muted-foreground">{req.id}</span>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusColors[req.status]}`}>
+                          {PURCHASE_STEP_LABELS[req.status]}
                         </span>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{req.approvalLevel}</span>
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Timer className="h-3 w-3" />
+                          {isTerminal ? `Total: ${totalElapsed}` : `En curso: ${totalElapsed}`}
+                        </span>
+                      </div>
+                      <h3 className="font-heading font-bold text-card-foreground">{req.title}</h3>
+                      <p className="text-sm text-muted-foreground mt-1">{req.department} · {req.requestedBy} · {new Date(req.requestedAt).toLocaleDateString()}</p>
+                      <div className="flex items-center gap-4 mt-2">
+                        <span className="text-lg font-heading font-bold gold-accent-text">{formatCurrency(req.totalAmount)}</span>
+                        <span className="text-xs text-muted-foreground">{req.items.length} artículo(s)</span>
+                        {req.quotationFiles.length > 0 && (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <FileText className="h-3 w-3" /> {req.quotationFiles.length} cotización(es)
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Progress bar */}
+                      {req.status !== "Rechazada" && (
+                        <div className="mt-3">
+                          <div className="flex items-center gap-1">
+                            {steps.map((step, i) => {
+                              const isReached = i <= currentIdx;
+                              return (
+                                <div key={step} className="flex items-center gap-1 flex-1">
+                                  <div className={`h-1.5 flex-1 rounded-full transition-colors ${isReached ? "bg-gold" : "bg-border"}`} />
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="flex justify-between mt-1">
+                            {steps.map((step, i) => (
+                              <span key={step} className={`text-[9px] ${i <= currentIdx ? "text-gold font-semibold" : "text-muted-foreground"}`}>
+                                {PURCHASE_STEP_LABELS[step].split(" ").slice(0, 2).join(" ")}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      <button onClick={() => setSelected(req)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-card-foreground transition-colors" title="Ver detalle">
+                        <Eye className="h-4 w-4" />
+                      </button>
+                      {!isTerminal && user?.isAdmin && (
+                        <button onClick={() => setShowAction(req)} className="p-2 rounded-lg hover:bg-emerald-50 text-muted-foreground hover:text-emerald-700 transition-colors" title="Gestionar">
+                          <ArrowRight className="h-4 w-4" />
+                        </button>
+                      )}
+                      {user?.isAdmin && (
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`¿Eliminar solicitud ${req.id}: "${req.title}"?`)) {
+                              setRequests((prev) => prev.filter((r) => r.id !== req.id));
+                            }
+                          }}
+                          className="p-2 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       )}
                     </div>
                   </div>
-                  <div className="flex gap-2 shrink-0">
-                    <button onClick={() => setSelected(req)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-card-foreground transition-colors" title="Ver detalle">
-                      <Eye className="h-4 w-4" />
-                    </button>
-                    {req.status === "Pendiente" && user?.isAdmin && (
-                      <button onClick={() => setShowApproval(req)} className="p-2 rounded-lg hover:bg-emerald-50 text-muted-foreground hover:text-emerald-700 transition-colors" title="Aprobar/Rechazar">
-                        <Check className="h-4 w-4" />
-                      </button>
-                    )}
-                    {user?.isAdmin && (
-                      <button
-                        onClick={() => {
-                          if (window.confirm(`¿Eliminar solicitud ${req.id}: "${req.title}"?`)) {
-                            setRequests((prev) => prev.filter((r) => r.id !== req.id));
-                          }
-                        }}
-                        className="p-2 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
-                        title="Eliminar"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Detail Modal */}
@@ -254,11 +423,12 @@ const PurchaseRequestsPage = () => {
                     ["Departamento", selected.department],
                     ["Solicitado por", selected.requestedBy],
                     ["Fecha", new Date(selected.requestedAt).toLocaleDateString()],
-                    ["Estado", selected.status],
+                    ["Estado", PURCHASE_STEP_LABELS[selected.status]],
                     ["Nivel Aprobación", selected.approvalLevel],
                     ["Total", formatCurrency(selected.totalAmount)],
-                    ...(selected.approvedBy ? [["Aprobado por", selected.approvedBy]] : []),
-                    ...(selected.rejectionReason ? [["Motivo Rechazo", selected.rejectionReason]] : []),
+                    ...(selected.managerApproval ? [["Aprobado Jefe", `${selected.managerApproval.by} — ${new Date(selected.managerApproval.at).toLocaleDateString()}`]] : []),
+                    ...(selected.gmApproval ? [["Aprobado GG", `${selected.gmApproval.by} — ${new Date(selected.gmApproval.at).toLocaleDateString()}`]] : []),
+                    ...(selected.rejectionReason ? [["Motivo Rechazo", `${selected.rejectedBy}: ${selected.rejectionReason}`]] : []),
                   ].map(([label, val]) => (
                     <div key={label} className="bg-muted rounded-lg p-3">
                       <span className="text-xs text-muted-foreground block">{label}</span>
@@ -266,6 +436,30 @@ const PurchaseRequestsPage = () => {
                     </div>
                   ))}
                 </div>
+
+                {/* Time tracking */}
+                {getTimelineData(selected).length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-card-foreground mb-2 flex items-center gap-2">
+                      <Timer className="h-4 w-4 text-gold" /> Tiempos del Proceso
+                    </h4>
+                    <div className="space-y-2">
+                      {getTimelineData(selected).map((t, i) => (
+                        <div key={i} className="flex items-center justify-between bg-muted rounded-lg p-3 text-sm">
+                          <span className="text-muted-foreground">{t.label}</span>
+                          <span className="font-heading font-bold text-card-foreground">{t.elapsed}</span>
+                        </div>
+                      ))}
+                      <div className="flex items-center justify-between bg-gold/10 rounded-lg p-3 text-sm border border-gold/20">
+                        <span className="font-medium text-card-foreground">Tiempo Total</span>
+                        <span className="font-heading font-bold gold-accent-text">
+                          {getElapsedTime(selected.requestedAt, selected.completedAt || selected.rejectedAt)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <h4 className="text-sm font-medium text-card-foreground mb-2">Justificación</h4>
                   <p className="text-sm text-muted-foreground bg-muted rounded-lg p-3">{selected.justification}</p>
@@ -302,37 +496,50 @@ const PurchaseRequestsPage = () => {
           </div>
         )}
 
-        {/* Approval Modal */}
-        {showApproval && (
+        {/* Action Modal */}
+        {showAction && (
           <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
             <div className="bg-card rounded-xl w-full max-w-md shadow-2xl">
               <div className="flex items-center justify-between p-5 border-b border-border">
-                <h2 className="font-heading font-bold text-lg text-card-foreground">Aprobar / Rechazar</h2>
-                <button onClick={() => { setShowApproval(null); setRejectionReason(""); }} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
+                <h2 className="font-heading font-bold text-lg text-card-foreground">Gestionar Solicitud</h2>
+                <button onClick={() => { setShowAction(null); setRejectionReason(""); }} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
               </div>
               <div className="p-5 space-y-4">
                 <div className="bg-muted rounded-lg p-4">
-                  <h3 className="font-heading font-bold text-card-foreground">{showApproval.title}</h3>
-                  <p className="text-sm text-muted-foreground mt-1">{showApproval.department} · {showApproval.requestedBy}</p>
-                  <p className="text-xl font-heading font-bold gold-accent-text mt-2">{formatCurrency(showApproval.totalAmount)}</p>
+                  <h3 className="font-heading font-bold text-card-foreground">{showAction.title}</h3>
+                  <p className="text-sm text-muted-foreground mt-1">{showAction.department} · {showAction.requestedBy}</p>
+                  <p className="text-xl font-heading font-bold gold-accent-text mt-2">{formatCurrency(showAction.totalAmount)}</p>
+                  <p className="text-sm font-medium mt-2">
+                    Estado actual: <span className={`px-2 py-0.5 rounded-full text-xs ${statusColors[showAction.status]}`}>{PURCHASE_STEP_LABELS[showAction.status]}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                    <Timer className="h-3 w-3" /> En este paso: {getElapsedTime(
+                      showAction.gmApproval?.at || showAction.managerApproval?.at || showAction.requestedAt
+                    )}
+                  </p>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Motivo de rechazo (si aplica)</label>
-                  <textarea
-                    value={rejectionReason}
-                    onChange={(e) => setRejectionReason(e.target.value)}
-                    rows={3}
-                    className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none resize-none"
-                    placeholder="Solo requerido si rechaza la solicitud..."
-                  />
-                </div>
+
+                {(showAction.status === "Pendiente" || showAction.status === "Pendiente GG") && (
+                  <div>
+                    <label className="text-sm font-medium text-card-foreground block mb-1.5">Motivo de rechazo (si aplica)</label>
+                    <textarea
+                      value={rejectionReason}
+                      onChange={(e) => setRejectionReason(e.target.value)}
+                      rows={3}
+                      className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none resize-none"
+                      placeholder="Solo requerido si rechaza la solicitud..."
+                    />
+                  </div>
+                )}
               </div>
               <div className="p-5 border-t border-border flex gap-3 justify-end">
-                <button onClick={() => handleReject(showApproval)} className="px-5 py-2.5 rounded-lg text-sm font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors flex items-center gap-2">
-                  <XCircle className="h-4 w-4" /> Rechazar
-                </button>
-                <button onClick={() => handleApprove(showApproval)} className="btn-gold text-sm flex items-center gap-2">
-                  <Check className="h-4 w-4" /> Aprobar
+                {(showAction.status === "Pendiente" || showAction.status === "Pendiente GG") && (
+                  <button onClick={() => advanceStatus(showAction, false)} className="px-5 py-2.5 rounded-lg text-sm font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors flex items-center gap-2">
+                    <XCircle className="h-4 w-4" /> Rechazar
+                  </button>
+                )}
+                <button onClick={() => advanceStatus(showAction, true)} className="btn-gold text-sm flex items-center gap-2">
+                  <Check className="h-4 w-4" /> {getActionLabel(showAction.status)}
                 </button>
               </div>
             </div>
