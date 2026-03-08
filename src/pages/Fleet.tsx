@@ -58,10 +58,26 @@ const FleetPage = () => {
                 </h1>
                 <p className="text-muted-foreground text-sm mt-1">Inventario y asignación de vehículos</p>
               </div>
-              <button onClick={() => setShowAdd(true)} className="btn-gold flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Agregar Vehículo
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setShowAdd(true)} className="btn-gold flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Agregar Vehículo
+                </button>
+                <ExportMenu
+                  title="Flotilla Vehicular SafeOne"
+                  columns={[
+                    { header: "Placa", key: "plate", width: 12 },
+                    { header: "Marca", key: "brand", width: 14 },
+                    { header: "Modelo", key: "model", width: 14 },
+                    { header: "Año", key: "year", width: 8 },
+                    { header: "Estado", key: "status", width: 14 },
+                    { header: "Asignado a", key: "assignedTo", width: 20 },
+                    { header: "Kilometraje", key: "mileage", width: 14 },
+                  ]}
+                  data={vehicles.map((v) => ({ ...v, assignedTo: v.assignedTo || "—" }))}
+                  filename="flotilla-safeone"
+                />
+              </div>
             </div>
           </div>
         </div>

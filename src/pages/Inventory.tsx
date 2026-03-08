@@ -3,6 +3,7 @@ import AppLayout from "@/components/AppLayout";
 import { mockEquipment } from "@/lib/mockData";
 import type { Equipment, EquipmentStatus, EquipmentType } from "@/lib/types";
 import { Search, Plus, Monitor, Printer, Cpu, Wifi, Package, X } from "lucide-react";
+import ExportMenu from "@/components/ExportMenu";
 
 const typeIcons: Record<EquipmentType, typeof Monitor> = {
   Computadora: Cpu,
