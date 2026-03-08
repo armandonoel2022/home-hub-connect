@@ -1,5 +1,5 @@
 import logo from "@/assets/safeone-logo.png";
-import { Bell, Search, User, Menu, X } from "lucide-react";
+import { Bell, User, Menu, X } from "lucide-react";
 import { useState } from "react";
 
 const Navbar = () => {
