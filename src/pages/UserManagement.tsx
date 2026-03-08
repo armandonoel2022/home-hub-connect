@@ -5,6 +5,8 @@ import { DEPARTMENTS } from "@/lib/types";
 import type { IntranetUser } from "@/lib/types";
 import { Plus, X, Search, Pencil, Trash2, User, Shield, Mail, Building2, Phone, Upload, Image } from "lucide-react";
 import { Navigate } from "react-router-dom";
+import RegistrationRequests from "@/components/RegistrationRequests";
+import ExportMenu from "@/components/ExportMenu";
 
 const emptyForm = (): Partial<IntranetUser> => ({
   fullName: "",
@@ -155,6 +157,19 @@ const UserManagementPage = () => {
                 <Plus className="h-4 w-4" />
                 Nuevo Usuario
               </button>
+              <ExportMenu
+                title="Usuarios SafeOne"
+                columns={[
+                  { header: "Nombre", key: "fullName", width: 22 },
+                  { header: "Ext.", key: "extension", width: 8 },
+                  { header: "Correo", key: "email", width: 28 },
+                  { header: "Departamento", key: "department", width: 22 },
+                  { header: "Cargo", key: "position", width: 22 },
+                  { header: "Rol", key: "role", width: 12 },
+                ]}
+                data={allUsers.map((u) => ({ ...u, role: u.isAdmin ? "Admin" : u.isDepartmentLeader ? "Líder" : "Usuario" }))}
+                filename="usuarios-safeone"
+              />
             </div>
           </div>
         </div>
@@ -186,6 +201,11 @@ const UserManagementPage = () => {
               <p className="text-2xl font-heading font-bold text-card-foreground">{s.value}</p>
             </div>
           ))}
+        </div>
+
+        {/* Registration Requests */}
+        <div className="px-6 pb-4">
+          <RegistrationRequests />
         </div>
 
         {/* User Table */}

@@ -29,6 +29,7 @@ import Surveys from "./pages/Surveys";
 import Wiki from "./pages/Wiki";
 import TaskInbox from "./pages/TaskInbox";
 import LoginPage from "./pages/Login";
+import RegisterPage from "./pages/Register";
 import NotFound from "./pages/NotFound";
 import type { IntranetUser } from "./lib/types";
 
@@ -105,6 +106,7 @@ const App = () => {
               <ChatProvider>
                 <Routes>
                   <Route path="/login" element={<LoginPage />} />
+                  <Route path="/registro" element={<RegisterPage />} />
                   <Route path="/*" element={<ProtectedRoutes />} />
                 </Routes>
                 <ChatWindow />

@@ -28,6 +28,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
+import GlobalSearch from "@/components/GlobalSearch";
 
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
@@ -159,6 +160,13 @@ const AppSidebar = () => {
               ))
             )}
           </div>
+        </div>
+      )}
+
+      {/* Search */}
+      {!collapsed && (
+        <div className="px-2 pb-2">
+          <GlobalSearch />
         </div>
       )}
 

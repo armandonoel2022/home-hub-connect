@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import logo from "@/assets/safeone-logo.png";
 import { Lock, User, LogIn } from "lucide-react";
@@ -82,7 +82,11 @@ const LoginPage = () => {
             {loading ? "Ingresando..." : "Ingresar"}
           </button>
 
-          <p className="text-xs text-muted-foreground text-center mt-4">
+          <p className="text-xs text-muted-foreground text-center mt-3">
+            ¿No tienes cuenta?{" "}
+            <Link to="/registro" className="gold-accent-text hover:underline font-medium">Solicitar Acceso</Link>
+          </p>
+          <p className="text-xs text-muted-foreground text-center mt-2">
             Demo: <strong>tecnologia@safeone.com.do</strong> o <strong>anoel@safeone.com.do</strong><br />
             Contraseña: <strong>safeone</strong>
           </p>
