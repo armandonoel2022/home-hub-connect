@@ -51,7 +51,7 @@ interface Survey {
   deleteReason?: string;
 }
 
-const HR_MANAGER_EMAIL = "dilia.aguasvivas@safeone.com.do";
+// HR leader is determined by isDepartmentLeader flag — inheritable when role changes
 
 const INITIAL_SURVEYS: Survey[] = [
   {
