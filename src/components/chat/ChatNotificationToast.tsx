@@ -1,10 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useChatContext } from "@/contexts/ChatContext";
 import { MessageSquare, Vibrate, X } from "lucide-react";
+import { sendBrowserNotification, requestNotificationPermission } from "@/lib/windowsNotifications";
 
 const ChatNotificationToast = () => {
   const { notifications, dismissNotification, setIsChatOpen } = useChatContext();
   const [buzzAnimation, setBuzzAnimation] = useState<string | null>(null);
+  const seenIds = useRef<Set<string>>(new Set());
+
+  // Request permission on mount
+  useEffect(() => {
+    requestNotificationPermission();
+  }, []);
 
   useEffect(() => {
     const buzzNotif = notifications.find((n) => n.type === "buzz");
@@ -14,6 +21,23 @@ const ChatNotificationToast = () => {
       return () => clearTimeout(timer);
     }
   }, [notifications]);
+
+  // Send browser notification for new chat notifications
+  useEffect(() => {
+    notifications.forEach((n) => {
+      if (!seenIds.current.has(n.id)) {
+        seenIds.current.add(n.id);
+        const title = n.type === "buzz" ? `🔔 ${n.senderName}` : `💬 ${n.senderName}`;
+        sendBrowserNotification(title, n.message, {
+          tag: n.id,
+          onClick: () => {
+            setIsChatOpen(true);
+            dismissNotification(n.id);
+          },
+        });
+      }
+    });
+  }, [notifications, setIsChatOpen, dismissNotification]);
 
   // Auto-dismiss after 6s
   useEffect(() => {
