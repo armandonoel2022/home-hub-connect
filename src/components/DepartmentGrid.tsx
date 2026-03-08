@@ -145,6 +145,10 @@ const DEPT_MULTI_ROUTES: Record<string, { label: string; route: string; icon: an
     { label: "Tecnología", route: "/tickets", icon: Settings },
     { label: "Monitoreo", route: "/monitoreo", icon: Monitor },
   ],
+  "Operaciones": [
+    { label: "Personal Armado", route: "/operaciones", icon: Shield },
+    { label: "Centro de Operaciones", route: "/centro-operaciones", icon: Users },
+  ],
 };
 
 const DepartmentGrid = () => {

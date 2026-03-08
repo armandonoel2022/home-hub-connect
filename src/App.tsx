@@ -31,6 +31,7 @@ import Surveys from "./pages/Surveys";
 import Wiki from "./pages/Wiki";
 import TaskInbox from "./pages/TaskInbox";
 import MonitoringCenter from "./pages/MonitoringCenter";
+import OperationsCenter from "./pages/OperationsCenter";
 import LoginPage from "./pages/Login";
 import RegisterPage from "./pages/Register";
 import NotFound from "./pages/NotFound";
@@ -86,6 +87,7 @@ function ProtectedRoutes() {
         <Route path="/solicitudes-personal" element={<HiringRequests />} />
         <Route path="/rrhh/formularios" element={<HRForms />} />
         <Route path="/monitoreo" element={<MonitoringCenter />} />
+        <Route path="/centro-operaciones" element={<OperationsCenter />} />
         <Route path="/basc" element={<BASC />} />
         <Route path="/archivos" element={<SharedFiles />} />
         <Route path="/procedimientos" element={<Procedures />} />
