@@ -159,13 +159,46 @@ export const DEPARTMENTS = [
 ];
 
 // ─── Purchase Requests ───
-export type PurchaseRequestStatus = "Pendiente" | "Aprobada" | "Rechazada" | "En Revisión";
+export type PurchaseRequestStatus =
+  | "Pendiente"
+  | "Aprobada Jefe"
+  | "Pendiente GG"
+  | "Aprobada"
+  | "En Proceso Compra"
+  | "Completada"
+  | "Rechazada";
+
+export const PURCHASE_STEPS: PurchaseRequestStatus[] = [
+  "Pendiente",
+  "Aprobada Jefe",
+  "Pendiente GG",
+  "Aprobada",
+  "En Proceso Compra",
+  "Completada",
+];
+
+export const PURCHASE_STEP_LABELS: Record<string, string> = {
+  "Pendiente": "Solicitud Enviada",
+  "Aprobada Jefe": "Aprobada por Jefe",
+  "Pendiente GG": "Pendiente Gerencia General",
+  "Aprobada": "Aprobada",
+  "En Proceso Compra": "En Proceso de Compra",
+  "Completada": "Completada",
+  "Rechazada": "Rechazada",
+};
 
 export interface PurchaseItem {
   name: string;
   description: string;
   quantity: number;
   estimatedPrice: number;
+}
+
+export interface ApprovalStep {
+  by: string;
+  at: string;
+  approved: boolean;
+  comment?: string;
 }
 
 export interface PurchaseRequest {
@@ -179,10 +212,15 @@ export interface PurchaseRequest {
   requestedAt: string;
   status: PurchaseRequestStatus;
   approvalLevel: "Jefe Directo" | "Gerencia General";
-  approvedBy: string | null;
-  approvedAt: string | null;
+  // Step tracking
+  managerApproval: ApprovalStep | null;
+  gmApproval: ApprovalStep | null;
+  purchaseStartedAt: string | null;
+  completedAt: string | null;
   rejectionReason: string | null;
-  quotationFiles: string[]; // file names
+  rejectedBy: string | null;
+  rejectedAt: string | null;
+  quotationFiles: string[];
   notes: string;
 }
 
