@@ -2,7 +2,7 @@ import { useState } from "react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { DEPARTMENTS } from "@/lib/types";
-import { ClipboardList, Plus, X, BarChart3, Eye, Send, Check, Users } from "lucide-react";
+import { ClipboardList, Plus, X, BarChart3, Eye, Send, Check, Users, Lock, UserPlus, EyeOff } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 
 const COLORS = ["hsl(42,100%,50%)", "hsl(200,70%,50%)", "hsl(160,60%,40%)", "hsl(0,60%,50%)", "hsl(280,50%,50%)"];
@@ -34,7 +34,11 @@ interface Survey {
   targetDept?: string;
   status: "activa" | "cerrada";
   responses: SurveyResponse[];
+  // Results visibility: HR manager controls who can see results
+  resultsVisibleTo: string[]; // user IDs allowed to see results (besides HR manager)
 }
+
+const HR_MANAGER_EMAIL = "dilia.aguasvivas@safeone.com.do";
 
 const INITIAL_SURVEYS: Survey[] = [
   {
@@ -55,6 +59,7 @@ const INITIAL_SURVEYS: Survey[] = [
       { surveyId: "SRV-001", userId: "USR-005", userName: "Remit López", department: "Operaciones", answers: { q1: 3, q2: "Casi siempre", q3: "Mejor comunicación inter-departamental" }, submittedAt: "2026-03-04" },
       { surveyId: "SRV-001", userId: "USR-112", userName: "Perla González", department: "Servicio al Cliente", answers: { q1: 5, q2: "Siempre", q3: "Todo bien" }, submittedAt: "2026-03-05" },
     ],
+    resultsVisibleTo: [],
   },
 ];
 
@@ -64,6 +69,7 @@ const SurveysPage = () => {
   const [showCreate, setShowCreate] = useState(false);
   const [showResults, setShowResults] = useState<Survey | null>(null);
   const [showRespond, setShowRespond] = useState<Survey | null>(null);
+  const [showVisibility, setShowVisibility] = useState<Survey | null>(null);
   const [answers, setAnswers] = useState<Record<string, string | number>>({});
 
   const [form, setForm] = useState({
@@ -74,7 +80,15 @@ const SurveysPage = () => {
     questions: [{ id: "nq1", text: "", type: "rating" as SurveyQuestion["type"], options: [""] }],
   });
 
+  const isHRManager = user?.email === HR_MANAGER_EMAIL;
   const isHR = user?.department === "Recursos Humanos" || user?.isAdmin;
+
+  // Can see results: HR Manager, or users explicitly granted by her
+  const canSeeResults = (survey: Survey) => {
+    if (!user) return false;
+    if (isHRManager) return true;
+    return survey.resultsVisibleTo.includes(user.id);
+  };
 
   const visibleSurveys = surveys.filter((s) => {
     if (!user) return false;
@@ -99,6 +113,7 @@ const SurveysPage = () => {
       targetDept: form.targetType === "departamento" ? form.targetDept : undefined,
       status: "activa",
       responses: [],
+      resultsVisibleTo: [],
     };
     setSurveys([newSurvey, ...surveys]);
     setShowCreate(false);
@@ -120,6 +135,16 @@ const SurveysPage = () => {
     setAnswers({});
   };
 
+  const toggleResultsVisibility = (surveyId: string, userId: string) => {
+    setSurveys(surveys.map((s) => {
+      if (s.id !== surveyId) return s;
+      const visible = s.resultsVisibleTo.includes(userId)
+        ? s.resultsVisibleTo.filter((id) => id !== userId)
+        : [...s.resultsVisibleTo, userId];
+      return { ...s, resultsVisibleTo: visible };
+    }));
+  };
+
   const addQuestion = () => {
     setForm({ ...form, questions: [...form.questions, { id: `nq${form.questions.length + 1}`, text: "", type: "rating", options: [""] }] });
   };
@@ -130,19 +155,20 @@ const SurveysPage = () => {
     setForm({ ...form, questions: qs });
   };
 
-  // Results calculations
   const getResultsData = (survey: Survey, questionId: string) => {
     const q = survey.questions.find((q) => q.id === questionId);
     if (!q) return [];
     if (q.type === "rating") {
-      const counts = [1, 2, 3, 4, 5].map((r) => ({ name: `${r}⭐`, value: survey.responses.filter((resp) => Number(resp.answers[questionId]) === r).length }));
-      return counts;
+      return [1, 2, 3, 4, 5].map((r) => ({ name: `${r}⭐`, value: survey.responses.filter((resp) => Number(resp.answers[questionId]) === r).length }));
     }
     if (q.type === "multiple" && q.options) {
       return q.options.map((opt) => ({ name: opt, value: survey.responses.filter((resp) => resp.answers[questionId] === opt).length }));
     }
     return [];
   };
+
+  // Get HR department users for visibility management
+  const hrUsers = allUsers.filter((u) => u.department === "Recursos Humanos" && u.email !== HR_MANAGER_EMAIL);
 
   return (
     <AppLayout>
@@ -192,17 +218,24 @@ const SurveysPage = () => {
                     </div>
                   </div>
                   <div className="flex gap-2 shrink-0">
-                    {isHR && (
+                    {/* Only HR Manager and granted users can see results */}
+                    {canSeeResults(s) && (
                       <button onClick={() => setShowResults(s)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-card-foreground transition-colors" title="Ver resultados">
                         <BarChart3 className="h-4 w-4" />
                       </button>
                     )}
-                    {s.status === "activa" && !hasResponded(s) && !isHR && (
+                    {/* HR Manager can manage visibility */}
+                    {isHRManager && (
+                      <button onClick={() => setShowVisibility(s)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-card-foreground transition-colors" title="Gestionar visibilidad de resultados">
+                        <Lock className="h-4 w-4" />
+                      </button>
+                    )}
+                    {s.status === "activa" && !hasResponded(s) && (
                       <button onClick={() => { setShowRespond(s); setAnswers({}); }} className="btn-gold text-xs flex items-center gap-1">
                         <Send className="h-3 w-3" /> Responder
                       </button>
                     )}
-                    {hasResponded(s) && !isHR && (
+                    {hasResponded(s) && (
                       <span className="text-xs text-emerald-600 flex items-center gap-1"><Check className="h-3 w-3" /> Respondida</span>
                     )}
                   </div>
@@ -264,13 +297,16 @@ const SurveysPage = () => {
         )}
 
         {/* Results Modal */}
-        {showResults && (
+        {showResults && canSeeResults(showResults) && (
           <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
             <div className="bg-card rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
               <div className="flex items-center justify-between p-5 border-b border-border">
                 <div>
                   <h2 className="font-heading font-bold text-lg text-card-foreground">Resultados: {showResults.title}</h2>
-                  <p className="text-xs text-muted-foreground">{showResults.responses.length} respuestas</p>
+                  <p className="text-xs text-muted-foreground flex items-center gap-2">
+                    {showResults.responses.length} respuestas
+                    <span className="flex items-center gap-1 text-amber-600"><Lock className="h-3 w-3" /> Solo visible para personal autorizado</span>
+                  </p>
                 </div>
                 <button onClick={() => setShowResults(null)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
               </div>
@@ -310,6 +346,56 @@ const SurveysPage = () => {
               </div>
               <div className="p-5 border-t border-border flex justify-end">
                 <button onClick={() => setShowResults(null)} className="btn-gold text-sm">Cerrar</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Visibility Management Modal - Only HR Manager */}
+        {showVisibility && isHRManager && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-card rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
+              <div className="flex items-center justify-between p-5 border-b border-border">
+                <div>
+                  <h2 className="font-heading font-bold text-lg text-card-foreground">Visibilidad de Resultados</h2>
+                  <p className="text-xs text-muted-foreground">{showVisibility.title}</p>
+                </div>
+                <button onClick={() => setShowVisibility(null)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
+              </div>
+              <div className="p-5">
+                <p className="text-sm text-muted-foreground mb-4">
+                  <Lock className="h-4 w-4 inline mr-1" />
+                  Usted siempre tiene acceso. Seleccione a quién más desea otorgar visibilidad de los resultados:
+                </p>
+                <div className="space-y-2">
+                  {/* HR team members */}
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-2 mb-1">Personal de RRHH</p>
+                  {hrUsers.map((u) => (
+                    <label key={u.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted cursor-pointer transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={showVisibility.resultsVisibleTo.includes(u.id)}
+                        onChange={() => toggleResultsVisibility(showVisibility.id, u.id)}
+                        className="rounded"
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-card-foreground">{u.fullName}</p>
+                        <p className="text-xs text-muted-foreground">{u.position}</p>
+                      </div>
+                      {showVisibility.resultsVisibleTo.includes(u.id) ? (
+                        <Eye className="h-4 w-4 text-emerald-500" />
+                      ) : (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </label>
+                  ))}
+                  {hrUsers.length === 0 && (
+                    <p className="text-sm text-muted-foreground py-2">No hay otros miembros en RRHH registrados.</p>
+                  )}
+                </div>
+              </div>
+              <div className="p-5 border-t border-border flex justify-end">
+                <button onClick={() => setShowVisibility(null)} className="btn-gold text-sm">Listo</button>
               </div>
             </div>
           </div>
