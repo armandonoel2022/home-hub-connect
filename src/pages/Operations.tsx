@@ -316,7 +316,7 @@ const OperationsPage = () => {
           <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
             <div className="bg-card rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
               <div className="flex items-center justify-between p-5 border-b border-border">
-                <h2 className="font-heading font-bold text-lg text-card-foreground">Registrar Personal Armado</h2>
+                <h2 className="font-heading font-bold text-lg text-card-foreground">{editingId ? "Editar Personal Armado" : "Registrar Personal Armado"}</h2>
                 <button onClick={() => { setShowAdd(false); setPhotoPreview(""); }} className="p-1 hover:bg-muted rounded-lg">
                   <X className="h-5 w-5 text-muted-foreground" />
                 </button>
