@@ -122,6 +122,21 @@ const PhoneFleetPage = () => {
                       <td className="px-4 py-3">{p.assignedTo || "—"}</td>
                       <td className="px-4 py-3">{p.department || "—"}</td>
                       <td className="px-4 py-3 text-muted-foreground">{p.acquisitionDate}</td>
+                      {user?.isAdmin && (
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`¿Eliminar dispositivo ${p.id}: ${p.brand} ${p.model}?`)) {
+                                setPhones((prev) => prev.filter((ph) => ph.id !== p.id));
+                              }
+                            }}
+                            className="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
+                            title="Eliminar"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

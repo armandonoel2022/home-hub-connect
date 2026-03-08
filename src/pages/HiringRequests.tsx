@@ -258,6 +258,19 @@ const HiringRequestsPage = () => {
                         <ArrowRight className="h-4 w-4" />
                       </button>
                     )}
+                    {user?.isAdmin && (
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`¿Eliminar solicitud ${req.id}: "${req.positionTitle}"?`)) {
+                            setRequests((prev) => prev.filter((r) => r.id !== req.id));
+                          }
+                        }}
+                        className="p-2 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
+                        title="Eliminar"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

@@ -183,6 +183,22 @@ const OperationsPage = () => {
                     <span className="font-mono text-card-foreground">{p.fleetPhone || "—"}</span>
                   </div>
                 </div>
+                {user?.isAdmin && (
+                  <div className="mt-3 pt-3 border-t border-border flex justify-end">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (window.confirm(`¿Eliminar registro de ${p.name}?`)) {
+                          setPersonnel((prev) => prev.filter((per) => per.id !== p.id));
+                        }
+                      }}
+                      className="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors text-xs flex items-center gap-1"
+                      title="Eliminar"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" /> Eliminar
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))}

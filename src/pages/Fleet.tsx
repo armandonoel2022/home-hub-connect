@@ -129,6 +129,21 @@ const FleetPage = () => {
                     </div>
                   ))}
                 </div>
+                {user?.isAdmin && (
+                  <div className="pt-3 border-t border-border flex justify-end">
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`¿Eliminar vehículo ${v.plate}: ${v.brand} ${v.model}?`)) {
+                          setVehicles((prev) => prev.filter((veh) => veh.id !== v.id));
+                        }
+                      }}
+                      className="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors text-xs flex items-center gap-1"
+                      title="Eliminar"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" /> Eliminar
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))}
