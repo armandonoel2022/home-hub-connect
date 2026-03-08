@@ -503,6 +503,77 @@ const DepartmentGrid = () => {
           </div>
         );
       })()}
+
+      {/* Offboarding Modal */}
+      {showOffboarding && (() => {
+        const target = allUsers.find((u) => u.id === showOffboarding);
+        if (!target) return null;
+        return (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-card rounded-xl w-full max-w-md shadow-2xl">
+              <div className="flex items-center justify-between p-5 border-b border-border">
+                <h2 className="font-heading font-bold text-lg text-card-foreground flex items-center gap-2">
+                  <UserMinus className="h-5 w-5 text-destructive" />
+                  Dar de Baja
+                </h2>
+                <button onClick={() => setShowOffboarding(null)} className="p-1 hover:bg-muted rounded-lg">
+                  <X className="h-5 w-5 text-muted-foreground" />
+                </button>
+              </div>
+              <div className="p-5 space-y-4">
+                <div className="flex items-center gap-3 bg-muted rounded-lg p-3">
+                  <div className="w-10 h-10 rounded-full bg-background flex items-center justify-center overflow-hidden shrink-0">
+                    {target.photoUrl ? <img src={target.photoUrl} alt="" className="w-full h-full object-cover" /> : <User className="h-5 w-5 text-muted-foreground" />}
+                  </div>
+                  <div>
+                    <p className="font-medium text-card-foreground text-sm">{target.fullName}</p>
+                    <p className="text-xs text-muted-foreground">{target.position} — {target.department}</p>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Motivo *</label>
+                  <select
+                    value={offboardReason}
+                    onChange={(e) => setOffboardReason(e.target.value as OffboardingReason)}
+                    className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none"
+                  >
+                    <option value="Renuncia">Renuncia</option>
+                    <option value="Despido">Despido</option>
+                    <option value="Fin de Contrato">Fin de Contrato</option>
+                    <option value="Otro">Otro</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Notas</label>
+                  <textarea
+                    value={offboardNotes}
+                    onChange={(e) => setOffboardNotes(e.target.value)}
+                    placeholder="Detalles adicionales sobre la salida..."
+                    className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none resize-none h-20"
+                  />
+                </div>
+                <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-3 text-xs text-amber-700 dark:text-amber-400">
+                  <p className="font-semibold mb-1">Al dar de baja:</p>
+                  <ul className="list-disc pl-4 space-y-0.5">
+                    <li>Se notificará a RRHH y Tecnología</li>
+                    <li>IT verificará equipos asignados para retiro</li>
+                    <li>Equipos asignados quedarán disponibles para reasignación</li>
+                    <li>El empleado aparecerá en la sección "Ex-Empleados"</li>
+                  </ul>
+                </div>
+              </div>
+              <div className="p-5 border-t border-border flex gap-3 justify-end">
+                <button onClick={() => setShowOffboarding(null)} className="px-5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">
+                  Cancelar
+                </button>
+                <button onClick={handleOffboard} className="px-5 py-2.5 rounded-lg text-sm font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors">
+                  Confirmar Baja
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </section>
   );
 };
