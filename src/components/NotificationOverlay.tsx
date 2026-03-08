@@ -162,7 +162,7 @@ const NotificationOverlay = () => {
                   className="flex-1"
                   onClick={() => {
                     handleDismiss();
-                    window.location.href = currentOverlay.actionUrl;
+                    navigate(currentOverlay.actionUrl);
                   }}
                 >
                   Ver Detalles
