@@ -169,6 +169,7 @@ const DepartmentGrid = () => {
   });
   const [newFolderName, setNewFolderName] = useState("");
   const [showNewFolder, setShowNewFolder] = useState(false);
+  const [showDeptMenu, setShowDeptMenu] = useState<string | null>(null);
 
   const handleOffboard = () => {
     if (!showOffboarding) return;
