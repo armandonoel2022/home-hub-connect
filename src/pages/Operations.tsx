@@ -388,8 +388,8 @@ const OperationsPage = () => {
                 </div>
               </div>
               <div className="p-5 border-t border-border flex gap-3 justify-end">
-                <button onClick={() => { setShowAdd(false); setPhotoPreview(""); }} className="px-5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">Cancelar</button>
-                <button onClick={handleAdd} className="btn-gold text-sm">Registrar</button>
+                <button onClick={() => { setShowAdd(false); setEditingId(null); setPhotoPreview(""); setForm({ status: "Activo" }); }} className="px-5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">Cancelar</button>
+                <button onClick={editingId ? handleSaveEdit : handleAdd} className="btn-gold text-sm">{editingId ? "Guardar Cambios" : "Registrar"}</button>
               </div>
             </div>
           </div>
