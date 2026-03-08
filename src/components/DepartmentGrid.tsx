@@ -140,6 +140,13 @@ const DEPT_ROUTES: Record<string, string> = {
   "Recursos Humanos": "/rrhh/formularios",
 };
 
+const DEPT_MULTI_ROUTES: Record<string, { label: string; route: string; icon: any }[]> = {
+  "Tecnología y Monitoreo": [
+    { label: "Tecnología", route: "/tickets", icon: Settings },
+    { label: "Monitoreo", route: "/monitoreo", icon: Monitor },
+  ],
+};
+
 const DepartmentGrid = () => {
   const { user, allUsers, activeUsers, inactiveUsers, offboardUser, reactivateUser } = useAuth();
   const { addNotification } = useNotifications();
