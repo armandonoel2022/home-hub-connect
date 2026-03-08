@@ -80,6 +80,7 @@ const MinorPurchases = () => {
       return;
     }
     const autoApproved = canAutoApprove(user.id);
+    const approver = autoApproved ? null : getApprover(form.category);
     const newPurchase: MinorPurchase = {
       id: `EXP-${String(purchases.length + 1).padStart(3, "0")}`,
       description: form.description,
@@ -93,6 +94,7 @@ const MinorPurchases = () => {
       status: autoApproved ? "Aprobado" : "Pendiente",
       approvedBy: autoApproved ? "Auto-aprobado" : null,
       approvedAt: autoApproved ? new Date().toISOString() : null,
+      assignedApprover: approver ? approver.name : null,
       receiptUrl: "",
       notes: form.notes,
       purchasedBy: "",
