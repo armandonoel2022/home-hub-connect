@@ -305,20 +305,83 @@ const PurchaseRequestsPage = () => {
                   <h1 className="font-heading font-bold text-2xl text-secondary-foreground">
                     Solicitudes de <span className="gold-accent-text">Compra</span>
                   </h1>
-                  <p className="text-muted-foreground text-sm mt-1">Flujo: Solicitud → Jefe Directo → Gerencia General (si &gt;RD$50k) → Compra → Completada</p>
+                  <p className="text-muted-foreground text-sm mt-1">Flujo: Solicitud → Jefe Directo → Gerencia General (si &gt;RD${thresholds.directManager.toLocaleString()}) → Compra → Completada</p>
                 </div>
               </div>
-              <button onClick={() => setShowForm(true)} className="btn-gold flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Nueva Solicitud
-              </button>
+              <div className="flex items-center gap-2">
+                {canEditThresholds && (
+                  <button
+                    onClick={() => { setTempThreshold(thresholds.directManager); setShowThresholdSettings(true); }}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-card text-card-foreground hover:bg-accent transition-colors text-sm"
+                  >
+                    <Settings className="h-4 w-4" />
+                    Montos
+                  </button>
+                )}
+                <button onClick={() => setShowForm(true)} className="btn-gold flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Nueva Solicitud
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="px-6 py-4 grid grid-cols-2 md:grid-cols-5 gap-3">
-          {[
+        {/* Threshold Settings Modal */}
+        {showThresholdSettings && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+            <div className="bg-card rounded-xl border border-border shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+              <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Settings className="h-5 w-5 text-gold" />
+                  <h2 className="font-heading font-bold text-lg text-card-foreground">Montos de Aprobación</h2>
+                </div>
+                <button onClick={() => setShowThresholdSettings(false)} className="text-muted-foreground hover:text-foreground">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-card-foreground block mb-1">
+                    Límite para aprobación de Jefe Directo (RD$)
+                  </label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Montos iguales o menores solo requieren aprobación del jefe directo. Montos superiores requieren también aprobación de Gerencia General.
+                  </p>
+                  <input
+                    type="number"
+                    value={tempThreshold}
+                    onChange={(e) => setTempThreshold(Number(e.target.value))}
+                    min={0}
+                    step={1000}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Valor actual: <span className="font-semibold text-gold">RD${thresholds.directManager.toLocaleString()}</span>
+                  </p>
+                </div>
+                <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
+                  <p>📋 <strong>≤ RD${tempThreshold.toLocaleString()}</strong> → Solo Jefe Directo</p>
+                  <p>📋 <strong>&gt; RD${tempThreshold.toLocaleString()}</strong> → Jefe Directo + Gerencia General</p>
+                </div>
+              </div>
+              <div className="px-6 py-4 border-t border-border flex justify-end gap-2">
+                <button onClick={() => setShowThresholdSettings(false)} className="px-4 py-2 text-sm rounded-lg border border-border bg-card text-card-foreground hover:bg-accent transition-colors">
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    setThresholds({ directManager: tempThreshold });
+                    setShowThresholdSettings(false);
+                  }}
+                  className="btn-gold px-4 py-2 text-sm"
+                >
+                  Guardar Cambios
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
             { label: "Total", value: visibleRequests.length },
             { label: "Pendientes", value: visibleRequests.filter((r) => r.status.startsWith("Pendiente")).length },
             { label: "Aprobadas", value: visibleRequests.filter((r) => ["Aprobada Jefe", "Aprobada"].includes(r.status)).length },
