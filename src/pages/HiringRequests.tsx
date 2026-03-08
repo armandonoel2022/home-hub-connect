@@ -168,6 +168,10 @@ const HiringRequestsPage = () => {
         case "Entrevista Programada":
           newStatus = "Completada";
           addNotification({ type: "hiring", title: "Proceso Completado ✅", message: `El proceso de contratación para "${req.positionTitle}" ha sido completado`, relatedId: req.id, forUserId: "USR-005", actionUrl: "/solicitudes-personal" });
+          // Notify HR
+          addNotification({ type: "hiring", title: "Nuevo Ingreso - Preparar Expediente", message: `Contratación completada: "${req.positionTitle}" en ${req.department}. Preparar documentación de ingreso.`, relatedId: req.id, forUserId: "USR-006", actionUrl: "/solicitudes-personal" });
+          // Notify IT to prepare equipment
+          addNotification({ type: "info", title: "Nuevo Ingreso - Preparar Equipos", message: `Se ha completado la contratación de "${req.positionTitle}" para ${req.department}. Preparar equipos (computadora, celular flota, accesos). Si se requiere adquirir equipos, crear solicitud de compra a Gerencia Comercial.`, relatedId: req.id, forUserId: "USR-002", actionUrl: "/inventario" });
           break;
       }
     }
