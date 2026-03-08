@@ -227,7 +227,17 @@ const OperationsPage = () => {
                   </div>
                 </div>
                 {user?.isAdmin && (
-                  <div className="mt-3 pt-3 border-t border-border flex justify-end">
+                  <div className="mt-3 pt-3 border-t border-border flex justify-end gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStartEdit(p);
+                      }}
+                      className="p-1.5 rounded-lg hover:bg-blue-50 text-muted-foreground hover:text-blue-600 transition-colors text-xs flex items-center gap-1"
+                      title="Editar"
+                    >
+                      <Pencil className="h-3.5 w-3.5" /> Editar
+                    </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
