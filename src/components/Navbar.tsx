@@ -45,14 +45,6 @@ const Navbar = () => {
       {/* Mobile menu */}
       {menuOpen && (
         <div className="md:hidden px-4 pb-4">
-          <div className="relative mb-3">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Buscar..."
-              className="w-full pl-10 pr-4 py-2 rounded-lg bg-charcoal-light text-secondary-foreground placeholder:text-muted-foreground text-sm border-0 outline-none"
-            />
-          </div>
         </div>
       )}
       <div className="gold-bar" />
