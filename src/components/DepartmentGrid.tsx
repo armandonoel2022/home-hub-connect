@@ -302,6 +302,20 @@ const DepartmentGrid = () => {
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gold/20 gold-accent-text">{totalFiles(dept.name)}</span>
                     )}
                   </button>
+                  {exEmployees.length > 0 && (
+                    <button
+                      onClick={() => setShowExEmployees(showExEmployees === dept.name ? null : dept.name)}
+                      className="flex items-center justify-between text-xs font-semibold px-3 py-2 rounded-lg bg-destructive/5 hover:bg-destructive/10 transition-colors text-muted-foreground"
+                    >
+                      <span className="flex items-center gap-2">
+                        <UserX className="h-3.5 w-3.5" />
+                        Ex-Empleados
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive">
+                        {exEmployees.length}
+                      </span>
+                    </button>
+                  )}
                 </div>
 
                 {/* Expandable team section */}
@@ -326,7 +340,7 @@ const DepartmentGrid = () => {
                       </div>
                     )}
                     {teamMembers.map((m) => (
-                      <div key={m.id} className="flex items-center gap-2 text-[11px] px-3 py-1.5">
+                      <div key={m.id} className="flex items-center gap-2 text-[11px] px-3 py-1.5 group/member">
                         <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0">
                           {m.photoUrl ? <img src={m.photoUrl} alt="" className="w-full h-full object-cover" /> : <User className="h-3 w-3 text-muted-foreground" />}
                         </div>
@@ -341,6 +355,15 @@ const DepartmentGrid = () => {
                           <span className="text-[9px] text-muted-foreground italic">{m.shift}</span>
                         )}
                         <span className="text-muted-foreground ml-auto truncate max-w-[100px]">{m.position}</span>
+                        {isLeaderOrAdmin && (
+                          <button
+                            onClick={() => setShowOffboarding(m.id)}
+                            className="opacity-0 group-hover/member:opacity-100 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                            title="Dar de Baja"
+                          >
+                            <UserMinus className="h-3 w-3" />
+                          </button>
+                        )}
                       </div>
                     ))}
                     {!leaderUser && teamMembers.length === 0 && (
