@@ -56,8 +56,10 @@ const mockRequests: PurchaseRequest[] = [
 const PurchaseRequestsPage = () => {
   const { user } = useAuth();
   const { addNotification } = useNotifications();
-  const allRequests = useState<PurchaseRequest[]>(mockRequests)[0];
   const [requests, setRequests] = useState<PurchaseRequest[]>(mockRequests);
+
+  // Non-admins only see their own requests
+  const visibleRequests = user?.isAdmin ? requests : requests.filter((r) => r.requestedBy === user?.fullName);
   const [showForm, setShowForm] = useState(false);
   const [selected, setSelected] = useState<PurchaseRequest | null>(null);
   const [showApproval, setShowApproval] = useState<PurchaseRequest | null>(null);
