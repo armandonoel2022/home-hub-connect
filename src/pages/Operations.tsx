@@ -299,7 +299,12 @@ const OperationsPage = () => {
                   ))}
                 </div>
               </div>
-              <div className="p-5 border-t border-border flex justify-end">
+              <div className="p-5 border-t border-border flex justify-end gap-2">
+                {user?.isAdmin && (
+                  <button onClick={() => handleStartEdit(selected)} className="px-4 py-2 rounded-lg text-sm font-medium bg-muted text-card-foreground hover:bg-border transition-colors flex items-center gap-1.5">
+                    <Pencil className="h-3.5 w-3.5" /> Editar
+                  </button>
+                )}
                 <button onClick={() => setSelected(null)} className="btn-gold text-sm">Cerrar</button>
               </div>
             </div>
