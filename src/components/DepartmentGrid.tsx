@@ -141,11 +141,16 @@ const DEPT_ROUTES: Record<string, string> = {
 };
 
 const DepartmentGrid = () => {
-  const { allUsers } = useAuth();
+  const { user, allUsers, activeUsers, inactiveUsers, offboardUser, reactivateUser } = useAuth();
+  const { addNotification } = useNotifications();
   const navigate = useNavigate();
   const [showLeader, setShowLeader] = useState<Department | null>(null);
   const [showFiles, setShowFiles] = useState<string | null>(null);
   const [showTeam, setShowTeam] = useState<string | null>(null);
+  const [showExEmployees, setShowExEmployees] = useState<string | null>(null);
+  const [showOffboarding, setShowOffboarding] = useState<string | null>(null); // user ID
+  const [offboardReason, setOffboardReason] = useState<OffboardingReason>("Renuncia");
+  const [offboardNotes, setOffboardNotes] = useState("");
   const [deptFolders, setDeptFolders] = useState<Record<string, DeptFolder[]>>(() => {
     const init: Record<string, DeptFolder[]> = {};
     departments.forEach((d) => {
@@ -157,6 +162,38 @@ const DepartmentGrid = () => {
   });
   const [newFolderName, setNewFolderName] = useState("");
   const [showNewFolder, setShowNewFolder] = useState(false);
+
+  const handleOffboard = () => {
+    if (!showOffboarding) return;
+    const targetUser = allUsers.find((u) => u.id === showOffboarding);
+    if (!targetUser) return;
+
+    offboardUser(showOffboarding, offboardReason, offboardNotes);
+
+    // Notify HR
+    addNotification({
+      type: "info",
+      title: "Baja de Personal",
+      message: `${targetUser.fullName} (${targetUser.department}) ha sido dado de baja. Motivo: ${offboardReason}`,
+      relatedId: targetUser.id,
+      forUserId: "USR-006", // Dilia - RRHH
+      actionUrl: "/",
+    });
+
+    // Notify IT
+    addNotification({
+      type: "info",
+      title: "Retiro de Equipos - Baja de Personal",
+      message: `${targetUser.fullName} (${targetUser.department}) ha sido dado de baja. Verificar y retirar equipos asignados.`,
+      relatedId: targetUser.id,
+      forUserId: "USR-002", // Armando - IT
+      actionUrl: "/inventario",
+    });
+
+    setShowOffboarding(null);
+    setOffboardReason("Renuncia");
+    setOffboardNotes("");
+  };
 
   const handleAddFolder = (dept: string) => {
     if (!newFolderName.trim()) return;
