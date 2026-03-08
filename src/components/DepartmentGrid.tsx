@@ -408,6 +408,45 @@ const DepartmentGrid = () => {
                     )}
                   </div>
                 )}
+
+                {/* Ex-employees section */}
+                {showExEmployees === dept.name && exEmployees.length > 0 && (
+                  <div className="mt-3 border-t border-border pt-3 space-y-2">
+                    <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider px-3">Ex-Empleados</p>
+                    {exEmployees.map((ex) => (
+                      <div key={ex.id} className="bg-muted/30 rounded-lg px-3 py-2 space-y-1">
+                        <div className="flex items-center gap-2 text-[11px]">
+                          <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0 opacity-60">
+                            {ex.photoUrl ? <img src={ex.photoUrl} alt="" className="w-full h-full object-cover" /> : <User className="h-3 w-3 text-muted-foreground" />}
+                          </div>
+                          <span className="text-card-foreground font-medium">{ex.fullName}</span>
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive">{ex.offboardingReason}</span>
+                          {user?.isAdmin && (
+                            <button
+                              onClick={() => reactivateUser(ex.id)}
+                              className="ml-auto p-1 rounded hover:bg-emerald-50 text-muted-foreground hover:text-emerald-600 transition-colors"
+                              title="Reactivar"
+                            >
+                              <RotateCcw className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-[10px] text-muted-foreground pl-8">
+                          <span>{ex.position}</span>
+                          {ex.offboardingDate && (
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-2.5 w-2.5" />
+                              Salida: {ex.offboardingDate}
+                            </span>
+                          )}
+                        </div>
+                        {ex.offboardingNotes && (
+                          <p className="text-[10px] text-muted-foreground pl-8 italic">"{ex.offboardingNotes}"</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           );
