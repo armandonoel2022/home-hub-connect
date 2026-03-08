@@ -163,6 +163,13 @@ const AppSidebar = () => {
         </div>
       )}
 
+      {/* Search */}
+      {!collapsed && (
+        <div className="px-2 pb-2">
+          <GlobalSearch />
+        </div>
+      )}
+
       {/* Nav */}
       <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
