@@ -286,6 +286,7 @@ export interface MinorPurchase {
   status: MinorPurchaseStatus;
   approvedBy: string | null;
   approvedAt: string | null;
+  assignedApprover: string | null;
   receiptUrl: string;
   notes: string;
   purchasedBy: string;

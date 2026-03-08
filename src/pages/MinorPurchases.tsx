@@ -19,6 +19,14 @@ import type { MinorPurchase, PaymentMethod, MinorPurchaseStatus } from "@/lib/ty
 
 const AUTO_APPROVE_IDS = ["USR-100", "USR-110", "USR-101"]; // Aurelio, Samuel, Chrisnel
 
+// Approval routing: Technology → Samuel A. Pérez, everything else → Chrisnel Fabian
+const TECH_CATEGORIES = ["Tecnología"];
+const APPROVER_TECH = { id: "USR-110", name: "Samuel A. Pérez" };
+const APPROVER_DEFAULT = { id: "USR-101", name: "Chrisnel Fabian" };
+
+const getApprover = (category: string) =>
+  TECH_CATEGORIES.includes(category) ? APPROVER_TECH : APPROVER_DEFAULT;
+
 const EXPENSE_CATEGORIES = [
   "Material de Oficina",
   "Limpieza",
@@ -41,114 +49,9 @@ const PIE_COLORS = [
   "hsl(170, 60%, 45%)",
 ];
 
-const MOCK_PURCHASES: MinorPurchase[] = [
-  {
-    id: "EXP-001",
-    description: "Resmas de papel y tóner para impresora",
-    amount: 4500,
-    paymentMethod: "Caja Chica",
-    category: "Material de Oficina",
-    department: "Administración",
-    requestedBy: "USR-101",
-    requestedByName: "Chrisnel Fabian",
-    requestedAt: "2026-01-15T10:00:00",
-    status: "Aprobado",
-    approvedBy: null,
-    approvedAt: null,
-    receiptUrl: "",
-    notes: "",
-    purchasedBy: "Victor Sala",
-  },
-  {
-    id: "EXP-002",
-    description: "Café y azúcar para oficina",
-    amount: 1800,
-    paymentMethod: "Caja Chica",
-    category: "Alimentos y Bebidas",
-    department: "Administración",
-    requestedBy: "USR-160",
-    requestedByName: "Carmen Sosa",
-    requestedAt: "2026-01-20T14:00:00",
-    status: "Aprobado",
-    approvedBy: "Chrisnel Fabian",
-    approvedAt: "2026-01-20T15:00:00",
-    receiptUrl: "",
-    notes: "",
-    purchasedBy: "Victor Sala",
-  },
-  {
-    id: "EXP-003",
-    description: "Mouse y teclado para estación de monitoreo",
-    amount: 3200,
-    paymentMethod: "Tarjeta Corporativa",
-    category: "Tecnología",
-    department: "Tecnología y Monitoreo",
-    requestedBy: "USR-002",
-    requestedByName: "Armando Noel",
-    requestedAt: "2026-02-05T09:00:00",
-    status: "Aprobado",
-    approvedBy: null,
-    approvedAt: null,
-    receiptUrl: "",
-    notes: "",
-    purchasedBy: "Victor Sala",
-  },
-  {
-    id: "EXP-004",
-    description: "Productos de limpieza mensual",
-    amount: 2600,
-    paymentMethod: "Caja Chica",
-    category: "Limpieza",
-    department: "Administración",
-    requestedBy: "USR-161",
-    requestedByName: "Jefferson Constanza",
-    requestedAt: "2026-02-10T11:00:00",
-    status: "Pendiente",
-    approvedBy: null,
-    approvedAt: null,
-    receiptUrl: "",
-    notes: "",
-    purchasedBy: "",
-  },
-  {
-    id: "EXP-005",
-    description: "Gasolina para vehículo operativo",
-    amount: 5000,
-    paymentMethod: "Tarjeta Corporativa",
-    category: "Transporte",
-    department: "Operaciones",
-    requestedBy: "USR-005",
-    requestedByName: "Remit López",
-    requestedAt: "2026-02-15T08:00:00",
-    status: "Aprobado",
-    approvedBy: null,
-    approvedAt: null,
-    receiptUrl: "",
-    notes: "",
-    purchasedBy: "Victor Sala",
-  },
-  {
-    id: "EXP-006",
-    description: "Carpetas y organizadores",
-    amount: 950,
-    paymentMethod: "Caja Chica",
-    category: "Material de Oficina",
-    department: "Recursos Humanos",
-    requestedBy: "USR-006",
-    requestedByName: "Dilia Aguasvivas",
-    requestedAt: "2026-03-01T10:00:00",
-    status: "Aprobado",
-    approvedBy: null,
-    approvedAt: null,
-    receiptUrl: "",
-    notes: "",
-    purchasedBy: "Victor Sala",
-  },
-];
-
 const MinorPurchases = () => {
   const { user, allUsers } = useAuth();
-  const [purchases, setPurchases] = useState<MinorPurchase[]>(MOCK_PURCHASES);
+  const [purchases, setPurchases] = useState<MinorPurchase[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedYear, setSelectedYear] = useState("2026");
 
@@ -177,6 +80,7 @@ const MinorPurchases = () => {
       return;
     }
     const autoApproved = canAutoApprove(user.id);
+    const approver = autoApproved ? null : getApprover(form.category);
     const newPurchase: MinorPurchase = {
       id: `EXP-${String(purchases.length + 1).padStart(3, "0")}`,
       description: form.description,
@@ -190,6 +94,7 @@ const MinorPurchases = () => {
       status: autoApproved ? "Aprobado" : "Pendiente",
       approvedBy: autoApproved ? "Auto-aprobado" : null,
       approvedAt: autoApproved ? new Date().toISOString() : null,
+      assignedApprover: approver ? approver.name : null,
       receiptUrl: "",
       notes: form.notes,
       purchasedBy: "",
