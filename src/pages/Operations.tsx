@@ -13,6 +13,13 @@ const statusColors: Record<string, string> = {
 
 const OperationsPage = () => {
   const { user } = useAuth();
+  const [personnel, setPersonnel] = useState<ArmedPersonnel[]>(mockArmedPersonnel);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<ArmedPersonnel | null>(null);
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState<Partial<ArmedPersonnel>>({ status: "Activo" });
+  const [photoPreview, setPhotoPreview] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Only Operaciones department and admins can see this
   const canView = user?.isAdmin || user?.department === "Operaciones";
@@ -30,13 +37,6 @@ const OperationsPage = () => {
       </AppLayout>
     );
   }
-  const [personnel, setPersonnel] = useState<ArmedPersonnel[]>(mockArmedPersonnel);
-  const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState<ArmedPersonnel | null>(null);
-  const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState<Partial<ArmedPersonnel>>({ status: "Activo" });
-  const [photoPreview, setPhotoPreview] = useState<string>("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filtered = personnel.filter(
     (p) =>
