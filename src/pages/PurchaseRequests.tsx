@@ -90,10 +90,23 @@ const mockRequests: PurchaseRequest[] = [
   },
 ];
 
+const THRESHOLD_AUTHORIZED_DEPTS = ["Administración", "Gerencia General", "Gerencia Comercial"];
+
 const PurchaseRequestsPage = () => {
   const { user } = useAuth();
   const { addNotification } = useNotifications();
   const [requests, setRequests] = useState<PurchaseRequest[]>(mockRequests);
+
+  // Configurable approval thresholds
+  const [thresholds, setThresholds] = useState({
+    directManager: PURCHASE_APPROVAL_THRESHOLDS.directManager,
+  });
+  const [showThresholdSettings, setShowThresholdSettings] = useState(false);
+  const [tempThreshold, setTempThreshold] = useState(thresholds.directManager);
+
+  const canEditThresholds =
+    user?.isAdmin === true ||
+    THRESHOLD_AUTHORIZED_DEPTS.includes(user?.department || "");
 
   const visibleRequests = user?.isAdmin ? requests : requests.filter((r) => r.requestedBy === user?.fullName);
   const [showForm, setShowForm] = useState(false);
@@ -110,7 +123,7 @@ const PurchaseRequestsPage = () => {
   });
 
   const totalAmount = form.items.reduce((sum, i) => sum + i.quantity * i.estimatedPrice, 0);
-  const approvalLevel = totalAmount > PURCHASE_APPROVAL_THRESHOLDS.directManager ? "Gerencia General" : "Jefe Directo";
+  const approvalLevel = totalAmount > thresholds.directManager ? "Gerencia General" : "Jefe Directo";
 
   const addItem = () => setForm({ ...form, items: [...form.items, { name: "", description: "", quantity: 1, estimatedPrice: 0 }] });
   const removeItem = (idx: number) => setForm({ ...form, items: form.items.filter((_, i) => i !== idx) });
