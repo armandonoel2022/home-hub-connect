@@ -5,6 +5,8 @@ import { DEPARTMENTS } from "@/lib/types";
 import type { IntranetUser } from "@/lib/types";
 import { Plus, X, Search, Pencil, Trash2, User, Shield, Mail, Building2, Phone, Upload, Image } from "lucide-react";
 import { Navigate } from "react-router-dom";
+import RegistrationRequests from "@/components/RegistrationRequests";
+import ExportMenu from "@/components/ExportMenu";
 
 const emptyForm = (): Partial<IntranetUser> => ({
   fullName: "",
