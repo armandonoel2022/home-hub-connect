@@ -140,6 +140,13 @@ const DEPT_ROUTES: Record<string, string> = {
   "Recursos Humanos": "/rrhh/formularios",
 };
 
+const DEPT_MULTI_ROUTES: Record<string, { label: string; route: string; icon: any }[]> = {
+  "Tecnología y Monitoreo": [
+    { label: "Tecnología", route: "/tickets", icon: Settings },
+    { label: "Monitoreo", route: "/monitoreo", icon: Monitor },
+  ],
+};
+
 const DepartmentGrid = () => {
   const { user, allUsers, activeUsers, inactiveUsers, offboardUser, reactivateUser } = useAuth();
   const { addNotification } = useNotifications();
@@ -162,6 +169,7 @@ const DepartmentGrid = () => {
   });
   const [newFolderName, setNewFolderName] = useState("");
   const [showNewFolder, setShowNewFolder] = useState(false);
+  const [showDeptMenu, setShowDeptMenu] = useState<string | null>(null);
 
   const handleOffboard = () => {
     if (!showOffboarding) return;
@@ -251,19 +259,40 @@ const DepartmentGrid = () => {
           const reportsToUser = leaderUser?.reportsTo ? allUsers.find((u) => u.id === leaderUser.reportsTo) : null;
           const isLeaderOrAdmin = user?.isAdmin || (user?.isDepartmentLeader && user?.department === dept.name);
           return (
-            <div key={dept.name} className="card-department group border-2" style={{ borderColor: "hsl(220 15% 30%)" }} id={`dept-${dept.name.toLowerCase().replace(/\s+/g, "-")}`}>
-              <div className="px-5 py-4 flex items-center gap-4" style={{ background: "hsl(220 15% 30%)" }}>
+            <div key={dept.name} className="card-department group border-2 relative" style={{ borderColor: "hsl(220 15% 30%)" }} id={`dept-${dept.name.toLowerCase().replace(/\s+/g, "-")}`}>
+              <div className="px-5 py-4 flex items-center gap-4 relative" style={{ background: "hsl(220 15% 30%)" }}>
                 <div className="p-2.5 rounded-xl bg-white/20">
                   <Icon className="h-5 w-5 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3
-                    className={cn("font-heading font-bold text-white text-base leading-tight", DEPT_ROUTES[dept.name] && "cursor-pointer hover:underline")}
-                    onClick={() => DEPT_ROUTES[dept.name] && navigate(DEPT_ROUTES[dept.name])}
+                    className={cn("font-heading font-bold text-white text-base leading-tight", (DEPT_ROUTES[dept.name] || DEPT_MULTI_ROUTES[dept.name]) && "cursor-pointer hover:underline")}
+                    onClick={() => {
+                      if (DEPT_ROUTES[dept.name]) navigate(DEPT_ROUTES[dept.name]);
+                      else if (DEPT_MULTI_ROUTES[dept.name]) setShowDeptMenu(showDeptMenu === dept.name ? null : dept.name);
+                    }}
                   >
                     {dept.name}
                   </h3>
                   <p className="text-white/75 text-sm mt-0.5 truncate">{dept.description}</p>
+                  {/* Multi-route popup */}
+                  {DEPT_MULTI_ROUTES[dept.name] && showDeptMenu === dept.name && (
+                    <div className="absolute top-full left-0 right-0 z-30 mt-1 mx-4 flex gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                      {DEPT_MULTI_ROUTES[dept.name].map((r) => {
+                        const RIcon = r.icon;
+                        return (
+                          <button
+                            key={r.route}
+                            onClick={(e) => { e.stopPropagation(); navigate(r.route); setShowDeptMenu(null); }}
+                            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-card border border-border text-card-foreground text-xs font-semibold hover:bg-muted transition-colors shadow-lg"
+                          >
+                            <RIcon className="h-4 w-4" />
+                            {r.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="p-6">
