@@ -245,9 +245,11 @@ const DepartmentGrid = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {departments.map((dept) => {
           const Icon = dept.icon;
-          const leaderUser = allUsers.find((u) => u.department === dept.name && u.isDepartmentLeader);
-          const teamMembers = allUsers.filter((u) => u.department === dept.name && !u.isDepartmentLeader);
+          const leaderUser = activeUsers.find((u) => u.department === dept.name && u.isDepartmentLeader);
+          const teamMembers = activeUsers.filter((u) => u.department === dept.name && !u.isDepartmentLeader);
+          const exEmployees = inactiveUsers.filter((u) => u.department === dept.name);
           const reportsToUser = leaderUser?.reportsTo ? allUsers.find((u) => u.id === leaderUser.reportsTo) : null;
+          const isLeaderOrAdmin = user?.isAdmin || (user?.isDepartmentLeader && user?.department === dept.name);
           return (
             <div key={dept.name} className="card-department group border-2" style={{ borderColor: "hsl(220 15% 30%)" }} id={`dept-${dept.name.toLowerCase().replace(/\s+/g, "-")}`}>
               <div className="px-5 py-4 flex items-center gap-4" style={{ background: "hsl(220 15% 30%)" }}>
