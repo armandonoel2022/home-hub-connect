@@ -265,12 +265,33 @@ const DepartmentGrid = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3
-                    className={cn("font-heading font-bold text-white text-base leading-tight", DEPT_ROUTES[dept.name] && "cursor-pointer hover:underline")}
-                    onClick={() => DEPT_ROUTES[dept.name] && navigate(DEPT_ROUTES[dept.name])}
+                    className={cn("font-heading font-bold text-white text-base leading-tight", (DEPT_ROUTES[dept.name] || DEPT_MULTI_ROUTES[dept.name]) && "cursor-pointer hover:underline")}
+                    onClick={() => {
+                      if (DEPT_ROUTES[dept.name]) navigate(DEPT_ROUTES[dept.name]);
+                      else if (DEPT_MULTI_ROUTES[dept.name]) setShowDeptMenu(showDeptMenu === dept.name ? null : dept.name);
+                    }}
                   >
                     {dept.name}
                   </h3>
                   <p className="text-white/75 text-sm mt-0.5 truncate">{dept.description}</p>
+                  {/* Multi-route popup */}
+                  {DEPT_MULTI_ROUTES[dept.name] && showDeptMenu === dept.name && (
+                    <div className="absolute top-full left-0 right-0 z-30 mt-1 mx-4 flex gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                      {DEPT_MULTI_ROUTES[dept.name].map((r) => {
+                        const RIcon = r.icon;
+                        return (
+                          <button
+                            key={r.route}
+                            onClick={(e) => { e.stopPropagation(); navigate(r.route); setShowDeptMenu(null); }}
+                            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-card border border-border text-card-foreground text-xs font-semibold hover:bg-muted transition-colors shadow-lg"
+                          >
+                            <RIcon className="h-4 w-4" />
+                            {r.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="p-6">
