@@ -5,6 +5,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
+import { ChatProvider } from "@/contexts/ChatContext";
+import ChatWindow from "@/components/chat/ChatWindow";
+import ChatNotificationToast from "@/components/chat/ChatNotificationToast";
 import BirthdayOverlay from "@/components/BirthdayOverlay";
 import Index from "./pages/Index";
 import Tickets from "./pages/Tickets";
@@ -83,10 +86,14 @@ const App = () => {
         <BrowserRouter>
           <AuthProvider>
             <NotificationProvider>
-              <Routes>
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/*" element={<ProtectedRoutes />} />
-              </Routes>
+              <ChatProvider>
+                <Routes>
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/*" element={<ProtectedRoutes />} />
+                </Routes>
+                <ChatWindow />
+                <ChatNotificationToast />
+              </ChatProvider>
             </NotificationProvider>
           </AuthProvider>
         </BrowserRouter>
