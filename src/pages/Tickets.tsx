@@ -95,10 +95,10 @@ const TicketsPage = () => {
   };
 
   const statusCounts = {
-    Todos: tickets.length,
-    Abierto: tickets.filter((t) => t.status === "Abierto").length,
-    "En Progreso": tickets.filter((t) => t.status === "En Progreso").length,
-    Resuelto: tickets.filter((t) => t.status === "Resuelto").length,
+    Todos: userTickets.length,
+    Abierto: userTickets.filter((t) => t.status === "Abierto").length,
+    "En Progreso": userTickets.filter((t) => t.status === "En Progreso").length,
+    Resuelto: userTickets.filter((t) => t.status === "Resuelto").length,
   };
 
   return (
