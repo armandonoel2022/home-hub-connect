@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNotifications } from "@/contexts/NotificationContext";
 import { cn } from "@/lib/utils";
+import type { OffboardingReason } from "@/lib/types";
 import {
   Building2,
   Briefcase,
@@ -27,6 +29,10 @@ import {
   Trash2,
   Plus,
   File,
+  UserMinus,
+  UserX,
+  Clock,
+  RotateCcw,
 } from "lucide-react";
 
 interface DeptLeader {
