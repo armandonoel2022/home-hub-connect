@@ -71,7 +71,12 @@ const BASCPage = () => {
   const [search, setSearch] = useState("");
   const [filterDept, setFilterDept] = useState("");
 
-  const filteredDocs = documents.filter((d) => {
+  // Non-admins only see their department's documents
+  const accessibleDocs = user?.isAdmin
+    ? documents
+    : documents.filter((d) => d.department === user?.department);
+
+  const filteredDocs = accessibleDocs.filter((d) => {
     const matchSearch = !search || d.name.toLowerCase().includes(search.toLowerCase());
     const matchDept = !filterDept || d.department === filterDept;
     return matchSearch && matchDept;

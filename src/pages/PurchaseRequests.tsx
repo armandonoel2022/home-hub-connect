@@ -188,7 +188,7 @@ const PurchaseRequestsPage = () => {
 
         {/* List */}
         <div className="px-6 pb-8 space-y-3">
-          {requests.map((req) => (
+          {visibleRequests.map((req) => (
             <div key={req.id} className="bg-card rounded-lg border border-border overflow-hidden hover:shadow-md transition-shadow">
               <div className="h-1 w-full bg-secondary" />
               <div className="p-5">
