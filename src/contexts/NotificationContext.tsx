@@ -21,7 +21,7 @@ const initialNotifications: AppNotification[] = [
     message: "Operaciones ha solicitado la compra de 10 radios portátiles por RD$85,000",
     relatedId: "PR-001",
     forUserId: "USR-002",
-    read: false,
+    read: true,
     createdAt: "2026-03-05T08:00:00",
     actionUrl: "/solicitudes-compra",
   },
