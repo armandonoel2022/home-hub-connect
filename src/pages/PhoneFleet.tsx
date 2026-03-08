@@ -1,5 +1,6 @@
 import { useState } from "react";
 import AppLayout from "@/components/AppLayout";
+import { useAuth } from "@/contexts/AuthContext";
 import { mockPhones } from "@/lib/mockData";
 import type { PhoneDevice, PhoneStatus } from "@/lib/types";
 import { DEPARTMENTS } from "@/lib/types";
