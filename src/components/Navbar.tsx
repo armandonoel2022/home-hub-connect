@@ -1,4 +1,5 @@
 import logo from "@/assets/safeone-logo.png";
+import GlobalSearch from "@/components/GlobalSearch";
 
 const Navbar = () => {
   return (
@@ -14,6 +15,11 @@ const Navbar = () => {
               </span>
               <span className="block text-xs text-muted-foreground -mt-1 tracking-widest">INTRANET</span>
             </div>
+          </div>
+
+          {/* Search */}
+          <div className="w-full max-w-xs">
+            <GlobalSearch />
           </div>
         </div>
       </div>
