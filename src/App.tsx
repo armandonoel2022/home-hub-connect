@@ -31,6 +31,7 @@ import Surveys from "./pages/Surveys";
 import Wiki from "./pages/Wiki";
 import TaskInbox from "./pages/TaskInbox";
 import MonitoringCenter from "./pages/MonitoringCenter";
+import OperationsCenter from "./pages/OperationsCenter";
 import LoginPage from "./pages/Login";
 import RegisterPage from "./pages/Register";
 import NotFound from "./pages/NotFound";
