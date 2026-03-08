@@ -77,10 +77,26 @@ const InventoryPage = () => {
                 </h1>
                 <p className="text-muted-foreground text-sm mt-1">Equipos de cómputo, monitores, impresoras y red</p>
               </div>
-              <button onClick={() => setShowAdd(true)} className="btn-gold flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Agregar Equipo
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setShowAdd(true)} className="btn-gold flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Agregar Equipo
+                </button>
+                <ExportMenu
+                  title="Inventario IT SafeOne"
+                  columns={[
+                    { header: "Tipo", key: "type", width: 14 },
+                    { header: "Marca", key: "brand", width: 14 },
+                    { header: "Modelo", key: "model", width: 14 },
+                    { header: "Serial", key: "serial", width: 18 },
+                    { header: "Estado", key: "status", width: 14 },
+                    { header: "Asignado a", key: "assignedTo", width: 20 },
+                    { header: "Departamento", key: "department", width: 18 },
+                  ]}
+                  data={filtered.map((e) => ({ ...e, assignedTo: e.assignedTo || "—", department: e.department || "—" }))}
+                  filename="inventario-it-safeone"
+                />
+              </div>
             </div>
             <div className="flex gap-3 mt-5 flex-wrap">
               {Object.entries(typeCounts).map(([label, count]) => (
