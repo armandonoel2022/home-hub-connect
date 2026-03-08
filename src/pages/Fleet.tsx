@@ -3,6 +3,7 @@ import AppLayout from "@/components/AppLayout";
 import { mockVehicles } from "@/lib/mockData";
 import type { Vehicle, VehicleStatus } from "@/lib/types";
 import { Search, Plus, Truck, X } from "lucide-react";
+import ExportMenu from "@/components/ExportMenu";
 
 const statusColors: Record<VehicleStatus, string> = {
   Activo: "bg-emerald-50 text-emerald-700",
