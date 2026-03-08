@@ -67,10 +67,12 @@ const PhoneFleetPage = () => {
                 </h1>
                 <p className="text-muted-foreground text-sm mt-1">Registro de dispositivos móviles corporativos</p>
               </div>
-              <button onClick={() => setShowAdd(true)} className="btn-gold flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Agregar Dispositivo
-              </button>
+              {user?.isAdmin && (
+                <button onClick={() => setShowAdd(true)} className="btn-gold flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Agregar Dispositivo
+                </button>
+              )}
             </div>
           </div>
         </div>

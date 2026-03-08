@@ -12,6 +12,24 @@ const statusColors: Record<string, string> = {
 };
 
 const OperationsPage = () => {
+  const { user } = useAuth();
+
+  // Only Operaciones department and admins can see this
+  const canView = user?.isAdmin || user?.department === "Operaciones";
+
+  if (!canView) {
+    return (
+      <AppLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <Lock className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+            <h2 className="font-heading font-bold text-lg text-card-foreground">Acceso Restringido</h2>
+            <p className="text-sm text-muted-foreground mt-1">Este módulo es exclusivo del departamento de Operaciones</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
   const [personnel, setPersonnel] = useState<ArmedPersonnel[]>(mockArmedPersonnel);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<ArmedPersonnel | null>(null);
