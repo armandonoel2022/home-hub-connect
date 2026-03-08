@@ -22,6 +22,7 @@ import {
   ClipboardList,
   BookMarked,
   CheckSquare,
+  Wallet,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -49,6 +50,7 @@ const navItems = [
   { title: "Procedimientos", url: "/procedimientos", icon: BookOpen },
   { title: "Wiki", url: "/wiki", icon: BookMarked },
   { title: "Encuestas", url: "/encuestas", icon: ClipboardList },
+  { title: "Gastos Menores", url: "/gastos-menores", icon: Wallet },
 ];
 
 const adminItems = [

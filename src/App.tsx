@@ -34,6 +34,7 @@ import MonitoringCenter from "./pages/MonitoringCenter";
 import OperationsCenter from "./pages/OperationsCenter";
 import LoginPage from "./pages/Login";
 import RegisterPage from "./pages/Register";
+import MinorPurchases from "./pages/MinorPurchases";
 import NotFound from "./pages/NotFound";
 import type { IntranetUser } from "./lib/types";
 
@@ -93,6 +94,7 @@ function ProtectedRoutes() {
         <Route path="/procedimientos" element={<Procedures />} />
         <Route path="/wiki" element={<Wiki />} />
         <Route path="/encuestas" element={<Surveys />} />
+        <Route path="/gastos-menores" element={<MinorPurchases />} />
         <Route path="/admin/usuarios" element={<UserManagement />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
