@@ -14,6 +14,7 @@ const statusColors: Record<VehicleStatus, string> = {
 };
 
 const FleetPage = () => {
+  const { user } = useAuth();
   const [vehicles, setVehicles] = useState<Vehicle[]>(mockVehicles);
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
