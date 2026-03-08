@@ -24,6 +24,7 @@ import {
   Paperclip,
   ChevronRight,
   X,
+  Trash2,
 } from "lucide-react";
 
 const priorityConfig: Record<TicketPriority, { color: string; bg: string }> = {
