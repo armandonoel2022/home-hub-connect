@@ -32,7 +32,7 @@ const initialNotifications: AppNotification[] = [
     message: "Gerencia Comercial solicita un Ejecutivo de Ventas — requiere aprobación",
     relatedId: "HR-001",
     forUserId: "USR-002",
-    read: false,
+    read: true,
     createdAt: "2026-03-04T14:00:00",
     actionUrl: "/solicitudes-personal",
   },
