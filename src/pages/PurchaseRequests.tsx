@@ -174,10 +174,10 @@ const PurchaseRequestsPage = () => {
         {/* Stats */}
         <div className="px-6 py-4 grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: "Total", value: requests.length },
-            { label: "Pendientes", value: requests.filter((r) => r.status === "Pendiente").length },
-            { label: "Aprobadas", value: requests.filter((r) => r.status === "Aprobada").length },
-            { label: "Rechazadas", value: requests.filter((r) => r.status === "Rechazada").length },
+            { label: "Total", value: visibleRequests.length },
+            { label: "Pendientes", value: visibleRequests.filter((r) => r.status === "Pendiente").length },
+            { label: "Aprobadas", value: visibleRequests.filter((r) => r.status === "Aprobada").length },
+            { label: "Rechazadas", value: visibleRequests.filter((r) => r.status === "Rechazada").length },
           ].map((s) => (
             <div key={s.label} className="bg-card rounded-lg p-4 border border-border">
               <p className="text-xs text-muted-foreground">{s.label}</p>
