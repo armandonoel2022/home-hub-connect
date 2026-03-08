@@ -203,6 +203,11 @@ const UserManagementPage = () => {
           ))}
         </div>
 
+        {/* Registration Requests */}
+        <div className="px-6 pb-4">
+          <RegistrationRequests />
+        </div>
+
         {/* User Table */}
         <div className="px-6 pb-8">
           <div className="bg-card rounded-lg border border-border overflow-hidden">
