@@ -189,12 +189,13 @@ const UserManagementPage = () => {
         </div>
 
         {/* Stats */}
-        <div className="px-6 pb-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="px-6 pb-4 grid grid-cols-2 md:grid-cols-5 gap-3">
           {[
-            { label: "Total Usuarios", value: allUsers.length },
-            { label: "Administradores", value: allUsers.filter((u) => u.isAdmin).length },
-            { label: "Usuarios Regulares", value: allUsers.filter((u) => !u.isAdmin).length },
-            { label: "Departamentos", value: new Set(allUsers.map((u) => u.department)).size },
+            { label: "Total Activos", value: activeUsers.length },
+            { label: "Administradores", value: activeUsers.filter((u) => u.isAdmin).length },
+            { label: "Usuarios Regulares", value: activeUsers.filter((u) => !u.isAdmin).length },
+            { label: "Ex-Empleados", value: inactiveUsers.length },
+            { label: "Departamentos", value: new Set(activeUsers.map((u) => u.department)).size },
           ].map((s) => (
             <div key={s.label} className="bg-card rounded-lg p-4 border border-border">
               <p className="text-xs text-muted-foreground">{s.label}</p>
