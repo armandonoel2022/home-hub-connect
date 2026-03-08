@@ -144,6 +144,7 @@ const InventoryPage = () => {
                     <th className="text-left px-4 py-3 font-heading font-semibold text-muted-foreground text-xs uppercase tracking-wider">Estado</th>
                     <th className="text-left px-4 py-3 font-heading font-semibold text-muted-foreground text-xs uppercase tracking-wider">Asignado a</th>
                     <th className="text-left px-4 py-3 font-heading font-semibold text-muted-foreground text-xs uppercase tracking-wider">Adquisición</th>
+                    {user?.isAdmin && <th className="text-left px-4 py-3 font-heading font-semibold text-muted-foreground text-xs uppercase tracking-wider w-16"></th>}
                   </tr>
                 </thead>
                 <tbody>
