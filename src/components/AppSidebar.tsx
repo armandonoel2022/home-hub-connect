@@ -50,6 +50,7 @@ const navItems = [
   { title: "Procedimientos", url: "/procedimientos", icon: BookOpen },
   { title: "Wiki", url: "/wiki", icon: BookMarked },
   { title: "Encuestas", url: "/encuestas", icon: ClipboardList },
+  { title: "Gastos Menores", url: "/gastos-menores", icon: Wallet },
 ];
 
 const adminItems = [

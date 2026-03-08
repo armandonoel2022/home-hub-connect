@@ -269,6 +269,28 @@ export interface HiringRequest {
   notes: string;
 }
 
+// ─── Minor Purchases (Caja Chica / Tarjeta Corporativa) ───
+export type PaymentMethod = "Caja Chica" | "Tarjeta Corporativa";
+export type MinorPurchaseStatus = "Pendiente" | "Aprobado" | "Rechazado";
+
+export interface MinorPurchase {
+  id: string;
+  description: string;
+  amount: number;
+  paymentMethod: PaymentMethod;
+  category: string;
+  department: string;
+  requestedBy: string;
+  requestedByName: string;
+  requestedAt: string;
+  status: MinorPurchaseStatus;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  receiptUrl: string;
+  notes: string;
+  purchasedBy: string;
+}
+
 // ─── Notifications ───
 export type NotificationType = "purchase" | "hiring" | "info";
 
