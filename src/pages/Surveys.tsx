@@ -224,7 +224,7 @@ const SurveysPage = () => {
     return [];
   };
 
-  const hrUsers = allUsers.filter((u) => u.department === "Recursos Humanos" && u.email !== HR_MANAGER_EMAIL);
+  const hrUsers = allUsers.filter((u) => u.department === "Recursos Humanos" && u.id !== user?.id);
   const deletedCount = surveys.filter((s) => s.deleted).length;
 
   return (
