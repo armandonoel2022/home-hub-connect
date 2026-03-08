@@ -42,6 +42,7 @@ const statusConfig: Record<TicketStatus, { icon: typeof Clock; color: string; bg
 };
 
 const TicketsPage = () => {
+  const { user } = useAuth();
   const [tickets, setTickets] = useState<Ticket[]>(mockTickets);
   const [showCreate, setShowCreate] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
