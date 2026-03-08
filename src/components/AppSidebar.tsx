@@ -14,6 +14,10 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
+  Phone,
+  Calendar,
+  FolderOpen,
+  BookOpen,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -23,6 +27,8 @@ import { useNotifications } from "@/contexts/NotificationContext";
 
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "Directorio", url: "/directorio", icon: Phone },
+  { title: "Calendario", url: "/calendario", icon: Calendar },
   { title: "Tickets IT", url: "/tickets", icon: Ticket },
   { title: "Inventario IT", url: "/inventario", icon: Package },
   { title: "Flotilla Vehicular", url: "/flotilla", icon: Truck },
@@ -31,6 +37,8 @@ const navItems = [
   { title: "Solicitudes Compra", url: "/solicitudes-compra", icon: ShoppingCart },
   { title: "Solicitudes Personal", url: "/solicitudes-personal", icon: Users },
   { title: "BASC", url: "/basc", icon: FileCheck },
+  { title: "Archivos Compartidos", url: "/archivos", icon: FolderOpen },
+  { title: "Procedimientos", url: "/procedimientos", icon: BookOpen },
 ];
 
 const adminItems = [

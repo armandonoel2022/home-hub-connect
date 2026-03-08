@@ -57,6 +57,9 @@ const PurchaseRequestsPage = () => {
   const { user } = useAuth();
   const { addNotification } = useNotifications();
   const [requests, setRequests] = useState<PurchaseRequest[]>(mockRequests);
+
+  // Non-admins only see their own requests
+  const visibleRequests = user?.isAdmin ? requests : requests.filter((r) => r.requestedBy === user?.fullName);
   const [showForm, setShowForm] = useState(false);
   const [selected, setSelected] = useState<PurchaseRequest | null>(null);
   const [showApproval, setShowApproval] = useState<PurchaseRequest | null>(null);
@@ -171,10 +174,10 @@ const PurchaseRequestsPage = () => {
         {/* Stats */}
         <div className="px-6 py-4 grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: "Total", value: requests.length },
-            { label: "Pendientes", value: requests.filter((r) => r.status === "Pendiente").length },
-            { label: "Aprobadas", value: requests.filter((r) => r.status === "Aprobada").length },
-            { label: "Rechazadas", value: requests.filter((r) => r.status === "Rechazada").length },
+            { label: "Total", value: visibleRequests.length },
+            { label: "Pendientes", value: visibleRequests.filter((r) => r.status === "Pendiente").length },
+            { label: "Aprobadas", value: visibleRequests.filter((r) => r.status === "Aprobada").length },
+            { label: "Rechazadas", value: visibleRequests.filter((r) => r.status === "Rechazada").length },
           ].map((s) => (
             <div key={s.label} className="bg-card rounded-lg p-4 border border-border">
               <p className="text-xs text-muted-foreground">{s.label}</p>
@@ -185,7 +188,7 @@ const PurchaseRequestsPage = () => {
 
         {/* List */}
         <div className="px-6 pb-8 space-y-3">
-          {requests.map((req) => (
+          {visibleRequests.map((req) => (
             <div key={req.id} className="bg-card rounded-lg border border-border overflow-hidden hover:shadow-md transition-shadow">
               <div className="h-1 w-full bg-secondary" />
               <div className="p-5">

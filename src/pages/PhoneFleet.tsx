@@ -1,5 +1,6 @@
 import { useState } from "react";
 import AppLayout from "@/components/AppLayout";
+import { useAuth } from "@/contexts/AuthContext";
 import { mockPhones } from "@/lib/mockData";
 import type { PhoneDevice, PhoneStatus } from "@/lib/types";
 import { DEPARTMENTS } from "@/lib/types";
@@ -13,12 +14,18 @@ const statusColors: Record<PhoneStatus, string> = {
 };
 
 const PhoneFleetPage = () => {
+  const { user } = useAuth();
   const [phones, setPhones] = useState<PhoneDevice[]>(mockPhones);
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState<Partial<PhoneDevice>>({ status: "Disponible" });
 
-  const filtered = phones.filter(
+  // Non-admins only see their own assigned phone
+  const userPhones = user?.isAdmin
+    ? phones
+    : phones.filter((p) => p.assignedTo === user?.fullName);
+
+  const filtered = userPhones.filter(
     (p) =>
       p.imei.toLowerCase().includes(search.toLowerCase()) ||
       p.serial.toLowerCase().includes(search.toLowerCase()) ||
@@ -60,10 +67,12 @@ const PhoneFleetPage = () => {
                 </h1>
                 <p className="text-muted-foreground text-sm mt-1">Registro de dispositivos móviles corporativos</p>
               </div>
-              <button onClick={() => setShowAdd(true)} className="btn-gold flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Agregar Dispositivo
-              </button>
+              {user?.isAdmin && (
+                <button onClick={() => setShowAdd(true)} className="btn-gold flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Agregar Dispositivo
+                </button>
+              )}
             </div>
           </div>
         </div>

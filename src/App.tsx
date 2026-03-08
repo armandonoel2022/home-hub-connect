@@ -20,6 +20,10 @@ import PurchaseRequests from "./pages/PurchaseRequests";
 import HiringRequests from "./pages/HiringRequests";
 import HRForms from "./pages/HRForms";
 import UserManagement from "./pages/UserManagement";
+import Directory from "./pages/Directory";
+import CalendarPage from "./pages/CalendarPage";
+import SharedFiles from "./pages/SharedFiles";
+import Procedures from "./pages/Procedures";
 import LoginPage from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import type { IntranetUser } from "./lib/types";
@@ -61,6 +65,8 @@ function ProtectedRoutes() {
       <BirthdayOverlay birthdayUsers={birthdayUsers} />
       <Routes>
         <Route path="/" element={<Index />} />
+        <Route path="/directorio" element={<Directory />} />
+        <Route path="/calendario" element={<CalendarPage />} />
         <Route path="/tickets" element={<Tickets />} />
         <Route path="/inventario" element={<Inventory />} />
         <Route path="/flotilla" element={<Fleet />} />
@@ -70,6 +76,8 @@ function ProtectedRoutes() {
         <Route path="/solicitudes-personal" element={<HiringRequests />} />
         <Route path="/rrhh/formularios" element={<HRForms />} />
         <Route path="/basc" element={<BASC />} />
+        <Route path="/archivos" element={<SharedFiles />} />
+        <Route path="/procedimientos" element={<Procedures />} />
         <Route path="/admin/usuarios" element={<UserManagement />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

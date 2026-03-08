@@ -1,5 +1,6 @@
 import { useState } from "react";
 import AppLayout from "@/components/AppLayout";
+import { useAuth } from "@/contexts/AuthContext";
 import { DEPARTMENTS } from "@/lib/types";
 import {
   FolderOpen,
@@ -61,15 +62,21 @@ const initialDocs: BASCDocument[] = [
 ];
 
 const BASCPage = () => {
+  const { user } = useAuth();
   const [documents, setDocuments] = useState<BASCDocument[]>(initialDocs);
-  const [expandedDept, setExpandedDept] = useState<string | null>("Operaciones");
+  const [expandedDept, setExpandedDept] = useState<string | null>(user?.department || "Operaciones");
   const [expandedCat, setExpandedCat] = useState<string | null>("Procedimientos");
   const [showUpload, setShowUpload] = useState(false);
-  const [uploadForm, setUploadForm] = useState({ department: "", category: "", file: null as File | null });
+  const [uploadForm, setUploadForm] = useState({ department: user?.department || "", category: "", file: null as File | null });
   const [search, setSearch] = useState("");
   const [filterDept, setFilterDept] = useState("");
 
-  const filteredDocs = documents.filter((d) => {
+  // Non-admins only see their department's documents
+  const accessibleDocs = user?.isAdmin
+    ? documents
+    : documents.filter((d) => d.department === user?.department);
+
+  const filteredDocs = accessibleDocs.filter((d) => {
     const matchSearch = !search || d.name.toLowerCase().includes(search.toLowerCase());
     const matchDept = !filterDept || d.department === filterDept;
     return matchSearch && matchDept;

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import AppLayout from "@/components/AppLayout";
+import { useAuth } from "@/contexts/AuthContext";
 import { mockTickets } from "@/lib/mockData";
 import {
   TICKET_CATEGORIES,
@@ -41,6 +42,7 @@ const statusConfig: Record<TicketStatus, { icon: typeof Clock; color: string; bg
 };
 
 const TicketsPage = () => {
+  const { user } = useAuth();
   const [tickets, setTickets] = useState<Ticket[]>(mockTickets);
   const [showCreate, setShowCreate] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
@@ -56,7 +58,10 @@ const TicketsPage = () => {
     department: "",
   });
 
-  const filteredTickets = tickets.filter((t) => {
+  // Non-admins only see their own tickets
+  const userTickets = user?.isAdmin ? tickets : tickets.filter((t) => t.createdBy === user?.fullName);
+
+  const filteredTickets = userTickets.filter((t) => {
     const matchesSearch =
       t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.id.toLowerCase().includes(searchQuery.toLowerCase());
@@ -76,7 +81,7 @@ const TicketsPage = () => {
       category: form.category as TicketCategory,
       priority: form.priority,
       status: "Abierto",
-      createdBy: "Usuario Actual",
+      createdBy: user?.fullName || "Usuario Actual",
       department: form.department,
       createdAt: now,
       updatedAt: now,
@@ -90,10 +95,10 @@ const TicketsPage = () => {
   };
 
   const statusCounts = {
-    Todos: tickets.length,
-    Abierto: tickets.filter((t) => t.status === "Abierto").length,
-    "En Progreso": tickets.filter((t) => t.status === "En Progreso").length,
-    Resuelto: tickets.filter((t) => t.status === "Resuelto").length,
+    Todos: userTickets.length,
+    Abierto: userTickets.filter((t) => t.status === "Abierto").length,
+    "En Progreso": userTickets.filter((t) => t.status === "En Progreso").length,
+    Resuelto: userTickets.filter((t) => t.status === "Resuelto").length,
   };
 
   return (
