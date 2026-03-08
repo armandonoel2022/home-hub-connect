@@ -58,7 +58,10 @@ const TicketsPage = () => {
     department: "",
   });
 
-  const filteredTickets = tickets.filter((t) => {
+  // Non-admins only see their own tickets
+  const userTickets = user?.isAdmin ? tickets : tickets.filter((t) => t.createdBy === user?.fullName);
+
+  const filteredTickets = userTickets.filter((t) => {
     const matchesSearch =
       t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.id.toLowerCase().includes(searchQuery.toLowerCase());
