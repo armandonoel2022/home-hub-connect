@@ -117,6 +117,7 @@ const App = () => {
                 <PanicButton />
                 <NotificationOverlay />
                 <NotificationDemo />
+              </ChatProvider>
             </NotificationProvider>
           </AuthProvider>
         </BrowserRouter>
