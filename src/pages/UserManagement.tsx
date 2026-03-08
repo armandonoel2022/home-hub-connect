@@ -241,6 +241,7 @@ const UserManagementPage = () => {
                            {u.employeeStatus === "Inactivo" && (
                              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive font-semibold">Inactivo</span>
                            )}
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         {u.extension ? (
