@@ -101,7 +101,7 @@ const SurveysPage = () => {
     questions: [{ id: "nq1", text: "", type: "rating" as SurveyQuestion["type"], options: [""] }],
   });
 
-  const isHRManager = user?.email === HR_MANAGER_EMAIL || user?.isAdmin === true;
+  const isHRManager = user?.isAdmin === true || (user?.isDepartmentLeader === true && user?.department === "Recursos Humanos");
   // Can manage (create/delete): HR Manager, admins, or delegated users
   const canManage = isHRManager || (user ? delegatedUsers.includes(user.id) : false);
   const isHR = user?.department === "Recursos Humanos" || user?.isAdmin;
