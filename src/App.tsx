@@ -106,6 +106,7 @@ const App = () => {
               <ChatProvider>
                 <Routes>
                   <Route path="/login" element={<LoginPage />} />
+                  <Route path="/registro" element={<RegisterPage />} />
                   <Route path="/*" element={<ProtectedRoutes />} />
                 </Routes>
                 <ChatWindow />
