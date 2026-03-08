@@ -1,8 +1,9 @@
 import { useState } from "react";
 import AppLayout from "@/components/AppLayout";
+import { useAuth } from "@/contexts/AuthContext";
 import { mockVehicles } from "@/lib/mockData";
 import type { Vehicle, VehicleStatus } from "@/lib/types";
-import { Search, Plus, Truck, X } from "lucide-react";
+import { Search, Plus, Truck, X, Trash2 } from "lucide-react";
 import ExportMenu from "@/components/ExportMenu";
 
 const statusColors: Record<VehicleStatus, string> = {
