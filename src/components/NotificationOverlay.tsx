@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { X, ShieldAlert, Heart, ShoppingCart, UserPlus, Bell, AlertTriangle } from "lucide-react";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { Button } from "@/components/ui/button";
