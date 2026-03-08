@@ -1,8 +1,9 @@
 import { useState } from "react";
 import AppLayout from "@/components/AppLayout";
+import { useAuth } from "@/contexts/AuthContext";
 import { mockVehicles } from "@/lib/mockData";
 import type { Vehicle, VehicleStatus } from "@/lib/types";
-import { Search, Plus, Truck, X } from "lucide-react";
+import { Search, Plus, Truck, X, Trash2 } from "lucide-react";
 import ExportMenu from "@/components/ExportMenu";
 
 const statusColors: Record<VehicleStatus, string> = {
@@ -13,6 +14,7 @@ const statusColors: Record<VehicleStatus, string> = {
 };
 
 const FleetPage = () => {
+  const { user } = useAuth();
   const [vehicles, setVehicles] = useState<Vehicle[]>(mockVehicles);
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
@@ -127,6 +129,21 @@ const FleetPage = () => {
                     </div>
                   ))}
                 </div>
+                {user?.isAdmin && (
+                  <div className="pt-3 border-t border-border flex justify-end">
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`¿Eliminar vehículo ${v.plate}: ${v.brand} ${v.model}?`)) {
+                          setVehicles((prev) => prev.filter((veh) => veh.id !== v.id));
+                        }
+                      }}
+                      className="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors text-xs flex items-center gap-1"
+                      title="Eliminar"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" /> Eliminar
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))}

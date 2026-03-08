@@ -1,8 +1,9 @@
 import { useState } from "react";
 import AppLayout from "@/components/AppLayout";
+import { useAuth } from "@/contexts/AuthContext";
 import { mockEquipment } from "@/lib/mockData";
 import type { Equipment, EquipmentStatus, EquipmentType } from "@/lib/types";
-import { Search, Plus, Monitor, Printer, Cpu, Wifi, Package, X } from "lucide-react";
+import { Search, Plus, Monitor, Printer, Cpu, Wifi, Package, X, Trash2 } from "lucide-react";
 import ExportMenu from "@/components/ExportMenu";
 
 const typeIcons: Record<EquipmentType, typeof Monitor> = {
@@ -21,6 +22,7 @@ const statusColors: Record<EquipmentStatus, string> = {
 };
 
 const InventoryPage = () => {
+  const { user } = useAuth();
   const [equipment, setEquipment] = useState<Equipment[]>(mockEquipment);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("Todos");
@@ -142,6 +144,7 @@ const InventoryPage = () => {
                     <th className="text-left px-4 py-3 font-heading font-semibold text-muted-foreground text-xs uppercase tracking-wider">Estado</th>
                     <th className="text-left px-4 py-3 font-heading font-semibold text-muted-foreground text-xs uppercase tracking-wider">Asignado a</th>
                     <th className="text-left px-4 py-3 font-heading font-semibold text-muted-foreground text-xs uppercase tracking-wider">Adquisición</th>
+                    {user?.isAdmin && <th className="text-left px-4 py-3 font-heading font-semibold text-muted-foreground text-xs uppercase tracking-wider w-16"></th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -165,6 +168,21 @@ const InventoryPage = () => {
                         </td>
                         <td className="px-4 py-3">{eq.assignedTo || "—"}</td>
                         <td className="px-4 py-3 text-muted-foreground">{eq.acquisitionDate}</td>
+                        {user?.isAdmin && (
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={() => {
+                                if (window.confirm(`¿Eliminar equipo ${eq.id}: ${eq.brand} ${eq.model}?`)) {
+                                  setEquipment((prev) => prev.filter((e) => e.id !== eq.id));
+                                }
+                              }}
+                              className="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
+                              title="Eliminar"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}

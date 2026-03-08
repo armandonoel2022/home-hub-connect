@@ -24,6 +24,7 @@ import {
   Paperclip,
   ChevronRight,
   X,
+  Trash2,
 } from "lucide-react";
 
 const priorityConfig: Record<TicketPriority, { color: string; bg: string }> = {
@@ -189,6 +190,20 @@ const TicketsPage = () => {
                 <div className="flex items-center gap-2 shrink-0">
                   {ticket.attachments.length > 0 && (
                     <Paperclip className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  {user?.isAdmin && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (window.confirm(`¿Eliminar ticket ${ticket.id}: "${ticket.title}"?`)) {
+                          setTickets((prev) => prev.filter((t) => t.id !== ticket.id));
+                        }
+                      }}
+                      className="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
+                      title="Eliminar"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   )}
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </div>

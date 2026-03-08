@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
 import type { PurchaseRequest, PurchaseItem } from "@/lib/types";
 import { DEPARTMENTS, PURCHASE_APPROVAL_THRESHOLDS } from "@/lib/types";
-import { Plus, X, ShoppingCart, Check, XCircle, FileText, Upload, Eye, Clock } from "lucide-react";
+import { Plus, X, ShoppingCart, Check, XCircle, FileText, Upload, Eye, Clock, Trash2 } from "lucide-react";
 
 const statusColors: Record<string, string> = {
   Pendiente: "bg-amber-50 text-amber-700",
@@ -218,6 +218,19 @@ const PurchaseRequestsPage = () => {
                     {req.status === "Pendiente" && user?.isAdmin && (
                       <button onClick={() => setShowApproval(req)} className="p-2 rounded-lg hover:bg-emerald-50 text-muted-foreground hover:text-emerald-700 transition-colors" title="Aprobar/Rechazar">
                         <Check className="h-4 w-4" />
+                      </button>
+                    )}
+                    {user?.isAdmin && (
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`¿Eliminar solicitud ${req.id}: "${req.title}"?`)) {
+                            setRequests((prev) => prev.filter((r) => r.id !== req.id));
+                          }
+                        }}
+                        className="p-2 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
+                        title="Eliminar"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     )}
                   </div>

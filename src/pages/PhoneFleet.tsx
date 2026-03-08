@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { mockPhones } from "@/lib/mockData";
 import type { PhoneDevice, PhoneStatus } from "@/lib/types";
 import { DEPARTMENTS } from "@/lib/types";
-import { Search, Plus, Smartphone, X } from "lucide-react";
+import { Search, Plus, Smartphone, X, Trash2 } from "lucide-react";
 
 const statusColors: Record<PhoneStatus, string> = {
   Activo: "bg-emerald-50 text-emerald-700",
@@ -96,8 +96,8 @@ const PhoneFleetPage = () => {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
-                    {["ID", "Marca / Modelo", "IMEI", "Serial", "Nro. Teléfono", "Estado", "Asignado a", "Departamento", "Adquisición"].map((h) => (
-                      <th key={h} className="text-left px-4 py-3 font-heading font-semibold text-muted-foreground text-xs uppercase tracking-wider whitespace-nowrap">{h}</th>
+                    {["ID", "Marca / Modelo", "IMEI", "Serial", "Nro. Teléfono", "Estado", "Asignado a", "Departamento", "Adquisición", ...(user?.isAdmin ? [""] : [])].map((h, i) => (
+                      <th key={`${h}-${i}`} className="text-left px-4 py-3 font-heading font-semibold text-muted-foreground text-xs uppercase tracking-wider whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -122,6 +122,21 @@ const PhoneFleetPage = () => {
                       <td className="px-4 py-3">{p.assignedTo || "—"}</td>
                       <td className="px-4 py-3">{p.department || "—"}</td>
                       <td className="px-4 py-3 text-muted-foreground">{p.acquisitionDate}</td>
+                      {user?.isAdmin && (
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`¿Eliminar dispositivo ${p.id}: ${p.brand} ${p.model}?`)) {
+                                setPhones((prev) => prev.filter((ph) => ph.id !== p.id));
+                              }
+                            }}
+                            className="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
+                            title="Eliminar"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
