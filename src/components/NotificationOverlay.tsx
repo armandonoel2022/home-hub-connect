@@ -65,6 +65,7 @@ function getOverlayType(n: AppNotification): keyof typeof typeConfig {
 }
 
 const NotificationOverlay = () => {
+  const navigate = useNavigate();
   const { notifications, markAsRead } = useNotifications();
   const [currentOverlay, setCurrentOverlay] = useState<AppNotification | null>(null);
   const [shownIds, setShownIds] = useState<Set<string>>(new Set());
