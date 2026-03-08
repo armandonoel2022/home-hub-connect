@@ -11,7 +11,6 @@ import ChatNotificationToast from "@/components/chat/ChatNotificationToast";
 import BirthdayOverlay from "@/components/BirthdayOverlay";
 import PanicButton from "@/components/PanicButton";
 import NotificationOverlay from "@/components/NotificationOverlay";
-import NotificationDemo from "@/components/NotificationDemo";
 import Index from "./pages/Index";
 import Tickets from "./pages/Tickets";
 import Inventory from "./pages/Inventory";
