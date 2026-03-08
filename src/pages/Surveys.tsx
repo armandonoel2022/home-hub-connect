@@ -51,7 +51,7 @@ interface Survey {
   deleteReason?: string;
 }
 
-const HR_MANAGER_EMAIL = "dilia.aguasvivas@safeone.com.do";
+// HR leader is determined by isDepartmentLeader flag — inheritable when role changes
 
 const INITIAL_SURVEYS: Survey[] = [
   {
@@ -101,7 +101,7 @@ const SurveysPage = () => {
     questions: [{ id: "nq1", text: "", type: "rating" as SurveyQuestion["type"], options: [""] }],
   });
 
-  const isHRManager = user?.email === HR_MANAGER_EMAIL || user?.isAdmin === true;
+  const isHRManager = user?.isAdmin === true || (user?.isDepartmentLeader === true && user?.department === "Recursos Humanos");
   // Can manage (create/delete): HR Manager, admins, or delegated users
   const canManage = isHRManager || (user ? delegatedUsers.includes(user.id) : false);
   const isHR = user?.department === "Recursos Humanos" || user?.isAdmin;
@@ -224,7 +224,7 @@ const SurveysPage = () => {
     return [];
   };
 
-  const hrUsers = allUsers.filter((u) => u.department === "Recursos Humanos" && u.email !== HR_MANAGER_EMAIL);
+  const hrUsers = allUsers.filter((u) => u.department === "Recursos Humanos" && u.id !== user?.id);
   const deletedCount = surveys.filter((s) => s.deleted).length;
 
   return (

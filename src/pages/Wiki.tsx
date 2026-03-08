@@ -1,8 +1,8 @@
 import { useState } from "react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { DEPARTMENTS } from "@/lib/types";
-import { BookOpen, Plus, X, Search, Edit3, Save, Trash2, Clock, User, Tag } from "lucide-react";
+import { useDepartmentLeader, type DeletionRecord } from "@/hooks/useDepartmentLeader";
+import { BookOpen, Plus, X, Search, Edit3, Save, Trash2, Clock, User, Tag, Archive, UserCog } from "lucide-react";
 
 interface WikiArticle {
   id: string;
@@ -15,67 +15,64 @@ interface WikiArticle {
   createdAt: string;
   updatedAt: string;
   tags: string[];
+  deleted?: boolean;
+  deletedBy?: string;
+  deletedAt?: string;
+  deleteReason?: string;
 }
 
 const CATEGORIES = ["General", "Políticas", "Guías", "FAQ", "Procesos", "Tecnología"];
 
 const INITIAL_ARTICLES: WikiArticle[] = [
   {
-    id: "WIKI-001",
-    title: "Cómo conectarse a la VPN corporativa",
+    id: "WIKI-001", title: "Cómo conectarse a la VPN corporativa",
     content: "## Requisitos\n- Tener instalado el cliente FortiClient\n- Credenciales de acceso proporcionadas por IT\n\n## Pasos\n1. Abrir FortiClient VPN\n2. Ingresar la dirección del servidor: vpn.safeone.com.do\n3. Introducir usuario y contraseña\n4. Hacer clic en \"Conectar\"\n\n## Solución de Problemas\n- Si no puede conectarse, verifique que tiene acceso a internet\n- Contacte a IT al ext. 216 si el problema persiste",
-    category: "Tecnología",
-    department: "Tecnología y Monitoreo",
-    createdBy: "Armando Noel",
-    createdByUserId: "USR-002",
-    createdAt: "2026-02-15",
-    updatedAt: "2026-02-15",
-    tags: ["VPN", "Conectividad", "IT"],
+    category: "Tecnología", department: "Tecnología y Monitoreo", createdBy: "Armando Noel", createdByUserId: "USR-002", createdAt: "2026-02-15", updatedAt: "2026-02-15", tags: ["VPN", "Conectividad", "IT"],
   },
   {
-    id: "WIKI-002",
-    title: "Procedimiento para solicitar vacaciones",
+    id: "WIKI-002", title: "Procedimiento para solicitar vacaciones",
     content: "## Proceso\n1. Acceder al módulo de RRHH > Formularios > Vacaciones\n2. Completar el formulario con las fechas deseadas\n3. Seleccionar modalidad: Imprimir o Virtual\n4. Obtener aprobación del supervisor directo\n5. Entregar a RRHH para registro\n\n## Consideraciones\n- Solicitar con mínimo 15 días de anticipación\n- Verificar disponibilidad con el supervisor\n- Tener días disponibles según antigüedad",
-    category: "Procesos",
-    department: "Recursos Humanos",
-    createdBy: "Dilia Aguasvivas",
-    createdByUserId: "USR-006",
-    createdAt: "2026-01-20",
-    updatedAt: "2026-03-01",
-    tags: ["Vacaciones", "RRHH", "Formularios"],
+    category: "Procesos", department: "Recursos Humanos", createdBy: "Dilia Aguasvivas", createdByUserId: "USR-006", createdAt: "2026-01-20", updatedAt: "2026-03-01", tags: ["Vacaciones", "RRHH", "Formularios"],
   },
   {
-    id: "WIKI-003",
-    title: "Política de uso de equipos corporativos",
+    id: "WIKI-003", title: "Política de uso de equipos corporativos",
     content: "## Alcance\nAplica a todos los colaboradores que tengan equipos asignados.\n\n## Lineamientos\n- Los equipos son para uso exclusivamente laboral\n- No instalar software no autorizado\n- Reportar inmediatamente cualquier daño o pérdida\n- Devolver equipos al finalizar la relación laboral\n\n## Sanciones\nEl incumplimiento puede resultar en acciones disciplinarias según el reglamento interno.",
-    category: "Políticas",
-    department: "Gerencia General",
-    createdBy: "Aurelio Pérez",
-    createdByUserId: "USR-100",
-    createdAt: "2026-01-05",
-    updatedAt: "2026-01-05",
-    tags: ["Equipos", "Política", "General"],
+    category: "Políticas", department: "Gerencia General", createdBy: "Aurelio Pérez", createdByUserId: "USR-100", createdAt: "2026-01-05", updatedAt: "2026-01-05", tags: ["Equipos", "Política", "General"],
   },
 ];
 
 const WikiPage = () => {
   const { user } = useAuth();
+  const { isLeader, canManageContent, departmentUsers } = useDepartmentLeader();
   const [articles, setArticles] = useState<WikiArticle[]>(INITIAL_ARTICLES);
+  const [deletionLog, setDeletionLog] = useState<DeletionRecord[]>([]);
+  const [delegatedUsers, setDelegatedUsers] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState("");
   const [selected, setSelected] = useState<WikiArticle | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<WikiArticle | null>(null);
+  const [deleteReason, setDeleteReason] = useState("");
+  const [showDeletionLog, setShowDeletionLog] = useState(false);
+  const [showDelegation, setShowDelegation] = useState(false);
 
-  const [form, setForm] = useState({
-    title: "",
-    content: "",
-    category: "General",
-    tags: "",
-  });
+  const [form, setForm] = useState({ title: "", content: "", category: "General", tags: "" });
 
-  const filtered = articles.filter((a) => {
+  const canManage = canManageContent || (user ? delegatedUsers.includes(user.id) : false);
+
+  const canManageArticle = (a: WikiArticle) => {
+    if (user?.isAdmin) return true;
+    if (a.createdByUserId === user?.id) return true;
+    if (user?.isDepartmentLeader && user?.department === a.department) return true;
+    if (user && delegatedUsers.includes(user.id) && user.department === a.department) return true;
+    return false;
+  };
+
+  const activeArticles = articles.filter((a) => !a.deleted);
+
+  const filtered = activeArticles.filter((a) => {
     const matchSearch = !search ||
       a.title.toLowerCase().includes(search.toLowerCase()) ||
       a.tags.some((t) => t.toLowerCase().includes(search.toLowerCase())) ||
@@ -88,14 +85,9 @@ const WikiPage = () => {
     if (!form.title || !form.content) return;
     const newArticle: WikiArticle = {
       id: `WIKI-${String(articles.length + 1).padStart(3, "0")}`,
-      title: form.title,
-      content: form.content,
-      category: form.category,
-      department: user?.department || "",
-      createdBy: user?.fullName || "",
-      createdByUserId: user?.id || "",
-      createdAt: new Date().toISOString().split("T")[0],
-      updatedAt: new Date().toISOString().split("T")[0],
+      title: form.title, content: form.content, category: form.category,
+      department: user?.department || "", createdBy: user?.fullName || "", createdByUserId: user?.id || "",
+      createdAt: new Date().toISOString().split("T")[0], updatedAt: new Date().toISOString().split("T")[0],
       tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
     };
     setArticles([newArticle, ...articles]);
@@ -110,9 +102,23 @@ const WikiPage = () => {
     setEditing(false);
   };
 
-  const canEdit = (article: WikiArticle) => user?.isAdmin || article.createdByUserId === user?.id;
+  const handleSoftDelete = (article: WikiArticle) => {
+    if (!deleteReason.trim()) return;
+    const now = new Date().toISOString().split("T")[0];
+    setDeletionLog([
+      { itemId: article.id, itemTitle: article.title, module: "Wiki", deletedBy: user?.fullName || "", deletedAt: now, reason: deleteReason },
+      ...deletionLog,
+    ]);
+    setArticles(articles.map((a) => a.id === article.id ? { ...a, deleted: true, deletedBy: user?.fullName, deletedAt: now, deleteReason: deleteReason } : a));
+    setShowDeleteConfirm(null);
+    setDeleteReason("");
+    if (selected?.id === article.id) setSelected(null);
+  };
 
-  // Simple markdown-like renderer
+  const toggleDelegation = (userId: string) => {
+    setDelegatedUsers(delegatedUsers.includes(userId) ? delegatedUsers.filter((id) => id !== userId) : [...delegatedUsers, userId]);
+  };
+
   const renderContent = (content: string) => {
     return content.split("\n").map((line, i) => {
       if (line.startsWith("## ")) return <h3 key={i} className="font-heading font-bold text-card-foreground mt-4 mb-2">{line.slice(3)}</h3>;
@@ -122,6 +128,8 @@ const WikiPage = () => {
       return <p key={i} className="text-sm text-muted-foreground">{line}</p>;
     });
   };
+
+  const deletedCount = articles.filter((a) => a.deleted).length;
 
   return (
     <AppLayout>
@@ -139,9 +147,24 @@ const WikiPage = () => {
                   <p className="text-muted-foreground text-sm mt-1">Wiki interna — artículos, guías y procedimientos</p>
                 </div>
               </div>
-              <button onClick={() => setShowCreate(true)} className="btn-gold flex items-center gap-2">
-                <Plus className="h-4 w-4" /> Nuevo Artículo
-              </button>
+              <div className="flex items-center gap-2">
+                {isLeader && (
+                  <button onClick={() => setShowDelegation(true)} className="p-2.5 rounded-lg border border-border text-muted-foreground hover:text-card-foreground hover:bg-muted transition-colors" title="Gestionar delegados">
+                    <UserCog className="h-4 w-4" />
+                  </button>
+                )}
+                {isLeader && (
+                  <button onClick={() => setShowDeletionLog(true)} className="p-2.5 rounded-lg border border-border text-muted-foreground hover:text-card-foreground hover:bg-muted transition-colors relative" title="Registro de eliminaciones">
+                    <Archive className="h-4 w-4" />
+                    {deletedCount > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center">{deletedCount}</span>}
+                  </button>
+                )}
+                {canManage && (
+                  <button onClick={() => setShowCreate(true)} className="btn-gold flex items-center gap-2">
+                    <Plus className="h-4 w-4" /> Nuevo Artículo
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -202,7 +225,7 @@ const WikiPage = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {canEdit(selected) && !editing && (
+                  {canManageArticle(selected) && !editing && (
                     <button onClick={() => { setEditing(true); setEditContent(selected.content); }} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-card-foreground transition-colors" title="Editar">
                       <Edit3 className="h-4 w-4" />
                     </button>
@@ -232,10 +255,98 @@ const WikiPage = () => {
                 </div>
               )}
               <div className="p-5 border-t border-border flex justify-between">
-                {canEdit(selected) && (
-                  <button onClick={() => { setArticles(articles.filter((a) => a.id !== selected.id)); setSelected(null); }} className="px-4 py-2 rounded-lg text-sm text-destructive hover:bg-destructive/10 transition-colors flex items-center gap-1"><Trash2 className="h-4 w-4" /> Eliminar</button>
+                {canManageArticle(selected) && (
+                  <button onClick={() => { setShowDeleteConfirm(selected); setDeleteReason(""); }} className="px-4 py-2 rounded-lg text-sm text-destructive hover:bg-destructive/10 transition-colors flex items-center gap-1"><Trash2 className="h-4 w-4" /> Eliminar</button>
                 )}
                 <button onClick={() => setSelected(null)} className="btn-gold text-sm ml-auto">Cerrar</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══════ Delete Confirmation ══════ */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-card rounded-xl w-full max-w-md shadow-2xl">
+              <div className="flex items-center justify-between p-5 border-b border-border">
+                <h2 className="font-heading font-bold text-lg text-destructive">Eliminar Artículo</h2>
+                <button onClick={() => setShowDeleteConfirm(null)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
+              </div>
+              <div className="p-5 space-y-4">
+                <div className="bg-destructive/10 rounded-lg p-4">
+                  <p className="text-sm font-medium text-card-foreground">¿Está seguro de eliminar este artículo?</p>
+                  <p className="text-xs text-muted-foreground mt-1"><strong>{showDeleteConfirm.title}</strong></p>
+                  <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1"><Archive className="h-3 w-3" /> Quedará un registro permanente de esta eliminación.</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Motivo de eliminación *</label>
+                  <textarea value={deleteReason} onChange={(e) => setDeleteReason(e.target.value)} rows={2} placeholder="Indique el motivo..." className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-destructive outline-none resize-none" />
+                </div>
+              </div>
+              <div className="p-5 border-t border-border flex gap-3 justify-end">
+                <button onClick={() => setShowDeleteConfirm(null)} className="px-5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">Cancelar</button>
+                <button onClick={() => handleSoftDelete(showDeleteConfirm)} disabled={!deleteReason.trim()} className="px-5 py-2.5 rounded-lg text-sm font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Eliminar</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══════ Deletion Log ══════ */}
+        {showDeletionLog && isLeader && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-card rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+              <div className="flex items-center justify-between p-5 border-b border-border">
+                <div>
+                  <h2 className="font-heading font-bold text-lg text-card-foreground">Registro de Eliminaciones</h2>
+                  <p className="text-xs text-muted-foreground mt-1">Historial permanente — Wiki</p>
+                </div>
+                <button onClick={() => setShowDeletionLog(false)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
+              </div>
+              <div className="p-5 space-y-3">
+                {deletionLog.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">No hay registros de eliminaciones.</p>
+                ) : (
+                  deletionLog.map((r, i) => (
+                    <div key={i} className="bg-muted rounded-lg p-4 space-y-1">
+                      <p className="text-sm font-medium text-card-foreground">{r.itemTitle}</p>
+                      <p className="text-xs text-muted-foreground">Eliminado por: <strong>{r.deletedBy}</strong> · {r.deletedAt}</p>
+                      <p className="text-xs text-muted-foreground">Motivo: {r.reason}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="p-5 border-t border-border flex justify-end">
+                <button onClick={() => setShowDeletionLog(false)} className="btn-gold text-sm">Cerrar</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══════ Delegation ══════ */}
+        {showDelegation && isLeader && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-card rounded-xl w-full max-w-md shadow-2xl">
+              <div className="flex items-center justify-between p-5 border-b border-border">
+                <div>
+                  <h2 className="font-heading font-bold text-lg text-card-foreground">Delegar Gestión</h2>
+                  <p className="text-xs text-muted-foreground mt-1">Seleccione quién puede agregar/eliminar artículos</p>
+                </div>
+                <button onClick={() => setShowDelegation(false)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
+              </div>
+              <div className="p-5 space-y-2">
+                {departmentUsers.map((u) => (
+                  <label key={u.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted cursor-pointer">
+                    <input type="checkbox" checked={delegatedUsers.includes(u.id)} onChange={() => toggleDelegation(u.id)} className="rounded" />
+                    <div>
+                      <span className="text-sm font-medium text-card-foreground">{u.fullName}</span>
+                      <span className="text-xs text-muted-foreground block">{u.position}</span>
+                    </div>
+                  </label>
+                ))}
+                {departmentUsers.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No hay otros miembros en su departamento.</p>}
+              </div>
+              <div className="p-5 border-t border-border flex justify-end">
+                <button onClick={() => setShowDelegation(false)} className="btn-gold text-sm">Listo</button>
               </div>
             </div>
           </div>
