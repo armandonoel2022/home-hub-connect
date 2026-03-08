@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
 import type { HiringRequest, HiringRequestStatus } from "@/lib/types";
 import { DEPARTMENTS } from "@/lib/types";
-import { Plus, X, Users, Check, XCircle, Eye, Calendar, ArrowRight } from "lucide-react";
+import { Plus, X, Users, Check, XCircle, Eye, Calendar, ArrowRight, Trash2 } from "lucide-react";
 
 const statusColors: Record<string, string> = {
   Borrador: "bg-gray-100 text-gray-600",
