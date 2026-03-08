@@ -19,6 +19,14 @@ import type { MinorPurchase, PaymentMethod, MinorPurchaseStatus } from "@/lib/ty
 
 const AUTO_APPROVE_IDS = ["USR-100", "USR-110", "USR-101"]; // Aurelio, Samuel, Chrisnel
 
+// Approval routing: Technology → Samuel A. Pérez, everything else → Chrisnel Fabian
+const TECH_CATEGORIES = ["Tecnología"];
+const APPROVER_TECH = { id: "USR-110", name: "Samuel A. Pérez" };
+const APPROVER_DEFAULT = { id: "USR-101", name: "Chrisnel Fabian" };
+
+const getApprover = (category: string) =>
+  TECH_CATEGORIES.includes(category) ? APPROVER_TECH : APPROVER_DEFAULT;
+
 const EXPENSE_CATEGORIES = [
   "Material de Oficina",
   "Limpieza",
