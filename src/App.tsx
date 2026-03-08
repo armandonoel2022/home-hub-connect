@@ -115,7 +115,7 @@ const App = () => {
                 <ChatNotificationToast />
                 <PanicButton />
                 <NotificationOverlay />
-                <NotificationDemo />
+                
               </ChatProvider>
             </NotificationProvider>
           </AuthProvider>
