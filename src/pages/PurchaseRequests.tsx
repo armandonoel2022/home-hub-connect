@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
 import type { PurchaseRequest, PurchaseItem } from "@/lib/types";
 import { DEPARTMENTS, PURCHASE_APPROVAL_THRESHOLDS } from "@/lib/types";
-import { Plus, X, ShoppingCart, Check, XCircle, FileText, Upload, Eye, Clock } from "lucide-react";
+import { Plus, X, ShoppingCart, Check, XCircle, FileText, Upload, Eye, Clock, Trash2 } from "lucide-react";
 
 const statusColors: Record<string, string> = {
   Pendiente: "bg-amber-50 text-amber-700",
