@@ -62,11 +62,12 @@ const initialDocs: BASCDocument[] = [
 ];
 
 const BASCPage = () => {
+  const { user } = useAuth();
   const [documents, setDocuments] = useState<BASCDocument[]>(initialDocs);
-  const [expandedDept, setExpandedDept] = useState<string | null>("Operaciones");
+  const [expandedDept, setExpandedDept] = useState<string | null>(user?.department || "Operaciones");
   const [expandedCat, setExpandedCat] = useState<string | null>("Procedimientos");
   const [showUpload, setShowUpload] = useState(false);
-  const [uploadForm, setUploadForm] = useState({ department: "", category: "", file: null as File | null });
+  const [uploadForm, setUploadForm] = useState({ department: user?.department || "", category: "", file: null as File | null });
   const [search, setSearch] = useState("");
   const [filterDept, setFilterDept] = useState("");
 
