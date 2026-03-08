@@ -1,6 +1,7 @@
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { Search, Phone, Mail, Building, User } from "lucide-react";
+import ExportMenu from "@/components/ExportMenu";
 import { useState } from "react";
 import { DEPARTMENTS } from "@/lib/types";
 
