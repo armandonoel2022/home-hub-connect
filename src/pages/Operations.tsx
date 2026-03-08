@@ -1,8 +1,9 @@
 import { useState, useRef } from "react";
 import AppLayout from "@/components/AppLayout";
+import { useAuth } from "@/contexts/AuthContext";
 import { mockArmedPersonnel } from "@/lib/mockData";
 import type { ArmedPersonnel } from "@/lib/types";
-import { Search, Plus, User, MapPin, X, Phone, Upload, Image } from "lucide-react";
+import { Search, Plus, User, MapPin, X, Phone, Upload, Image, Lock } from "lucide-react";
 
 const statusColors: Record<string, string> = {
   Activo: "bg-emerald-50 text-emerald-700",
