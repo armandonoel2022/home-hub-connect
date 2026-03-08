@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
 import type { HiringRequest, HiringRequestStatus } from "@/lib/types";
 import { DEPARTMENTS } from "@/lib/types";
-import { Plus, X, Users, Check, XCircle, Eye, Calendar, ArrowRight, Trash2 } from "lucide-react";
+import { Plus, X, Users, Check, XCircle, Eye, Calendar, ArrowRight, Trash2, Timer } from "lucide-react";
 
 const statusColors: Record<string, string> = {
   Borrador: "bg-gray-100 text-gray-600",
@@ -20,13 +20,57 @@ const statusColors: Record<string, string> = {
 
 const statusSteps: HiringRequestStatus[] = [
   "Pendiente Gerente Área",
-  "Aprobada Gerente Área",
   "Pendiente Gerencia General",
-  "Aprobada Gerencia General",
   "En Proceso RRHH",
   "Entrevista Programada",
   "Completada",
 ];
+
+const stepLabels: Record<string, string> = {
+  "Pendiente Gerente Área": "Gerente",
+  "Pendiente Gerencia General": "GG",
+  "En Proceso RRHH": "RRHH",
+  "Entrevista Programada": "Entrevista",
+  "Completada": "Completada",
+};
+
+function getElapsedTime(from: string, to?: string | null): string {
+  const start = new Date(from).getTime();
+  const end = to ? new Date(to).getTime() : Date.now();
+  const diffMs = end - start;
+  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+  if (hours >= 24) {
+    const days = Math.floor(hours / 24);
+    const remainHours = hours % 24;
+    return `${days}d ${remainHours}h`;
+  }
+  return `${hours}h ${minutes}m`;
+}
+
+function getTimelineData(req: HiringRequest) {
+  const timeline: { label: string; elapsed: string }[] = [];
+  if (req.managerApproval?.at) {
+    timeline.push({ label: "Solicitud → Aprobación Gerente", elapsed: getElapsedTime(req.requestedAt, req.managerApproval.at) });
+  }
+  if (req.gmApproval?.at && req.managerApproval?.at) {
+    timeline.push({ label: "Gerente → Gerencia General", elapsed: getElapsedTime(req.managerApproval.at, req.gmApproval.at) });
+  }
+  if (req.rrhhStartedAt) {
+    const prev = req.gmApproval?.at || req.managerApproval?.at || req.requestedAt;
+    timeline.push({ label: "Aprobación → RRHH", elapsed: getElapsedTime(prev, req.rrhhStartedAt) });
+  }
+  if (req.interviewDate && req.rrhhStartedAt) {
+    timeline.push({ label: "RRHH → Entrevista", elapsed: getElapsedTime(req.rrhhStartedAt, req.interviewDate) });
+  }
+  if (req.completedAt && req.interviewDate) {
+    timeline.push({ label: "Entrevista → Completada", elapsed: getElapsedTime(req.interviewDate, req.completedAt) });
+  }
+  if (req.rejectedAt) {
+    timeline.push({ label: "Solicitud → Rechazada", elapsed: getElapsedTime(req.requestedAt, req.rejectedAt) });
+  }
+  return timeline;
+}
 
 const mockHiringRequests: HiringRequest[] = [
   {
@@ -80,7 +124,6 @@ const HiringRequestsPage = () => {
   const { addNotification } = useNotifications();
   const [requests, setRequests] = useState<HiringRequest[]>(mockHiringRequests);
 
-  // HR sees all, admins see all, leaders see only own
   const visibleRequests = (user?.isAdmin || user?.department === "Recursos Humanos")
     ? requests
     : requests.filter((r) => r.requestedBy === user?.fullName);
@@ -138,10 +181,12 @@ const HiringRequestsPage = () => {
     if (!approved) {
       newStatus = "Rechazada";
       updates.rejectionReason = rejectionReason;
+      updates.rejectedBy = user?.fullName || "";
+      updates.rejectedAt = new Date().toISOString();
       addNotification({
         type: "hiring",
         title: "Solicitud de Contratación Rechazada ❌",
-        message: `La solicitud para "${req.positionTitle}" fue rechazada: ${rejectionReason}`,
+        message: `La solicitud para "${req.positionTitle}" fue rechazada por ${user?.fullName}: ${rejectionReason}`,
         relatedId: req.id,
         forUserId: "USR-005",
         actionUrl: "/solicitudes-personal",
@@ -151,27 +196,27 @@ const HiringRequestsPage = () => {
         case "Pendiente Gerente Área":
           newStatus = "Pendiente Gerencia General";
           updates.managerApproval = { by: user?.fullName || "", at: new Date().toISOString(), approved: true };
-          addNotification({ type: "hiring", title: "Aprobación de Gerente ✅", message: `Solicitud "${req.positionTitle}" aprobada por gerente de área, pendiente Gerencia General`, relatedId: req.id, forUserId: "USR-001", actionUrl: "/solicitudes-personal" });
+          addNotification({ type: "hiring", title: "Aprobación de Gerente de Área ✅", message: `Solicitud "${req.positionTitle}" aprobada por gerente de área. Pendiente aprobación de Gerencia General.`, relatedId: req.id, forUserId: "USR-001", actionUrl: "/solicitudes-personal" });
           break;
         case "Pendiente Gerencia General":
           newStatus = "En Proceso RRHH";
           updates.gmApproval = { by: user?.fullName || "", at: new Date().toISOString(), approved: true };
-          addNotification({ type: "hiring", title: "Aprobación Gerencia General ✅", message: `Solicitud "${req.positionTitle}" aprobada — pasa a RRHH para gestión`, relatedId: req.id, forUserId: "USR-005", actionUrl: "/solicitudes-personal" });
+          updates.rrhhStartedAt = new Date().toISOString();
+          addNotification({ type: "hiring", title: "Aprobación Gerencia General ✅", message: `Solicitud "${req.positionTitle}" aprobada por Gerencia General. Pasa a RRHH para gestión de candidatos.`, relatedId: req.id, forUserId: "USR-005", actionUrl: "/solicitudes-personal" });
           break;
         case "En Proceso RRHH":
           if (interviewDate) {
             newStatus = "Entrevista Programada";
             updates.interviewDate = interviewDate;
-            addNotification({ type: "hiring", title: "Entrevista Programada 📅", message: `Entrevista para "${req.positionTitle}" agendada: ${new Date(interviewDate).toLocaleDateString()}`, relatedId: req.id, forUserId: "USR-005", actionUrl: "/solicitudes-personal" });
+            addNotification({ type: "hiring", title: "Entrevista Programada 📅", message: `Entrevista para "${req.positionTitle}" agendada para el ${new Date(interviewDate).toLocaleDateString("es-DO")}. Departamento: ${req.department}.`, relatedId: req.id, forUserId: "USR-005", actionUrl: "/solicitudes-personal" });
           }
           break;
         case "Entrevista Programada":
           newStatus = "Completada";
-          addNotification({ type: "hiring", title: "Proceso Completado ✅", message: `El proceso de contratación para "${req.positionTitle}" ha sido completado`, relatedId: req.id, forUserId: "USR-005", actionUrl: "/solicitudes-personal" });
-          // Notify HR
+          updates.completedAt = new Date().toISOString();
+          addNotification({ type: "hiring", title: "Proceso de Contratación Completado ✅", message: `El proceso para "${req.positionTitle}" en ${req.department} ha sido completado. Tiempo total: ${getElapsedTime(req.requestedAt)}.`, relatedId: req.id, forUserId: "USR-005", actionUrl: "/solicitudes-personal" });
           addNotification({ type: "hiring", title: "Nuevo Ingreso - Preparar Expediente", message: `Contratación completada: "${req.positionTitle}" en ${req.department}. Preparar documentación de ingreso.`, relatedId: req.id, forUserId: "USR-006", actionUrl: "/solicitudes-personal" });
-          // Notify IT to prepare equipment
-          addNotification({ type: "info", title: "Nuevo Ingreso - Preparar Equipos", message: `Se ha completado la contratación de "${req.positionTitle}" para ${req.department}. Preparar equipos (computadora, celular flota, accesos). Si se requiere adquirir equipos, crear solicitud de compra a Gerencia Comercial.`, relatedId: req.id, forUserId: "USR-002", actionUrl: "/inventario" });
+          addNotification({ type: "info", title: "Nuevo Ingreso - Preparar Equipos", message: `Se ha completado la contratación de "${req.positionTitle}" para ${req.department}. Preparar equipos (computadora, celular flota, accesos).`, relatedId: req.id, forUserId: "USR-002", actionUrl: "/inventario" });
           break;
       }
     }
@@ -197,7 +242,7 @@ const HiringRequestsPage = () => {
                   <h1 className="font-heading font-bold text-2xl text-secondary-foreground">
                     Solicitudes de <span className="gold-accent-text">Personal</span>
                   </h1>
-                  <p className="text-muted-foreground text-sm mt-1">Contratación con flujo de aprobación: Gerente → Gerencia General → RRHH</p>
+                  <p className="text-muted-foreground text-sm mt-1">Flujo: Gerente Área → Gerencia General → RRHH → Entrevista → Completada</p>
                 </div>
               </div>
               <button onClick={() => setShowForm(true)} className="btn-gold flex items-center gap-2">
@@ -209,12 +254,13 @@ const HiringRequestsPage = () => {
         </div>
 
         {/* Stats */}
-        <div className="px-6 py-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="px-6 py-4 grid grid-cols-2 md:grid-cols-5 gap-3">
           {[
             { label: "Total", value: visibleRequests.length },
             { label: "Pendientes", value: visibleRequests.filter((r) => r.status.startsWith("Pendiente")).length },
             { label: "En Proceso", value: visibleRequests.filter((r) => ["En Proceso RRHH", "Entrevista Programada"].includes(r.status)).length },
             { label: "Completadas", value: visibleRequests.filter((r) => r.status === "Completada").length },
+            { label: "Rechazadas", value: visibleRequests.filter((r) => r.status === "Rechazada").length },
           ].map((s) => (
             <div key={s.label} className="bg-card rounded-lg p-4 border border-border">
               <p className="text-xs text-muted-foreground">{s.label}</p>
@@ -225,61 +271,81 @@ const HiringRequestsPage = () => {
 
         {/* List */}
         <div className="px-6 pb-8 space-y-3">
-          {visibleRequests.map((req) => (
-            <div key={req.id} className="bg-card rounded-lg border border-border overflow-hidden hover:shadow-md transition-shadow">
-              <div className="h-1 w-full bg-secondary" />
-              <div className="p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className="text-xs font-mono text-muted-foreground">{req.id}</span>
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusColors[req.status]}`}>{req.status}</span>
-                      {req.urgency === "Urgente" && <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-50 text-red-700">Urgente</span>}
-                    </div>
-                    <h3 className="font-heading font-bold text-card-foreground">{req.positionTitle}</h3>
-                    <p className="text-sm text-muted-foreground mt-1">{req.department} · {req.requestedBy} · {new Date(req.requestedAt).toLocaleDateString()}</p>
-                    {req.salaryRange && <p className="text-sm gold-accent-text font-medium mt-1">{req.salaryRange}</p>}
+          {visibleRequests.map((req) => {
+            const currentIdx = getStepIndex(req.status);
+            const isTerminal = req.status === "Completada" || req.status === "Rechazada";
+            const totalElapsed = getElapsedTime(req.requestedAt, req.completedAt || req.rejectedAt);
 
-                    {/* Progress bar */}
-                    <div className="mt-3 flex items-center gap-1">
-                      {statusSteps.map((step, i) => {
-                        const current = getStepIndex(req.status);
-                        const isReached = req.status !== "Rechazada" && i <= current;
-                        return (
-                          <div key={step} className="flex items-center gap-1 flex-1">
-                            <div className={`h-1.5 flex-1 rounded-full ${isReached ? "bg-gold" : "bg-border"}`} />
+            return (
+              <div key={req.id} className="bg-card rounded-lg border border-border overflow-hidden hover:shadow-md transition-shadow">
+                <div className={`h-1 w-full ${req.status === "Rechazada" ? "bg-destructive" : req.status === "Completada" ? "bg-emerald-500" : "bg-secondary"}`} />
+                <div className="p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="text-xs font-mono text-muted-foreground">{req.id}</span>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusColors[req.status]}`}>{req.status}</span>
+                        {req.urgency === "Urgente" && <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-50 text-red-700">Urgente</span>}
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Timer className="h-3 w-3" />
+                          {isTerminal ? `Total: ${totalElapsed}` : `En curso: ${totalElapsed}`}
+                        </span>
+                      </div>
+                      <h3 className="font-heading font-bold text-card-foreground">{req.positionTitle}</h3>
+                      <p className="text-sm text-muted-foreground mt-1">{req.department} · {req.requestedBy} · {new Date(req.requestedAt).toLocaleDateString()}</p>
+                      {req.salaryRange && <p className="text-sm gold-accent-text font-medium mt-1">{req.salaryRange}</p>}
+
+                      {/* Progress bar */}
+                      {req.status !== "Rechazada" && (
+                        <div className="mt-3">
+                          <div className="flex items-center gap-1">
+                            {statusSteps.map((step, i) => {
+                              const isReached = i <= currentIdx;
+                              return (
+                                <div key={step} className="flex items-center gap-1 flex-1">
+                                  <div className={`h-1.5 flex-1 rounded-full ${isReached ? "bg-gold" : "bg-border"}`} />
+                                </div>
+                              );
+                            })}
                           </div>
-                        );
-                      })}
+                          <div className="flex justify-between mt-1">
+                            {statusSteps.map((step, i) => (
+                              <span key={step} className={`text-[9px] ${i <= currentIdx ? "text-gold font-semibold" : "text-muted-foreground"}`}>
+                                {stepLabels[step]}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <div className="flex gap-2 shrink-0">
-                    <button onClick={() => setSelected(req)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-card-foreground transition-colors" title="Ver detalle">
-                      <Eye className="h-4 w-4" />
-                    </button>
-                    {req.status !== "Rechazada" && req.status !== "Completada" && user?.isAdmin && (
-                      <button onClick={() => setShowAction(req)} className="p-2 rounded-lg hover:bg-emerald-50 text-muted-foreground hover:text-emerald-700 transition-colors" title="Gestionar">
-                        <ArrowRight className="h-4 w-4" />
+                    <div className="flex gap-2 shrink-0">
+                      <button onClick={() => setSelected(req)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-card-foreground transition-colors" title="Ver detalle">
+                        <Eye className="h-4 w-4" />
                       </button>
-                    )}
-                    {user?.isAdmin && (
-                      <button
-                        onClick={() => {
-                          if (window.confirm(`¿Eliminar solicitud ${req.id}: "${req.positionTitle}"?`)) {
-                            setRequests((prev) => prev.filter((r) => r.id !== req.id));
-                          }
-                        }}
-                        className="p-2 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
-                        title="Eliminar"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    )}
+                      {!isTerminal && user?.isAdmin && (
+                        <button onClick={() => setShowAction(req)} className="p-2 rounded-lg hover:bg-emerald-50 text-muted-foreground hover:text-emerald-700 transition-colors" title="Gestionar">
+                          <ArrowRight className="h-4 w-4" />
+                        </button>
+                      )}
+                      {user?.isAdmin && (
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`¿Eliminar solicitud ${req.id}: "${req.positionTitle}"?`)) {
+                              setRequests((prev) => prev.filter((r) => r.id !== req.id));
+                            }
+                          }}
+                          className="p-2 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Detail Modal */}
@@ -303,7 +369,7 @@ const HiringRequestsPage = () => {
                     ...(selected.managerApproval ? [["Aprobado Gerente", `${selected.managerApproval.by} — ${new Date(selected.managerApproval.at).toLocaleDateString()}`]] : []),
                     ...(selected.gmApproval ? [["Aprobado GG", `${selected.gmApproval.by} — ${new Date(selected.gmApproval.at).toLocaleDateString()}`]] : []),
                     ...(selected.interviewDate ? [["Entrevista", new Date(selected.interviewDate).toLocaleDateString()]] : []),
-                    ...(selected.rejectionReason ? [["Motivo Rechazo", selected.rejectionReason]] : []),
+                    ...(selected.rejectionReason ? [["Motivo Rechazo", `${selected.rejectedBy || ""}: ${selected.rejectionReason}`]] : []),
                     ...(selected.residentialZone ? [["Zona Residencia", selected.residentialZone]] : []),
                     ["Tiene Vehículo", selected.hasVehicle ? `Sí — ${selected.vehicleType}` : "No"],
                   ].map(([label, val]) => (
@@ -313,6 +379,30 @@ const HiringRequestsPage = () => {
                     </div>
                   ))}
                 </div>
+
+                {/* Time tracking */}
+                {getTimelineData(selected).length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-card-foreground mb-2 flex items-center gap-2">
+                      <Timer className="h-4 w-4 text-gold" /> Tiempos del Proceso
+                    </h4>
+                    <div className="space-y-2">
+                      {getTimelineData(selected).map((t, i) => (
+                        <div key={i} className="flex items-center justify-between bg-muted rounded-lg p-3 text-sm">
+                          <span className="text-muted-foreground">{t.label}</span>
+                          <span className="font-heading font-bold text-card-foreground">{t.elapsed}</span>
+                        </div>
+                      ))}
+                      <div className="flex items-center justify-between bg-gold/10 rounded-lg p-3 text-sm border border-gold/20">
+                        <span className="font-medium text-card-foreground">Tiempo Total</span>
+                        <span className="font-heading font-bold gold-accent-text">
+                          {getElapsedTime(selected.requestedAt, selected.completedAt || selected.rejectedAt)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <h4 className="text-sm font-medium text-card-foreground mb-2">Justificación</h4>
                   <p className="text-sm text-muted-foreground bg-muted rounded-lg p-3">{selected.justification}</p>
@@ -343,6 +433,11 @@ const HiringRequestsPage = () => {
                   <p className="text-sm text-muted-foreground mt-1">{showAction.department} · {showAction.requestedBy}</p>
                   <p className="text-sm font-medium mt-2">
                     Estado actual: <span className={`px-2 py-0.5 rounded-full text-xs ${statusColors[showAction.status]}`}>{showAction.status}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                    <Timer className="h-3 w-3" /> En este paso: {getElapsedTime(
+                      showAction.rrhhStartedAt || showAction.gmApproval?.at || showAction.managerApproval?.at || showAction.requestedAt
+                    )}
                   </p>
                 </div>
 

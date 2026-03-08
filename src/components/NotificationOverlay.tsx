@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { X, ShieldAlert, Heart, ShoppingCart, UserPlus, Bell, AlertTriangle } from "lucide-react";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { Button } from "@/components/ui/button";
@@ -64,6 +65,7 @@ function getOverlayType(n: AppNotification): keyof typeof typeConfig {
 }
 
 const NotificationOverlay = () => {
+  const navigate = useNavigate();
   const { notifications, markAsRead } = useNotifications();
   const [currentOverlay, setCurrentOverlay] = useState<AppNotification | null>(null);
   const [shownIds, setShownIds] = useState<Set<string>>(new Set());
@@ -160,7 +162,7 @@ const NotificationOverlay = () => {
                   className="flex-1"
                   onClick={() => {
                     handleDismiss();
-                    window.location.href = currentOverlay.actionUrl;
+                    navigate(currentOverlay.actionUrl);
                   }}
                 >
                   Ver Detalles
