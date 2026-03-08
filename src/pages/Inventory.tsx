@@ -1,8 +1,9 @@
 import { useState } from "react";
 import AppLayout from "@/components/AppLayout";
+import { useAuth } from "@/contexts/AuthContext";
 import { mockEquipment } from "@/lib/mockData";
 import type { Equipment, EquipmentStatus, EquipmentType } from "@/lib/types";
-import { Search, Plus, Monitor, Printer, Cpu, Wifi, Package, X } from "lucide-react";
+import { Search, Plus, Monitor, Printer, Cpu, Wifi, Package, X, Trash2 } from "lucide-react";
 import ExportMenu from "@/components/ExportMenu";
 
 const typeIcons: Record<EquipmentType, typeof Monitor> = {
