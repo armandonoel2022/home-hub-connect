@@ -78,7 +78,7 @@ const TicketsPage = () => {
       category: form.category as TicketCategory,
       priority: form.priority,
       status: "Abierto",
-      createdBy: "Usuario Actual",
+      createdBy: user?.fullName || "Usuario Actual",
       department: form.department,
       createdAt: now,
       updatedAt: now,
