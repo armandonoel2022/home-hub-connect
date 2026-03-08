@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import type { IntranetUser } from "@/lib/types";
+import type { IntranetUser, OffboardingReason } from "@/lib/types";
 import { DEPARTMENTS } from "@/lib/types";
 
 interface AuthContextType {
@@ -9,9 +9,13 @@ interface AuthContextType {
   isLoading: boolean;
   hasAccess: (department: string) => boolean;
   allUsers: IntranetUser[];
+  activeUsers: IntranetUser[];
+  inactiveUsers: IntranetUser[];
   addUser: (u: IntranetUser) => void;
   updateUser: (id: string, data: Partial<IntranetUser>) => void;
   deleteUser: (id: string) => void;
+  offboardUser: (id: string, reason: OffboardingReason, notes: string) => void;
+  reactivateUser: (id: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -512,7 +516,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return user.allowedDepartments.includes(department);
   };
 
-  const addUser = (u: IntranetUser) => setAllUsers((prev) => [...prev, u]);
+  const addUser = (u: IntranetUser) => setAllUsers((prev) => [...prev, { ...u, employeeStatus: "Activo" }]);
 
   const updateUser = (id: string, data: Partial<IntranetUser>) => {
     setAllUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...data } : u)));
@@ -527,8 +531,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAllUsers((prev) => prev.filter((u) => u.id !== id));
   };
 
+  const offboardUser = (id: string, reason: OffboardingReason, notes: string) => {
+    setAllUsers((prev) =>
+      prev.map((u) =>
+        u.id === id
+          ? {
+              ...u,
+              employeeStatus: "Inactivo" as const,
+              offboardingDate: new Date().toISOString().split("T")[0],
+              offboardingReason: reason,
+              offboardingNotes: notes,
+              offboardingBy: user?.id || "",
+            }
+          : u
+      )
+    );
+  };
+
+  const reactivateUser = (id: string) => {
+    setAllUsers((prev) =>
+      prev.map((u) =>
+        u.id === id
+          ? {
+              ...u,
+              employeeStatus: "Activo" as const,
+              offboardingDate: undefined,
+              offboardingReason: undefined,
+              offboardingNotes: undefined,
+              offboardingBy: undefined,
+            }
+          : u
+      )
+    );
+  };
+
+  const activeUsers = allUsers.filter((u) => u.employeeStatus !== "Inactivo");
+  const inactiveUsers = allUsers.filter((u) => u.employeeStatus === "Inactivo");
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading, hasAccess, allUsers, addUser, updateUser, deleteUser }}>
+    <AuthContext.Provider value={{ user, login, logout, isLoading, hasAccess, allUsers, activeUsers, inactiveUsers, addUser, updateUser, deleteUser, offboardUser, reactivateUser }}>
       {children}
     </AuthContext.Provider>
   );

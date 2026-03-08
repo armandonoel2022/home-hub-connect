@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNotifications } from "@/contexts/NotificationContext";
 import { cn } from "@/lib/utils";
+import type { OffboardingReason } from "@/lib/types";
 import {
   Building2,
   Briefcase,
@@ -27,6 +29,10 @@ import {
   Trash2,
   Plus,
   File,
+  UserMinus,
+  UserX,
+  Clock,
+  RotateCcw,
 } from "lucide-react";
 
 interface DeptLeader {
@@ -135,11 +141,16 @@ const DEPT_ROUTES: Record<string, string> = {
 };
 
 const DepartmentGrid = () => {
-  const { allUsers } = useAuth();
+  const { user, allUsers, activeUsers, inactiveUsers, offboardUser, reactivateUser } = useAuth();
+  const { addNotification } = useNotifications();
   const navigate = useNavigate();
   const [showLeader, setShowLeader] = useState<Department | null>(null);
   const [showFiles, setShowFiles] = useState<string | null>(null);
   const [showTeam, setShowTeam] = useState<string | null>(null);
+  const [showExEmployees, setShowExEmployees] = useState<string | null>(null);
+  const [showOffboarding, setShowOffboarding] = useState<string | null>(null); // user ID
+  const [offboardReason, setOffboardReason] = useState<OffboardingReason>("Renuncia");
+  const [offboardNotes, setOffboardNotes] = useState("");
   const [deptFolders, setDeptFolders] = useState<Record<string, DeptFolder[]>>(() => {
     const init: Record<string, DeptFolder[]> = {};
     departments.forEach((d) => {
@@ -151,6 +162,38 @@ const DepartmentGrid = () => {
   });
   const [newFolderName, setNewFolderName] = useState("");
   const [showNewFolder, setShowNewFolder] = useState(false);
+
+  const handleOffboard = () => {
+    if (!showOffboarding) return;
+    const targetUser = allUsers.find((u) => u.id === showOffboarding);
+    if (!targetUser) return;
+
+    offboardUser(showOffboarding, offboardReason, offboardNotes);
+
+    // Notify HR
+    addNotification({
+      type: "info",
+      title: "Baja de Personal",
+      message: `${targetUser.fullName} (${targetUser.department}) ha sido dado de baja. Motivo: ${offboardReason}`,
+      relatedId: targetUser.id,
+      forUserId: "USR-006", // Dilia - RRHH
+      actionUrl: "/",
+    });
+
+    // Notify IT
+    addNotification({
+      type: "info",
+      title: "Retiro de Equipos - Baja de Personal",
+      message: `${targetUser.fullName} (${targetUser.department}) ha sido dado de baja. Verificar y retirar equipos asignados.`,
+      relatedId: targetUser.id,
+      forUserId: "USR-002", // Armando - IT
+      actionUrl: "/inventario",
+    });
+
+    setShowOffboarding(null);
+    setOffboardReason("Renuncia");
+    setOffboardNotes("");
+  };
 
   const handleAddFolder = (dept: string) => {
     if (!newFolderName.trim()) return;
@@ -202,9 +245,11 @@ const DepartmentGrid = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {departments.map((dept) => {
           const Icon = dept.icon;
-          const leaderUser = allUsers.find((u) => u.department === dept.name && u.isDepartmentLeader);
-          const teamMembers = allUsers.filter((u) => u.department === dept.name && !u.isDepartmentLeader);
+          const leaderUser = activeUsers.find((u) => u.department === dept.name && u.isDepartmentLeader);
+          const teamMembers = activeUsers.filter((u) => u.department === dept.name && !u.isDepartmentLeader);
+          const exEmployees = inactiveUsers.filter((u) => u.department === dept.name);
           const reportsToUser = leaderUser?.reportsTo ? allUsers.find((u) => u.id === leaderUser.reportsTo) : null;
+          const isLeaderOrAdmin = user?.isAdmin || (user?.isDepartmentLeader && user?.department === dept.name);
           return (
             <div key={dept.name} className="card-department group border-2" style={{ borderColor: "hsl(220 15% 30%)" }} id={`dept-${dept.name.toLowerCase().replace(/\s+/g, "-")}`}>
               <div className="px-5 py-4 flex items-center gap-4" style={{ background: "hsl(220 15% 30%)" }}>
@@ -257,6 +302,20 @@ const DepartmentGrid = () => {
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gold/20 gold-accent-text">{totalFiles(dept.name)}</span>
                     )}
                   </button>
+                  {exEmployees.length > 0 && (
+                    <button
+                      onClick={() => setShowExEmployees(showExEmployees === dept.name ? null : dept.name)}
+                      className="flex items-center justify-between text-xs font-semibold px-3 py-2 rounded-lg bg-destructive/5 hover:bg-destructive/10 transition-colors text-muted-foreground"
+                    >
+                      <span className="flex items-center gap-2">
+                        <UserX className="h-3.5 w-3.5" />
+                        Ex-Empleados
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive">
+                        {exEmployees.length}
+                      </span>
+                    </button>
+                  )}
                 </div>
 
                 {/* Expandable team section */}
@@ -281,7 +340,7 @@ const DepartmentGrid = () => {
                       </div>
                     )}
                     {teamMembers.map((m) => (
-                      <div key={m.id} className="flex items-center gap-2 text-[11px] px-3 py-1.5">
+                      <div key={m.id} className="flex items-center gap-2 text-[11px] px-3 py-1.5 group/member">
                         <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0">
                           {m.photoUrl ? <img src={m.photoUrl} alt="" className="w-full h-full object-cover" /> : <User className="h-3 w-3 text-muted-foreground" />}
                         </div>
@@ -296,6 +355,15 @@ const DepartmentGrid = () => {
                           <span className="text-[9px] text-muted-foreground italic">{m.shift}</span>
                         )}
                         <span className="text-muted-foreground ml-auto truncate max-w-[100px]">{m.position}</span>
+                        {isLeaderOrAdmin && (
+                          <button
+                            onClick={() => setShowOffboarding(m.id)}
+                            className="opacity-0 group-hover/member:opacity-100 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                            title="Dar de Baja"
+                          >
+                            <UserMinus className="h-3 w-3" />
+                          </button>
+                        )}
                       </div>
                     ))}
                     {!leaderUser && teamMembers.length === 0 && (
@@ -338,6 +406,45 @@ const DepartmentGrid = () => {
                         <FolderPlus className="h-3 w-3" /> Nueva Carpeta
                       </button>
                     )}
+                  </div>
+                )}
+
+                {/* Ex-employees section */}
+                {showExEmployees === dept.name && exEmployees.length > 0 && (
+                  <div className="mt-3 border-t border-border pt-3 space-y-2">
+                    <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider px-3">Ex-Empleados</p>
+                    {exEmployees.map((ex) => (
+                      <div key={ex.id} className="bg-muted/30 rounded-lg px-3 py-2 space-y-1">
+                        <div className="flex items-center gap-2 text-[11px]">
+                          <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0 opacity-60">
+                            {ex.photoUrl ? <img src={ex.photoUrl} alt="" className="w-full h-full object-cover" /> : <User className="h-3 w-3 text-muted-foreground" />}
+                          </div>
+                          <span className="text-card-foreground font-medium">{ex.fullName}</span>
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive">{ex.offboardingReason}</span>
+                          {user?.isAdmin && (
+                            <button
+                              onClick={() => reactivateUser(ex.id)}
+                              className="ml-auto p-1 rounded hover:bg-emerald-50 text-muted-foreground hover:text-emerald-600 transition-colors"
+                              title="Reactivar"
+                            >
+                              <RotateCcw className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-[10px] text-muted-foreground pl-8">
+                          <span>{ex.position}</span>
+                          {ex.offboardingDate && (
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-2.5 w-2.5" />
+                              Salida: {ex.offboardingDate}
+                            </span>
+                          )}
+                        </div>
+                        {ex.offboardingNotes && (
+                          <p className="text-[10px] text-muted-foreground pl-8 italic">"{ex.offboardingNotes}"</p>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -391,6 +498,77 @@ const DepartmentGrid = () => {
               </div>
               <div className="p-5 border-t border-border flex justify-end">
                 <button onClick={() => setShowLeader(null)} className="btn-gold text-sm">Cerrar</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Offboarding Modal */}
+      {showOffboarding && (() => {
+        const target = allUsers.find((u) => u.id === showOffboarding);
+        if (!target) return null;
+        return (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-card rounded-xl w-full max-w-md shadow-2xl">
+              <div className="flex items-center justify-between p-5 border-b border-border">
+                <h2 className="font-heading font-bold text-lg text-card-foreground flex items-center gap-2">
+                  <UserMinus className="h-5 w-5 text-destructive" />
+                  Dar de Baja
+                </h2>
+                <button onClick={() => setShowOffboarding(null)} className="p-1 hover:bg-muted rounded-lg">
+                  <X className="h-5 w-5 text-muted-foreground" />
+                </button>
+              </div>
+              <div className="p-5 space-y-4">
+                <div className="flex items-center gap-3 bg-muted rounded-lg p-3">
+                  <div className="w-10 h-10 rounded-full bg-background flex items-center justify-center overflow-hidden shrink-0">
+                    {target.photoUrl ? <img src={target.photoUrl} alt="" className="w-full h-full object-cover" /> : <User className="h-5 w-5 text-muted-foreground" />}
+                  </div>
+                  <div>
+                    <p className="font-medium text-card-foreground text-sm">{target.fullName}</p>
+                    <p className="text-xs text-muted-foreground">{target.position} — {target.department}</p>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Motivo *</label>
+                  <select
+                    value={offboardReason}
+                    onChange={(e) => setOffboardReason(e.target.value as OffboardingReason)}
+                    className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none"
+                  >
+                    <option value="Renuncia">Renuncia</option>
+                    <option value="Despido">Despido</option>
+                    <option value="Fin de Contrato">Fin de Contrato</option>
+                    <option value="Otro">Otro</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Notas</label>
+                  <textarea
+                    value={offboardNotes}
+                    onChange={(e) => setOffboardNotes(e.target.value)}
+                    placeholder="Detalles adicionales sobre la salida..."
+                    className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none resize-none h-20"
+                  />
+                </div>
+                <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-3 text-xs text-amber-700 dark:text-amber-400">
+                  <p className="font-semibold mb-1">Al dar de baja:</p>
+                  <ul className="list-disc pl-4 space-y-0.5">
+                    <li>Se notificará a RRHH y Tecnología</li>
+                    <li>IT verificará equipos asignados para retiro</li>
+                    <li>Equipos asignados quedarán disponibles para reasignación</li>
+                    <li>El empleado aparecerá en la sección "Ex-Empleados"</li>
+                  </ul>
+                </div>
+              </div>
+              <div className="p-5 border-t border-border flex gap-3 justify-end">
+                <button onClick={() => setShowOffboarding(null)} className="px-5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">
+                  Cancelar
+                </button>
+                <button onClick={handleOffboard} className="px-5 py-2.5 rounded-lg text-sm font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors">
+                  Confirmar Baja
+                </button>
               </div>
             </div>
           </div>

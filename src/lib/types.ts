@@ -98,6 +98,9 @@ export interface PhoneDevice {
 }
 
 // Users
+export type EmployeeStatus = "Activo" | "Inactivo";
+export type OffboardingReason = "Renuncia" | "Despido" | "Fin de Contrato" | "Otro";
+
 export interface IntranetUser {
   id: string;
   fullName: string;
@@ -114,6 +117,12 @@ export interface IntranetUser {
   extension?: string; // internal phone extension
   shift?: string; // turno de trabajo
   team?: string; // equipo asignado (e.g. "ALNAP", "Banco Caribe")
+  // Offboarding
+  employeeStatus?: EmployeeStatus;
+  offboardingDate?: string;
+  offboardingReason?: OffboardingReason;
+  offboardingNotes?: string;
+  offboardingBy?: string; // user ID who initiated
 }
 
 export const TICKET_CATEGORIES: TicketCategory[] = [

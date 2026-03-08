@@ -26,7 +26,7 @@ const emptyForm = (): Partial<IntranetUser> => ({
 });
 
 const UserManagementPage = () => {
-  const { user, allUsers, addUser, updateUser, deleteUser } = useAuth();
+  const { user, allUsers, activeUsers, inactiveUsers, addUser, updateUser, deleteUser } = useAuth();
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<IntranetUser | null>(null);
@@ -189,12 +189,13 @@ const UserManagementPage = () => {
         </div>
 
         {/* Stats */}
-        <div className="px-6 pb-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="px-6 pb-4 grid grid-cols-2 md:grid-cols-5 gap-3">
           {[
-            { label: "Total Usuarios", value: allUsers.length },
-            { label: "Administradores", value: allUsers.filter((u) => u.isAdmin).length },
-            { label: "Usuarios Regulares", value: allUsers.filter((u) => !u.isAdmin).length },
-            { label: "Departamentos", value: new Set(allUsers.map((u) => u.department)).size },
+            { label: "Total Activos", value: activeUsers.length },
+            { label: "Administradores", value: activeUsers.filter((u) => u.isAdmin).length },
+            { label: "Usuarios Regulares", value: activeUsers.filter((u) => !u.isAdmin).length },
+            { label: "Ex-Empleados", value: inactiveUsers.length },
+            { label: "Departamentos", value: new Set(activeUsers.map((u) => u.department)).size },
           ].map((s) => (
             <div key={s.label} className="bg-card rounded-lg p-4 border border-border">
               <p className="text-xs text-muted-foreground">{s.label}</p>
@@ -236,7 +237,10 @@ const UserManagementPage = () => {
                               <User className="h-4 w-4 text-muted-foreground" />
                             )}
                           </div>
-                          <span className="font-medium text-card-foreground">{u.fullName}</span>
+                           <span className="font-medium text-card-foreground">{u.fullName}</span>
+                           {u.employeeStatus === "Inactivo" && (
+                             <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive font-semibold">Inactivo</span>
+                           )}
                         </div>
                       </td>
                       <td className="px-4 py-3">
