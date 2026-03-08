@@ -28,6 +28,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
+import { useChatContext } from "@/contexts/ChatContext";
 import GlobalSearch from "@/components/GlobalSearch";
 
 const navItems = [
