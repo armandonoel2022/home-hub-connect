@@ -13,12 +13,18 @@ const statusColors: Record<PhoneStatus, string> = {
 };
 
 const PhoneFleetPage = () => {
+  const { user } = useAuth();
   const [phones, setPhones] = useState<PhoneDevice[]>(mockPhones);
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState<Partial<PhoneDevice>>({ status: "Disponible" });
 
-  const filtered = phones.filter(
+  // Non-admins only see their own assigned phone
+  const userPhones = user?.isAdmin
+    ? phones
+    : phones.filter((p) => p.assignedTo === user?.fullName);
+
+  const filtered = userPhones.filter(
     (p) =>
       p.imei.toLowerCase().includes(search.toLowerCase()) ||
       p.serial.toLowerCase().includes(search.toLowerCase()) ||
