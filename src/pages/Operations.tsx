@@ -17,6 +17,7 @@ const OperationsPage = () => {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<ArmedPersonnel | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Partial<ArmedPersonnel>>({ status: "Activo" });
   const [photoPreview, setPhotoPreview] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
