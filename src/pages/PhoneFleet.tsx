@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { mockPhones } from "@/lib/mockData";
 import type { PhoneDevice, PhoneStatus } from "@/lib/types";
 import { DEPARTMENTS } from "@/lib/types";
-import { Search, Plus, Smartphone, X } from "lucide-react";
+import { Search, Plus, Smartphone, X, Trash2 } from "lucide-react";
 
 const statusColors: Record<PhoneStatus, string> = {
   Activo: "bg-emerald-50 text-emerald-700",
