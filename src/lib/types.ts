@@ -260,8 +260,12 @@ export interface HiringRequest {
   managerApproval: { by: string; at: string; approved: boolean } | null;
   gmApproval: { by: string; at: string; approved: boolean } | null;
   rejectionReason: string | null;
+  rejectedBy?: string | null;
+  rejectedAt?: string | null;
+  rrhhStartedAt?: string | null;
   interviewDate: string | null;
   interviewNotes: string;
+  completedAt?: string | null;
   notes: string;
 }
 
