@@ -157,6 +157,19 @@ const UserManagementPage = () => {
                 <Plus className="h-4 w-4" />
                 Nuevo Usuario
               </button>
+              <ExportMenu
+                title="Usuarios SafeOne"
+                columns={[
+                  { header: "Nombre", key: "fullName", width: 22 },
+                  { header: "Ext.", key: "extension", width: 8 },
+                  { header: "Correo", key: "email", width: 28 },
+                  { header: "Departamento", key: "department", width: 22 },
+                  { header: "Cargo", key: "position", width: 22 },
+                  { header: "Rol", key: "role", width: 12 },
+                ]}
+                data={allUsers.map((u) => ({ ...u, role: u.isAdmin ? "Admin" : u.isDepartmentLeader ? "Líder" : "Usuario" }))}
+                filename="usuarios-safeone"
+              />
             </div>
           </div>
         </div>
