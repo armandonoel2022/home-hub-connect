@@ -115,7 +115,7 @@ export default function GlobalSearch() {
 
       {/* Overlay */}
       {open && (
-        <div className="fixed inset-0 z-[100] bg-black/60 flex items-start justify-center pt-[15vh] p-4" onClick={() => setOpen(false)}>
+        <div className="fixed inset-0 z-[200] bg-black/60 flex items-start justify-center pt-[20vh] p-4" onClick={() => setOpen(false)}>
           <div className="bg-card rounded-xl w-full max-w-lg shadow-2xl border border-border" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
               <Search className="h-5 w-5 text-muted-foreground shrink-0" />
