@@ -79,6 +79,11 @@ const HiringRequestsPage = () => {
   const { user } = useAuth();
   const { addNotification } = useNotifications();
   const [requests, setRequests] = useState<HiringRequest[]>(mockHiringRequests);
+
+  // HR sees all, admins see all, leaders see only own
+  const visibleRequests = (user?.isAdmin || user?.department === "Recursos Humanos")
+    ? requests
+    : requests.filter((r) => r.requestedBy === user?.fullName);
   const [showForm, setShowForm] = useState(false);
   const [selected, setSelected] = useState<HiringRequest | null>(null);
   const [showAction, setShowAction] = useState<HiringRequest | null>(null);
