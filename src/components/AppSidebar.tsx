@@ -18,6 +18,10 @@ import {
   Calendar,
   FolderOpen,
   BookOpen,
+  TrendingUp,
+  ClipboardList,
+  BookMarked,
+  CheckSquare,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -27,6 +31,8 @@ import { useNotifications } from "@/contexts/NotificationContext";
 
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "KPIs", url: "/kpis", icon: TrendingUp },
+  { title: "Tareas", url: "/tareas", icon: CheckSquare },
   { title: "Directorio", url: "/directorio", icon: Phone },
   { title: "Calendario", url: "/calendario", icon: Calendar },
   { title: "Tickets IT", url: "/tickets", icon: Ticket },
@@ -37,8 +43,10 @@ const navItems = [
   { title: "Solicitudes Compra", url: "/solicitudes-compra", icon: ShoppingCart },
   { title: "Solicitudes Personal", url: "/solicitudes-personal", icon: Users },
   { title: "BASC", url: "/basc", icon: FileCheck },
-  { title: "Archivos Compartidos", url: "/archivos", icon: FolderOpen },
+  { title: "Archivos", url: "/archivos", icon: FolderOpen },
   { title: "Procedimientos", url: "/procedimientos", icon: BookOpen },
+  { title: "Wiki", url: "/wiki", icon: BookMarked },
+  { title: "Encuestas", url: "/encuestas", icon: ClipboardList },
 ];
 
 const adminItems = [

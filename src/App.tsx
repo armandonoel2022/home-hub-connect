@@ -69,6 +69,8 @@ function ProtectedRoutes() {
       <BirthdayOverlay birthdayUsers={birthdayUsers} />
       <Routes>
         <Route path="/" element={<Index />} />
+        <Route path="/kpis" element={<KPIDashboard />} />
+        <Route path="/tareas" element={<TaskInbox />} />
         <Route path="/directorio" element={<Directory />} />
         <Route path="/calendario" element={<CalendarPage />} />
         <Route path="/tickets" element={<Tickets />} />
@@ -82,6 +84,8 @@ function ProtectedRoutes() {
         <Route path="/basc" element={<BASC />} />
         <Route path="/archivos" element={<SharedFiles />} />
         <Route path="/procedimientos" element={<Procedures />} />
+        <Route path="/wiki" element={<Wiki />} />
+        <Route path="/encuestas" element={<Surveys />} />
         <Route path="/admin/usuarios" element={<UserManagement />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
