@@ -33,14 +33,28 @@ const DirectoryPage = () => {
         <div className="nav-corporate">
           <div className="gold-bar" />
           <div className="px-6 py-6">
-            <div className="flex items-center gap-3">
-              <Phone className="h-7 w-7 text-gold" />
-              <div>
-                <h1 className="font-heading font-bold text-2xl text-secondary-foreground">
-                  Directorio <span className="gold-accent-text">Corporativo</span>
-                </h1>
-                <p className="text-muted-foreground text-sm mt-1">Contactos internos de SafeOne</p>
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-3">
+                <Phone className="h-7 w-7 text-gold" />
+                <div>
+                  <h1 className="font-heading font-bold text-2xl text-secondary-foreground">
+                    Directorio <span className="gold-accent-text">Corporativo</span>
+                  </h1>
+                  <p className="text-muted-foreground text-sm mt-1">Contactos internos de SafeOne</p>
+                </div>
               </div>
+              <ExportMenu
+                title="Directorio Corporativo SafeOne"
+                columns={[
+                  { header: "Nombre", key: "fullName", width: 22 },
+                  { header: "Ext.", key: "extension", width: 8 },
+                  { header: "Correo", key: "email", width: 28 },
+                  { header: "Departamento", key: "department", width: 22 },
+                  { header: "Cargo", key: "position", width: 22 },
+                ]}
+                data={filtered.map((u) => ({ ...u, extension: u.extension || "" }))}
+                filename="directorio-safeone"
+              />
             </div>
           </div>
         </div>
