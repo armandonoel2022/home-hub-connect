@@ -382,6 +382,9 @@ const PurchaseRequestsPage = () => {
             </div>
           </div>
         )}
+        {/* Stats */}
+        <div className="px-6 py-4 grid grid-cols-2 md:grid-cols-5 gap-3">
+          {[
             { label: "Total", value: visibleRequests.length },
             { label: "Pendientes", value: visibleRequests.filter((r) => r.status.startsWith("Pendiente")).length },
             { label: "Aprobadas", value: visibleRequests.filter((r) => ["Aprobada Jefe", "Aprobada"].includes(r.status)).length },
