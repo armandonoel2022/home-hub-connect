@@ -86,10 +86,14 @@ const App = () => {
         <BrowserRouter>
           <AuthProvider>
             <NotificationProvider>
-              <Routes>
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/*" element={<ProtectedRoutes />} />
-              </Routes>
+              <ChatProvider>
+                <Routes>
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/*" element={<ProtectedRoutes />} />
+                </Routes>
+                <ChatWindow />
+                <ChatNotificationToast />
+              </ChatProvider>
             </NotificationProvider>
           </AuthProvider>
         </BrowserRouter>
