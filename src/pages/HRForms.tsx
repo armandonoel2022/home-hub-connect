@@ -432,7 +432,67 @@ const HRForms = () => {
   );
 };
 
-// ── Print header with SafeOne branding ──
+// ── Status badge ──
+function StatusBadge({ status }: { status: string }) {
+  const colorMap: Record<string, string> = {
+    "Pendiente Supervisor": "bg-amber-100 text-amber-800 border-amber-200",
+    "Aprobada Supervisor": "bg-blue-100 text-blue-800 border-blue-200",
+    "Pendiente RRHH": "bg-orange-100 text-orange-800 border-orange-200",
+    "Aprobada": "bg-emerald-100 text-emerald-800 border-emerald-200",
+    "Rechazada": "bg-red-100 text-red-800 border-red-200",
+  };
+  return (
+    <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full border", colorMap[status] || "bg-muted text-muted-foreground")}>
+      {status}
+    </span>
+  );
+}
+
+// ── Request card for "Mis Solicitudes" ──
+function RequestCard({ req }: { req: HRRequest }) {
+  const fc = formConfig.find(f => f.key === req.formType);
+  return (
+    <div className="bg-card rounded-xl border border-border p-5">
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="font-heading font-bold text-card-foreground text-sm">{req.id}</span>
+            <StatusBadge status={req.status} />
+          </div>
+          <p className="text-sm font-medium text-card-foreground mt-1">{fc?.label}</p>
+          <p className="text-xs text-muted-foreground">{format(new Date(req.requestedAt), "dd/MM/yyyy HH:mm")}</p>
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-1 text-xs">
+        {Object.entries(req.formData).filter(([, v]) => v).slice(0, 6).map(([key, val]) => (
+          <div key={key}>
+            <span className="text-muted-foreground">{key}: </span>
+            <span className="text-card-foreground">{val}</span>
+          </div>
+        ))}
+      </div>
+      {/* Approval timeline */}
+      <div className="mt-3 pt-3 border-t border-border flex gap-4 text-xs text-muted-foreground">
+        <div className="flex items-center gap-1">
+          {req.supervisorApproval ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Clock className="h-3.5 w-3.5" />}
+          Supervisor: {req.supervisorApproval ? `${req.supervisorApproval.byName} ✓` : req.supervisorName}
+        </div>
+        <div className="flex items-center gap-1">
+          {req.rrhhApproval ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Clock className="h-3.5 w-3.5" />}
+          RRHH: {req.rrhhApproval ? `${req.rrhhApproval.byName} ✓` : "Pendiente"}
+        </div>
+      </div>
+      {req.status === "Rechazada" && req.rejectionReason && (
+        <div className="mt-2 flex items-start gap-1.5 text-xs text-destructive">
+          <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+          <span>Rechazada: {req.rejectionReason}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 function PrintHeader({ title }: { title: string }) {
   return (
     <div className="text-center mb-6 border-b border-border pb-4 print-header">
