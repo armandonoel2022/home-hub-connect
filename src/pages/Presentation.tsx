@@ -1,9 +1,13 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 import {
   ChevronLeft,
   ChevronRight,
   Maximize,
   Minimize,
+  Download,
+  Loader2,
   LayoutDashboard,
   Ticket,
   Package,
@@ -224,6 +228,8 @@ const slides: Slide[] = [
 const Presentation = () => {
   const [current, setCurrent] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const slideRef = useRef<HTMLDivElement>(null);
   const total = slides.length;
 
   const next = useCallback(() => setCurrent((c) => Math.min(c + 1, total - 1)), [total]);
@@ -253,6 +259,32 @@ const Presentation = () => {
     }
   };
 
+  const exportToPDF = async () => {
+    setExporting(true);
+    const saved = current;
+    const pdf = new jsPDF({ orientation: "landscape", unit: "px", format: [1280, 720] });
+
+    for (let i = 0; i < total; i++) {
+      setCurrent(i);
+      // wait for render
+      await new Promise((r) => setTimeout(r, 400));
+      if (slideRef.current) {
+        const canvas = await html2canvas(slideRef.current, {
+          scale: 2,
+          backgroundColor: null,
+          useCORS: true,
+        });
+        const imgData = canvas.toDataURL("image/png");
+        if (i > 0) pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, 0, 1280, 720);
+      }
+    }
+
+    pdf.save("SafeOne_Intranet_Presentacion.pdf");
+    setCurrent(saved);
+    setExporting(false);
+  };
+
   const slide = slides[current];
 
   return (
@@ -266,10 +298,18 @@ const Presentation = () => {
               Presentación del Proyecto
             </span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">
               {current + 1} / {total}
             </span>
+            <button
+              onClick={exportToPDF}
+              disabled={exporting}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-muted transition-colors text-foreground text-sm disabled:opacity-50"
+            >
+              {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              {exporting ? "Exportando…" : "PDF"}
+            </button>
             <button onClick={toggleFullscreen} className="p-2 rounded-lg hover:bg-muted transition-colors text-foreground">
               <Maximize className="h-4 w-4" />
             </button>
@@ -278,7 +318,7 @@ const Presentation = () => {
       )}
 
       {/* Slide area */}
-      <div className="flex-1 flex items-center justify-center relative overflow-hidden select-none">
+      <div ref={slideRef} className="flex-1 flex items-center justify-center relative overflow-hidden select-none bg-background">
         {/* Navigation zones */}
         <button onClick={prev} className="absolute left-0 top-0 bottom-0 w-20 z-10 flex items-center justify-start pl-4 opacity-0 hover:opacity-100 transition-opacity" aria-label="Previous">
           <ChevronLeft className="h-8 w-8 text-muted-foreground" />
