@@ -146,6 +146,21 @@ const HRForms = () => {
       const label = input.closest(".space-y-1\\.5")?.querySelector("label")?.textContent || "";
       if (label) formData[label] = input.value;
     });
+    // Also collect date picker button text
+    formEl.querySelectorAll("button[data-state]").forEach((el) => {
+      const btn = el as HTMLButtonElement;
+      const label = btn.closest(".space-y-1\\.5")?.querySelector("label")?.textContent || "";
+      const text = btn.textContent?.trim() || "";
+      if (label && text && text !== "Seleccionar fecha") formData[label] = text;
+    });
+
+    // Validate required dates for vacation
+    if (activeForm === "vacaciones") {
+      if (!formData["Fecha de Inicio"] || !formData["Fecha de Fin"]) {
+        toast({ title: "Campos requeridos", description: "Debe seleccionar la fecha de inicio y fin de las vacaciones.", variant: "destructive" });
+        return;
+      }
+    }
 
     if (!supervisor && !user.isAdmin) {
       toast({ title: "Error", description: "No se encontró un supervisor asignado. Contacte a RRHH.", variant: "destructive" });
@@ -181,26 +196,37 @@ const HRForms = () => {
     setActiveView("my-requests");
   };
 
+  const [rejectId, setRejectId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [coverPerson, setCoverPerson] = useState("");
+  const [approveId, setApproveId] = useState<string | null>(null);
+
   const handleApprove = (req: HRRequest) => {
     if (!user) return;
+    // For vacaciones, require cover person when supervisor approves
+    if (req.formType === "vacaciones" && req.status === "Pendiente Supervisor") {
+      if (approveId !== req.id) {
+        setApproveId(req.id);
+        return;
+      }
+    }
     let result: HRRequest | null = null;
     if (req.status === "Pendiente Supervisor") {
-      result = approveBySupevisor(req.id, user.id, user.fullName);
+      result = approveBySupervisor(req.id, user.id, user.fullName, undefined, req.formType === "vacaciones" ? coverPerson : undefined);
     } else if (req.status === "Pendiente RRHH") {
       result = approveByRRHH(req.id, user.id, user.fullName);
     }
     if (result) {
+      setApproveId(null);
+      setCoverPerson("");
       setRefreshKey((k) => k + 1);
       toast({ title: "Aprobada", description: `Solicitud ${req.id} aprobada exitosamente.` });
     }
   };
 
-  const [rejectId, setRejectId] = useState<string | null>(null);
-  const [rejectReason, setRejectReason] = useState("");
-
   const handleReject = (reqId: string) => {
     if (!user || !rejectReason.trim()) return;
-    rejectRequest(reqId, user.id, rejectReason);
+    rejectRequest(reqId, user.id, user.fullName, rejectReason);
     setRejectId(null);
     setRejectReason("");
     setRefreshKey((k) => k + 1);
