@@ -120,6 +120,7 @@ const App = () => {
                 <Routes>
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/registro" element={<RegisterPage />} />
+                  <Route path="/presentacion" element={<Presentation />} />
                   <Route path="/*" element={<ProtectedRoutes />} />
                 </Routes>
                 <ChatWindow />
