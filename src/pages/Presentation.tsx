@@ -298,10 +298,18 @@ const Presentation = () => {
               Presentación del Proyecto
             </span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">
               {current + 1} / {total}
             </span>
+            <button
+              onClick={exportToPDF}
+              disabled={exporting}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-muted transition-colors text-foreground text-sm disabled:opacity-50"
+            >
+              {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              {exporting ? "Exportando…" : "PDF"}
+            </button>
             <button onClick={toggleFullscreen} className="p-2 rounded-lg hover:bg-muted transition-colors text-foreground">
               <Maximize className="h-4 w-4" />
             </button>
