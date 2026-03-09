@@ -240,6 +240,14 @@ const HRForms = () => {
     else { navigate("/"); }
   };
 
+  // Data for tabs
+  const myRequests = user ? getRequestsByUser(user.id) : [];
+  const pendingApprovals = user ? getAllHRRequests().filter((r) => {
+    if (r.status === "Pendiente Supervisor" && r.supervisorId === user.id) return true;
+    if (r.status === "Pendiente RRHH" && isRRHH) return true;
+    return false;
+  }) : [];
+
   // HR Notifications
   const hrNotifications = user ? getNotificationsForUser(user.id) : [];
   const unreadNotifs = hrNotifications.filter((n) => !n.read);
