@@ -6,40 +6,16 @@ import {
   AlertTriangle, type LucideIcon,
 } from "lucide-react";
 
-/* screenshot imports */
-import scDashboard from "@/assets/screenshots/dashboard.jpg";
-import scKpis from "@/assets/screenshots/kpis.jpg";
-import scTareas from "@/assets/screenshots/tareas.jpg";
-import scDirectorio from "@/assets/screenshots/directorio.jpg";
-import scCalendario from "@/assets/screenshots/calendario.jpg";
-import scTickets from "@/assets/screenshots/tickets.jpg";
-import scInventario from "@/assets/screenshots/inventario.jpg";
-import scFlotilla from "@/assets/screenshots/flotilla.jpg";
-import scFlotaCelular from "@/assets/screenshots/flota-celular.jpg";
-import scBasc from "@/assets/screenshots/basc.jpg";
-import scCompras from "@/assets/screenshots/compras.jpg";
-import scContratacion from "@/assets/screenshots/contratacion.jpg";
-import scRrhh from "@/assets/screenshots/rrhh.jpg";
-import scArchivos from "@/assets/screenshots/archivos.jpg";
-import scProcedimientos from "@/assets/screenshots/procedimientos.jpg";
-import scWiki from "@/assets/screenshots/wiki.jpg";
-import scEncuestas from "@/assets/screenshots/encuestas.jpg";
-import scGastos from "@/assets/screenshots/gastos.jpg";
-import scUsuarios from "@/assets/screenshots/usuarios.jpg";
-import scLogin from "@/assets/screenshots/login.jpg";
-import scChat from "@/assets/screenshots/chat.jpg";
-import scPanico from "@/assets/screenshots/panico.jpg";
-import scGeneral from "@/assets/screenshots/general.jpg";
-import scAdonis from "@/assets/screenshots/adonis.jpg";
-
 export interface Slide {
   title: string;
   subtitle?: string;
   icon?: LucideIcon;
   bullets?: string[];
   highlight?: string;
-  layout: "cover" | "feature" | "screenshot" | "grid" | "closing";
-  screenshot?: string;
+  layout: "cover" | "feature" | "demo" | "grid" | "closing";
+  /** route to open for live demo */
+  demoRoute?: string;
+  demoLabel?: string;
   gridItems?: { icon: LucideIcon; label: string; desc: string }[];
 }
 
@@ -73,7 +49,7 @@ export const slides: Slide[] = [
     ],
   },
 
-  /* 2-3 Dashboard */
+  /* Dashboard */
   {
     layout: "feature",
     title: "Dashboard Corporativo",
@@ -86,9 +62,9 @@ export const slides: Slide[] = [
       "Diseño moderno inspirado en SharePoint con identidad SafeOne",
     ],
   },
-  { layout: "screenshot", title: "Dashboard Corporativo", screenshot: scDashboard, icon: LayoutDashboard },
+  { layout: "demo", title: "Dashboard Corporativo", icon: LayoutDashboard, demoRoute: "/", demoLabel: "Abrir Dashboard" },
 
-  /* 4-5 KPIs */
+  /* KPIs */
   {
     layout: "feature",
     title: "KPIs y Métricas",
@@ -101,9 +77,9 @@ export const slides: Slide[] = [
       "Actualización en tiempo real de métricas clave",
     ],
   },
-  { layout: "screenshot", title: "KPIs y Métricas", screenshot: scKpis, icon: TrendingUp },
+  { layout: "demo", title: "KPIs y Métricas", icon: TrendingUp, demoRoute: "/kpis", demoLabel: "Abrir KPIs" },
 
-  /* 6-7 Tareas */
+  /* Tareas */
   {
     layout: "feature",
     title: "Gestión de Tareas",
@@ -116,9 +92,9 @@ export const slides: Slide[] = [
       "Historial completo de cambios y comentarios",
     ],
   },
-  { layout: "screenshot", title: "Gestión de Tareas", screenshot: scTareas, icon: CheckSquare },
+  { layout: "demo", title: "Gestión de Tareas", icon: CheckSquare, demoRoute: "/tareas", demoLabel: "Abrir Tareas" },
 
-  /* 8-9 Directorio */
+  /* Directorio */
   {
     layout: "feature",
     title: "Directorio Corporativo",
@@ -131,9 +107,9 @@ export const slides: Slide[] = [
       "Exportación del directorio a Excel",
     ],
   },
-  { layout: "screenshot", title: "Directorio Corporativo", screenshot: scDirectorio, icon: Phone },
+  { layout: "demo", title: "Directorio Corporativo", icon: Phone, demoRoute: "/directorio", demoLabel: "Abrir Directorio" },
 
-  /* 10-11 Calendario */
+  /* Calendario */
   {
     layout: "feature",
     title: "Calendario Corporativo",
@@ -146,9 +122,9 @@ export const slides: Slide[] = [
       "Notificaciones de próximos eventos",
     ],
   },
-  { layout: "screenshot", title: "Calendario Corporativo", screenshot: scCalendario, icon: Calendar },
+  { layout: "demo", title: "Calendario Corporativo", icon: Calendar, demoRoute: "/calendario", demoLabel: "Abrir Calendario" },
 
-  /* 12-13 Tickets */
+  /* Tickets IT */
   {
     layout: "feature",
     title: "Tickets de Soporte IT",
@@ -161,9 +137,9 @@ export const slides: Slide[] = [
       "Adjuntos y notas de seguimiento en cada ticket",
     ],
   },
-  { layout: "screenshot", title: "Tickets de Soporte IT", screenshot: scTickets, icon: Ticket },
+  { layout: "demo", title: "Tickets de Soporte IT", icon: Ticket, demoRoute: "/tickets", demoLabel: "Abrir Tickets" },
 
-  /* 14-15 Inventario */
+  /* Inventario IT */
   {
     layout: "feature",
     title: "Inventario de Equipos IT",
@@ -176,9 +152,9 @@ export const slides: Slide[] = [
       "Exportación de reportes a Excel y PDF",
     ],
   },
-  { layout: "screenshot", title: "Inventario de Equipos IT", screenshot: scInventario, icon: Package },
+  { layout: "demo", title: "Inventario de Equipos IT", icon: Package, demoRoute: "/inventario", demoLabel: "Abrir Inventario" },
 
-  /* 16-17 Flotilla */
+  /* Flotilla */
   {
     layout: "feature",
     title: "Flotilla Vehicular",
@@ -191,9 +167,9 @@ export const slides: Slide[] = [
       "Control de documentos: seguro, matrícula, inspección",
     ],
   },
-  { layout: "screenshot", title: "Flotilla Vehicular", screenshot: scFlotilla, icon: Truck },
+  { layout: "demo", title: "Flotilla Vehicular", icon: Truck, demoRoute: "/flotilla", demoLabel: "Abrir Flotilla" },
 
-  /* 18-19 Flota Celular */
+  /* Flota Celular */
   {
     layout: "feature",
     title: "Flota de Celulares",
@@ -206,9 +182,9 @@ export const slides: Slide[] = [
       "Seguimiento de líneas corporativas",
     ],
   },
-  { layout: "screenshot", title: "Flota de Celulares", screenshot: scFlotaCelular, icon: Smartphone },
+  { layout: "demo", title: "Flota de Celulares", icon: Smartphone, demoRoute: "/flota-celular", demoLabel: "Abrir Flota Celular" },
 
-  /* 20-21 BASC */
+  /* BASC */
   {
     layout: "feature",
     title: "Personal Armado (BASC)",
@@ -221,9 +197,9 @@ export const slides: Slide[] = [
       "Vista de tarjetas con foto del agente y detalles del arma",
     ],
   },
-  { layout: "screenshot", title: "Personal Armado (BASC)", screenshot: scBasc, icon: Shield },
+  { layout: "demo", title: "Personal Armado (BASC)", icon: Shield, demoRoute: "/basc", demoLabel: "Abrir BASC" },
 
-  /* 22-23 Compras */
+  /* Compras */
   {
     layout: "feature",
     title: "Solicitudes de Compra",
@@ -236,9 +212,9 @@ export const slides: Slide[] = [
       "Notificaciones automáticas en cada cambio de estado",
     ],
   },
-  { layout: "screenshot", title: "Solicitudes de Compra", screenshot: scCompras, icon: ShoppingCart },
+  { layout: "demo", title: "Solicitudes de Compra", icon: ShoppingCart, demoRoute: "/solicitudes-compra", demoLabel: "Abrir Compras" },
 
-  /* 24-25 Contratación */
+  /* Contratación */
   {
     layout: "feature",
     title: "Solicitudes de Personal",
@@ -251,9 +227,9 @@ export const slides: Slide[] = [
       "Control de tipos de contrato: Indefinido, Temporal, Proyecto",
     ],
   },
-  { layout: "screenshot", title: "Solicitudes de Personal", screenshot: scContratacion, icon: Users },
+  { layout: "demo", title: "Solicitudes de Personal", icon: Users, demoRoute: "/solicitudes-personal", demoLabel: "Abrir Contratación" },
 
-  /* 26-27 RRHH */
+  /* RRHH */
   {
     layout: "feature",
     title: "Recursos Humanos",
@@ -266,9 +242,9 @@ export const slides: Slide[] = [
       "Cálculo de antigüedad y días según jornada laboral configurada",
     ],
   },
-  { layout: "screenshot", title: "Recursos Humanos", screenshot: scRrhh, icon: FileText },
+  { layout: "demo", title: "Recursos Humanos", icon: FileText, demoRoute: "/rrhh/formularios", demoLabel: "Abrir RRHH" },
 
-  /* 28-29 Gastos Menores */
+  /* Gastos Menores */
   {
     layout: "feature",
     title: "Gastos Menores",
@@ -281,9 +257,9 @@ export const slides: Slide[] = [
       "Control de presupuesto mensual disponible",
     ],
   },
-  { layout: "screenshot", title: "Gastos Menores", screenshot: scGastos, icon: Wallet },
+  { layout: "demo", title: "Gastos Menores", icon: Wallet, demoRoute: "/gastos-menores", demoLabel: "Abrir Gastos" },
 
-  /* 30-31 Archivos */
+  /* Archivos */
   {
     layout: "feature",
     title: "Archivos Compartidos",
@@ -296,9 +272,9 @@ export const slides: Slide[] = [
       "Control de versiones y permisos por departamento",
     ],
   },
-  { layout: "screenshot", title: "Archivos Compartidos", screenshot: scArchivos, icon: FolderOpen },
+  { layout: "demo", title: "Archivos Compartidos", icon: FolderOpen, demoRoute: "/archivos", demoLabel: "Abrir Archivos" },
 
-  /* 32-33 Procedimientos */
+  /* Procedimientos */
   {
     layout: "feature",
     title: "Procedimientos (SOPs)",
@@ -311,9 +287,9 @@ export const slides: Slide[] = [
       "Acceso rápido a manuales operativos y guías",
     ],
   },
-  { layout: "screenshot", title: "Procedimientos (SOPs)", screenshot: scProcedimientos, icon: BookOpen },
+  { layout: "demo", title: "Procedimientos (SOPs)", icon: BookOpen, demoRoute: "/procedimientos", demoLabel: "Abrir Procedimientos" },
 
-  /* 34-35 Wiki */
+  /* Wiki */
   {
     layout: "feature",
     title: "Wiki Corporativa",
@@ -326,9 +302,9 @@ export const slides: Slide[] = [
       "Historial de ediciones y revisiones",
     ],
   },
-  { layout: "screenshot", title: "Wiki Corporativa", screenshot: scWiki, icon: BookMarked },
+  { layout: "demo", title: "Wiki Corporativa", icon: BookMarked, demoRoute: "/wiki", demoLabel: "Abrir Wiki" },
 
-  /* 36-37 Encuestas */
+  /* Encuestas */
   {
     layout: "feature",
     title: "Encuestas Internas",
@@ -341,9 +317,9 @@ export const slides: Slide[] = [
       "Encuestas anónimas y nominales",
     ],
   },
-  { layout: "screenshot", title: "Encuestas Internas", screenshot: scEncuestas, icon: ClipboardList },
+  { layout: "demo", title: "Encuestas Internas", icon: ClipboardList, demoRoute: "/encuestas", demoLabel: "Abrir Encuestas" },
 
-  /* 38-39 Gestión de Usuarios */
+  /* Gestión de Usuarios */
   {
     layout: "feature",
     title: "Gestión de Usuarios",
@@ -356,9 +332,9 @@ export const slides: Slide[] = [
       "Configuración de jornada laboral y fecha de ingreso",
     ],
   },
-  { layout: "screenshot", title: "Gestión de Usuarios", screenshot: scUsuarios, icon: UserCog },
+  { layout: "demo", title: "Gestión de Usuarios", icon: UserCog, demoRoute: "/admin/usuarios", demoLabel: "Abrir Admin" },
 
-  /* 40-41 Login */
+  /* Login */
   {
     layout: "feature",
     title: "Autenticación Segura",
@@ -371,9 +347,9 @@ export const slides: Slide[] = [
       "Interfaz limpia con identidad visual SafeOne",
     ],
   },
-  { layout: "screenshot", title: "Pantalla de Login", screenshot: scLogin, icon: Lock },
+  { layout: "demo", title: "Pantalla de Login", icon: Lock, demoRoute: "/login", demoLabel: "Ver Login" },
 
-  /* 42-43 Chat */
+  /* Chat */
   {
     layout: "feature",
     title: "Chat Corporativo",
@@ -386,9 +362,8 @@ export const slides: Slide[] = [
       "Notificaciones en tiempo real de nuevos mensajes",
     ],
   },
-  { layout: "screenshot", title: "Chat Corporativo", screenshot: scChat, icon: MessageSquare },
 
-  /* 44-45 Botón de Pánico */
+  /* Botón de Pánico */
   {
     layout: "feature",
     title: "Botón de Pánico",
@@ -401,9 +376,8 @@ export const slides: Slide[] = [
       "Registro de incidentes para seguimiento posterior",
     ],
   },
-  { layout: "screenshot", title: "Botón de Pánico", screenshot: scPanico, icon: AlertTriangle },
 
-  /* 46-47 General */
+  /* General */
   {
     layout: "feature",
     title: "Sistema General",
@@ -416,9 +390,9 @@ export const slides: Slide[] = [
       "Integración con módulos de la intranet (Próximamente)",
     ],
   },
-  { layout: "screenshot", title: "Sistema General", screenshot: scGeneral, icon: Building2 },
+  { layout: "demo", title: "Sistema General", icon: Building2, demoRoute: "/general", demoLabel: "Ver General" },
 
-  /* 48-49 Adonis */
+  /* Adonis */
   {
     layout: "feature",
     title: "Sistema Adonis",
@@ -431,9 +405,9 @@ export const slides: Slide[] = [
       "Integración con módulos de la intranet (Próximamente)",
     ],
   },
-  { layout: "screenshot", title: "Sistema Adonis", screenshot: scAdonis, icon: Calculator },
+  { layout: "demo", title: "Sistema Adonis", icon: Calculator, demoRoute: "/adonis", demoLabel: "Ver Adonis" },
 
-  /* 50 — Seguridad */
+  /* Seguridad */
   {
     layout: "feature",
     title: "Seguridad y Arquitectura",
@@ -447,7 +421,7 @@ export const slides: Slide[] = [
     ],
   },
 
-  /* 51 — Closing */
+  /* Closing */
   {
     layout: "closing",
     title: "SafeOne Intranet",

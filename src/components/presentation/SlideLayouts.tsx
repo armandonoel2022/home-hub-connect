@@ -1,3 +1,4 @@
+import { ExternalLink } from "lucide-react";
 import type { Slide } from "@/lib/presentationData";
 import logo from "@/assets/safeone-logo.png";
 import building from "@/assets/safeone-building.jpeg";
@@ -41,21 +42,43 @@ export const FeatureSlide = ({ slide }: { slide: Slide }) => {
   );
 };
 
-export const ScreenshotSlide = ({ slide }: { slide: Slide }) => {
+export const DemoSlide = ({ slide }: { slide: Slide }) => {
   const Icon = slide.icon;
+  const baseUrl = window.location.origin;
+  const demoUrl = `${baseUrl}${slide.demoRoute}`;
+
   return (
-    <div className="py-6 flex flex-col items-center">
-      <div className="flex items-center gap-3 mb-6">
-        {Icon && (
-          <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center">
-            <Icon className="h-5 w-5 text-primary" />
-          </div>
-        )}
-        <h2 className="font-heading font-bold text-2xl text-foreground">{slide.title}</h2>
+    <div className="py-10 flex flex-col items-center text-center">
+      {Icon && (
+        <div className="w-20 h-20 rounded-3xl bg-primary/15 flex items-center justify-center mb-6">
+          <Icon className="h-10 w-10 text-primary" />
+        </div>
+      )}
+      <h2 className="font-heading font-bold text-3xl md:text-4xl text-foreground mb-4">{slide.title}</h2>
+      <p className="text-muted-foreground mb-8 text-lg">
+        Haz clic en el botón para ver el módulo en funcionamiento
+      </p>
+
+      {/* Live iframe preview */}
+      <div className="w-full max-w-4xl rounded-xl overflow-hidden border-2 border-border shadow-2xl bg-card mb-6" style={{ height: "380px" }}>
+        <iframe
+          src={demoUrl}
+          title={slide.title}
+          className="w-full h-full border-0"
+          style={{ transform: "scale(0.6)", transformOrigin: "top left", width: "166.67%", height: "166.67%" }}
+        />
       </div>
-      <div className="w-full max-w-4xl rounded-xl overflow-hidden border-2 border-border shadow-2xl">
-        <img src={slide.screenshot} alt={slide.title} className="w-full h-auto" />
-      </div>
+
+      <a
+        href={demoUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-2 px-8 py-3 rounded-xl font-heading font-bold text-primary-foreground transition-all hover:brightness-110 hover:-translate-y-0.5 shadow-lg"
+        style={{ background: "var(--gradient-gold)" }}
+      >
+        <ExternalLink className="h-5 w-5" />
+        {slide.demoLabel || "Ver Demo en Vivo"}
+      </a>
     </div>
   );
 };
