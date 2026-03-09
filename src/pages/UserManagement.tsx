@@ -23,6 +23,8 @@ const emptyForm = (): Partial<IntranetUser> => ({
   extension: "",
   shift: "",
   team: "",
+  workDaysPerWeek: 5,
+  hireDate: "",
 });
 
 const UserManagementPage = () => {
