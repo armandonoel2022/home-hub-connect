@@ -320,6 +320,20 @@ const HRForms = () => {
           {/* ═══ MY REQUESTS VIEW ═══ */}
           {activeView === "my-requests" && !activeForm && (
             <div className="space-y-3" key={refreshKey}>
+              {unreadNotifs.length > 0 && (
+                <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-heading font-bold text-foreground">Notificaciones ({unreadNotifs.length})</span>
+                    <Button variant="ghost" size="sm" className="text-xs" onClick={handleDismissNotifications}>Marcar leídas</Button>
+                  </div>
+                  {unreadNotifs.slice(0, 5).map((n) => (
+                    <div key={n.id} className="text-sm text-card-foreground py-1 border-b border-border last:border-0">
+                      {n.message}
+                      <span className="text-xs text-muted-foreground ml-2">{format(new Date(n.createdAt), "dd/MM HH:mm")}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               {myRequests.length === 0 ? (
                 <div className="text-center py-16 text-muted-foreground">
                   <FileText className="h-12 w-12 mx-auto mb-3 opacity-40" />
