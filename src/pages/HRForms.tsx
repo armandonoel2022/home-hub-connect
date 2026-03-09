@@ -364,6 +364,21 @@ const HRForms = () => {
                         <Button size="sm" variant="outline" onClick={() => { setRejectId(null); setRejectReason(""); }}>Cancelar</Button>
                       </div>
                     </div>
+                  ) : approveId === req.id && req.formType === "vacaciones" ? (
+                    <div className="space-y-3 border-t border-border pt-3">
+                      <p className="text-sm font-medium text-card-foreground">¿Quién cubrirá durante las vacaciones?</p>
+                      <Input
+                        value={coverPerson}
+                        onChange={(e) => setCoverPerson(e.target.value)}
+                        placeholder="Nombre de la persona que cubrirá..."
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" className="gap-1" onClick={() => handleApprove(req)}>
+                          <ThumbsUp className="h-3.5 w-3.5" /> Confirmar Aprobación
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => { setApproveId(null); setCoverPerson(""); }}>Cancelar</Button>
+                      </div>
+                    </div>
                   ) : (
                     <div className="flex gap-2">
                       <Button size="sm" className="gap-1" onClick={() => handleApprove(req)}>
