@@ -25,9 +25,9 @@ import safeOneLogo from "@/assets/safeone-logo.png";
 import safeOneLetterhead from "@/assets/safeone-letterhead.png";
 import type { HRRequest, HRFormType } from "@/lib/hrRequestTypes";
 import {
-  getAllHRRequests, getRequestsByUser, getPendingForUser,
-  createHRRequest, approveBySupevisor, approveByRRHH,
-  rejectRequest, generateRequestId,
+  getAllHRRequests, getRequestsByUser,
+  createHRRequest, approveBySupervisor, approveByRRHH,
+  rejectRequest, generateRequestId, getNotificationsForUser, markAllNotificationsRead,
 } from "@/lib/hrRequestService";
 
 type FormType = "vacaciones" | "dias-libres" | "comida" | "ausencias" | "feriados" | "permisos" | "prestamos";
