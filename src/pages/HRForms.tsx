@@ -43,13 +43,19 @@ const formConfig: { key: FormType; label: string; icon: any; color: string }[] =
   { key: "prestamos", label: "Solicitud de Préstamos", icon: Banknote, color: "hsl(220 15% 30%)" },
 ];
 
+type ActiveView = "forms" | "my-requests" | "approvals";
+
 const HRForms = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, allUsers } = useAuth();
+  const { toast } = useToast();
   const [activeForm, setActiveForm] = useState<FormType | null>(null);
   const [formMode, setFormMode] = useState<FormMode | null>(null);
   const [withLetterhead, setWithLetterhead] = useState(true);
+  const [activeView, setActiveView] = useState<ActiveView>("forms");
+  const [refreshKey, setRefreshKey] = useState(0);
   const printRef = useRef<HTMLDivElement>(null);
+  const virtualFormRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = () => {
     const content = printRef.current;
