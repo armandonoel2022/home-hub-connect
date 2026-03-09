@@ -763,7 +763,27 @@ const Adonis = () => {
                           </div>
                           <div className="flex items-center justify-between">
                             <Badge className={statusColor(chk.status)}>{chk.status}</Badge>
-                            <Button variant="outline" size="sm" onClick={() => window.print()}><Printer className="h-3.5 w-3.5 mr-1" />Imprimir</Button>
+                            <Button variant="outline" size="sm" onClick={() => {
+                              const pw = window.open("", "_blank");
+                              if (!pw) return;
+                              pw.document.write(`<!DOCTYPE html><html><head><title>Cheque ${chk.number}</title><style>
+                                body{font-family:'Segoe UI',Arial,sans-serif;margin:40px;color:#222}
+                                .check{border:2px dashed #ccc;border-radius:8px;padding:24px;max-width:600px;margin:auto}
+                                .header{display:flex;justify-content:space-between;margin-bottom:16px}
+                                .company{font-weight:bold;font-size:14px}.bank{font-size:10px;color:#777}
+                                .num{font-family:monospace;font-weight:bold}.date{font-size:12px;color:#777}
+                                .payto-label{font-size:10px;color:#777}.payto{font-weight:600;font-size:14px;border-bottom:1px solid #ccc;padding-bottom:4px;margin-bottom:8px}
+                                .bottom{display:flex;justify-content:space-between;align-items:center}
+                                .concept{font-size:12px;color:#777;font-style:italic}.amount{border:1px solid #ccc;border-radius:4px;padding:4px 12px;font-family:monospace;font-weight:bold}
+                                @media print{body{margin:20px}}
+                              </style></head><body>
+                              <div class="check">
+                                <div class="header"><div><div class="company">SafeOne Security SRL</div><div class="bank">${chk.bankAccount}</div></div><div style="text-align:right"><div class="date">No. <span class="num">${chk.number}</span></div><div class="date">${chk.date}</div></div></div>
+                                <div class="payto-label">PÁGUESE A LA ORDEN DE:</div><div class="payto">${chk.payTo}</div>
+                                <div class="bottom"><div class="concept">${chk.concept}</div><div class="amount">RD$${chk.amount.toLocaleString("es-DO",{minimumFractionDigits:2})}</div></div>
+                              </div><script>window.print();<\/script></body></html>`);
+                              pw.document.close();
+                            }}><Printer className="h-3.5 w-3.5 mr-1" />Imprimir</Button>
                           </div>
                         </div>
                       ))}
