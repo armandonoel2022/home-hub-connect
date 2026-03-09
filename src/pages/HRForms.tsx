@@ -12,14 +12,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Printer, CalendarIcon, Palmtree, CalendarOff, UtensilsCrossed,
-  UserX, PartyPopper, Clock, Banknote, CheckCircle2,
+  UserX, PartyPopper, Clock, Banknote, CheckCircle2, Send, FileText,
+  ThumbsUp, ThumbsDown, AlertCircle, Inbox,
 } from "lucide-react";
 import safeOneLogo from "@/assets/safeone-logo.png";
 import safeOneLetterhead from "@/assets/safeone-letterhead.png";
+import type { HRRequest, HRFormType } from "@/lib/hrRequestTypes";
+import {
+  getAllHRRequests, getRequestsByUser, getPendingForUser,
+  createHRRequest, approveBySupevisor, approveByRRHH,
+  rejectRequest, generateRequestId,
+} from "@/lib/hrRequestService";
 
 type FormType = "vacaciones" | "dias-libres" | "comida" | "ausencias" | "feriados" | "permisos" | "prestamos";
 type FormMode = "print" | "virtual";
