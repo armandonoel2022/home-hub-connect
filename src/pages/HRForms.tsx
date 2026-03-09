@@ -641,17 +641,52 @@ function SignatureBlock() {
 
 // ── Vacation form ──
 function VacationForm({ userName, department, showSignature }: { userName: string; department: string; showSignature: boolean }) {
+  const { user } = useAuth();
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
 
-  // Auto-calculate business days
+  // Calculate days based on employee's work schedule
+  const workDaysPerWeek = user?.workDaysPerWeek || 5;
+  
+  // Calculate vacation entitlement based on Dominican Republic Labor Law (Código de Trabajo)
+  // Article 177: 14 días laborables after 1 year, 18 días laborables after 5 years
+  const calcVacationEntitlement = (): { years: number; daysEntitled: number; message: string } => {
+    if (!user?.hireDate) return { years: 0, daysEntitled: 0, message: "Sin fecha de ingreso registrada" };
+    const hire = new Date(user.hireDate);
+    const now = new Date();
+    const diffMs = now.getTime() - hire.getTime();
+    const years = Math.floor(diffMs / (365.25 * 24 * 60 * 60 * 1000));
+    
+    if (years < 1) {
+      return { years, daysEntitled: 0, message: "Aún no cumple 1 año (no aplica vacaciones)" };
+    } else if (years >= 5) {
+      // 18 días laborables (Ley RD para +5 años)
+      const daysEntitled = Math.round((18 / 5) * workDaysPerWeek);
+      return { years, daysEntitled, message: `${years} años de antigüedad → 18 días laborables` };
+    } else {
+      // 14 días laborables (Ley RD para 1-4 años)
+      const daysEntitled = Math.round((14 / 5) * workDaysPerWeek);
+      return { years, daysEntitled, message: `${years} año${years > 1 ? "s" : ""} de antigüedad → 14 días laborables` };
+    }
+  };
+
+  const entitlement = calcVacationEntitlement();
+
+  // Auto-calculate working days based on employee's schedule
   const calcDays = (start?: Date, end?: Date): number => {
     if (!start || !end || end <= start) return 0;
     let count = 0;
     const cur = new Date(start);
     while (cur <= end) {
       const day = cur.getDay();
-      if (day !== 0 && day !== 6) count++;
+      // If 7 days/week, count all. If 6, exclude Sundays. Otherwise exclude Sat+Sun.
+      if (workDaysPerWeek >= 7) {
+        count++;
+      } else if (workDaysPerWeek === 6) {
+        if (day !== 0) count++; // exclude Sunday
+      } else {
+        if (day !== 0 && day !== 6) count++; // exclude Sat & Sun
+      }
       cur.setDate(cur.getDate() + 1);
     }
     return count;
@@ -663,6 +698,26 @@ function VacationForm({ userName, department, showSignature }: { userName: strin
       <div className="grid grid-cols-2 gap-4">
         <FormField label="Nombre del Empleado"><Input defaultValue={userName} readOnly /></FormField>
         <FormField label="Departamento"><Input defaultValue={department} readOnly /></FormField>
+      </div>
+      {/* Entitlement info */}
+      <div className="bg-muted/50 rounded-lg p-4 border border-border">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-card-foreground">Días de Vacaciones según Ley RD</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {user?.hireDate ? `Ingreso: ${format(new Date(user.hireDate), "dd/MM/yyyy")} • ` : ""}
+              {entitlement.message}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-2xl font-bold text-primary">{entitlement.daysEntitled}</p>
+            <p className="text-xs text-muted-foreground">días/año</p>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground mt-2 border-t border-border pt-2">
+          Jornada: <strong>{workDaysPerWeek} día{workDaysPerWeek > 1 ? "s" : ""}/semana</strong> • 
+          Según Art. 177 del Código de Trabajo: 14 días (1-4 años) o 18 días (+5 años)
+        </p>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <DatePickerField label="Fecha de Inicio" date={startDate} setDate={setStartDate} />
