@@ -37,6 +37,7 @@ import RegisterPage from "./pages/Register";
 import MinorPurchases from "./pages/MinorPurchases";
 import General from "./pages/General";
 import Adonis from "./pages/Adonis";
+import Presentation from "./pages/Presentation";
 import NotFound from "./pages/NotFound";
 import type { IntranetUser } from "./lib/types";
 
@@ -119,6 +120,7 @@ const App = () => {
                 <Routes>
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/registro" element={<RegisterPage />} />
+                  <Route path="/presentacion" element={<Presentation />} />
                   <Route path="/*" element={<ProtectedRoutes />} />
                 </Routes>
                 <ChatWindow />
