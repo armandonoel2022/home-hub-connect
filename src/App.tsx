@@ -97,6 +97,8 @@ function ProtectedRoutes() {
         <Route path="/wiki" element={<Wiki />} />
         <Route path="/encuestas" element={<Surveys />} />
         <Route path="/gastos-menores" element={<MinorPurchases />} />
+        <Route path="/general" element={<General />} />
+        <Route path="/adonis" element={<Adonis />} />
         <Route path="/admin/usuarios" element={<UserManagement />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
