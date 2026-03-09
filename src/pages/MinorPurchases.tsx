@@ -315,9 +315,6 @@ const MinorPurchases = () => {
               </CardContent>
             </Card>
           </div>
-              </CardContent>
-            </Card>
-          </div>
 
           {/* Tabs */}
           <Tabs defaultValue="dashboard" className="space-y-4">
