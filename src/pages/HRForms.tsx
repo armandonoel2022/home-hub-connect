@@ -12,14 +12,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Printer, CalendarIcon, Palmtree, CalendarOff, UtensilsCrossed,
-  UserX, PartyPopper, Clock, Banknote, CheckCircle2,
+  UserX, PartyPopper, Clock, Banknote, CheckCircle2, Send, FileText,
+  ThumbsUp, ThumbsDown, AlertCircle, Inbox,
 } from "lucide-react";
 import safeOneLogo from "@/assets/safeone-logo.png";
 import safeOneLetterhead from "@/assets/safeone-letterhead.png";
+import type { HRRequest, HRFormType } from "@/lib/hrRequestTypes";
+import {
+  getAllHRRequests, getRequestsByUser, getPendingForUser,
+  createHRRequest, approveBySupevisor, approveByRRHH,
+  rejectRequest, generateRequestId,
+} from "@/lib/hrRequestService";
 
 type FormType = "vacaciones" | "dias-libres" | "comida" | "ausencias" | "feriados" | "permisos" | "prestamos";
 type FormMode = "print" | "virtual";
@@ -34,13 +43,19 @@ const formConfig: { key: FormType; label: string; icon: any; color: string }[] =
   { key: "prestamos", label: "Solicitud de Préstamos", icon: Banknote, color: "hsl(220 15% 30%)" },
 ];
 
+type ActiveView = "forms" | "my-requests" | "approvals";
+
 const HRForms = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, allUsers } = useAuth();
+  const { toast } = useToast();
   const [activeForm, setActiveForm] = useState<FormType | null>(null);
   const [formMode, setFormMode] = useState<FormMode | null>(null);
   const [withLetterhead, setWithLetterhead] = useState(true);
+  const [activeView, setActiveView] = useState<ActiveView>("forms");
+  const [refreshKey, setRefreshKey] = useState(0);
   const printRef = useRef<HTMLDivElement>(null);
+  const virtualFormRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = () => {
     const content = printRef.current;
@@ -114,11 +129,98 @@ const HRForms = () => {
     setTimeout(() => { printWindow.print(); printWindow.close(); }, 600);
   };
 
+  // Find supervisor for current user
+  const supervisor = allUsers.find((u) => u.id === user?.reportsTo);
+  const rrhhLeader = allUsers.find((u) => u.department === "Recursos Humanos" && u.isDepartmentLeader);
+  const isRRHH = user?.department === "Recursos Humanos";
+  const isSupervisor = user?.isDepartmentLeader === true || user?.isAdmin === true;
+
+  const handleVirtualSubmit = () => {
+    if (!user || !activeForm || !virtualFormRef.current) return;
+    const formEl = virtualFormRef.current;
+    
+    // Collect all input/textarea/select values
+    const formData: Record<string, string> = {};
+    formEl.querySelectorAll("input, textarea").forEach((el) => {
+      const input = el as HTMLInputElement | HTMLTextAreaElement;
+      const label = input.closest(".space-y-1\\.5")?.querySelector("label")?.textContent || "";
+      if (label) formData[label] = input.value;
+    });
+
+    if (!supervisor && !user.isAdmin) {
+      toast({ title: "Error", description: "No se encontró un supervisor asignado. Contacte a RRHH.", variant: "destructive" });
+      return;
+    }
+
+    const request: HRRequest = {
+      id: generateRequestId(),
+      formType: activeForm as HRFormType,
+      status: "Pendiente Supervisor",
+      requestedBy: user.id,
+      requestedByName: user.fullName,
+      department: user.department,
+      requestedAt: new Date().toISOString(),
+      formData,
+      supervisorId: supervisor?.id || rrhhLeader?.id || "",
+      supervisorName: supervisor?.fullName || rrhhLeader?.fullName || "N/A",
+      supervisorApproval: null,
+      rrhhApproval: null,
+      rejectionReason: null,
+      rejectedBy: null,
+      rejectedAt: null,
+    };
+
+    createHRRequest(request);
+    setRefreshKey((k) => k + 1);
+    toast({
+      title: "Solicitud Enviada",
+      description: `Tu solicitud de ${formConfig.find(f => f.key === activeForm)?.label} fue enviada a ${request.supervisorName} para aprobación.`,
+    });
+    setActiveForm(null);
+    setFormMode(null);
+    setActiveView("my-requests");
+  };
+
+  const handleApprove = (req: HRRequest) => {
+    if (!user) return;
+    let result: HRRequest | null = null;
+    if (req.status === "Pendiente Supervisor") {
+      result = approveBySupevisor(req.id, user.id, user.fullName);
+    } else if (req.status === "Pendiente RRHH") {
+      result = approveByRRHH(req.id, user.id, user.fullName);
+    }
+    if (result) {
+      setRefreshKey((k) => k + 1);
+      toast({ title: "Aprobada", description: `Solicitud ${req.id} aprobada exitosamente.` });
+    }
+  };
+
+  const [rejectId, setRejectId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+
+  const handleReject = (reqId: string) => {
+    if (!user || !rejectReason.trim()) return;
+    rejectRequest(reqId, user.id, rejectReason);
+    setRejectId(null);
+    setRejectReason("");
+    setRefreshKey((k) => k + 1);
+    toast({ title: "Rechazada", description: `Solicitud ${reqId} fue rechazada.`, variant: "destructive" });
+  };
+
   const handleBack = () => {
     if (formMode) { setFormMode(null); }
     else if (activeForm) { setActiveForm(null); }
+    else if (activeView !== "forms") { setActiveView("forms"); }
     else { navigate("/"); }
   };
+
+  // Data for tabs
+  const myRequests = user ? getRequestsByUser(user.id) : [];
+  const pendingApprovals = user ? getAllHRRequests().filter((r) => {
+    if (r.status === "Pendiente Supervisor" && r.supervisorId === user.id) return true;
+    if (r.status === "Pendiente RRHH" && isRRHH) return true;
+    return false;
+  }) : [];
 
   return (
     <AppLayout>
@@ -129,21 +231,42 @@ const HRForms = () => {
             <Button variant="ghost" size="icon" onClick={handleBack}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div>
+            <div className="flex-1">
               <h1 className="text-2xl font-heading font-bold text-foreground">
                 {activeForm ? formConfig.find(f => f.key === activeForm)?.label : "Recursos Humanos — Formularios"}
               </h1>
               <p className="text-sm text-muted-foreground">
                 {formMode === "print" ? "Formulario para imprimir y firmar"
-                  : formMode === "virtual" ? "Aprobación virtual (próximamente)"
+                  : formMode === "virtual" ? "Aprobación virtual — completar y enviar"
                   : activeForm ? "Seleccione modalidad"
+                  : activeView === "my-requests" ? "Historial de solicitudes"
+                  : activeView === "approvals" ? "Solicitudes pendientes de aprobación"
                   : "Seleccione un formulario"}
               </p>
             </div>
           </div>
 
-          {/* Step 1: Form selection */}
+          {/* Tab navigation */}
           {!activeForm && (
+            <div className="flex gap-2 mb-6 no-print">
+              <Button variant={activeView === "forms" ? "default" : "outline"} size="sm" onClick={() => setActiveView("forms")} className="gap-2">
+                <FileText className="h-4 w-4" /> Formularios
+              </Button>
+              <Button variant={activeView === "my-requests" ? "default" : "outline"} size="sm" onClick={() => setActiveView("my-requests")} className="gap-2">
+                <Send className="h-4 w-4" /> Mis Solicitudes
+                {myRequests.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{myRequests.length}</Badge>}
+              </Button>
+              {(isSupervisor || isRRHH) && (
+                <Button variant={activeView === "approvals" ? "default" : "outline"} size="sm" onClick={() => setActiveView("approvals")} className="gap-2">
+                  <Inbox className="h-4 w-4" /> Aprobaciones
+                  {pendingApprovals.length > 0 && <Badge variant="destructive" className="ml-1 text-xs">{pendingApprovals.length}</Badge>}
+                </Button>
+              )}
+            </div>
+          )}
+
+          {/* ═══ FORMS VIEW ═══ */}
+          {activeView === "forms" && !activeForm && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {formConfig.map(fc => {
                 const Icon = fc.icon;
@@ -157,6 +280,76 @@ const HRForms = () => {
                   </button>
                 );
               })}
+            </div>
+          )}
+
+          {/* ═══ MY REQUESTS VIEW ═══ */}
+          {activeView === "my-requests" && !activeForm && (
+            <div className="space-y-3" key={refreshKey}>
+              {myRequests.length === 0 ? (
+                <div className="text-center py-16 text-muted-foreground">
+                  <FileText className="h-12 w-12 mx-auto mb-3 opacity-40" />
+                  <p className="font-medium">No tienes solicitudes enviadas</p>
+                  <p className="text-sm">Las solicitudes que envíes por aprobación virtual aparecerán aquí.</p>
+                </div>
+              ) : myRequests.map((req) => (
+                <RequestCard key={req.id} req={req} />
+              ))}
+            </div>
+          )}
+
+          {/* ═══ APPROVALS VIEW ═══ */}
+          {activeView === "approvals" && !activeForm && (
+            <div className="space-y-3" key={refreshKey}>
+              {pendingApprovals.length === 0 ? (
+                <div className="text-center py-16 text-muted-foreground">
+                  <CheckCircle2 className="h-12 w-12 mx-auto mb-3 opacity-40" />
+                  <p className="font-medium">No hay solicitudes pendientes</p>
+                  <p className="text-sm">Todas las solicitudes han sido procesadas.</p>
+                </div>
+              ) : pendingApprovals.map((req) => (
+                <div key={req.id} className="bg-card rounded-xl border border-border p-5">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-heading font-bold text-card-foreground">{req.id}</span>
+                        <StatusBadge status={req.status} />
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {formConfig.find(f => f.key === req.formType)?.label} — Solicitado por <strong>{req.requestedByName}</strong> ({req.department})
+                      </p>
+                      <p className="text-xs text-muted-foreground">{format(new Date(req.requestedAt), "dd/MM/yyyy HH:mm")}</p>
+                    </div>
+                  </div>
+                  {/* Show form data */}
+                  <div className="grid grid-cols-2 gap-2 mb-4 text-sm">
+                    {Object.entries(req.formData).map(([key, val]) => val && (
+                      <div key={key}>
+                        <span className="text-muted-foreground text-xs">{key}:</span>
+                        <span className="ml-1 text-card-foreground font-medium">{val}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {rejectId === req.id ? (
+                    <div className="space-y-2">
+                      <Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="Motivo del rechazo..." rows={2} />
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="destructive" onClick={() => handleReject(req.id)} disabled={!rejectReason.trim()}>Confirmar Rechazo</Button>
+                        <Button size="sm" variant="outline" onClick={() => { setRejectId(null); setRejectReason(""); }}>Cancelar</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Button size="sm" className="gap-1" onClick={() => handleApprove(req)}>
+                        <ThumbsUp className="h-3.5 w-3.5" /> Aprobar
+                      </Button>
+                      <Button size="sm" variant="destructive" className="gap-1" onClick={() => setRejectId(req.id)}>
+                        <ThumbsDown className="h-3.5 w-3.5" /> Rechazar
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
 
@@ -204,7 +397,7 @@ const HRForms = () => {
             </div>
           )}
 
-          {/* Step 3b: Virtual mode */}
+          {/* Step 3b: Virtual mode — FUNCTIONAL */}
           {activeForm && formMode === "virtual" && (
             <div className="max-w-2xl mx-auto">
               <div className="bg-card rounded-xl border border-border p-8">
@@ -214,15 +407,20 @@ const HRForms = () => {
                     {formConfig.find(f => f.key === activeForm)?.label}
                   </h2>
                   <p className="text-xs text-muted-foreground mt-1">Aprobación Virtual</p>
+                  {supervisor && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Será enviada a: <strong>{supervisor.fullName}</strong> ({supervisor.position})
+                      {rrhhLeader && <> → luego a <strong>{rrhhLeader.fullName}</strong> (RRHH)</>}
+                    </p>
+                  )}
                 </div>
-                <RenderForm formType={activeForm} userName={user?.fullName || ""} department={user?.department || ""} showSignature={false} />
+                <div ref={virtualFormRef}>
+                  <RenderForm formType={activeForm} userName={user?.fullName || ""} department={user?.department || ""} showSignature={false} />
+                </div>
                 <div className="mt-6 pt-4 border-t border-border">
-                  <Button className="w-full gap-2" disabled>
-                    <CheckCircle2 className="h-4 w-4" /> Enviar para Aprobación (próximamente)
+                  <Button className="w-full gap-2" onClick={handleVirtualSubmit}>
+                    <Send className="h-4 w-4" /> Enviar para Aprobación
                   </Button>
-                  <p className="text-xs text-center text-muted-foreground mt-2">
-                    Esta funcionalidad estará disponible cuando se active el backend. La solicitud será enviada al supervisor inmediato y a RRHH para aprobación.
-                  </p>
                 </div>
               </div>
             </div>
@@ -234,7 +432,67 @@ const HRForms = () => {
   );
 };
 
-// ── Print header with SafeOne branding ──
+// ── Status badge ──
+function StatusBadge({ status }: { status: string }) {
+  const colorMap: Record<string, string> = {
+    "Pendiente Supervisor": "bg-amber-100 text-amber-800 border-amber-200",
+    "Aprobada Supervisor": "bg-blue-100 text-blue-800 border-blue-200",
+    "Pendiente RRHH": "bg-orange-100 text-orange-800 border-orange-200",
+    "Aprobada": "bg-emerald-100 text-emerald-800 border-emerald-200",
+    "Rechazada": "bg-red-100 text-red-800 border-red-200",
+  };
+  return (
+    <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full border", colorMap[status] || "bg-muted text-muted-foreground")}>
+      {status}
+    </span>
+  );
+}
+
+// ── Request card for "Mis Solicitudes" ──
+function RequestCard({ req }: { req: HRRequest }) {
+  const fc = formConfig.find(f => f.key === req.formType);
+  return (
+    <div className="bg-card rounded-xl border border-border p-5">
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="font-heading font-bold text-card-foreground text-sm">{req.id}</span>
+            <StatusBadge status={req.status} />
+          </div>
+          <p className="text-sm font-medium text-card-foreground mt-1">{fc?.label}</p>
+          <p className="text-xs text-muted-foreground">{format(new Date(req.requestedAt), "dd/MM/yyyy HH:mm")}</p>
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-1 text-xs">
+        {Object.entries(req.formData).filter(([, v]) => v).slice(0, 6).map(([key, val]) => (
+          <div key={key}>
+            <span className="text-muted-foreground">{key}: </span>
+            <span className="text-card-foreground">{val}</span>
+          </div>
+        ))}
+      </div>
+      {/* Approval timeline */}
+      <div className="mt-3 pt-3 border-t border-border flex gap-4 text-xs text-muted-foreground">
+        <div className="flex items-center gap-1">
+          {req.supervisorApproval ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Clock className="h-3.5 w-3.5" />}
+          Supervisor: {req.supervisorApproval ? `${req.supervisorApproval.byName} ✓` : req.supervisorName}
+        </div>
+        <div className="flex items-center gap-1">
+          {req.rrhhApproval ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Clock className="h-3.5 w-3.5" />}
+          RRHH: {req.rrhhApproval ? `${req.rrhhApproval.byName} ✓` : "Pendiente"}
+        </div>
+      </div>
+      {req.status === "Rechazada" && req.rejectionReason && (
+        <div className="mt-2 flex items-start gap-1.5 text-xs text-destructive">
+          <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+          <span>Rechazada: {req.rejectionReason}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 function PrintHeader({ title }: { title: string }) {
   return (
     <div className="text-center mb-6 border-b border-border pb-4 print-header">
