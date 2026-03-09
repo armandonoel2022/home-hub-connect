@@ -39,7 +39,41 @@ const HRForms = () => {
   const [formMode, setFormMode] = useState<FormMode | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
-  const handlePrint = () => window.print();
+  const handlePrint = () => {
+    const content = printRef.current;
+    if (!content) return;
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+    printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Formulario RRHH</title><style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #1a1a1a; }
+      img { max-height: 56px; display: block; margin: 0 auto 8px; }
+      .print-header { text-align: center; border-bottom: 1px solid #ddd; padding-bottom: 16px; margin-bottom: 24px; }
+      .print-header h2 { font-size: 18px; font-weight: 700; }
+      .print-header p { font-size: 13px; color: #666; margin-top: 4px; }
+      label { font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px; }
+      input, textarea, select, [data-radix-select-trigger] { 
+        width: 100%; border: 1px solid #ccc; border-radius: 6px; padding: 8px 10px; font-size: 13px; background: #fff; 
+      }
+      textarea { min-height: 60px; resize: vertical; }
+      .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      .form-field { margin-bottom: 14px; }
+      .sig-block { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 40px; padding-top: 24px; border-top: 1px solid #ddd; }
+      .sig-block div { text-align: center; }
+      .sig-line { border-bottom: 1px solid #333; height: 60px; margin-bottom: 8px; }
+      .sig-label { font-size: 12px; color: #666; }
+      .footer { text-align: center; font-size: 11px; color: #888; border-top: 1px solid #ddd; padding-top: 12px; margin-top: 24px; }
+      button { display: none !important; }
+      @media print { body { padding: 20px; } }
+    </style></head><body>${content.innerHTML}
+    <div class="footer">
+      <p>Tel: 809.548.3100 • info@safeone.com.do • www.safeone.com.do | RNC: 101526752</p>
+      <p>C/ Olof Palme esq. Cul de Sac 2, San Gerónimo, Santo Domingo, D.N.</p>
+    </div></body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => { printWindow.print(); printWindow.close(); }, 500);
+  };
 
   const handleBack = () => {
     if (formMode) { setFormMode(null); }
