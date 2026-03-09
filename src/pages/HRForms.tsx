@@ -523,6 +523,11 @@ function RequestCard({ req }: { req: HRRequest }) {
           RRHH: {req.rrhhApproval ? `${req.rrhhApproval.byName} ✓` : "Pendiente"}
         </div>
       </div>
+      {req.supervisorApproval?.coverPerson && (
+        <div className="mt-2 text-xs text-muted-foreground">
+          <span className="font-medium">Persona que cubre:</span> {req.supervisorApproval.coverPerson}
+        </div>
+      )}
       {req.status === "Rechazada" && req.rejectionReason && (
         <div className="mt-2 flex items-start gap-1.5 text-xs text-destructive">
           <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
