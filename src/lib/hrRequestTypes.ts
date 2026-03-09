@@ -19,30 +19,37 @@ export const HR_FORM_LABELS: Record<HRFormType, string> = {
 };
 
 export interface HRApprovalStep {
-  by: string;       // user ID
+  by: string;
   byName: string;
-  at: string;        // ISO date
+  at: string;
   approved: boolean;
   comment?: string;
+  /** For vacaciones: who covers during absence */
+  coverPerson?: string;
+}
+
+export interface HRNotification {
+  id: string;
+  forUserId: string;
+  message: string;
+  requestId: string;
+  read: boolean;
+  createdAt: string;
 }
 
 export interface HRRequest {
   id: string;
   formType: HRFormType;
   status: HRRequestStatus;
-  // Requester info
-  requestedBy: string;      // user ID
+  requestedBy: string;
   requestedByName: string;
   department: string;
-  requestedAt: string;       // ISO date
-  // Form data (key-value from the form fields)
+  requestedAt: string;
   formData: Record<string, string>;
-  // Approval chain
-  supervisorId: string;      // reportsTo user
+  supervisorId: string;
   supervisorName: string;
   supervisorApproval: HRApprovalStep | null;
   rrhhApproval: HRApprovalStep | null;
-  // Rejection
   rejectionReason: string | null;
   rejectedBy: string | null;
   rejectedAt: string | null;

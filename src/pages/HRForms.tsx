@@ -25,9 +25,9 @@ import safeOneLogo from "@/assets/safeone-logo.png";
 import safeOneLetterhead from "@/assets/safeone-letterhead.png";
 import type { HRRequest, HRFormType } from "@/lib/hrRequestTypes";
 import {
-  getAllHRRequests, getRequestsByUser, getPendingForUser,
-  createHRRequest, approveBySupevisor, approveByRRHH,
-  rejectRequest, generateRequestId,
+  getAllHRRequests, getRequestsByUser,
+  createHRRequest, approveBySupervisor, approveByRRHH,
+  rejectRequest, generateRequestId, getNotificationsForUser, markAllNotificationsRead,
 } from "@/lib/hrRequestService";
 
 type FormType = "vacaciones" | "dias-libres" | "comida" | "ausencias" | "feriados" | "permisos" | "prestamos";
@@ -146,6 +146,21 @@ const HRForms = () => {
       const label = input.closest(".space-y-1\\.5")?.querySelector("label")?.textContent || "";
       if (label) formData[label] = input.value;
     });
+    // Also collect date picker button text
+    formEl.querySelectorAll("button[data-state]").forEach((el) => {
+      const btn = el as HTMLButtonElement;
+      const label = btn.closest(".space-y-1\\.5")?.querySelector("label")?.textContent || "";
+      const text = btn.textContent?.trim() || "";
+      if (label && text && text !== "Seleccionar fecha") formData[label] = text;
+    });
+
+    // Validate required dates for vacation
+    if (activeForm === "vacaciones") {
+      if (!formData["Fecha de Inicio"] || !formData["Fecha de Fin"]) {
+        toast({ title: "Campos requeridos", description: "Debe seleccionar la fecha de inicio y fin de las vacaciones.", variant: "destructive" });
+        return;
+      }
+    }
 
     if (!supervisor && !user.isAdmin) {
       toast({ title: "Error", description: "No se encontró un supervisor asignado. Contacte a RRHH.", variant: "destructive" });
@@ -181,26 +196,37 @@ const HRForms = () => {
     setActiveView("my-requests");
   };
 
+  const [rejectId, setRejectId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [coverPerson, setCoverPerson] = useState("");
+  const [approveId, setApproveId] = useState<string | null>(null);
+
   const handleApprove = (req: HRRequest) => {
     if (!user) return;
+    // For vacaciones, require cover person when supervisor approves
+    if (req.formType === "vacaciones" && req.status === "Pendiente Supervisor") {
+      if (approveId !== req.id) {
+        setApproveId(req.id);
+        return;
+      }
+    }
     let result: HRRequest | null = null;
     if (req.status === "Pendiente Supervisor") {
-      result = approveBySupevisor(req.id, user.id, user.fullName);
+      result = approveBySupervisor(req.id, user.id, user.fullName, undefined, req.formType === "vacaciones" ? coverPerson : undefined);
     } else if (req.status === "Pendiente RRHH") {
       result = approveByRRHH(req.id, user.id, user.fullName);
     }
     if (result) {
+      setApproveId(null);
+      setCoverPerson("");
       setRefreshKey((k) => k + 1);
       toast({ title: "Aprobada", description: `Solicitud ${req.id} aprobada exitosamente.` });
     }
   };
 
-  const [rejectId, setRejectId] = useState<string | null>(null);
-  const [rejectReason, setRejectReason] = useState("");
-
   const handleReject = (reqId: string) => {
     if (!user || !rejectReason.trim()) return;
-    rejectRequest(reqId, user.id, rejectReason);
+    rejectRequest(reqId, user.id, user.fullName, rejectReason);
     setRejectId(null);
     setRejectReason("");
     setRefreshKey((k) => k + 1);
@@ -221,6 +247,14 @@ const HRForms = () => {
     if (r.status === "Pendiente RRHH" && isRRHH) return true;
     return false;
   }) : [];
+
+  // HR Notifications
+  const hrNotifications = user ? getNotificationsForUser(user.id) : [];
+  const unreadNotifs = hrNotifications.filter((n) => !n.read);
+
+  const handleDismissNotifications = () => {
+    if (user) { markAllNotificationsRead(user.id); setRefreshKey((k) => k + 1); }
+  };
 
   return (
     <AppLayout>
@@ -286,6 +320,20 @@ const HRForms = () => {
           {/* ═══ MY REQUESTS VIEW ═══ */}
           {activeView === "my-requests" && !activeForm && (
             <div className="space-y-3" key={refreshKey}>
+              {unreadNotifs.length > 0 && (
+                <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-heading font-bold text-foreground">Notificaciones ({unreadNotifs.length})</span>
+                    <Button variant="ghost" size="sm" className="text-xs" onClick={handleDismissNotifications}>Marcar leídas</Button>
+                  </div>
+                  {unreadNotifs.slice(0, 5).map((n) => (
+                    <div key={n.id} className="text-sm text-card-foreground py-1 border-b border-border last:border-0">
+                      {n.message}
+                      <span className="text-xs text-muted-foreground ml-2">{format(new Date(n.createdAt), "dd/MM HH:mm")}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               {myRequests.length === 0 ? (
                 <div className="text-center py-16 text-muted-foreground">
                   <FileText className="h-12 w-12 mx-auto mb-3 opacity-40" />
@@ -336,6 +384,21 @@ const HRForms = () => {
                       <div className="flex gap-2">
                         <Button size="sm" variant="destructive" onClick={() => handleReject(req.id)} disabled={!rejectReason.trim()}>Confirmar Rechazo</Button>
                         <Button size="sm" variant="outline" onClick={() => { setRejectId(null); setRejectReason(""); }}>Cancelar</Button>
+                      </div>
+                    </div>
+                  ) : approveId === req.id && req.formType === "vacaciones" ? (
+                    <div className="space-y-3 border-t border-border pt-3">
+                      <p className="text-sm font-medium text-card-foreground">¿Quién cubrirá durante las vacaciones?</p>
+                      <Input
+                        value={coverPerson}
+                        onChange={(e) => setCoverPerson(e.target.value)}
+                        placeholder="Nombre de la persona que cubrirá..."
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" className="gap-1" onClick={() => handleApprove(req)}>
+                          <ThumbsUp className="h-3.5 w-3.5" /> Confirmar Aprobación
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => { setApproveId(null); setCoverPerson(""); }}>Cancelar</Button>
                       </div>
                     </div>
                   ) : (
@@ -482,6 +545,11 @@ function RequestCard({ req }: { req: HRRequest }) {
           RRHH: {req.rrhhApproval ? `${req.rrhhApproval.byName} ✓` : "Pendiente"}
         </div>
       </div>
+      {req.supervisorApproval?.coverPerson && (
+        <div className="mt-2 text-xs text-muted-foreground">
+          <span className="font-medium">Persona que cubre:</span> {req.supervisorApproval.coverPerson}
+        </div>
+      )}
       {req.status === "Rechazada" && req.rejectionReason && (
         <div className="mt-2 flex items-start gap-1.5 text-xs text-destructive">
           <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
@@ -575,19 +643,40 @@ function SignatureBlock() {
 function VacationForm({ userName, department, showSignature }: { userName: string; department: string; showSignature: boolean }) {
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
+
+  // Auto-calculate business days
+  const calcDays = (start?: Date, end?: Date): number => {
+    if (!start || !end || end <= start) return 0;
+    let count = 0;
+    const cur = new Date(start);
+    while (cur <= end) {
+      const day = cur.getDay();
+      if (day !== 0 && day !== 6) count++;
+      cur.setDate(cur.getDate() + 1);
+    }
+    return count;
+  };
+  const daysRequested = calcDays(startDate, endDate);
+
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Nombre del Empleado"><Input defaultValue={userName} /></FormField>
-        <FormField label="Departamento"><Input defaultValue={department} /></FormField>
+        <FormField label="Nombre del Empleado"><Input defaultValue={userName} readOnly /></FormField>
+        <FormField label="Departamento"><Input defaultValue={department} readOnly /></FormField>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <DatePickerField label="Fecha de Inicio" date={startDate} setDate={setStartDate} />
         <DatePickerField label="Fecha de Fin" date={endDate} setDate={setEndDate} />
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Días Solicitados"><Input type="number" min={1} placeholder="Ej: 5" /></FormField>
-        <FormField label="Días Disponibles"><Input type="number" placeholder="Según registros" /></FormField>
+        <FormField label="Días Solicitados">
+          <Input type="number" value={daysRequested} readOnly className="font-bold" />
+          {daysRequested > 0 && <p className="text-xs text-muted-foreground mt-1">Días laborables calculados automáticamente</p>}
+        </FormField>
+        <FormField label="Días Disponibles">
+          <Input type="number" placeholder="A completar por RRHH" readOnly className="bg-muted" />
+          <p className="text-xs text-muted-foreground mt-1">RRHH indicará los días restantes</p>
+        </FormField>
       </div>
       <FormField label="Motivo / Observaciones"><Textarea placeholder="Describa el motivo de sus vacaciones..." rows={3} /></FormField>
       <FormField label="Contacto durante Vacaciones"><Input placeholder="Teléfono o email de contacto" /></FormField>
