@@ -318,7 +318,7 @@ const Presentation = () => {
       )}
 
       {/* Slide area */}
-      <div className="flex-1 flex items-center justify-center relative overflow-hidden select-none">
+      <div ref={slideRef} className="flex-1 flex items-center justify-center relative overflow-hidden select-none bg-background">
         {/* Navigation zones */}
         <button onClick={prev} className="absolute left-0 top-0 bottom-0 w-20 z-10 flex items-center justify-start pl-4 opacity-0 hover:opacity-100 transition-opacity" aria-label="Previous">
           <ChevronLeft className="h-8 w-8 text-muted-foreground" />
