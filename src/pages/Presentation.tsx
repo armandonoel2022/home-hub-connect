@@ -4,7 +4,7 @@ import jsPDF from "jspdf";
 import { ChevronLeft, ChevronRight, Maximize, Minimize, Download, Loader2 } from "lucide-react";
 import logo from "@/assets/safeone-logo.png";
 import { slides } from "@/lib/presentationData";
-import { CoverSlide, FeatureSlide, ScreenshotSlide, GridSlide, ClosingSlide } from "@/components/presentation/SlideLayouts";
+import { CoverSlide, FeatureSlide, DemoSlide, GridSlide, ClosingSlide } from "@/components/presentation/SlideLayouts";
 
 const Presentation = () => {
   const [current, setCurrent] = useState(0);
@@ -43,7 +43,7 @@ const Presentation = () => {
     const pdf = new jsPDF({ orientation: "landscape", unit: "px", format: [1280, 720] });
     for (let i = 0; i < total; i++) {
       setCurrent(i);
-      await new Promise((r) => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 600));
       if (slideRef.current) {
         const canvas = await html2canvas(slideRef.current, { scale: 2, backgroundColor: null, useCORS: true });
         const imgData = canvas.toDataURL("image/png");
@@ -60,7 +60,6 @@ const Presentation = () => {
 
   return (
     <div className={`min-h-screen flex flex-col ${isFullscreen ? "bg-[hsl(220,20%,8%)]" : "bg-background"}`}>
-      {/* Toolbar */}
       {!isFullscreen && (
         <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card">
           <div className="flex items-center gap-3">
@@ -80,7 +79,6 @@ const Presentation = () => {
         </div>
       )}
 
-      {/* Slide area */}
       <div ref={slideRef} className="flex-1 flex items-center justify-center relative overflow-hidden select-none bg-background">
         <button onClick={prev} className="absolute left-0 top-0 bottom-0 w-20 z-10 flex items-center justify-start pl-4 opacity-0 hover:opacity-100 transition-opacity" aria-label="Previous">
           <ChevronLeft className="h-8 w-8 text-muted-foreground" />
@@ -92,7 +90,7 @@ const Presentation = () => {
         <div className="w-full max-w-5xl mx-auto px-8">
           {slide.layout === "cover" && <CoverSlide slide={slide} />}
           {slide.layout === "feature" && <FeatureSlide slide={slide} />}
-          {slide.layout === "screenshot" && <ScreenshotSlide slide={slide} />}
+          {slide.layout === "demo" && <DemoSlide slide={slide} />}
           {slide.layout === "grid" && <GridSlide slide={slide} />}
           {slide.layout === "closing" && <ClosingSlide slide={slide} />}
         </div>
@@ -107,7 +105,6 @@ const Presentation = () => {
         )}
       </div>
 
-      {/* Thumbnails */}
       {!isFullscreen && (
         <div className="border-t border-border bg-card px-4 py-3 overflow-x-auto">
           <div className="flex gap-2 min-w-max">
@@ -121,7 +118,7 @@ const Presentation = () => {
                     : "border-border bg-muted/30 text-muted-foreground hover:border-primary/50"
                 }`}
               >
-                {s.layout === "screenshot" ? "📸" : ""} {s.title.length > 20 ? s.title.slice(0, 20) + "…" : s.title}
+                {s.layout === "demo" ? "🖥️ " : ""}{s.title.length > 20 ? s.title.slice(0, 20) + "…" : s.title}
               </button>
             ))}
           </div>
