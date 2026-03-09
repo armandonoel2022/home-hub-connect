@@ -261,55 +261,55 @@ const MinorPurchases = () => {
           </div>
 
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
               <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2 rounded-lg bg-primary/10 shrink-0">
                     <DollarSign className="h-5 w-5 text-primary" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-xs text-muted-foreground">Total General</p>
-                    <p className="text-xl font-heading font-bold text-foreground">{fmt(totalGeneral)}</p>
+                    <p className="text-lg font-heading font-bold text-foreground truncate">{fmt(totalGeneral)}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-emerald-500/10">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2 rounded-lg bg-emerald-500/10 shrink-0">
                     <Wallet className="h-5 w-5 text-emerald-600" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-xs text-muted-foreground">Caja Chica</p>
-                    <p className="text-xl font-heading font-bold text-foreground">{fmt(totalCajaChica)}</p>
+                    <p className="text-lg font-heading font-bold text-foreground truncate">{fmt(totalCajaChica)}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-blue-500/10">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2 rounded-lg bg-blue-500/10 shrink-0">
                     <CreditCard className="h-5 w-5 text-blue-600" />
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Tarjeta Corporativa</p>
-                    <p className="text-xl font-heading font-bold text-foreground">{fmt(totalTarjeta)}</p>
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">Tarjeta Corp.</p>
+                    <p className="text-lg font-heading font-bold text-foreground truncate">{fmt(totalTarjeta)}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-amber-500/10">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2 rounded-lg bg-amber-500/10 shrink-0">
                     <Clock className="h-5 w-5 text-amber-600" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-xs text-muted-foreground">Pendientes</p>
-                    <p className="text-xl font-heading font-bold text-foreground">{pendingPurchases.length}</p>
+                    <p className="text-lg font-heading font-bold text-foreground">{pendingPurchases.length}</p>
                   </div>
                 </div>
               </CardContent>
