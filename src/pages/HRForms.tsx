@@ -189,14 +189,18 @@ const HRForms = () => {
           {/* Step 3a: Print mode */}
           {activeForm && formMode === "print" && (
             <div className="space-y-4">
-              <div className="flex justify-end no-print">
+              <div className="flex items-center justify-between no-print">
+                <div className="flex items-center gap-3">
+                  <Switch id="letterhead" checked={withLetterhead} onCheckedChange={setWithLetterhead} />
+                  <Label htmlFor="letterhead" className="text-sm font-medium text-foreground cursor-pointer">
+                    {withLetterhead ? "Con Membrete" : "Sin Membrete"}
+                  </Label>
+                </div>
                 <Button onClick={handlePrint} className="gap-2"><Printer className="h-4 w-4" /> Imprimir</Button>
               </div>
               <div ref={printRef} className="print-area bg-card rounded-xl border border-border p-8">
-                <PrintHeader title={formConfig.find(f => f.key === activeForm)?.label || ""} />
                 <RenderForm formType={activeForm} userName={user?.fullName || ""} department={user?.department || ""} />
               </div>
-              <PrintFooter />
             </div>
           )}
 
