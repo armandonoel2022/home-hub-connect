@@ -39,6 +39,7 @@ const HRForms = () => {
   const { user } = useAuth();
   const [activeForm, setActiveForm] = useState<FormType | null>(null);
   const [formMode, setFormMode] = useState<FormMode | null>(null);
+  const [withLetterhead, setWithLetterhead] = useState(true);
   const printRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = () => {
