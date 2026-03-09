@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import {
@@ -18,6 +19,7 @@ import {
   UserX, PartyPopper, Clock, Banknote, CheckCircle2,
 } from "lucide-react";
 import safeOneLogo from "@/assets/safeone-logo.png";
+import safeOneLetterhead from "@/assets/safeone-letterhead.png";
 
 type FormType = "vacaciones" | "dias-libres" | "comida" | "ausencias" | "feriados" | "permisos" | "prestamos";
 type FormMode = "print" | "virtual";
@@ -37,6 +39,7 @@ const HRForms = () => {
   const { user } = useAuth();
   const [activeForm, setActiveForm] = useState<FormType | null>(null);
   const [formMode, setFormMode] = useState<FormMode | null>(null);
+  const [withLetterhead, setWithLetterhead] = useState(true);
   const printRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = () => {
@@ -44,35 +47,71 @@ const HRForms = () => {
     if (!content) return;
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
-    printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Formulario RRHH</title><style>
+
+    const letterheadBg = withLetterhead
+      ? `background-image: url('${new URL(safeOneLetterhead, window.location.origin).href}'); background-size: 100% 100%; background-repeat: no-repeat; background-position: center;`
+      : "";
+
+    const headerHtml = withLetterhead
+      ? "" // The letterhead image already has the logo/header
+      : `<div style="text-align:center;border-bottom:1px solid #ddd;padding-bottom:16px;margin-bottom:24px;">
+          <img src="${new URL(safeOneLogo, window.location.origin).href}" style="max-height:56px;display:block;margin:0 auto 8px;" />
+          <h2 style="font-size:18px;font-weight:700;">SafeOne Group — Recursos Humanos</h2>
+          <p style="font-size:13px;color:#666;margin-top:4px;">${formConfig.find(f => f.key === activeForm)?.label || ""}</p>
+          <p style="font-size:11px;color:#999;margin-top:4px;">Fecha: ${format(new Date(), "dd/MM/yyyy")}</p>
+         </div>`;
+
+    const footerHtml = withLetterhead
+      ? "" // The letterhead image already has the footer
+      : `<div style="text-align:center;font-size:11px;color:#888;border-top:1px solid #ddd;padding-top:12px;margin-top:24px;">
+          <p>Tel: 809.548.3100 • info@safeone.com.do • www.safeone.com.do | RNC: 101526752</p>
+          <p>C/ Olof Palme esq. Cul de Sac 2, San Gerónimo, Santo Domingo, D.N.</p>
+         </div>`;
+
+    printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Formulario RRHH — SafeOne</title><style>
+      @page { size: A4; margin: 0; }
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #1a1a1a; }
-      img { max-height: 56px; display: block; margin: 0 auto 8px; }
-      .print-header { text-align: center; border-bottom: 1px solid #ddd; padding-bottom: 16px; margin-bottom: 24px; }
-      .print-header h2 { font-size: 18px; font-weight: 700; }
-      .print-header p { font-size: 13px; color: #666; margin-top: 4px; }
-      label { font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px; }
-      input, textarea, select, [data-radix-select-trigger] { 
-        width: 100%; border: 1px solid #ccc; border-radius: 6px; padding: 8px 10px; font-size: 13px; background: #fff; 
+      body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a1a; }
+      .page { 
+        width: 210mm; min-height: 297mm; position: relative;
+        ${letterheadBg}
+        margin: 0 auto;
       }
-      textarea { min-height: 60px; resize: vertical; }
-      .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-      .form-field { margin-bottom: 14px; }
-      .sig-block { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 40px; padding-top: 24px; border-top: 1px solid #ddd; }
+      .content-area {
+        ${withLetterhead ? "padding: 180px 60px 100px 60px;" : "padding: 40px 50px;"}
+      }
+      .form-title { font-size: 16px; font-weight: 700; text-align: center; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; }
+      .form-date { font-size: 11px; color: #666; text-align: right; margin-bottom: 16px; }
+      label { font-size: 12px; font-weight: 600; display: block; margin-bottom: 3px; color: #333; }
+      input, textarea, select, [data-radix-select-trigger] { 
+        width: 100%; border: 1px solid #ccc; border-radius: 4px; padding: 6px 8px; font-size: 12px; background: #fff; 
+      }
+      textarea { min-height: 50px; resize: vertical; }
+      .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .form-field { margin-bottom: 12px; }
+      .sig-block { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 36px; padding-top: 20px; border-top: 1px solid #ddd; }
       .sig-block div { text-align: center; }
-      .sig-line { border-bottom: 1px solid #333; height: 60px; margin-bottom: 8px; }
-      .sig-label { font-size: 12px; color: #666; }
-      .footer { text-align: center; font-size: 11px; color: #888; border-top: 1px solid #ddd; padding-top: 12px; margin-top: 24px; }
+      .sig-line { border-bottom: 1px solid #333; height: 50px; margin-bottom: 6px; }
+      .sig-label { font-size: 11px; color: #666; }
       button { display: none !important; }
-      @media print { body { padding: 20px; } }
-    </style></head><body>${content.innerHTML}
-    <div class="footer">
-      <p>Tel: 809.548.3100 • info@safeone.com.do • www.safeone.com.do | RNC: 101526752</p>
-      <p>C/ Olof Palme esq. Cul de Sac 2, San Gerónimo, Santo Domingo, D.N.</p>
-    </div></body></html>`);
+      @media print { 
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .page { width: 100%; min-height: 100vh; }
+      }
+    </style></head><body>
+    <div class="page">
+      <div class="content-area">
+        ${headerHtml}
+        <div class="form-title">${formConfig.find(f => f.key === activeForm)?.label || ""}</div>
+        <div class="form-date">Fecha: ${format(new Date(), "dd/MM/yyyy")}</div>
+        ${content.innerHTML}
+        ${footerHtml}
+      </div>
+    </div>
+    </body></html>`);
     printWindow.document.close();
     printWindow.focus();
-    setTimeout(() => { printWindow.print(); printWindow.close(); }, 500);
+    setTimeout(() => { printWindow.print(); printWindow.close(); }, 600);
   };
 
   const handleBack = () => {
@@ -150,14 +189,18 @@ const HRForms = () => {
           {/* Step 3a: Print mode */}
           {activeForm && formMode === "print" && (
             <div className="space-y-4">
-              <div className="flex justify-end no-print">
+              <div className="flex items-center justify-between no-print">
+                <div className="flex items-center gap-3">
+                  <Switch id="letterhead" checked={withLetterhead} onCheckedChange={setWithLetterhead} />
+                  <Label htmlFor="letterhead" className="text-sm font-medium text-foreground cursor-pointer">
+                    {withLetterhead ? "Con Membrete" : "Sin Membrete"}
+                  </Label>
+                </div>
                 <Button onClick={handlePrint} className="gap-2"><Printer className="h-4 w-4" /> Imprimir</Button>
               </div>
               <div ref={printRef} className="print-area bg-card rounded-xl border border-border p-8">
-                <PrintHeader title={formConfig.find(f => f.key === activeForm)?.label || ""} />
                 <RenderForm formType={activeForm} userName={user?.fullName || ""} department={user?.department || ""} />
               </div>
-              <PrintFooter />
             </div>
           )}
 
