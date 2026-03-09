@@ -601,19 +601,40 @@ function SignatureBlock() {
 function VacationForm({ userName, department, showSignature }: { userName: string; department: string; showSignature: boolean }) {
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
+
+  // Auto-calculate business days
+  const calcDays = (start?: Date, end?: Date): number => {
+    if (!start || !end || end <= start) return 0;
+    let count = 0;
+    const cur = new Date(start);
+    while (cur <= end) {
+      const day = cur.getDay();
+      if (day !== 0 && day !== 6) count++;
+      cur.setDate(cur.getDate() + 1);
+    }
+    return count;
+  };
+  const daysRequested = calcDays(startDate, endDate);
+
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Nombre del Empleado"><Input defaultValue={userName} /></FormField>
-        <FormField label="Departamento"><Input defaultValue={department} /></FormField>
+        <FormField label="Nombre del Empleado"><Input defaultValue={userName} readOnly /></FormField>
+        <FormField label="Departamento"><Input defaultValue={department} readOnly /></FormField>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <DatePickerField label="Fecha de Inicio" date={startDate} setDate={setStartDate} />
         <DatePickerField label="Fecha de Fin" date={endDate} setDate={setEndDate} />
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Días Solicitados"><Input type="number" min={1} placeholder="Ej: 5" /></FormField>
-        <FormField label="Días Disponibles"><Input type="number" placeholder="Según registros" /></FormField>
+        <FormField label="Días Solicitados">
+          <Input type="number" value={daysRequested} readOnly className="font-bold" />
+          {daysRequested > 0 && <p className="text-xs text-muted-foreground mt-1">Días laborables calculados automáticamente</p>}
+        </FormField>
+        <FormField label="Días Disponibles">
+          <Input type="number" placeholder="A completar por RRHH" readOnly className="bg-muted" />
+          <p className="text-xs text-muted-foreground mt-1">RRHH indicará los días restantes</p>
+        </FormField>
       </div>
       <FormField label="Motivo / Observaciones"><Textarea placeholder="Describa el motivo de sus vacaciones..." rows={3} /></FormField>
       <FormField label="Contacto durante Vacaciones"><Input placeholder="Teléfono o email de contacto" /></FormField>
