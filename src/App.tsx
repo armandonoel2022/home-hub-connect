@@ -35,6 +35,8 @@ import OperationsCenter from "./pages/OperationsCenter";
 import LoginPage from "./pages/Login";
 import RegisterPage from "./pages/Register";
 import MinorPurchases from "./pages/MinorPurchases";
+import General from "./pages/General";
+import Adonis from "./pages/Adonis";
 import NotFound from "./pages/NotFound";
 import type { IntranetUser } from "./lib/types";
 
