@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import {
@@ -18,6 +19,7 @@ import {
   UserX, PartyPopper, Clock, Banknote, CheckCircle2,
 } from "lucide-react";
 import safeOneLogo from "@/assets/safeone-logo.png";
+import safeOneLetterhead from "@/assets/safeone-letterhead.png";
 
 type FormType = "vacaciones" | "dias-libres" | "comida" | "ausencias" | "feriados" | "permisos" | "prestamos";
 type FormMode = "print" | "virtual";
