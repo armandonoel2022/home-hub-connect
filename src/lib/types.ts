@@ -117,6 +117,9 @@ export interface IntranetUser {
   extension?: string; // internal phone extension
   shift?: string; // turno de trabajo
   team?: string; // equipo asignado (e.g. "ALNAP", "Banco Caribe")
+  // Work schedule
+  workDaysPerWeek?: number; // días laborables por semana (default 5)
+  hireDate?: string; // fecha de ingreso (ISO date)
   // Offboarding
   employeeStatus?: EmployeeStatus;
   offboardingDate?: string;

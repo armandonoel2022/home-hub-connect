@@ -331,6 +331,7 @@ const UserManagementPage = () => {
                   { key: "shift", label: "Turno", type: "text", placeholder: "Ej: Turno día, Mañana, Noche" },
                   { key: "team", label: "Equipo", type: "text", placeholder: "Ej: Sede Central, ALNAP, Banco Caribe" },
                   { key: "birthday", label: "Cumpleaños (MM-DD)", type: "text", placeholder: "Ej: 07-15" },
+                  { key: "hireDate", label: "Fecha de Ingreso", type: "date", placeholder: "" },
                 ].map(({ key, label, type, placeholder }) => (
                   <div key={key}>
                     <label className="text-sm font-medium text-card-foreground block mb-1.5">{label}</label>
@@ -343,6 +344,19 @@ const UserManagementPage = () => {
                     />
                   </div>
                 ))}
+                <div>
+                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Días Laborables por Semana</label>
+                  <select
+                    value={form.workDaysPerWeek || 5}
+                    onChange={(e) => setForm({ ...form, workDaysPerWeek: Number(e.target.value) })}
+                    className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none"
+                  >
+                    {[1, 2, 3, 4, 5, 6, 7].map((d) => (
+                      <option key={d} value={d}>{d} día{d > 1 ? "s" : ""}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground mt-1">Para calcular correctamente las vacaciones</p>
+                </div>
 
                 <div>
                   <label className="text-sm font-medium text-card-foreground block mb-1.5">Departamento Principal</label>
