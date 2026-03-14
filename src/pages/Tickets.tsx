@@ -1,7 +1,7 @@
 import { useState } from "react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { mockTickets } from "@/lib/mockData";
+import { useTickets } from "@/hooks/useApiHooks";
 import {
   TICKET_CATEGORIES,
   DEPARTMENTS,
