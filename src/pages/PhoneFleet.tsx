@@ -15,7 +15,7 @@ const statusColors: Record<PhoneStatus, string> = {
 
 const PhoneFleetPage = () => {
   const { user } = useAuth();
-  const [phones, setPhones] = useState<PhoneDevice[]>(mockPhones);
+  const { data: phones, setData: setPhones, create: createPhone, remove: removePhone } = usePhones();
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState<Partial<PhoneDevice>>({ status: "Disponible" });

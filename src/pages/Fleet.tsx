@@ -15,7 +15,7 @@ const statusColors: Record<VehicleStatus, string> = {
 
 const FleetPage = () => {
   const { user } = useAuth();
-  const [vehicles, setVehicles] = useState<Vehicle[]>(mockVehicles);
+  const { data: vehicles, setData: setVehicles, create: createVehicle, remove: removeVehicle } = useVehicles();
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState<Partial<Vehicle>>({ status: "Disponible", year: 2024 });

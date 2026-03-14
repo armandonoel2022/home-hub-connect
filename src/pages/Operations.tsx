@@ -13,7 +13,7 @@ const statusColors: Record<string, string> = {
 
 const OperationsPage = () => {
   const { user } = useAuth();
-  const [personnel, setPersonnel] = useState<ArmedPersonnel[]>(mockArmedPersonnel);
+  const { data: personnel, setData: setPersonnel, create: createPersonnel, remove: removePersonnel } = useArmedPersonnel();
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<ArmedPersonnel | null>(null);
   const [showAdd, setShowAdd] = useState(false);

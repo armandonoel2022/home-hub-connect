@@ -23,7 +23,7 @@ const statusColors: Record<EquipmentStatus, string> = {
 
 const InventoryPage = () => {
   const { user } = useAuth();
-  const [equipment, setEquipment] = useState<Equipment[]>(mockEquipment);
+  const { data: equipment, setData: setEquipment, create: createEquipment, remove: removeEquipment } = useEquipment();
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("Todos");
   const [showAdd, setShowAdd] = useState(false);

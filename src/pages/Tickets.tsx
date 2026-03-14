@@ -44,7 +44,7 @@ const statusConfig: Record<TicketStatus, { icon: typeof Clock; color: string; bg
 
 const TicketsPage = () => {
   const { user } = useAuth();
-  const [tickets, setTickets] = useState<Ticket[]>(mockTickets);
+  const { data: tickets, setData: setTickets, create: createTicket, remove: removeTicket } = useTickets();
   const [showCreate, setShowCreate] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
