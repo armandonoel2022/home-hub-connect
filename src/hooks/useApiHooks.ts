@@ -502,7 +502,7 @@ export function useMinorPurchases() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<MinorPurchase> }) => {
-      if (apiMode) return minorPurchasesApi.update(id, {});
+      if (apiMode) return minorPurchasesApi.approve(id, { by: "" });
       setLocalData((prev) => prev.map((m) => (m.id === id ? { ...m, ...data } : m)));
       return Promise.resolve({} as MinorPurchase);
     },
