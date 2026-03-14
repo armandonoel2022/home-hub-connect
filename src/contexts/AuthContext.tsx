@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import type { IntranetUser, OffboardingReason } from "@/lib/types";
 import { DEPARTMENTS } from "@/lib/types";
+import { isApiConfigured, authApi, usersApi } from "@/lib/api";
 
 interface AuthContextType {
   user: IntranetUser | null;
@@ -52,10 +53,6 @@ const INITIAL_USERS: IntranetUser[] = [
     reportsTo: "",
     extension: "201",
   },
-
-  // ═══════════════════════════════════════════
-  // ADMINISTRACIÓN — Chrisnel Fabian (reporta a Aurelio)
-  // ═══════════════════════════════════════════
   {
     id: "USR-101",
     fullName: "Chrisnel Fabian",
@@ -112,10 +109,6 @@ const INITIAL_USERS: IntranetUser[] = [
     reportsTo: "USR-101",
     extension: "217",
   },
-
-  // ═══════════════════════════════════════════
-  // GERENCIA COMERCIAL — Samuel A. Pérez (reporta a Aurelio)
-  // ═══════════════════════════════════════════
   {
     id: "USR-110",
     fullName: "Samuel A. Pérez",
@@ -186,10 +179,6 @@ const INITIAL_USERS: IntranetUser[] = [
     reportsTo: "USR-110",
     extension: "212",
   },
-
-  // ═══════════════════════════════════════════
-  // OPERADORES DE MONITOREO — Sede Central (bajo Armando Noel)
-  // ═══════════════════════════════════════════
   {
     id: "USR-120",
     fullName: "Brandon Díaz",
@@ -250,8 +239,6 @@ const INITIAL_USERS: IntranetUser[] = [
     shift: "Turno noche",
     team: "Sede Central",
   },
-
-  // EQUIPO ALNAP (bajo Armando Noel)
   {
     id: "USR-130",
     fullName: "Rusbert Michel",
@@ -322,8 +309,6 @@ const INITIAL_USERS: IntranetUser[] = [
     shift: "Noche",
     team: "ALNAP",
   },
-
-  // EQUIPO BANCO CARIBE (bajo Armando Noel)
   {
     id: "USR-140",
     fullName: "Eduardo Serrano",
@@ -352,10 +337,6 @@ const INITIAL_USERS: IntranetUser[] = [
     shift: "Turno día",
     team: "Banco Caribe",
   },
-
-  // ═══════════════════════════════════════════
-  // RECURSOS HUMANOS — Dilia Aguasvivas (reporta a Aurelio)
-  // ═══════════════════════════════════════════
   {
     id: "USR-006",
     fullName: "Dilia Aguasvivas",
@@ -409,10 +390,6 @@ const INITIAL_USERS: IntranetUser[] = [
     reportsTo: "USR-006",
     extension: "213",
   },
-
-  // ═══════════════════════════════════════════
-  // OPERACIONES — Remit López (reporta a Aurelio)
-  // ═══════════════════════════════════════════
   {
     id: "USR-005",
     fullName: "Remit López",
@@ -428,10 +405,6 @@ const INITIAL_USERS: IntranetUser[] = [
     extension: "220",
     fleetPhone: "+1 809-555-0010",
   },
-
-  // ═══════════════════════════════════════════
-  // OTROS ROLES — Personal de apoyo
-  // ═══════════════════════════════════════════
   {
     id: "USR-160",
     fullName: "Carmen Sosa",
@@ -463,7 +436,10 @@ const INITIAL_USERS: IntranetUser[] = [
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<IntranetUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const apiMode = isApiConfigured();
+
   const [allUsers, setAllUsers] = useState<IntranetUser[]>(() => {
+    if (apiMode) return []; // Will load from API
     const storedVersion = localStorage.getItem("safeone_users_version");
     if (storedVersion === USERS_VERSION) {
       const stored = localStorage.getItem("safeone_all_users");
@@ -471,43 +447,89 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try { return JSON.parse(stored); } catch {}
       }
     }
-    // Reset to new data when version changes
     localStorage.setItem("safeone_users_version", USERS_VERSION);
     localStorage.removeItem("safeone_all_users");
     return INITIAL_USERS;
   });
 
-  // Persist users list
+  // Persist users list (mock mode only)
   useEffect(() => {
-    localStorage.setItem("safeone_all_users", JSON.stringify(allUsers));
-  }, [allUsers]);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("safeone_user");
-    if (stored) {
-      try { setUser(JSON.parse(stored)); } catch {}
+    if (!apiMode) {
+      localStorage.setItem("safeone_all_users", JSON.stringify(allUsers));
     }
-    setIsLoading(false);
-  }, []);
+  }, [allUsers, apiMode]);
+
+  // Initialize: check for existing session
+  useEffect(() => {
+    const init = async () => {
+      if (apiMode) {
+        // API mode: validate token with server
+        const token = localStorage.getItem("safeone_token");
+        if (token) {
+          try {
+            const currentUser = await authApi.me();
+            setUser(currentUser);
+          } catch {
+            localStorage.removeItem("safeone_token");
+            localStorage.removeItem("safeone_user");
+          }
+        }
+        // Load all users from API
+        try {
+          const users = await usersApi.getAll();
+          setAllUsers(users);
+        } catch {
+          // Fallback to initial users if API fails
+          setAllUsers(INITIAL_USERS);
+        }
+      } else {
+        // Mock mode: restore from localStorage
+        const stored = localStorage.getItem("safeone_user");
+        if (stored) {
+          try { setUser(JSON.parse(stored)); } catch {}
+        }
+      }
+      setIsLoading(false);
+    };
+    init();
+  }, [apiMode]);
 
   const login = async (username: string, password: string): Promise<boolean> => {
-    if (password.trim().toLowerCase() !== "safeone") return false;
-    const found = allUsers.find(
-      (u) => u.email.toLowerCase() === username.trim().toLowerCase() || u.fullName.toLowerCase() === username.trim().toLowerCase()
-    );
-    if (found) {
-      setUser(found);
-      localStorage.setItem("safeone_user", JSON.stringify(found));
-      localStorage.setItem("safeone_token", "mock-token-" + found.id);
-      return true;
+    if (apiMode) {
+      // API mode: authenticate with server
+      try {
+        const result = await authApi.login(username.trim(), password);
+        localStorage.setItem("safeone_token", result.token);
+        localStorage.setItem("safeone_user", JSON.stringify(result.user));
+        setUser(result.user);
+        // Refresh users list
+        try {
+          const users = await usersApi.getAll();
+          setAllUsers(users);
+        } catch {}
+        return true;
+      } catch {
+        return false;
+      }
+    } else {
+      // Mock mode: local authentication
+      if (password.trim().toLowerCase() !== "safeone") return false;
+      const found = allUsers.find(
+        (u) => u.email.toLowerCase() === username.trim().toLowerCase() || u.fullName.toLowerCase() === username.trim().toLowerCase()
+      );
+      if (found) {
+        setUser(found);
+        localStorage.setItem("safeone_user", JSON.stringify(found));
+        localStorage.setItem("safeone_token", "mock-token-" + found.id);
+        return true;
+      }
+      return false;
     }
-    return false;
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("safeone_user");
-    localStorage.removeItem("safeone_token");
+    authApi.logout();
   };
 
   const hasAccess = (department: string) => {
@@ -516,53 +538,105 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return user.allowedDepartments.includes(department);
   };
 
-  const addUser = (u: IntranetUser) => setAllUsers((prev) => [...prev, { ...u, employeeStatus: "Activo" }]);
-
-  const updateUser = (id: string, data: Partial<IntranetUser>) => {
-    setAllUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...data } : u)));
-    if (user?.id === id) {
-      const updated = { ...user, ...data };
-      setUser(updated);
-      localStorage.setItem("safeone_user", JSON.stringify(updated));
+  const addUser = async (u: IntranetUser) => {
+    if (apiMode) {
+      try {
+        const created = await usersApi.create(u);
+        setAllUsers((prev) => [...prev, created]);
+      } catch (err) {
+        console.error("Error creating user:", err);
+      }
+    } else {
+      setAllUsers((prev) => [...prev, { ...u, employeeStatus: "Activo" }]);
     }
   };
 
-  const deleteUser = (id: string) => {
-    setAllUsers((prev) => prev.filter((u) => u.id !== id));
+  const updateUser = async (id: string, data: Partial<IntranetUser>) => {
+    if (apiMode) {
+      try {
+        const updated = await usersApi.update(id, data);
+        setAllUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...updated } : u)));
+        if (user?.id === id) {
+          const updatedUser = { ...user, ...updated };
+          setUser(updatedUser);
+          localStorage.setItem("safeone_user", JSON.stringify(updatedUser));
+        }
+      } catch (err) {
+        console.error("Error updating user:", err);
+      }
+    } else {
+      setAllUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...data } : u)));
+      if (user?.id === id) {
+        const updated = { ...user, ...data };
+        setUser(updated);
+        localStorage.setItem("safeone_user", JSON.stringify(updated));
+      }
+    }
   };
 
-  const offboardUser = (id: string, reason: OffboardingReason, notes: string) => {
-    setAllUsers((prev) =>
-      prev.map((u) =>
-        u.id === id
-          ? {
-              ...u,
-              employeeStatus: "Inactivo" as const,
-              offboardingDate: new Date().toISOString().split("T")[0],
-              offboardingReason: reason,
-              offboardingNotes: notes,
-              offboardingBy: user?.id || "",
-            }
-          : u
-      )
-    );
+  const deleteUser = async (id: string) => {
+    if (apiMode) {
+      try {
+        await usersApi.delete(id);
+        setAllUsers((prev) => prev.filter((u) => u.id !== id));
+      } catch (err) {
+        console.error("Error deleting user:", err);
+      }
+    } else {
+      setAllUsers((prev) => prev.filter((u) => u.id !== id));
+    }
   };
 
-  const reactivateUser = (id: string) => {
-    setAllUsers((prev) =>
-      prev.map((u) =>
-        u.id === id
-          ? {
-              ...u,
-              employeeStatus: "Activo" as const,
-              offboardingDate: undefined,
-              offboardingReason: undefined,
-              offboardingNotes: undefined,
-              offboardingBy: undefined,
-            }
-          : u
-      )
-    );
+  const offboardUser = async (id: string, reason: OffboardingReason, notes: string) => {
+    if (apiMode) {
+      try {
+        const updated = await usersApi.offboard(id, { reason, notes });
+        setAllUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...updated } : u)));
+      } catch (err) {
+        console.error("Error offboarding user:", err);
+      }
+    } else {
+      setAllUsers((prev) =>
+        prev.map((u) =>
+          u.id === id
+            ? {
+                ...u,
+                employeeStatus: "Inactivo" as const,
+                offboardingDate: new Date().toISOString().split("T")[0],
+                offboardingReason: reason,
+                offboardingNotes: notes,
+                offboardingBy: user?.id || "",
+              }
+            : u
+        )
+      );
+    }
+  };
+
+  const reactivateUser = async (id: string) => {
+    if (apiMode) {
+      try {
+        const updated = await usersApi.reactivate(id);
+        setAllUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...updated } : u)));
+      } catch (err) {
+        console.error("Error reactivating user:", err);
+      }
+    } else {
+      setAllUsers((prev) =>
+        prev.map((u) =>
+          u.id === id
+            ? {
+                ...u,
+                employeeStatus: "Activo" as const,
+                offboardingDate: undefined,
+                offboardingReason: undefined,
+                offboardingNotes: undefined,
+                offboardingBy: undefined,
+              }
+            : u
+        )
+      );
+    }
   };
 
   const activeUsers = allUsers.filter((u) => u.employeeStatus !== "Inactivo");
