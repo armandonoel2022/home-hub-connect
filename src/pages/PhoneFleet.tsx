@@ -1,7 +1,7 @@
 import { useState } from "react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { mockPhones } from "@/lib/mockData";
+import { usePhones } from "@/hooks/useApiHooks";
 import type { PhoneDevice, PhoneStatus } from "@/lib/types";
 import { DEPARTMENTS } from "@/lib/types";
 import { Search, Plus, Smartphone, X, Trash2 } from "lucide-react";
@@ -15,7 +15,7 @@ const statusColors: Record<PhoneStatus, string> = {
 
 const PhoneFleetPage = () => {
   const { user } = useAuth();
-  const [phones, setPhones] = useState<PhoneDevice[]>(mockPhones);
+  const { data: phones, setData: setPhones, create: createPhone, remove: removePhone } = usePhones();
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState<Partial<PhoneDevice>>({ status: "Disponible" });

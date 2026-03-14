@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { mockArmedPersonnel } from "@/lib/mockData";
+import { useArmedPersonnel } from "@/hooks/useApiHooks";
 import type { ArmedPersonnel } from "@/lib/types";
 import { Search, Plus, User, MapPin, X, Phone, Upload, Image, Lock, Trash2, Pencil } from "lucide-react";
 
@@ -13,7 +13,7 @@ const statusColors: Record<string, string> = {
 
 const OperationsPage = () => {
   const { user } = useAuth();
-  const [personnel, setPersonnel] = useState<ArmedPersonnel[]>(mockArmedPersonnel);
+  const { data: personnel, setData: setPersonnel, create: createPersonnel, remove: removePersonnel } = useArmedPersonnel();
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<ArmedPersonnel | null>(null);
   const [showAdd, setShowAdd] = useState(false);

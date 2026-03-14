@@ -1,7 +1,7 @@
 import { useState } from "react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { mockVehicles } from "@/lib/mockData";
+import { useVehicles } from "@/hooks/useApiHooks";
 import type { Vehicle, VehicleStatus } from "@/lib/types";
 import { Search, Plus, Truck, X, Trash2 } from "lucide-react";
 import ExportMenu from "@/components/ExportMenu";
@@ -15,7 +15,7 @@ const statusColors: Record<VehicleStatus, string> = {
 
 const FleetPage = () => {
   const { user } = useAuth();
-  const [vehicles, setVehicles] = useState<Vehicle[]>(mockVehicles);
+  const { data: vehicles, setData: setVehicles, create: createVehicle, remove: removeVehicle } = useVehicles();
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState<Partial<Vehicle>>({ status: "Disponible", year: 2024 });

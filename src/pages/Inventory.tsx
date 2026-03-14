@@ -1,7 +1,7 @@
 import { useState } from "react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { mockEquipment } from "@/lib/mockData";
+import { useEquipment } from "@/hooks/useApiHooks";
 import type { Equipment, EquipmentStatus, EquipmentType } from "@/lib/types";
 import { Search, Plus, Monitor, Printer, Cpu, Wifi, Package, X, Trash2 } from "lucide-react";
 import ExportMenu from "@/components/ExportMenu";
@@ -23,7 +23,7 @@ const statusColors: Record<EquipmentStatus, string> = {
 
 const InventoryPage = () => {
   const { user } = useAuth();
-  const [equipment, setEquipment] = useState<Equipment[]>(mockEquipment);
+  const { data: equipment, setData: setEquipment, create: createEquipment, remove: removeEquipment } = useEquipment();
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("Todos");
   const [showAdd, setShowAdd] = useState(false);
