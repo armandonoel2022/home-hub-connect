@@ -1,7 +1,7 @@
 import { useState } from "react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { mockVehicles } from "@/lib/mockData";
+import { useVehicles } from "@/hooks/useApiHooks";
 import type { Vehicle, VehicleStatus } from "@/lib/types";
 import { Search, Plus, Truck, X, Trash2 } from "lucide-react";
 import ExportMenu from "@/components/ExportMenu";
