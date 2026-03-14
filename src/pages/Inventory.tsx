@@ -1,7 +1,7 @@
 import { useState } from "react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { mockEquipment } from "@/lib/mockData";
+import { useEquipment } from "@/hooks/useApiHooks";
 import type { Equipment, EquipmentStatus, EquipmentType } from "@/lib/types";
 import { Search, Plus, Monitor, Printer, Cpu, Wifi, Package, X, Trash2 } from "lucide-react";
 import ExportMenu from "@/components/ExportMenu";
