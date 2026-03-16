@@ -86,10 +86,6 @@ const LoginPage = () => {
             ¿No tienes cuenta?{" "}
             <Link to="/registro" className="gold-accent-text hover:underline font-medium">Solicitar Acceso</Link>
           </p>
-          <p className="text-xs text-muted-foreground text-center mt-2">
-            Demo: <strong>tecnologia@safeone.com.do</strong> o <strong>anoel@safeone.com.do</strong><br />
-            Contraseña: <strong>safeone</strong>
-          </p>
         </form>
       </div>
     </div>

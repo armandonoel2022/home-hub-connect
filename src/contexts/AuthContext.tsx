@@ -509,22 +509,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch {}
         return true;
       } catch {
-        return false;
+        // If API fails, try local fallback
+        console.warn("API login failed, trying local fallback...");
+        return localLogin(username, password);
       }
     } else {
-      // Mock mode: local authentication
-      if (password.trim().toLowerCase() !== "safeone") return false;
-      const found = allUsers.find(
-        (u) => u.email.toLowerCase() === username.trim().toLowerCase() || u.fullName.toLowerCase() === username.trim().toLowerCase()
-      );
-      if (found) {
-        setUser(found);
-        localStorage.setItem("safeone_user", JSON.stringify(found));
-        localStorage.setItem("safeone_token", "mock-token-" + found.id);
-        return true;
-      }
-      return false;
+      return localLogin(username, password);
     }
+  };
+
+  const localLogin = (username: string, password: string): boolean => {
+    if (password.trim().toLowerCase() !== "safeone") return false;
+    const found = allUsers.find(
+      (u) =>
+        u.email?.toLowerCase() === username.trim().toLowerCase() ||
+        u.fullName.toLowerCase() === username.trim().toLowerCase()
+    );
+    if (found) {
+      setUser(found);
+      localStorage.setItem("safeone_user", JSON.stringify(found));
+      localStorage.setItem("safeone_token", "mock-token-" + found.id);
+      return true;
+    }
+    return false;
   };
 
   const logout = () => {
