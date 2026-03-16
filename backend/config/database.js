@@ -1,37 +1,19 @@
-const sql = require('mssql');
+/**
+ * Database abstraction layer.
+ * Now uses file-based storage (JSON files on disk).
+ * SQL Server connection is optional and can be enabled later.
+ */
 
-const config = {
-  server: process.env.DB_SERVER,
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  options: {
-    encrypt: process.env.DB_ENCRYPT === 'true',
-    trustServerCertificate: process.env.DB_TRUST_SERVER_CERTIFICATE === 'true',
-  },
-  pool: {
-    max: 10,
-    min: 0,
-    idleTimeoutMillis: 30000,
-  },
+const fileStorage = require('./fileStorage');
+
+// Export file storage as the primary data layer
+module.exports = {
+  readData: fileStorage.readData,
+  writeData: fileStorage.writeData,
+  generateId: fileStorage.generateId,
+  saveFile: fileStorage.saveFile,
+  getDepartmentUploadPath: fileStorage.getDepartmentUploadPath,
+  DATA_DIR: fileStorage.DATA_DIR,
+  UPLOADS_DIR: fileStorage.UPLOADS_DIR,
+  DEPARTMENT_FOLDERS: fileStorage.DEPARTMENT_FOLDERS,
 };
-
-let pool;
-
-async function connectDB() {
-  try {
-    pool = await sql.connect(config);
-    console.log('✅ Conectado a SQL Server:', process.env.DB_NAME);
-    return pool;
-  } catch (err) {
-    console.error('❌ Error de conexión a BD:', err.message);
-    throw err;
-  }
-}
-
-function getPool() {
-  if (!pool) throw new Error('Base de datos no conectada');
-  return pool;
-}
-
-module.exports = { connectDB, getPool, sql };
