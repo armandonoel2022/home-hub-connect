@@ -1,41 +1,44 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { getPool, sql } = require('../config/database');
+const { readData, writeData } = require('../config/database');
 const auth = require('../middleware/auth');
-const { mapUser } = require('../helpers/mappers');
 
 const router = express.Router();
+const USERS_FILE = 'users.json';
+
+function mapUser(u) {
+  const { PasswordHash, passwordHash, ...safe } = u;
+  return safe;
+}
 
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    const pool = getPool();
+    const users = readData(USERS_FILE);
 
-    const result = await pool.request()
-      .input('email', sql.VarChar, email)
-      .query('SELECT * FROM IntranetUsuarios WHERE LOWER(Email) = LOWER(@email)');
+    const user = users.find(u =>
+      u.email && u.email.toLowerCase() === email.toLowerCase()
+    );
 
-    if (result.recordset.length === 0) {
+    if (!user) {
       return res.status(401).json({ message: 'Usuario o contraseña incorrectos' });
     }
 
-    const user = result.recordset[0];
-
-    // Si tiene PasswordHash, verificar con bcrypt
-    if (user.PasswordHash) {
-      const valid = await bcrypt.compare(password, user.PasswordHash);
+    // Check password
+    if (user.passwordHash) {
+      const valid = await bcrypt.compare(password, user.passwordHash);
       if (!valid) return res.status(401).json({ message: 'Usuario o contraseña incorrectos' });
     } else {
-      // Fallback temporal para migración (contraseña = "safeone")
+      // Default password for users without hash
       if (password.toLowerCase() !== 'safeone') {
         return res.status(401).json({ message: 'Usuario o contraseña incorrectos' });
       }
     }
 
     const token = jwt.sign(
-      { id: user.Id, email: user.Email, isAdmin: !!user.IsAdmin },
+      { id: user.id, email: user.email, isAdmin: !!user.isAdmin },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
     );
@@ -48,30 +51,48 @@ router.post('/login', async (req, res) => {
 });
 
 // GET /api/auth/me
-router.get('/me', auth, async (req, res) => {
-  try {
-    const pool = getPool();
-    const result = await pool.request()
-      .input('id', sql.VarChar, req.user.id)
-      .query('SELECT * FROM IntranetUsuarios WHERE Id = @id');
-
-    if (result.recordset.length === 0) {
-      return res.status(404).json({ message: 'Usuario no encontrado' });
-    }
-    res.json(mapUser(result.recordset[0]));
-  } catch (err) {
-    res.status(500).json({ message: 'Error del servidor' });
-  }
+router.get('/me', auth, (req, res) => {
+  const users = readData(USERS_FILE);
+  const user = users.find(u => u.id === req.user.id);
+  if (!user) return res.status(404).json({ message: 'Usuario no encontrado' });
+  res.json(mapUser(user));
 });
 
 // POST /api/auth/refresh
-router.post('/refresh', auth, async (req, res) => {
+router.post('/refresh', auth, (req, res) => {
   const token = jwt.sign(
     { id: req.user.id, email: req.user.email, isAdmin: req.user.isAdmin },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
   );
   res.json({ token });
+});
+
+// POST /api/auth/change-password
+router.post('/change-password', auth, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  const users = readData(USERS_FILE);
+  const idx = users.findIndex(u => u.id === req.user.id);
+  if (idx === -1) return res.status(404).json({ message: 'Usuario no encontrado' });
+
+  const user = users[idx];
+  
+  // Verify current password
+  if (user.passwordHash) {
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) return res.status(401).json({ message: 'Contraseña actual incorrecta' });
+  } else {
+    if (currentPassword.toLowerCase() !== 'safeone') {
+      return res.status(401).json({ message: 'Contraseña actual incorrecta' });
+    }
+  }
+
+  // Hash new password
+  users[idx].passwordHash = await bcrypt.hash(newPassword, 10);
+  users[idx].updatedAt = new Date().toISOString();
+  writeData(USERS_FILE, users);
+
+  res.json({ message: 'Contraseña actualizada' });
 });
 
 // POST /api/auth/logout
