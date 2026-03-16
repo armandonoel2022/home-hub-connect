@@ -1,10 +1,14 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { connectDB } = require('./config/database');
+const path = require('path');
+const { ensureDirs } = require('./config/fileStorage');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Ensure data directories exist
+ensureDirs();
 
 // Middleware
 app.use(cors({
@@ -18,6 +22,9 @@ app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} ${req.method} ${req.url}`);
   next();
 });
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, 'data', 'uploads')));
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
@@ -35,6 +42,8 @@ app.use('/api/minor-purchases', require('./routes/minor-purchases'));
 // Health check
 app.get('/api/health', (req, res) => res.json({
   status: 'ok',
+  storage: 'file-based (JSON)',
+  dataDir: path.join(__dirname, 'data'),
   timestamp: new Date(),
   uptime: process.uptime(),
 }));
@@ -45,13 +54,9 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Error interno del servidor' });
 });
 
-// Start
-connectDB().then(() => {
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`✅ SafeOne API corriendo en puerto ${PORT}`);
-    console.log(`   Health: http://localhost:${PORT}/api/health`);
-  });
-}).catch(err => {
-  console.error('❌ No se pudo conectar a SQL Server:', err.message);
-  process.exit(1);
+// Start — no database connection needed!
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ SafeOne API corriendo en puerto ${PORT}`);
+  console.log(`   Almacenamiento: JSON files en ${path.join(__dirname, 'data')}`);
+  console.log(`   Health: http://localhost:${PORT}/api/health`);
 });
