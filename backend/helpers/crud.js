@@ -1,133 +1,67 @@
 /**
- * Generic CRUD factory for Express routes + SQL Server
+ * Generic CRUD factory for Express routes + File-based storage
  */
-const { getPool, sql } = require('../config/database');
+const express = require('express');
+const { readData, writeData, generateId } = require('../config/database');
+const auth = require('../middleware/auth');
 
-function generateId(prefix) {
-  return `${prefix}-${Date.now().toString().slice(-8)}`;
-}
-
-/**
- * Creates standard CRUD routes for a table.
- * @param {object} opts
- * @param {string} opts.table - SQL table name
- * @param {string} opts.idPrefix - ID prefix (e.g. 'TK', 'EQ')
- * @param {Function} opts.mapper - Row mapper function
- * @param {object} opts.insertFields - { frontendKey: { col: 'SqlColumn', type: sql.VarChar } }
- * @param {object} opts.updateFields - same format, fields allowed for update
- */
-function createCrudRouter({ table, idPrefix, mapper, insertFields, updateFields }) {
-  const express = require('express');
-  const auth = require('../middleware/auth');
+function createCrudRoutes(filename, idPrefix, options = {}) {
   const router = express.Router();
 
   // GET all
-  router.get('/', auth, async (req, res) => {
-    try {
-      const pool = getPool();
-      const result = await pool.request().query(`SELECT * FROM ${table} ORDER BY CreatedAt DESC`);
-      res.json(result.recordset.map(mapper));
-    } catch (err) {
-      console.error(`GET ${table} error:`, err);
-      res.status(500).json({ message: `Error obteniendo datos de ${table}` });
-    }
+  router.get('/', auth, (req, res) => {
+    let items = readData(filename);
+    if (req.query.userId) items = items.filter(i => i.userId === req.query.userId);
+    if (req.query.department) items = items.filter(i => i.department === req.query.department);
+    if (req.query.status) items = items.filter(i => i.status === req.query.status);
+    res.json(items);
   });
 
   // GET by id
-  router.get('/:id', auth, async (req, res) => {
-    try {
-      const pool = getPool();
-      const result = await pool.request()
-        .input('id', sql.VarChar, req.params.id)
-        .query(`SELECT * FROM ${table} WHERE Id = @id`);
-      if (result.recordset.length === 0) return res.status(404).json({ message: 'No encontrado' });
-      res.json(mapper(result.recordset[0]));
-    } catch (err) {
-      res.status(500).json({ message: 'Error del servidor' });
-    }
+  router.get('/:id', auth, (req, res) => {
+    const items = readData(filename);
+    const item = items.find(i => i.id === req.params.id);
+    if (!item) return res.status(404).json({ message: 'No encontrado' });
+    res.json(item);
   });
 
   // POST create
-  router.post('/', auth, async (req, res) => {
-    try {
-      const pool = getPool();
-      const id = req.body.id || generateId(idPrefix);
-      const now = new Date();
-      const request = pool.request();
-      request.input('id', sql.VarChar, id);
-      request.input('createdAt', sql.DateTime, now);
-
-      const cols = ['Id', 'CreatedAt'];
-      const vals = ['@id', '@createdAt'];
-
-      for (const [key, cfg] of Object.entries(insertFields)) {
-        const value = req.body[key];
-        const paramName = key.replace(/[^a-zA-Z0-9]/g, '');
-        if (value !== undefined) {
-          request.input(paramName, cfg.type, cfg.serialize ? cfg.serialize(value) : value);
-          cols.push(cfg.col);
-          vals.push(`@${paramName}`);
-        }
-      }
-
-      await request.query(`INSERT INTO ${table} (${cols.join(', ')}) VALUES (${vals.join(', ')})`);
-
-      // Return the created record
-      const created = await pool.request()
-        .input('id', sql.VarChar, id)
-        .query(`SELECT * FROM ${table} WHERE Id = @id`);
-      res.status(201).json(mapper(created.recordset[0]));
-    } catch (err) {
-      console.error(`POST ${table} error:`, err);
-      res.status(500).json({ message: `Error creando en ${table}` });
-    }
+  router.post('/', auth, (req, res) => {
+    const items = readData(filename);
+    const newItem = {
+      ...req.body,
+      id: req.body.id || generateId(idPrefix, items),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    items.push(newItem);
+    writeData(filename, items);
+    res.status(201).json(newItem);
   });
 
   // PUT update
-  router.put('/:id', auth, async (req, res) => {
-    try {
-      const pool = getPool();
-      const request = pool.request();
-      request.input('id', sql.VarChar, req.params.id);
-
-      const sets = ['UpdatedAt = GETDATE()'];
-      const fields = updateFields || insertFields;
-
-      for (const [key, cfg] of Object.entries(fields)) {
-        if (req.body[key] !== undefined) {
-          const paramName = key.replace(/[^a-zA-Z0-9]/g, '');
-          request.input(paramName, cfg.type, cfg.serialize ? cfg.serialize(req.body[key]) : req.body[key]);
-          sets.push(`${cfg.col} = @${paramName}`);
-        }
-      }
-
-      await request.query(`UPDATE ${table} SET ${sets.join(', ')} WHERE Id = @id`);
-
-      const updated = await pool.request()
-        .input('id', sql.VarChar, req.params.id)
-        .query(`SELECT * FROM ${table} WHERE Id = @id`);
-      if (updated.recordset.length === 0) return res.status(404).json({ message: 'No encontrado' });
-      res.json(mapper(updated.recordset[0]));
-    } catch (err) {
-      console.error(`PUT ${table} error:`, err);
-      res.status(500).json({ message: `Error actualizando ${table}` });
-    }
+  router.put('/:id', auth, (req, res) => {
+    const items = readData(filename);
+    const idx = items.findIndex(i => i.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ message: 'No encontrado' });
+    items[idx] = { ...items[idx], ...req.body, updatedAt: new Date().toISOString() };
+    writeData(filename, items);
+    res.json(items[idx]);
   });
 
   // DELETE
-  router.delete('/:id', auth, async (req, res) => {
-    try {
-      const pool = getPool();
-      await pool.request()
-        .input('id', sql.VarChar, req.params.id)
-        .query(`DELETE FROM ${table} WHERE Id = @id`);
-      res.status(204).send();
-    } catch (err) {
-      res.status(500).json({ message: `Error eliminando de ${table}` });
-    }
+  router.delete('/:id', auth, (req, res) => {
+    const items = readData(filename);
+    const idx = items.findIndex(i => i.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ message: 'No encontrado' });
+    items.splice(idx, 1);
+    writeData(filename, items);
+    res.status(204).send();
   });
+
+  if (options.customRoutes) options.customRoutes(router, filename);
 
   return router;
 }
 
-module.exports = { createCrudRouter, generateId };
+module.exports = { createCrudRoutes };
