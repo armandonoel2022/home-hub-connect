@@ -17,7 +17,17 @@ import type {
 import type { AppNotification } from "./types";
 
 // ─── Configuration ───
-const BASE_URL = import.meta.env.VITE_API_URL || "";
+// Auto-detect API URL: use env var, or same hostname on port 3000
+function getBaseUrl(): string {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  // In production, assume API runs on same server, port 3000
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    return `http://${window.location.hostname}:3000/api`;
+  }
+  return "";
+}
+
+const BASE_URL = getBaseUrl();
 
 /** Returns true when a backend API URL is configured */
 export const isApiConfigured = () => !!BASE_URL;
