@@ -320,8 +320,8 @@ const TicketsPage = () => {
                 >
                   Cancelar
                 </button>
-                <button onClick={handleCreate} className="btn-gold text-sm">
-                  Crear Ticket
+                <button onClick={handleCreate} disabled={isCreating} className="btn-gold text-sm disabled:opacity-60 disabled:cursor-not-allowed">
+                  {isCreating ? "Guardando..." : "Crear Ticket"}
                 </button>
               </div>
             </div>
