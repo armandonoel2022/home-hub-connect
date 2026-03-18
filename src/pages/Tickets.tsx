@@ -44,7 +44,7 @@ const statusConfig: Record<TicketStatus, { icon: typeof Clock; color: string; bg
 
 const TicketsPage = () => {
   const { user } = useAuth();
-  const { data: tickets, setData: setTickets, create: createTicket, remove: removeTicket } = useTickets();
+  const { data: tickets, create: createTicket, remove: removeTicket, isCreating } = useTickets();
   const [showCreate, setShowCreate] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -70,29 +70,35 @@ const TicketsPage = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!form.title || !form.category || !form.department) return;
+
     const now = new Date().toISOString();
     const slaHours = SLA_MAP[form.priority];
     const deadline = new Date(Date.now() + slaHours * 3600000).toISOString();
-    const newTicket: Ticket = {
-      id: `TK-${String(tickets.length + 1).padStart(3, "0")}`,
-      title: form.title,
-      description: form.description,
-      category: form.category as TicketCategory,
-      priority: form.priority,
-      status: "Abierto",
-      createdBy: user?.fullName || "Usuario Actual",
-      department: form.department,
-      createdAt: now,
-      updatedAt: now,
-      slaHours,
-      slaDeadline: deadline,
-      attachments: [],
-    };
-    setTickets([newTicket, ...tickets]);
-    setShowCreate(false);
-    setForm({ title: "", description: "", category: "", priority: "Media", department: "" });
+
+    try {
+      await createTicket({
+        title: form.title,
+        description: form.description,
+        category: form.category as TicketCategory,
+        priority: form.priority,
+        status: "Abierto",
+        createdBy: user?.fullName || "Usuario Actual",
+        department: form.department,
+        createdAt: now,
+        updatedAt: now,
+        slaHours,
+        slaDeadline: deadline,
+        attachments: [],
+      });
+
+      setShowCreate(false);
+      setForm({ title: "", description: "", category: "", priority: "Media", department: "" });
+    } catch (error) {
+      console.error("Error creando ticket:", error);
+      window.alert("No se pudo guardar el ticket en el servidor. Verifica que el backend esté corriendo en el puerto 3000.");
+    }
   };
 
   const statusCounts = {
@@ -193,13 +199,18 @@ const TicketsPage = () => {
                   )}
                   {user?.isAdmin && (
                     <button
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.stopPropagation();
                         if (window.confirm(`¿Eliminar ticket ${ticket.id}: "${ticket.title}"?`)) {
-                          setTickets((prev) => prev.filter((t) => t.id !== ticket.id));
+                          try {
+                            await removeTicket(ticket.id);
+                          } catch (error) {
+                            console.error("Error eliminando ticket:", error);
+                            window.alert("No se pudo eliminar el ticket en el servidor.");
+                          }
                         }
                       }}
-                      className="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
+                      className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
                       title="Eliminar"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -309,8 +320,8 @@ const TicketsPage = () => {
                 >
                   Cancelar
                 </button>
-                <button onClick={handleCreate} className="btn-gold text-sm">
-                  Crear Ticket
+                <button onClick={handleCreate} disabled={isCreating} className="btn-gold text-sm disabled:opacity-60 disabled:cursor-not-allowed">
+                  {isCreating ? "Guardando..." : "Crear Ticket"}
                 </button>
               </div>
             </div>
