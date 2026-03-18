@@ -199,13 +199,18 @@ const TicketsPage = () => {
                   )}
                   {user?.isAdmin && (
                     <button
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.stopPropagation();
                         if (window.confirm(`¿Eliminar ticket ${ticket.id}: "${ticket.title}"?`)) {
-                          setTickets((prev) => prev.filter((t) => t.id !== ticket.id));
+                          try {
+                            await removeTicket(ticket.id);
+                          } catch (error) {
+                            console.error("Error eliminando ticket:", error);
+                            window.alert("No se pudo eliminar el ticket en el servidor.");
+                          }
                         }
                       }}
-                      className="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
+                      className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
                       title="Eliminar"
                     >
                       <Trash2 className="h-4 w-4" />
