@@ -56,7 +56,7 @@ const INITIAL_USERS: IntranetUser[] = [
   {
     id: "USR-101",
     fullName: "Chrisnel Fabian",
-    email: "Cfabiancxc@safeone.com.do",
+    email: "cfabian@safeone.com.do",
     department: "Administración",
     position: "Gerente Administrativo",
     birthday: "",

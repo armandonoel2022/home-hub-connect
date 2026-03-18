@@ -39,7 +39,7 @@ async function seed() {
       fleetPhone: '+1 809-555-0020', extension: '216', passwordHash: defaultHash, employeeStatus: 'Activo',
     },
     {
-      id: 'USR-101', fullName: 'Chrisnel Fabian', email: 'cfabiancxc@safeone.com.do',
+      id: 'USR-101', fullName: 'Chrisnel Fabian', email: 'cfabian@safeone.com.do',
       department: 'Administración', position: 'Gerente Administrativo', birthday: '',
       photoUrl: '', allowedDepartments: ['Administración', 'Cuentas por Cobrar', 'Contabilidad', 'Calidad'],
       isAdmin: false, isDepartmentLeader: true, reportsTo: 'USR-100', extension: '204',

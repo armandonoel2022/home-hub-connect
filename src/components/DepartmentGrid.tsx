@@ -62,7 +62,7 @@ const departments: Department[] = [
     icon: Building2,
     description: "Gestión administrativa y recursos",
     color: "42 100% 50%",
-    leader: { name: "Chrisnel Fabian", position: "Gerente Administrativo", photo: "", fleetPhone: "", email: "Cfabiancxc@safeone.com.do" },
+    leader: { name: "Chrisnel Fabian", position: "Gerente Administrativo", photo: "", fleetPhone: "", email: "cfabian@safeone.com.do" },
   },
   {
     name: "Gerencia General",
