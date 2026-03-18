@@ -44,7 +44,7 @@ const statusConfig: Record<TicketStatus, { icon: typeof Clock; color: string; bg
 
 const TicketsPage = () => {
   const { user } = useAuth();
-  const { data: tickets, setData: setTickets, create: createTicket, remove: removeTicket } = useTickets();
+  const { data: tickets, create: createTicket, remove: removeTicket, isCreating } = useTickets();
   const [showCreate, setShowCreate] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -70,29 +70,35 @@ const TicketsPage = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!form.title || !form.category || !form.department) return;
+
     const now = new Date().toISOString();
     const slaHours = SLA_MAP[form.priority];
     const deadline = new Date(Date.now() + slaHours * 3600000).toISOString();
-    const newTicket: Ticket = {
-      id: `TK-${String(tickets.length + 1).padStart(3, "0")}`,
-      title: form.title,
-      description: form.description,
-      category: form.category as TicketCategory,
-      priority: form.priority,
-      status: "Abierto",
-      createdBy: user?.fullName || "Usuario Actual",
-      department: form.department,
-      createdAt: now,
-      updatedAt: now,
-      slaHours,
-      slaDeadline: deadline,
-      attachments: [],
-    };
-    setTickets([newTicket, ...tickets]);
-    setShowCreate(false);
-    setForm({ title: "", description: "", category: "", priority: "Media", department: "" });
+
+    try {
+      await createTicket({
+        title: form.title,
+        description: form.description,
+        category: form.category as TicketCategory,
+        priority: form.priority,
+        status: "Abierto",
+        createdBy: user?.fullName || "Usuario Actual",
+        department: form.department,
+        createdAt: now,
+        updatedAt: now,
+        slaHours,
+        slaDeadline: deadline,
+        attachments: [],
+      });
+
+      setShowCreate(false);
+      setForm({ title: "", description: "", category: "", priority: "Media", department: "" });
+    } catch (error) {
+      console.error("Error creando ticket:", error);
+      window.alert("No se pudo guardar el ticket en el servidor. Verifica que el backend esté corriendo en el puerto 3000.");
+    }
   };
 
   const statusCounts = {
