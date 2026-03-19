@@ -40,6 +40,7 @@ app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/purchase-requests', require('./routes/purchase-requests'));
 app.use('/api/hiring-requests', require('./routes/hiring-requests'));
 app.use('/api/minor-purchases', require('./routes/minor-purchases'));
+app.use('/api/chat', require('./routes/chat'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({

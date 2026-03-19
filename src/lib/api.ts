@@ -232,6 +232,21 @@ export const minorPurchasesApi = {
     apiFetch<MinorPurchase>(`/minor-purchases/${id}/reject`, { method: "POST", body: JSON.stringify(data) }),
 };
 
+// ─── Chat API ───
+import type { Chat, ChatMessage } from "./chatTypes";
+
+export const chatApi = {
+  getChats: () => apiFetch<Chat[]>("/chat/chats"),
+  findOrCreateChat: (data: { type: string; name: string; participants: string[]; departmentId?: string }) =>
+    apiFetch<Chat>("/chat/chats", { method: "POST", body: JSON.stringify(data) }),
+  getMessages: (chatId: string, since?: string) =>
+    apiFetch<ChatMessage[]>(`/chat/messages/${chatId}${since ? `?since=${encodeURIComponent(since)}` : ''}`),
+  sendMessage: (data: { chatId: string; content: string; type: string; senderName: string; fileName?: string; fileData?: string }) =>
+    apiFetch<ChatMessage>("/chat/messages", { method: "POST", body: JSON.stringify(data) }),
+  poll: (since: string) =>
+    apiFetch<{ messages: ChatMessage[]; chats: Chat[] }>(`/chat/poll?since=${encodeURIComponent(since)}`),
+};
+
 // ─── Registration Requests API ───
 export const registrationApi = {
   getAll: () => apiFetch<any[]>("/registration-requests"),

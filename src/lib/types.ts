@@ -20,12 +20,24 @@ export interface Ticket {
   priority: TicketPriority;
   status: TicketStatus;
   createdBy: string;
+  createdById?: string; // user ID of creator
+  assignedTo?: string; // department or person assigned
+  assignedToId?: string; // user ID assigned
   department: string;
   createdAt: string;
   updatedAt: string;
   slaHours: number;
   slaDeadline: string;
   attachments: string[];
+  comments?: TicketComment[];
+}
+
+export interface TicketComment {
+  id: string;
+  userId: string;
+  userName: string;
+  content: string;
+  timestamp: string;
 }
 
 export type EquipmentType = "Computadora" | "Monitor" | "Impresora" | "Equipo de Red" | "Otro";
