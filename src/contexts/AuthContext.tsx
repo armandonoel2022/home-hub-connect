@@ -474,12 +474,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             localStorage.removeItem("safeone_user");
           }
         }
-        // Load all users from API
-        try {
-          const users = await usersApi.getAll();
-          setAllUsers(users);
-        } catch {
-          // Fallback to initial users if API fails
+        // Load all users from API only if we have a token
+        const hasToken = !!localStorage.getItem("safeone_token");
+        if (hasToken) {
+          try {
+            const users = await usersApi.getAll();
+            setAllUsers(users);
+          } catch {
+            setAllUsers(INITIAL_USERS);
+          }
+        } else {
           setAllUsers(INITIAL_USERS);
         }
       } else {
