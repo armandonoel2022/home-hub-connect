@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { encryptMessage, decryptMessage } from "@/lib/chatCrypto";
+import { isApiConfigured, chatApi } from "@/lib/api";
 import type { Chat, ChatMessage, ChatNotification, ChatType } from "@/lib/chatTypes";
 import { DEPARTMENTS } from "@/lib/types";
 
@@ -42,36 +43,112 @@ function loadFromStorage<T>(key: string, fallback: T): T {
 
 export function ChatProvider({ children }: { children: ReactNode }) {
   const { user, allUsers } = useAuth();
+  const apiMode = isApiConfigured();
   const [chats, setChats] = useState<Chat[]>(() => loadFromStorage(STORAGE_KEY, []));
   const [allMessages, setAllMessages] = useState<ChatMessage[]>(() => loadFromStorage(MSG_KEY, []));
   const [activeChat, setActiveChat] = useState<Chat | null>(null);
   const [notifications, setNotifications] = useState<ChatNotification[]>([]);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const lastPollRef = useRef<string>(new Date().toISOString());
 
-  // Persist
+  // Persist to localStorage only in mock mode
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(chats));
-  }, [chats]);
+    if (!apiMode) localStorage.setItem(STORAGE_KEY, JSON.stringify(chats));
+  }, [chats, apiMode]);
   useEffect(() => {
-    localStorage.setItem(MSG_KEY, JSON.stringify(allMessages));
-  }, [allMessages]);
+    if (!apiMode) localStorage.setItem(MSG_KEY, JSON.stringify(allMessages));
+  }, [allMessages, apiMode]);
+
+  // Load chats from server on mount
+  useEffect(() => {
+    if (!apiMode || !user) return;
+    chatApi.getChats().then(setChats).catch(console.error);
+  }, [apiMode, user]);
+
+  // Poll for new messages every 3 seconds
+  useEffect(() => {
+    if (!apiMode || !user) return;
+    const interval = setInterval(async () => {
+      try {
+        const result = await chatApi.poll(lastPollRef.current);
+        if (result.messages.length > 0) {
+          setAllMessages(prev => {
+            const existingIds = new Set(prev.map(m => m.id));
+            const newMsgs = result.messages.filter(m => !existingIds.has(m.id));
+            if (newMsgs.length === 0) return prev;
+
+            // Show notifications for new messages
+            newMsgs.forEach(m => {
+              const notif: ChatNotification = {
+                id: `notif-${m.id}`,
+                chatId: m.chatId,
+                senderName: m.senderName,
+                message: m.type === "buzz" ? "¡Te ha enviado un zumbido! 🔔" : (m.content || "").slice(0, 50),
+                timestamp: m.timestamp,
+                type: m.type === "buzz" ? "buzz" : "message",
+              };
+              setNotifications(p => [...p, notif]);
+            });
+
+            lastPollRef.current = newMsgs[newMsgs.length - 1].timestamp;
+            return [...prev, ...newMsgs];
+          });
+          setChats(result.chats);
+        }
+      } catch {
+        // Silently fail on poll errors
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [apiMode, user]);
 
   // Messages for active chat
   const messages = activeChat
     ? allMessages.filter((m) => m.chatId === activeChat.id)
     : [];
 
-  const totalUnread = chats.reduce((sum, c) => sum + c.unreadCount, 0);
+  const totalUnread = chats.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+
+  // Load messages when switching active chat
+  useEffect(() => {
+    if (!apiMode || !activeChat) return;
+    chatApi.getMessages(activeChat.id).then(msgs => {
+      setAllMessages(prev => {
+        const otherMsgs = prev.filter(m => m.chatId !== activeChat.id);
+        return [...otherMsgs, ...msgs];
+      });
+      if (msgs.length > 0) {
+        lastPollRef.current = msgs[msgs.length - 1].timestamp;
+      }
+    }).catch(console.error);
+  }, [apiMode, activeChat?.id]);
 
   const findOrCreateChat = useCallback(
-    (type: ChatType, participantIds: string[], name: string, dept?: string): Chat => {
+    async (type: ChatType, participantIds: string[], name: string, dept?: string): Promise<Chat> => {
+      if (apiMode) {
+        try {
+          const chat = await chatApi.findOrCreateChat({
+            type,
+            name,
+            participants: participantIds,
+            departmentId: dept,
+          });
+          setChats(prev => {
+            const exists = prev.find(c => c.id === chat.id);
+            if (exists) return prev;
+            return [chat, ...prev];
+          });
+          return chat;
+        } catch (err) {
+          console.error("Error creating chat:", err);
+        }
+      }
+
+      // Fallback: local mode
       const existing = chats.find((c) => {
         if (type === "individual") {
-          return (
-            c.type === "individual" &&
-            c.participants.length === 2 &&
-            participantIds.every((p) => c.participants.includes(p))
-          );
+          return c.type === "individual" && c.participants.length === 2 &&
+            participantIds.every((p) => c.participants.includes(p));
         }
         return c.type === "department" && c.departmentId === dept;
       });
@@ -88,18 +165,17 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       setChats((prev) => [newChat, ...prev]);
       return newChat;
     },
-    [chats]
+    [chats, apiMode]
   );
 
   const startIndividualChat = useCallback(
-    (userId: string) => {
+    async (userId: string) => {
       if (!user) return;
       const other = allUsers.find((u) => u.id === userId);
       if (!other) return;
-      const chat = findOrCreateChat("individual", [user.id, userId], other.fullName);
+      const chat = await findOrCreateChat("individual", [user.id, userId], other.fullName);
       setActiveChat(chat);
       setIsChatOpen(true);
-      // Mark as read
       setChats((prev) =>
         prev.map((c) => (c.id === chat.id ? { ...c, unreadCount: 0 } : c))
       );
@@ -108,11 +184,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   );
 
   const startDepartmentChat = useCallback(
-    (department: string) => {
+    async (department: string) => {
       if (!user) return;
       const deptUsers = allUsers.filter((u) => u.department === department).map((u) => u.id);
       if (!deptUsers.includes(user.id)) deptUsers.push(user.id);
-      const chat = findOrCreateChat("department", deptUsers, department, department);
+      const chat = await findOrCreateChat("department", deptUsers, department, department);
       setActiveChat(chat);
       setIsChatOpen(true);
       setChats((prev) =>
@@ -126,6 +202,29 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     async (content: string, type: ChatMessage["type"] = "text", fileName?: string, fileData?: string) => {
       if (!user || !activeChat) return;
       const encrypted = type === "text" ? await encryptMessage(content) : content;
+
+      if (apiMode) {
+        try {
+          const msg = await chatApi.sendMessage({
+            chatId: activeChat.id,
+            content: encrypted,
+            type,
+            senderName: user.fullName,
+            fileName,
+            fileData,
+          });
+          setAllMessages(prev => [...prev, msg]);
+          const preview = type === "text" ? content.slice(0, 50) : type === "buzz" ? "🔔 ¡Zumbido!" : `📎 ${fileName || "Archivo"}`;
+          setChats(prev =>
+            prev.map(c => c.id === activeChat.id ? { ...c, lastMessage: preview, lastMessageTime: msg.timestamp } : c)
+          );
+          return;
+        } catch (err) {
+          console.error("Error sending message:", err);
+        }
+      }
+
+      // Fallback: local mode
       const msg: ChatMessage = {
         id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         chatId: activeChat.id,
@@ -139,52 +238,19 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         read: false,
       };
       setAllMessages((prev) => [...prev, msg]);
-
-      // Update chat last message
       const preview = type === "text" ? content.slice(0, 50) : type === "buzz" ? "🔔 ¡Zumbido!" : `📎 ${fileName || "Archivo"}`;
       setChats((prev) =>
         prev.map((c) =>
-          c.id === activeChat.id
-            ? { ...c, lastMessage: preview, lastMessageTime: msg.timestamp }
-            : c
+          c.id === activeChat.id ? { ...c, lastMessage: preview, lastMessageTime: msg.timestamp } : c
         )
       );
     },
-    [user, activeChat]
+    [user, activeChat, apiMode]
   );
 
   const sendBuzz = useCallback(async () => {
-    if (!user || !activeChat) return;
-    const msg: ChatMessage = {
-      id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      chatId: activeChat.id,
-      senderId: user.id,
-      senderName: user.fullName,
-      content: "🔔 ¡Zumbido!",
-      type: "buzz",
-      timestamp: new Date().toISOString(),
-      read: false,
-    };
-    setAllMessages((prev) => [...prev, msg]);
-    setChats((prev) =>
-      prev.map((c) =>
-        c.id === activeChat.id
-          ? { ...c, lastMessage: "🔔 ¡Zumbido!", lastMessageTime: msg.timestamp }
-          : c
-      )
-    );
-
-    // Trigger buzz notification for demo
-    const buzzNotif: ChatNotification = {
-      id: `notif-${Date.now()}`,
-      chatId: activeChat.id,
-      senderName: user.fullName,
-      message: "¡Te ha enviado un zumbido! 🔔",
-      timestamp: new Date().toISOString(),
-      type: "buzz",
-    };
-    setNotifications((prev) => [...prev, buzzNotif]);
-  }, [user, activeChat]);
+    await sendMessage("🔔 ¡Zumbido!", "buzz");
+  }, [sendMessage]);
 
   const dismissNotification = useCallback((id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
