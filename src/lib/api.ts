@@ -53,7 +53,10 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
   if (res.status === 401) {
     localStorage.removeItem("safeone_token");
     localStorage.removeItem("safeone_user");
-    window.location.href = "/login";
+    // Only redirect if not already on login page to avoid infinite loop
+    if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+      window.location.href = "/login";
+    }
     throw new Error("No autorizado");
   }
 
