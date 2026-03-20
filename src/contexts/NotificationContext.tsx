@@ -1,4 +1,6 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { isApiConfigured, notificationsApi } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 import type { AppNotification } from "@/lib/types";
 
 interface NotificationContextType {
@@ -12,58 +14,54 @@ interface NotificationContextType {
 
 const NotificationContext = createContext<NotificationContextType | null>(null);
 
-// Initial mock notifications
-const initialNotifications: AppNotification[] = [
-  {
-    id: "NOT-001",
-    type: "purchase",
-    title: "Nueva Solicitud de Compra",
-    message: "Operaciones ha solicitado la compra de 10 radios portátiles por RD$85,000",
-    relatedId: "PR-001",
-    forUserId: "USR-002",
-    read: true,
-    createdAt: "2026-03-05T08:00:00",
-    actionUrl: "/solicitudes-compra",
-  },
-  {
-    id: "NOT-002",
-    type: "hiring",
-    title: "Solicitud de Contratación Pendiente",
-    message: "Gerencia Comercial solicita un Ejecutivo de Ventas — requiere aprobación",
-    relatedId: "HR-001",
-    forUserId: "USR-002",
-    read: true,
-    createdAt: "2026-03-04T14:00:00",
-    actionUrl: "/solicitudes-personal",
-  },
-];
-
 export function NotificationProvider({ children }: { children: ReactNode }) {
-  const [notifications, setNotifications] = useState<AppNotification[]>(initialNotifications);
+  const { user } = useAuth();
+  const apiMode = isApiConfigured();
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+
+  // Load notifications from server
+  useEffect(() => {
+    if (!apiMode || !user) return;
+    notificationsApi.getForUser(user.id).then(setNotifications).catch(console.error);
+    // Poll every 10 seconds for new notifications (panic alerts, etc.)
+    const interval = setInterval(() => {
+      notificationsApi.getForUser(user.id).then(setNotifications).catch(() => {});
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [apiMode, user]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const addNotification = (n: Omit<AppNotification, "id" | "createdAt" | "read">) => {
-    const newN: AppNotification = {
-      ...n,
-      id: `NOT-${String(Date.now()).slice(-6)}`,
-      createdAt: new Date().toISOString(),
-      read: false,
-    };
-    setNotifications((prev) => [newN, ...prev]);
-  };
+  const addNotification = useCallback((n: Omit<AppNotification, "id" | "createdAt" | "read">) => {
+    if (apiMode) {
+      notificationsApi.create(n).then((created) => {
+        setNotifications((prev) => [created, ...prev]);
+      }).catch(console.error);
+    } else {
+      const newN: AppNotification = {
+        ...n,
+        id: `NOT-${String(Date.now()).slice(-6)}`,
+        createdAt: new Date().toISOString(),
+        read: false,
+      };
+      setNotifications((prev) => [newN, ...prev]);
+    }
+  }, [apiMode]);
 
-  const markAsRead = (id: string) => {
+  const markAsRead = useCallback((id: string) => {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
-  };
+    if (apiMode) notificationsApi.markRead(id).catch(() => {});
+  }, [apiMode]);
 
-  const markAllAsRead = () => {
+  const markAllAsRead = useCallback(() => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-  };
+    if (apiMode && user) notificationsApi.markAllRead(user.id).catch(() => {});
+  }, [apiMode, user]);
 
-  const clearNotification = (id: string) => {
+  const clearNotification = useCallback((id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
-  };
+    if (apiMode) notificationsApi.delete(id).catch(() => {});
+  }, [apiMode]);
 
   return (
     <NotificationContext.Provider value={{ notifications, unreadCount, addNotification, markAsRead, markAllAsRead, clearNotification }}>

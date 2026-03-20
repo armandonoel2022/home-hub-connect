@@ -518,3 +518,57 @@ export function useMinorPurchases() {
     setData: setLocalData,
   };
 }
+
+// ═══════════════════════════════════════════
+// TASKS
+// ═══════════════════════════════════════════
+export function useTasks() {
+  const queryClient = useQueryClient();
+  const apiMode = isApiConfigured();
+  const [localData, setLocalData] = useLocalState<any>("safeone_tasks", []);
+
+  const query = useQuery({
+    queryKey: ["tasks"],
+    queryFn: () => (apiMode ? tasksApi.getAll() : Promise.resolve(localData)),
+    initialData: apiMode ? undefined : localData,
+    staleTime: apiMode ? 30_000 : Infinity,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (task: any) => {
+      if (apiMode) return tasksApi.create(task);
+      const newTask = { ...task, id: task.id || `TSK-${Date.now().toString().slice(-6)}` };
+      setLocalData((prev) => [newTask, ...prev]);
+      return Promise.resolve(newTask);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tasks"] }),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => {
+      if (apiMode) return tasksApi.update(id, data);
+      setLocalData((prev) => prev.map((t: any) => (t.id === id ? { ...t, ...data } : t)));
+      return Promise.resolve({});
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tasks"] }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => {
+      if (apiMode) return tasksApi.delete(id);
+      setLocalData((prev) => prev.filter((t: any) => t.id !== id));
+      return Promise.resolve();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tasks"] }),
+  });
+
+  return {
+    data: apiMode ? query.data || [] : localData,
+    isLoading: query.isLoading,
+    error: query.error,
+    create: createMutation.mutateAsync,
+    update: (id: string, data: any) => updateMutation.mutateAsync({ id, data }),
+    remove: deleteMutation.mutateAsync,
+    isCreating: createMutation.isPending,
+  };
+}
