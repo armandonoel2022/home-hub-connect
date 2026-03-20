@@ -159,25 +159,45 @@ const DepartmentGrid = () => {
   const { user, allUsers, activeUsers, inactiveUsers, offboardUser, reactivateUser } = useAuth();
   const { addNotification } = useNotifications();
   const navigate = useNavigate();
+  const apiMode = isApiConfigured();
   const [showLeader, setShowLeader] = useState<Department | null>(null);
   const [showFiles, setShowFiles] = useState<string | null>(null);
   const [showTeam, setShowTeam] = useState<string | null>(null);
   const [showExEmployees, setShowExEmployees] = useState<string | null>(null);
-  const [showOffboarding, setShowOffboarding] = useState<string | null>(null); // user ID
+  const [showOffboarding, setShowOffboarding] = useState<string | null>(null);
   const [offboardReason, setOffboardReason] = useState<OffboardingReason>("Renuncia");
   const [offboardNotes, setOffboardNotes] = useState("");
-  const [deptFolders, setDeptFolders] = useState<Record<string, DeptFolder[]>>(() => {
-    const init: Record<string, DeptFolder[]> = {};
-    departments.forEach((d) => {
-      init[d.name] = [
-        { name: "General", files: [] },
-      ];
-    });
-    return init;
-  });
+  const [deptFolders, setDeptFolders] = useState<Record<string, DeptFolder[]>>({});
+  const [loadingFolders, setLoadingFolders] = useState<Record<string, boolean>>({});
   const [newFolderName, setNewFolderName] = useState("");
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [showDeptMenu, setShowDeptMenu] = useState<string | null>(null);
+
+  // Check if user belongs to a department
+  const userBelongsToDept = useCallback((deptName: string) => {
+    if (!user) return false;
+    if (user.isAdmin) return true;
+    return user.department === deptName;
+  }, [user]);
+
+  // Load folders from API when a department's files section is opened
+  const loadFolders = useCallback(async (deptName: string) => {
+    if (!apiMode || loadingFolders[deptName]) return;
+    setLoadingFolders(prev => ({ ...prev, [deptName]: true }));
+    try {
+      const folders = await departmentFoldersApi.getFolders(deptName);
+      setDeptFolders(prev => ({ ...prev, [deptName]: folders }));
+    } catch (err: any) {
+      if (err?.message?.includes("403") || err?.message?.includes("acceso")) {
+        toast({ title: "Acceso denegado", description: "Solo los miembros de este departamento pueden ver sus carpetas.", variant: "destructive" });
+      } else {
+        // Fallback to local empty state
+        setDeptFolders(prev => ({ ...prev, [deptName]: prev[deptName] || [{ id: 'local-gen', name: 'General', department: deptName, files: [] }] }));
+      }
+    } finally {
+      setLoadingFolders(prev => ({ ...prev, [deptName]: false }));
+    }
+  }, [apiMode, loadingFolders]);
 
   const handleOffboard = () => {
     if (!showOffboarding) return;
