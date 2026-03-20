@@ -482,13 +482,16 @@ const DepartmentGrid = () => {
                 {/* Inline file manager */}
                 {showFiles === dept.name && (
                   <div className="mt-3 border-t border-border pt-3 space-y-2">
-                    {(deptFolders[dept.name] || []).map((folder, fIdx) => (
+                    {loadingFolders[dept.name] ? (
+                      <p className="text-xs text-muted-foreground text-center py-3">Cargando carpetas...</p>
+                    ) : (deptFolders[dept.name] || []).map((folder) => (
                       <FolderItem
-                        key={folder.name}
+                        key={folder.id}
                         folder={folder}
-                        onUpload={(files) => handleUploadFile(dept.name, fIdx, files)}
-                        onDeleteFile={(fileIdx) => handleDeleteFile(dept.name, fIdx, fileIdx)}
-                        onDeleteFolder={fIdx > 0 ? () => handleDeleteFolder(dept.name, fIdx) : undefined}
+                        deptName={dept.name}
+                        onUpload={(files) => handleUploadFile(dept.name, folder.id, files)}
+                        onDeleteFile={(fileId) => handleDeleteFile(dept.name, folder.id, fileId)}
+                        onDeleteFolder={folder.name !== 'General' ? () => handleDeleteFolder(dept.name, folder.id) : undefined}
                       />
                     ))}
                     {showNewFolder ? (
