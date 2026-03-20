@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { cn } from "@/lib/utils";
+import { isApiConfigured, departmentFoldersApi } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
 import type { OffboardingReason } from "@/lib/types";
 import {
   Building2,
