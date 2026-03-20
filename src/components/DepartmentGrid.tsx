@@ -46,8 +46,10 @@ interface DeptLeader {
 }
 
 interface DeptFolder {
+  id: string;
   name: string;
-  files: { name: string; size: string; uploadedAt: string }[];
+  department: string;
+  files: { id: string; name: string; size: string; uploadedAt: string; uploadedBy?: string }[];
 }
 
 interface Department {
