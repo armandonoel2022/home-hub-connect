@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useRef, Re
 import { useAuth } from "@/contexts/AuthContext";
 import { encryptMessage, decryptMessage } from "@/lib/chatCrypto";
 import { isApiConfigured, chatApi } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
 import type { Chat, ChatMessage, ChatNotification, ChatType } from "@/lib/chatTypes";
 import { DEPARTMENTS } from "@/lib/types";
 
@@ -50,6 +51,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<ChatNotification[]>([]);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const lastPollRef = useRef<string>(new Date().toISOString());
+  const pollErrorCount = useRef(0);
 
   // Persist to localStorage only in mock mode
   useEffect(() => {
@@ -62,22 +64,22 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   // Load chats from server on mount
   useEffect(() => {
     if (!apiMode || !user) return;
-    chatApi.getChats().then(setChats).catch(console.error);
+    chatApi.getChats().then(setChats).catch(() => {});
   }, [apiMode, user]);
 
-  // Poll for new messages every 3 seconds
+  // Poll for new messages every 5 seconds (with backoff on errors)
   useEffect(() => {
     if (!apiMode || !user) return;
-    const interval = setInterval(async () => {
+    const poll = async () => {
       try {
         const result = await chatApi.poll(lastPollRef.current);
+        pollErrorCount.current = 0; // reset on success
         if (result.messages.length > 0) {
           setAllMessages(prev => {
             const existingIds = new Set(prev.map(m => m.id));
             const newMsgs = result.messages.filter(m => !existingIds.has(m.id));
             if (newMsgs.length === 0) return prev;
 
-            // Show notifications for new messages
             newMsgs.forEach(m => {
               const notif: ChatNotification = {
                 id: `notif-${m.id}`,
@@ -96,10 +98,27 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           setChats(result.chats);
         }
       } catch {
-        // Silently fail on poll errors
+        pollErrorCount.current++;
       }
-    }, 3000);
-    return () => clearInterval(interval);
+    };
+
+    // Use longer interval if errors keep happening (backoff)
+    const getInterval = () => {
+      if (pollErrorCount.current > 10) return 30000;
+      if (pollErrorCount.current > 5) return 15000;
+      return 5000;
+    };
+
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const schedulePoll = () => {
+      timeoutId = setTimeout(async () => {
+        await poll();
+        schedulePoll();
+      }, getInterval());
+    };
+    schedulePoll();
+
+    return () => clearTimeout(timeoutId);
   }, [apiMode, user]);
 
   // Messages for active chat
@@ -120,7 +139,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       if (msgs.length > 0) {
         lastPollRef.current = msgs[msgs.length - 1].timestamp;
       }
-    }).catch(console.error);
+    }).catch(() => {});
   }, [apiMode, activeChat?.id]);
 
   const findOrCreateChat = useCallback(
@@ -141,6 +160,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           return chat;
         } catch (err) {
           console.error("Error creating chat:", err);
+          toast({ title: "Error", description: "No se pudo crear el chat. Verifica el backend.", variant: "destructive" });
         }
       }
 
@@ -221,10 +241,13 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           return;
         } catch (err) {
           console.error("Error sending message:", err);
+          toast({ title: "Error al enviar", description: "No se pudo enviar el mensaje. Verifica el backend en puerto 3000.", variant: "destructive" });
+          // Don't fall through to local - show error instead
+          return;
         }
       }
 
-      // Fallback: local mode
+      // Local mode only when no API configured
       const msg: ChatMessage = {
         id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         chatId: activeChat.id,

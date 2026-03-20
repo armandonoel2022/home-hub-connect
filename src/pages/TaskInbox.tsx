@@ -1,7 +1,9 @@
 import { useState } from "react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTasks } from "@/hooks/useApiHooks";
 import { CheckSquare, Plus, X, Clock, AlertCircle, CheckCircle2, Circle, Calendar } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 type TaskPriority = "baja" | "media" | "alta";
 type TaskStatus = "pendiente" | "en_progreso" | "completada";
@@ -33,15 +35,9 @@ const statusConfig: Record<TaskStatus, { label: string; icon: typeof Circle; col
   completada: { label: "Completada", icon: CheckCircle2, color: "text-emerald-500" },
 };
 
-const INITIAL_TASKS: UserTask[] = [
-  { id: "TSK-001", title: "Revisar informe mensual de seguridad", description: "Consolidar datos de incidentes del mes de febrero", priority: "alta", status: "pendiente", dueDate: "2026-03-10", assignedTo: "Armando Noel", assignedToUserId: "USR-002", createdBy: "Aurelio Pérez", createdByUserId: "USR-100", createdAt: "2026-03-05", completedAt: null },
-  { id: "TSK-002", title: "Actualizar inventario de equipos", description: "Agregar los nuevos equipos recibidos en marzo", priority: "media", status: "en_progreso", dueDate: "2026-03-12", assignedTo: "Armando Noel", assignedToUserId: "USR-002", createdBy: "Armando Noel", createdByUserId: "USR-002", createdAt: "2026-03-04", completedAt: null },
-  { id: "TSK-003", title: "Preparar presentación BASC", description: "Slides para auditoría del 15 de marzo", priority: "alta", status: "pendiente", dueDate: "2026-03-14", assignedTo: "Bilianny Fernández", assignedToUserId: "USR-104", createdBy: "Aurelio Pérez", createdByUserId: "USR-100", createdAt: "2026-03-03", completedAt: null },
-];
-
 const TaskInbox = () => {
   const { user, allUsers } = useAuth();
-  const [tasks, setTasks] = useState<UserTask[]>(INITIAL_TASKS);
+  const { data: tasks, create: createTask, update: updateTask, isCreating } = useTasks();
   const [showCreate, setShowCreate] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>("todas");
 
@@ -54,7 +50,7 @@ const TaskInbox = () => {
   });
 
   // Show tasks assigned to user + tasks created by user
-  const myTasks = tasks.filter((t) =>
+  const myTasks = (tasks as UserTask[]).filter((t) =>
     t.assignedToUserId === user?.id || t.createdByUserId === user?.id
   );
 
@@ -62,33 +58,42 @@ const TaskInbox = () => {
     filterStatus === "todas" || t.status === filterStatus
   );
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!form.title || !form.assignedToUserId) return;
     const assignee = allUsers.find((u) => u.id === form.assignedToUserId);
-    const newTask: UserTask = {
-      id: `TSK-${String(tasks.length + 1).padStart(3, "0")}`,
-      title: form.title,
-      description: form.description,
-      priority: form.priority,
-      status: "pendiente",
-      dueDate: form.dueDate || new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0],
-      assignedTo: assignee?.fullName || "",
-      assignedToUserId: form.assignedToUserId,
-      createdBy: user?.fullName || "",
-      createdByUserId: user?.id || "",
-      createdAt: new Date().toISOString().split("T")[0],
-      completedAt: null,
-    };
-    setTasks([newTask, ...tasks]);
-    setShowCreate(false);
-    setForm({ title: "", description: "", priority: "media", dueDate: "", assignedToUserId: "" });
+    try {
+      await createTask({
+        title: form.title,
+        description: form.description,
+        priority: form.priority,
+        status: "pendiente",
+        dueDate: form.dueDate || new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0],
+        assignedTo: assignee?.fullName || "",
+        assignedToUserId: form.assignedToUserId,
+        createdBy: user?.fullName || "",
+        createdByUserId: user?.id || "",
+        completedAt: null,
+      });
+      toast({ title: "✅ Tarea creada", description: "La tarea se ha guardado correctamente." });
+      setShowCreate(false);
+      setForm({ title: "", description: "", priority: "media", dueDate: "", assignedToUserId: "" });
+    } catch {
+      toast({ title: "Error", description: "No se pudo guardar la tarea en el servidor.", variant: "destructive" });
+    }
   };
 
-  const cycleStatus = (task: UserTask) => {
+  const cycleStatus = async (task: UserTask) => {
     const order: TaskStatus[] = ["pendiente", "en_progreso", "completada"];
     const nextIdx = (order.indexOf(task.status) + 1) % order.length;
     const newStatus = order[nextIdx];
-    setTasks(tasks.map((t) => t.id === task.id ? { ...t, status: newStatus, completedAt: newStatus === "completada" ? new Date().toISOString().split("T")[0] : null } : t));
+    try {
+      await updateTask(task.id, {
+        status: newStatus,
+        completedAt: newStatus === "completada" ? new Date().toISOString().split("T")[0] : null,
+      });
+    } catch {
+      toast({ title: "Error", description: "No se pudo actualizar el estado.", variant: "destructive" });
+    }
   };
 
   const isOverdue = (task: UserTask) => task.status !== "completada" && new Date(task.dueDate) < new Date();
@@ -236,7 +241,9 @@ const TaskInbox = () => {
               </div>
               <div className="p-5 border-t border-border flex gap-3 justify-end">
                 <button onClick={() => setShowCreate(false)} className="px-5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">Cancelar</button>
-                <button onClick={handleCreate} className="btn-gold text-sm">Crear Tarea</button>
+                <button onClick={handleCreate} disabled={isCreating} className="btn-gold text-sm disabled:opacity-50">
+                  {isCreating ? "Guardando..." : "Crear Tarea"}
+                </button>
               </div>
             </div>
           </div>
