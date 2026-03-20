@@ -696,8 +696,9 @@ const FolderItem = ({
   onDeleteFolder,
 }: {
   folder: DeptFolder;
+  deptName?: string;
   onUpload: (files: FileList | null) => void;
-  onDeleteFile: (idx: number) => void;
+  onDeleteFile: (fileId: string) => void;
   onDeleteFolder?: () => void;
 }) => {
   const [expanded, setExpanded] = useState(false);
@@ -717,13 +718,28 @@ const FolderItem = ({
       </button>
       {expanded && (
         <div className="px-3 pb-2 space-y-1">
-          {folder.files.map((file, i) => (
-            <div key={i} className="flex items-center gap-2 text-[11px] py-1 group/file">
+          {folder.files.map((file) => (
+            <div key={file.id} className="flex items-center gap-2 text-[11px] py-1 group/file">
               <FileText className="h-3 w-3 text-muted-foreground shrink-0" />
               <span className="flex-1 text-card-foreground truncate">{file.name}</span>
               <span className="text-muted-foreground shrink-0">{file.size}</span>
-              <button onClick={() => onDeleteFile(i)} className="opacity-0 group-hover/file:opacity-100 text-destructive p-0.5">
+              {file.uploadedBy && <span className="text-muted-foreground shrink-0 text-[10px]">{file.uploadedBy}</span>}
+              <button onClick={() => onDeleteFile(file.id)} className="opacity-0 group-hover/file:opacity-100 text-destructive p-0.5">
                 <Trash2 className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+          <label className="flex items-center gap-1.5 text-[11px] font-medium gold-accent-text cursor-pointer hover:underline mt-1">
+            <Upload className="h-3 w-3" /> Subir archivo
+            <input type="file" multiple className="hidden" onChange={(e) => onUpload(e.target.files)} />
+          </label>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default DepartmentGrid;
               </button>
             </div>
           ))}
