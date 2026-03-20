@@ -387,7 +387,18 @@ const DepartmentGrid = () => {
                     </span>
                   </button>
                   <button
-                    onClick={() => setShowFiles(showFiles === dept.name ? null : dept.name)}
+                    onClick={() => {
+                      if (!userBelongsToDept(dept.name)) {
+                        toast({ title: "Acceso denegado", description: "Solo los miembros de este departamento pueden ver sus carpetas.", variant: "destructive" });
+                        return;
+                      }
+                      if (showFiles === dept.name) {
+                        setShowFiles(null);
+                      } else {
+                        setShowFiles(dept.name);
+                        loadFolders(dept.name);
+                      }
+                    }}
                     className="flex items-center justify-between text-xs font-semibold px-3 py-2 rounded-lg bg-muted hover:bg-border transition-colors text-card-foreground"
                   >
                     <span className="flex items-center gap-2">
