@@ -740,17 +740,4 @@ const FolderItem = ({
 };
 
 export default DepartmentGrid;
-              </button>
-            </div>
-          ))}
-          <label className="flex items-center gap-1.5 text-[11px] font-medium gold-accent-text cursor-pointer hover:underline mt-1">
-            <Upload className="h-3 w-3" /> Subir archivo
-            <input type="file" multiple className="hidden" onChange={(e) => onUpload(e.target.files)} />
-          </label>
-        </div>
-      )}
-    </div>
-  );
-};
-
 export default DepartmentGrid;
