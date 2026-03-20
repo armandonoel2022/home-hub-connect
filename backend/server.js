@@ -42,6 +42,7 @@ app.use('/api/hiring-requests', require('./routes/hiring-requests'));
 app.use('/api/minor-purchases', require('./routes/minor-purchases'));
 app.use('/api/chat', require('./routes/chat'));
 app.use('/api/tasks', require('./routes/tasks'));
+app.use('/api/department-folders', require('./routes/department-folders'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({
