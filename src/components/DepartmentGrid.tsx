@@ -231,42 +231,81 @@ const DepartmentGrid = () => {
     setOffboardNotes("");
   };
 
-  const handleAddFolder = (dept: string) => {
+  const handleAddFolder = async (dept: string) => {
     if (!newFolderName.trim()) return;
-    setDeptFolders((prev) => ({
-      ...prev,
-      [dept]: [...(prev[dept] || []), { name: newFolderName.trim(), files: [] }],
-    }));
+    if (apiMode) {
+      try {
+        const folder = await departmentFoldersApi.createFolder(dept, newFolderName.trim());
+        setDeptFolders(prev => ({ ...prev, [dept]: [...(prev[dept] || []), folder] }));
+        toast({ title: "✅ Carpeta creada", description: `"${newFolderName.trim()}" creada correctamente.` });
+      } catch (err: any) {
+        toast({ title: "Error", description: err?.message || "No se pudo crear la carpeta.", variant: "destructive" });
+      }
+    } else {
+      const newFolder: DeptFolder = { id: `local-${Date.now()}`, name: newFolderName.trim(), department: dept, files: [] };
+      setDeptFolders(prev => ({ ...prev, [dept]: [...(prev[dept] || []), newFolder] }));
+    }
     setNewFolderName("");
     setShowNewFolder(false);
   };
 
-  const handleUploadFile = (dept: string, folderIdx: number, fileList: FileList | null) => {
+  const handleUploadFile = async (dept: string, folderId: string, fileList: FileList | null) => {
     if (!fileList) return;
-    const newFiles = Array.from(fileList).map((f) => ({
-      name: f.name,
-      size: f.size > 1024 * 1024 ? `${(f.size / (1024 * 1024)).toFixed(1)} MB` : `${(f.size / 1024).toFixed(0)} KB`,
-      uploadedAt: new Date().toISOString().split("T")[0],
-    }));
-    setDeptFolders((prev) => {
-      const folders = [...(prev[dept] || [])];
-      folders[folderIdx] = { ...folders[folderIdx], files: [...folders[folderIdx].files, ...newFiles] };
+    for (const f of Array.from(fileList)) {
+      const size = f.size > 1024 * 1024 ? `${(f.size / (1024 * 1024)).toFixed(1)} MB` : `${(f.size / 1024).toFixed(0)} KB`;
+      if (apiMode) {
+        try {
+          const savedFile = await departmentFoldersApi.addFile(dept, folderId, { name: f.name, size });
+          setDeptFolders(prev => {
+            const folders = (prev[dept] || []).map(folder =>
+              folder.id === folderId ? { ...folder, files: [...folder.files, savedFile] } : folder
+            );
+            return { ...prev, [dept]: folders };
+          });
+        } catch {
+          toast({ title: "Error", description: `No se pudo subir ${f.name}`, variant: "destructive" });
+        }
+      } else {
+        const newFile = { id: `file-${Date.now()}`, name: f.name, size, uploadedAt: new Date().toISOString().split("T")[0] };
+        setDeptFolders(prev => {
+          const folders = (prev[dept] || []).map(folder =>
+            folder.id === folderId ? { ...folder, files: [...folder.files, newFile] } : folder
+          );
+          return { ...prev, [dept]: folders };
+        });
+      }
+    }
+  };
+
+  const handleDeleteFile = async (dept: string, folderId: string, fileId: string) => {
+    if (apiMode) {
+      try {
+        await departmentFoldersApi.deleteFile(dept, folderId, fileId);
+      } catch {
+        toast({ title: "Error", description: "No se pudo eliminar el archivo.", variant: "destructive" });
+        return;
+      }
+    }
+    setDeptFolders(prev => {
+      const folders = (prev[dept] || []).map(folder =>
+        folder.id === folderId ? { ...folder, files: folder.files.filter(f => f.id !== fileId) } : folder
+      );
       return { ...prev, [dept]: folders };
     });
   };
 
-  const handleDeleteFile = (dept: string, folderIdx: number, fileIdx: number) => {
-    setDeptFolders((prev) => {
-      const folders = [...(prev[dept] || [])];
-      folders[folderIdx] = { ...folders[folderIdx], files: folders[folderIdx].files.filter((_, i) => i !== fileIdx) };
-      return { ...prev, [dept]: folders };
-    });
-  };
-
-  const handleDeleteFolder = (dept: string, folderIdx: number) => {
-    setDeptFolders((prev) => ({
+  const handleDeleteFolder = async (dept: string, folderId: string) => {
+    if (apiMode) {
+      try {
+        await departmentFoldersApi.deleteFolder(dept, folderId);
+      } catch (err: any) {
+        toast({ title: "Error", description: err?.message || "No se pudo eliminar la carpeta.", variant: "destructive" });
+        return;
+      }
+    }
+    setDeptFolders(prev => ({
       ...prev,
-      [dept]: (prev[dept] || []).filter((_, i) => i !== folderIdx),
+      [dept]: (prev[dept] || []).filter(f => f.id !== folderId),
     }));
   };
 
