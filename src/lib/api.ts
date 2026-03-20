@@ -244,6 +244,24 @@ export const tasksApi = {
     apiFetch<void>(`/tasks/${id}`, { method: "DELETE" }),
 };
 
+// ─── Department Folders API ───
+export const departmentFoldersApi = {
+  getFolders: (department: string) =>
+    apiFetch<any[]>(`/department-folders/${encodeURIComponent(department)}`),
+  createFolder: (department: string, name: string) =>
+    apiFetch<any>(`/department-folders/${encodeURIComponent(department)}`, {
+      method: "POST", body: JSON.stringify({ name }),
+    }),
+  deleteFolder: (department: string, folderId: string) =>
+    apiFetch<void>(`/department-folders/${encodeURIComponent(department)}/${folderId}`, { method: "DELETE" }),
+  addFile: (department: string, folderId: string, data: { name: string; size: string }) =>
+    apiFetch<any>(`/department-folders/${encodeURIComponent(department)}/${folderId}/files`, {
+      method: "POST", body: JSON.stringify(data),
+    }),
+  deleteFile: (department: string, folderId: string, fileId: string) =>
+    apiFetch<void>(`/department-folders/${encodeURIComponent(department)}/${folderId}/files/${fileId}`, { method: "DELETE" }),
+};
+
 // ─── Chat API ───
 import type { Chat, ChatMessage } from "./chatTypes";
 

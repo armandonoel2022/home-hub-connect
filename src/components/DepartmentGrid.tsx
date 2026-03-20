@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { cn } from "@/lib/utils";
+import { isApiConfigured, departmentFoldersApi } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
 import type { OffboardingReason } from "@/lib/types";
 import {
   Building2,
@@ -44,8 +46,10 @@ interface DeptLeader {
 }
 
 interface DeptFolder {
+  id: string;
   name: string;
-  files: { name: string; size: string; uploadedAt: string }[];
+  department: string;
+  files: { id: string; name: string; size: string; uploadedAt: string; uploadedBy?: string }[];
 }
 
 interface Department {
@@ -155,25 +159,45 @@ const DepartmentGrid = () => {
   const { user, allUsers, activeUsers, inactiveUsers, offboardUser, reactivateUser } = useAuth();
   const { addNotification } = useNotifications();
   const navigate = useNavigate();
+  const apiMode = isApiConfigured();
   const [showLeader, setShowLeader] = useState<Department | null>(null);
   const [showFiles, setShowFiles] = useState<string | null>(null);
   const [showTeam, setShowTeam] = useState<string | null>(null);
   const [showExEmployees, setShowExEmployees] = useState<string | null>(null);
-  const [showOffboarding, setShowOffboarding] = useState<string | null>(null); // user ID
+  const [showOffboarding, setShowOffboarding] = useState<string | null>(null);
   const [offboardReason, setOffboardReason] = useState<OffboardingReason>("Renuncia");
   const [offboardNotes, setOffboardNotes] = useState("");
-  const [deptFolders, setDeptFolders] = useState<Record<string, DeptFolder[]>>(() => {
-    const init: Record<string, DeptFolder[]> = {};
-    departments.forEach((d) => {
-      init[d.name] = [
-        { name: "General", files: [] },
-      ];
-    });
-    return init;
-  });
+  const [deptFolders, setDeptFolders] = useState<Record<string, DeptFolder[]>>({});
+  const [loadingFolders, setLoadingFolders] = useState<Record<string, boolean>>({});
   const [newFolderName, setNewFolderName] = useState("");
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [showDeptMenu, setShowDeptMenu] = useState<string | null>(null);
+
+  // Check if user belongs to a department
+  const userBelongsToDept = useCallback((deptName: string) => {
+    if (!user) return false;
+    if (user.isAdmin) return true;
+    return user.department === deptName;
+  }, [user]);
+
+  // Load folders from API when a department's files section is opened
+  const loadFolders = useCallback(async (deptName: string) => {
+    if (!apiMode || loadingFolders[deptName]) return;
+    setLoadingFolders(prev => ({ ...prev, [deptName]: true }));
+    try {
+      const folders = await departmentFoldersApi.getFolders(deptName);
+      setDeptFolders(prev => ({ ...prev, [deptName]: folders }));
+    } catch (err: any) {
+      if (err?.message?.includes("403") || err?.message?.includes("acceso")) {
+        toast({ title: "Acceso denegado", description: "Solo los miembros de este departamento pueden ver sus carpetas.", variant: "destructive" });
+      } else {
+        // Fallback to local empty state
+        setDeptFolders(prev => ({ ...prev, [deptName]: prev[deptName] || [{ id: 'local-gen', name: 'General', department: deptName, files: [] }] }));
+      }
+    } finally {
+      setLoadingFolders(prev => ({ ...prev, [deptName]: false }));
+    }
+  }, [apiMode, loadingFolders]);
 
   const handleOffboard = () => {
     if (!showOffboarding) return;
@@ -207,42 +231,81 @@ const DepartmentGrid = () => {
     setOffboardNotes("");
   };
 
-  const handleAddFolder = (dept: string) => {
+  const handleAddFolder = async (dept: string) => {
     if (!newFolderName.trim()) return;
-    setDeptFolders((prev) => ({
-      ...prev,
-      [dept]: [...(prev[dept] || []), { name: newFolderName.trim(), files: [] }],
-    }));
+    if (apiMode) {
+      try {
+        const folder = await departmentFoldersApi.createFolder(dept, newFolderName.trim());
+        setDeptFolders(prev => ({ ...prev, [dept]: [...(prev[dept] || []), folder] }));
+        toast({ title: "✅ Carpeta creada", description: `"${newFolderName.trim()}" creada correctamente.` });
+      } catch (err: any) {
+        toast({ title: "Error", description: err?.message || "No se pudo crear la carpeta.", variant: "destructive" });
+      }
+    } else {
+      const newFolder: DeptFolder = { id: `local-${Date.now()}`, name: newFolderName.trim(), department: dept, files: [] };
+      setDeptFolders(prev => ({ ...prev, [dept]: [...(prev[dept] || []), newFolder] }));
+    }
     setNewFolderName("");
     setShowNewFolder(false);
   };
 
-  const handleUploadFile = (dept: string, folderIdx: number, fileList: FileList | null) => {
+  const handleUploadFile = async (dept: string, folderId: string, fileList: FileList | null) => {
     if (!fileList) return;
-    const newFiles = Array.from(fileList).map((f) => ({
-      name: f.name,
-      size: f.size > 1024 * 1024 ? `${(f.size / (1024 * 1024)).toFixed(1)} MB` : `${(f.size / 1024).toFixed(0)} KB`,
-      uploadedAt: new Date().toISOString().split("T")[0],
-    }));
-    setDeptFolders((prev) => {
-      const folders = [...(prev[dept] || [])];
-      folders[folderIdx] = { ...folders[folderIdx], files: [...folders[folderIdx].files, ...newFiles] };
+    for (const f of Array.from(fileList)) {
+      const size = f.size > 1024 * 1024 ? `${(f.size / (1024 * 1024)).toFixed(1)} MB` : `${(f.size / 1024).toFixed(0)} KB`;
+      if (apiMode) {
+        try {
+          const savedFile = await departmentFoldersApi.addFile(dept, folderId, { name: f.name, size });
+          setDeptFolders(prev => {
+            const folders = (prev[dept] || []).map(folder =>
+              folder.id === folderId ? { ...folder, files: [...folder.files, savedFile] } : folder
+            );
+            return { ...prev, [dept]: folders };
+          });
+        } catch {
+          toast({ title: "Error", description: `No se pudo subir ${f.name}`, variant: "destructive" });
+        }
+      } else {
+        const newFile = { id: `file-${Date.now()}`, name: f.name, size, uploadedAt: new Date().toISOString().split("T")[0] };
+        setDeptFolders(prev => {
+          const folders = (prev[dept] || []).map(folder =>
+            folder.id === folderId ? { ...folder, files: [...folder.files, newFile] } : folder
+          );
+          return { ...prev, [dept]: folders };
+        });
+      }
+    }
+  };
+
+  const handleDeleteFile = async (dept: string, folderId: string, fileId: string) => {
+    if (apiMode) {
+      try {
+        await departmentFoldersApi.deleteFile(dept, folderId, fileId);
+      } catch {
+        toast({ title: "Error", description: "No se pudo eliminar el archivo.", variant: "destructive" });
+        return;
+      }
+    }
+    setDeptFolders(prev => {
+      const folders = (prev[dept] || []).map(folder =>
+        folder.id === folderId ? { ...folder, files: folder.files.filter(f => f.id !== fileId) } : folder
+      );
       return { ...prev, [dept]: folders };
     });
   };
 
-  const handleDeleteFile = (dept: string, folderIdx: number, fileIdx: number) => {
-    setDeptFolders((prev) => {
-      const folders = [...(prev[dept] || [])];
-      folders[folderIdx] = { ...folders[folderIdx], files: folders[folderIdx].files.filter((_, i) => i !== fileIdx) };
-      return { ...prev, [dept]: folders };
-    });
-  };
-
-  const handleDeleteFolder = (dept: string, folderIdx: number) => {
-    setDeptFolders((prev) => ({
+  const handleDeleteFolder = async (dept: string, folderId: string) => {
+    if (apiMode) {
+      try {
+        await departmentFoldersApi.deleteFolder(dept, folderId);
+      } catch (err: any) {
+        toast({ title: "Error", description: err?.message || "No se pudo eliminar la carpeta.", variant: "destructive" });
+        return;
+      }
+    }
+    setDeptFolders(prev => ({
       ...prev,
-      [dept]: (prev[dept] || []).filter((_, i) => i !== folderIdx),
+      [dept]: (prev[dept] || []).filter(f => f.id !== folderId),
     }));
   };
 
@@ -324,7 +387,18 @@ const DepartmentGrid = () => {
                     </span>
                   </button>
                   <button
-                    onClick={() => setShowFiles(showFiles === dept.name ? null : dept.name)}
+                    onClick={() => {
+                      if (!userBelongsToDept(dept.name)) {
+                        toast({ title: "Acceso denegado", description: "Solo los miembros de este departamento pueden ver sus carpetas.", variant: "destructive" });
+                        return;
+                      }
+                      if (showFiles === dept.name) {
+                        setShowFiles(null);
+                      } else {
+                        setShowFiles(dept.name);
+                        loadFolders(dept.name);
+                      }
+                    }}
                     className="flex items-center justify-between text-xs font-semibold px-3 py-2 rounded-lg bg-muted hover:bg-border transition-colors text-card-foreground"
                   >
                     <span className="flex items-center gap-2">
@@ -408,13 +482,16 @@ const DepartmentGrid = () => {
                 {/* Inline file manager */}
                 {showFiles === dept.name && (
                   <div className="mt-3 border-t border-border pt-3 space-y-2">
-                    {(deptFolders[dept.name] || []).map((folder, fIdx) => (
+                    {loadingFolders[dept.name] ? (
+                      <p className="text-xs text-muted-foreground text-center py-3">Cargando carpetas...</p>
+                    ) : (deptFolders[dept.name] || []).map((folder) => (
                       <FolderItem
-                        key={folder.name}
+                        key={folder.id}
                         folder={folder}
-                        onUpload={(files) => handleUploadFile(dept.name, fIdx, files)}
-                        onDeleteFile={(fileIdx) => handleDeleteFile(dept.name, fIdx, fileIdx)}
-                        onDeleteFolder={fIdx > 0 ? () => handleDeleteFolder(dept.name, fIdx) : undefined}
+                        deptName={dept.name}
+                        onUpload={(files) => handleUploadFile(dept.name, folder.id, files)}
+                        onDeleteFile={(fileId) => handleDeleteFile(dept.name, folder.id, fileId)}
+                        onDeleteFolder={folder.name !== 'General' ? () => handleDeleteFolder(dept.name, folder.id) : undefined}
                       />
                     ))}
                     {showNewFolder ? (
@@ -619,8 +696,9 @@ const FolderItem = ({
   onDeleteFolder,
 }: {
   folder: DeptFolder;
+  deptName?: string;
   onUpload: (files: FileList | null) => void;
-  onDeleteFile: (idx: number) => void;
+  onDeleteFile: (fileId: string) => void;
   onDeleteFolder?: () => void;
 }) => {
   const [expanded, setExpanded] = useState(false);
@@ -640,12 +718,13 @@ const FolderItem = ({
       </button>
       {expanded && (
         <div className="px-3 pb-2 space-y-1">
-          {folder.files.map((file, i) => (
-            <div key={i} className="flex items-center gap-2 text-[11px] py-1 group/file">
+          {folder.files.map((file) => (
+            <div key={file.id} className="flex items-center gap-2 text-[11px] py-1 group/file">
               <FileText className="h-3 w-3 text-muted-foreground shrink-0" />
               <span className="flex-1 text-card-foreground truncate">{file.name}</span>
               <span className="text-muted-foreground shrink-0">{file.size}</span>
-              <button onClick={() => onDeleteFile(i)} className="opacity-0 group-hover/file:opacity-100 text-destructive p-0.5">
+              {file.uploadedBy && <span className="text-muted-foreground shrink-0 text-[10px]">{file.uploadedBy}</span>}
+              <button onClick={() => onDeleteFile(file.id)} className="opacity-0 group-hover/file:opacity-100 text-destructive p-0.5">
                 <Trash2 className="h-3 w-3" />
               </button>
             </div>
