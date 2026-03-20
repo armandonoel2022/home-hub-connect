@@ -740,4 +740,3 @@ const FolderItem = ({
 };
 
 export default DepartmentGrid;
-export default DepartmentGrid;
