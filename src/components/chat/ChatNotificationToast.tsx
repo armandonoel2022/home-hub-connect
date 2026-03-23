@@ -30,6 +30,7 @@ const ChatNotificationToast = () => {
         const title = n.type === "buzz" ? `🔔 ${n.senderName}` : `💬 ${n.senderName}`;
         sendBrowserNotification(title, n.message, {
           tag: n.id,
+          type: n.type === "buzz" ? "buzz" : "message",
           onClick: () => {
             setIsChatOpen(true);
             dismissNotification(n.id);
