@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { encryptMessage, decryptMessage } from "@/lib/chatCrypto";
+import { encryptMessage } from "@/lib/chatCrypto";
 import { isApiConfigured, chatApi } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import type { Chat, ChatMessage, ChatNotification, ChatType } from "@/lib/chatTypes";
@@ -160,7 +160,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           return chat;
         } catch (err) {
           console.error("Error creating chat:", err);
-          toast({ title: "Error", description: "No se pudo crear el chat. Verifica el backend.", variant: "destructive" });
+          toast({ title: "Modo local", description: "No se pudo conectar al servidor del chat; usaré almacenamiento local en este equipo.", variant: "destructive" });
         }
       }
 
@@ -241,6 +241,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           return;
         } catch (err) {
           console.error("Error sending message via API, using local fallback:", err);
+          toast({ title: "Modo local", description: "El servidor del chat no respondió; el mensaje se guardó solo en este equipo.", variant: "destructive" });
           // Fall through to local mode below
         }
       }
