@@ -91,7 +91,9 @@ const PanicButton = () => {
 
       {/* Expanded Panel */}
       {isOpen && (
-        <div className="fixed bottom-40 right-6 z-[61] w-72 rounded-xl bg-card border border-border shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-200">
+        <div className={`fixed bottom-40 z-[61] w-72 rounded-xl bg-card border border-border shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-200 ${
+          isChatOpen ? "left-6" : "right-6"
+        }`}>
           {/* Header */}
           <div className="bg-destructive px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
