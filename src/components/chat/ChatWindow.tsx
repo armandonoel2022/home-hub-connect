@@ -233,6 +233,12 @@ function ActiveConversation({ onBack }: { onBack: () => void }) {
     setText("");
   };
 
+  const handleKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== "Enter" || e.shiftKey) return;
+    e.preventDefault();
+    await handleSend();
+  };
+
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -342,7 +348,7 @@ function ActiveConversation({ onBack }: { onBack: () => void }) {
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+            onKeyDown={handleKeyDown}
             placeholder="Escribe un mensaje..."
             className="flex-1 bg-muted rounded-lg px-3 py-2 text-sm outline-none text-foreground placeholder:text-muted-foreground"
           />
