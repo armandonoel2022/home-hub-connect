@@ -3,6 +3,7 @@ import { ShieldAlert, Heart, X, AlertTriangle, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
+import { useChatContext } from "@/contexts/ChatContext";
 import { toast } from "@/hooks/use-toast";
 
 type PanicType = "security" | "medical";

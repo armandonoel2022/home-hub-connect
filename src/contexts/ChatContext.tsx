@@ -240,10 +240,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           );
           return;
         } catch (err) {
-          console.error("Error sending message:", err);
-          toast({ title: "Error al enviar", description: "No se pudo enviar el mensaje. Verifica el backend en puerto 3000.", variant: "destructive" });
-          // Don't fall through to local - show error instead
-          return;
+          console.error("Error sending message via API, using local fallback:", err);
+          // Fall through to local mode below
         }
       }
 
