@@ -80,7 +80,9 @@ const PanicButton = () => {
       {/* Floating Panic Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-24 right-6 z-[60] w-14 h-14 rounded-full bg-destructive text-destructive-foreground shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 animate-pulse hover:animate-none"
+        className={`fixed z-[60] w-14 h-14 rounded-full bg-destructive text-destructive-foreground shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 animate-pulse hover:animate-none ${
+          isChatOpen ? "bottom-24 left-6" : "bottom-24 right-6"
+        }`}
         aria-label="Botón de Pánico"
         title="Botón de Emergencia"
       >
