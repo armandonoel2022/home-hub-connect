@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useChatContextSafe } from "@/contexts/ChatContext";
 import { MessageSquare, Vibrate, X } from "lucide-react";
 import { sendBrowserNotification, requestNotificationPermission } from "@/lib/windowsNotifications";
@@ -10,30 +10,44 @@ const ChatNotificationToast = () => {
   const setIsChatOpen = ctx?.setIsChatOpen ?? (() => {});
   const [buzzAnimation, setBuzzAnimation] = useState<string | null>(null);
   const seenIds = useRef<Set<string>>(new Set());
+  const sortedNotifications = useMemo(
+    () => [...notifications].sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp)),
+    [notifications]
+  );
 
   // Request permission on mount and on first user interaction
   useEffect(() => {
-    requestNotificationPermission();
-    const handleInteraction = () => {
-      requestNotificationPermission();
-      window.removeEventListener("click", handleInteraction);
+    const events: Array<keyof WindowEventMap> = ["pointerdown", "keydown", "touchstart"];
+    let active = true;
+
+    const handleInteraction = async () => {
+      const permission = await requestNotificationPermission();
+      if (active && permission !== "default") {
+        events.forEach((eventName) => window.removeEventListener(eventName, handleInteraction));
+      }
     };
-    window.addEventListener("click", handleInteraction);
-    return () => window.removeEventListener("click", handleInteraction);
+
+    void handleInteraction();
+    events.forEach((eventName) => window.addEventListener(eventName, handleInteraction, { passive: true }));
+
+    return () => {
+      active = false;
+      events.forEach((eventName) => window.removeEventListener(eventName, handleInteraction));
+    };
   }, []);
 
   useEffect(() => {
-    const buzzNotif = notifications.find((n) => n.type === "buzz");
+    const buzzNotif = sortedNotifications.find((n) => n.type === "buzz");
     if (buzzNotif) {
       setBuzzAnimation(buzzNotif.id);
       const timer = setTimeout(() => setBuzzAnimation(null), 1000);
       return () => clearTimeout(timer);
     }
-  }, [notifications]);
+  }, [sortedNotifications]);
 
   // Send browser notification for new chat notifications
   useEffect(() => {
-    notifications.forEach((n) => {
+    sortedNotifications.forEach((n) => {
       if (!seenIds.current.has(n.id)) {
         seenIds.current.add(n.id);
         const title = n.type === "buzz" ? `🔔 ${n.senderName}` : `💬 ${n.senderName}`;
@@ -47,21 +61,19 @@ const ChatNotificationToast = () => {
         });
       }
     });
-  }, [notifications, setIsChatOpen, dismissNotification]);
+  }, [sortedNotifications, setIsChatOpen, dismissNotification]);
 
   // Auto-dismiss after 6s
   useEffect(() => {
-    notifications.forEach((n) => {
-      const timer = setTimeout(() => dismissNotification(n.id), 6000);
-      return () => clearTimeout(timer);
-    });
-  }, [notifications, dismissNotification]);
+    const timers = sortedNotifications.map((n) => setTimeout(() => dismissNotification(n.id), 6000));
+    return () => timers.forEach((timer) => clearTimeout(timer));
+  }, [sortedNotifications, dismissNotification]);
 
   if (notifications.length === 0) return null;
 
   return (
     <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 max-w-sm">
-      {notifications.map((n) => (
+      {sortedNotifications.map((n) => (
         <div
           key={n.id}
           className={`flex items-start gap-3 p-4 rounded-xl border shadow-2xl backdrop-blur-sm transition-all duration-300 animate-in slide-in-from-right-5 ${

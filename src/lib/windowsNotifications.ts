@@ -79,14 +79,59 @@ export function playNotificationSound(type: "message" | "buzz" = "message") {
 }
 
 export async function requestNotificationPermission(): Promise<NotificationPermission> {
+  if (typeof window === "undefined") {
+    return "denied" as NotificationPermission;
+  }
   if (!("Notification" in window)) {
     console.warn("Este navegador no soporta notificaciones de escritorio");
     return "denied" as NotificationPermission;
   }
-  if (Notification.permission === "default") {
-    return Notification.requestPermission();
+
+  if (Notification.permission !== "default") {
+    return Notification.permission;
   }
-  return Notification.permission;
+
+  try {
+    return await Notification.requestPermission();
+  } catch {
+    return Notification.permission;
+  }
+}
+
+function showNativeNotification(
+  title: string,
+  body: string,
+  options?: {
+    icon?: string;
+    tag?: string;
+    onClick?: () => void;
+    type?: "message" | "buzz";
+  }
+) {
+  try {
+    const notification = new Notification(title, {
+      body,
+      icon: options?.icon || "/placeholder.svg",
+      tag: options?.tag,
+      badge: options?.icon || "/placeholder.svg",
+      silent: false,
+      requireInteraction: options?.type === "buzz",
+    });
+
+    if (options?.onClick) {
+      notification.onclick = () => {
+        window.focus();
+        options.onClick?.();
+        notification.close();
+      };
+    }
+
+    setTimeout(() => notification.close(), 6000);
+
+    return notification;
+  } catch {
+    return null;
+  }
 }
 
 export function sendBrowserNotification(
@@ -102,27 +147,21 @@ export function sendBrowserNotification(
   // Play sound regardless of notification permission
   playNotificationSound(options?.type || "message");
 
-  if (!("Notification" in window) || Notification.permission !== "granted") {
+  if (typeof window === "undefined" || !("Notification" in window)) {
     return null;
   }
 
-  const notification = new Notification(title, {
-    body,
-    icon: options?.icon || "/favicon.ico",
-    tag: options?.tag,
-    badge: "/favicon.ico",
-    silent: false,
-  });
-
-  if (options?.onClick) {
-    notification.onclick = () => {
-      window.focus();
-      options.onClick?.();
-      notification.close();
-    };
+  if (Notification.permission === "granted") {
+    return showNativeNotification(title, body, options);
   }
 
-  setTimeout(() => notification.close(), 6000);
+  if (Notification.permission === "default") {
+    void requestNotificationPermission().then((permission) => {
+      if (permission === "granted") {
+        showNativeNotification(title, body, options);
+      }
+    });
+  }
 
-  return notification;
+  return null;
 }
