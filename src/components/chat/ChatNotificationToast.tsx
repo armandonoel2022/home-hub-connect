@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useChatContext } from "@/contexts/ChatContext";
+import { useChatContextSafe } from "@/contexts/ChatContext";
 import { MessageSquare, Vibrate, X } from "lucide-react";
 import { sendBrowserNotification, requestNotificationPermission } from "@/lib/windowsNotifications";
 
