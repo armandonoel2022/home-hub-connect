@@ -78,12 +78,15 @@ export function playNotificationSound(type: "message" | "buzz" = "message") {
   }
 }
 
-export function requestNotificationPermission(): Promise<NotificationPermission> {
+export async function requestNotificationPermission(): Promise<NotificationPermission> {
   if (!("Notification" in window)) {
     console.warn("Este navegador no soporta notificaciones de escritorio");
-    return Promise.resolve("denied" as NotificationPermission);
+    return "denied" as NotificationPermission;
   }
-  return Notification.requestPermission();
+  if (Notification.permission === "default") {
+    return Notification.requestPermission();
+  }
+  return Notification.permission;
 }
 
 export function sendBrowserNotification(

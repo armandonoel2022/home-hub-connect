@@ -8,9 +8,15 @@ const ChatNotificationToast = () => {
   const [buzzAnimation, setBuzzAnimation] = useState<string | null>(null);
   const seenIds = useRef<Set<string>>(new Set());
 
-  // Request permission on mount
+  // Request permission on mount and on first user interaction
   useEffect(() => {
     requestNotificationPermission();
+    const handleInteraction = () => {
+      requestNotificationPermission();
+      window.removeEventListener("click", handleInteraction);
+    };
+    window.addEventListener("click", handleInteraction);
+    return () => window.removeEventListener("click", handleInteraction);
   }, []);
 
   useEffect(() => {
