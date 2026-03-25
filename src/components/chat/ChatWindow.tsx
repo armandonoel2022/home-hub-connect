@@ -369,16 +369,12 @@ function ActiveConversation({ onBack }: { onBack: () => void }) {
   );
 }
 
+// ── Main Chat Window ──
 const ChatWindow = () => {
-  try {
-    return <ChatWindowInner />;
-  } catch {
-    return null;
-  }
-};
+  const ctx = useChatContextSafe();
+  if (!ctx) return null;
 
-const ChatWindowInner = () => {
-  const { isChatOpen, setIsChatOpen, activeChat, setActiveChat, totalUnread, startIndividualChat, startDepartmentChat } = useChatContext();
+  const { isChatOpen, setIsChatOpen, activeChat, setActiveChat, totalUnread, startIndividualChat, startDepartmentChat } = ctx;
 
   if (!isChatOpen) {
     return (
