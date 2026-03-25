@@ -30,6 +30,10 @@ export function useChatContext() {
   return ctx;
 }
 
+export function useChatContextSafe() {
+  return useContext(ChatContext);
+}
+
 const STORAGE_KEY = "safeone_chats";
 const MSG_KEY = "safeone_chat_messages";
 

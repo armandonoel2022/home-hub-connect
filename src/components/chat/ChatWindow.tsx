@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useChatContext } from "@/contexts/ChatContext";
+import { useChatContext, useChatContextSafe } from "@/contexts/ChatContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { decryptMessage } from "@/lib/chatCrypto";
 import {
