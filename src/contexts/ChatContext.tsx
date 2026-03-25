@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { encryptMessage } from "@/lib/chatCrypto";
+import { encryptMessage, decryptMessage } from "@/lib/chatCrypto";
 import { isApiConfigured, chatApi } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import type { Chat, ChatMessage, ChatNotification, ChatType } from "@/lib/chatTypes";
@@ -80,17 +80,33 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             const newMsgs = result.messages.filter(m => !existingIds.has(m.id));
             if (newMsgs.length === 0) return prev;
 
-            newMsgs.forEach(m => {
-              const notif: ChatNotification = {
-                id: `notif-${m.id}`,
-                chatId: m.chatId,
-                senderName: m.senderName,
-                message: m.type === "buzz" ? "¡Te ha enviado un zumbido! 🔔" : (m.content || "").slice(0, 50),
-                timestamp: m.timestamp,
-                type: m.type === "buzz" ? "buzz" : "message",
-              };
-              setNotifications(p => [...p, notif]);
-            });
+            // Only notify for messages from OTHER users
+            newMsgs
+              .filter(m => m.senderId !== user?.id)
+              .forEach(m => {
+                // Decrypt message content for notification preview
+                const createNotif = async () => {
+                  let preview = "¡Te ha enviado un zumbido! 🔔";
+                  if (m.type !== "buzz") {
+                    try {
+                      const decrypted = await decryptMessage(m.content || "");
+                      preview = decrypted.slice(0, 50);
+                    } catch {
+                      preview = "Nuevo mensaje";
+                    }
+                  }
+                  const notif: ChatNotification = {
+                    id: `notif-${m.id}`,
+                    chatId: m.chatId,
+                    senderName: m.senderName,
+                    message: preview,
+                    timestamp: m.timestamp,
+                    type: m.type === "buzz" ? "buzz" : "message",
+                  };
+                  setNotifications(p => [...p, notif]);
+                };
+                createNotif();
+              });
 
             lastPollRef.current = newMsgs[newMsgs.length - 1].timestamp;
             return [...prev, ...newMsgs];
