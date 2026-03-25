@@ -115,7 +115,6 @@ function showNativeNotification(
       tag: options?.tag,
       badge: options?.icon || "/placeholder.svg",
       silent: false,
-      renotify: true,
       requireInteraction: options?.type === "buzz",
     });
 

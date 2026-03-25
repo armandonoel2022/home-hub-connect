@@ -9,7 +9,7 @@ import {
 import { DEPARTMENTS } from "@/lib/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-function getChatSortTime(chat: { lastMessageTime?: string } & Record<string, unknown>) {
+function getChatSortTime(chat: { lastMessageTime?: string | null; createdAt?: string | null }) {
   const fallback = typeof chat.createdAt === "string" ? chat.createdAt : "";
   return Date.parse(chat.lastMessageTime ?? fallback) || 0;
 }
