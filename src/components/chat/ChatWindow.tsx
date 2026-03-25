@@ -369,8 +369,15 @@ function ActiveConversation({ onBack }: { onBack: () => void }) {
   );
 }
 
-// ── Main Chat Window ──
 const ChatWindow = () => {
+  try {
+    return <ChatWindowInner />;
+  } catch {
+    return null;
+  }
+};
+
+const ChatWindowInner = () => {
   const { isChatOpen, setIsChatOpen, activeChat, setActiveChat, totalUnread, startIndividualChat, startDepartmentChat } = useChatContext();
 
   if (!isChatOpen) {
