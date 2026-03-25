@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useChatContext, useChatContextSafe } from "@/contexts/ChatContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { decryptMessage } from "@/lib/chatCrypto";
@@ -9,6 +9,29 @@ import {
 import { DEPARTMENTS } from "@/lib/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+function getChatSortTime(chat: { lastMessageTime?: string } & Record<string, unknown>) {
+  const fallback = typeof chat.createdAt === "string" ? chat.createdAt : "";
+  return Date.parse(chat.lastMessageTime ?? fallback) || 0;
+}
+
+function getChatDisplayName(
+  chat: { type: string; participants: string[]; name: string },
+  currentUserId?: string,
+  users: Array<{ id: string; fullName: string }> = []
+) {
+  if (chat.type !== "individual") return chat.name;
+  const otherParticipantId = chat.participants.find((participantId) => participantId !== currentUserId);
+  return users.find((candidate) => candidate.id === otherParticipantId)?.fullName ?? chat.name;
+}
+
+async function getChatPreview(lastMessage?: string) {
+  if (!lastMessage) return "";
+  if (["🔔", "📎", "🎤"].some((prefix) => lastMessage.startsWith(prefix))) return lastMessage;
+
+  const preview = await decryptMessage(lastMessage);
+  return preview.startsWith("[Error") || preview.startsWith("[Mensaje cifrado") ? lastMessage : preview;
+}
+
 // ── Chat List Panel ──
 function ChatList({
   onSelectUser,
@@ -17,11 +40,36 @@ function ChatList({
   onSelectUser: (id: string) => void;
   onSelectDept: (dept: string) => void;
 }) {
-  const { allUsers } = useAuth();
-  const { user } = useAuth();
+  const { allUsers, user } = useAuth();
   const { chats } = useChatContext();
   const [tab, setTab] = useState<"recent" | "people" | "departments">("recent");
   const [search, setSearch] = useState("");
+  const [chatPreviews, setChatPreviews] = useState<Record<string, string>>({});
+
+  const recentChats = useMemo(
+    () => [...chats].sort((a, b) => getChatSortTime(b) - getChatSortTime(a)),
+    [chats]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPreviews = async () => {
+      const previewEntries = await Promise.all(
+        recentChats.map(async (chat) => [chat.id, await getChatPreview(chat.lastMessage)] as const)
+      );
+
+      if (!cancelled) {
+        setChatPreviews(Object.fromEntries(previewEntries));
+      }
+    };
+
+    void loadPreviews();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [recentChats]);
 
   const filteredUsers = allUsers.filter(
     (u) =>
@@ -72,38 +120,43 @@ function ChatList({
                 <br />Inicia un chat desde "Personas" o "Departamentos".
               </p>
             ) : (
-              chats.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() =>
-                    c.type === "department" && c.departmentId
-                      ? onSelectDept(c.departmentId)
-                      : onSelectUser(
-                          c.participants.find((p) => p !== user?.id) || ""
-                        )
-                  }
-                  className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors text-left"
-                >
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
-                    c.type === "department" ? "bg-primary/10 text-primary" : "bg-secondary text-secondary-foreground"
-                  }`}>
-                    {c.type === "department" ? <Building2 className="h-4 w-4" /> : <User className="h-4 w-4" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium truncate">{c.name}</p>
-                      {c.unreadCount > 0 && (
-                        <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center shrink-0">
-                          {c.unreadCount}
-                        </span>
+              recentChats.map((c) => {
+                const displayName = getChatDisplayName(c, user?.id, allUsers);
+                const preview = chatPreviews[c.id] ?? "";
+
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() =>
+                      c.type === "department" && c.departmentId
+                        ? onSelectDept(c.departmentId)
+                        : onSelectUser(
+                            c.participants.find((p) => p !== user?.id) || ""
+                          )
+                    }
+                    className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors text-left"
+                  >
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
+                      c.type === "department" ? "bg-primary/10 text-primary" : "bg-secondary text-secondary-foreground"
+                    }`}>
+                      {c.type === "department" ? <Building2 className="h-4 w-4" /> : <User className="h-4 w-4" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium truncate">{displayName}</p>
+                        {c.unreadCount > 0 && (
+                          <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center shrink-0">
+                            {c.unreadCount}
+                          </span>
+                        )}
+                      </div>
+                      {preview && (
+                        <p className="text-xs text-muted-foreground truncate">{preview}</p>
                       )}
                     </div>
-                    {c.lastMessage && (
-                      <p className="text-xs text-muted-foreground truncate">{c.lastMessage}</p>
-                    )}
-                  </div>
-                </button>
-              ))
+                  </button>
+                );
+              })
             )}
           </div>
         )}
@@ -214,13 +267,17 @@ function MessageBubble({ msg, isOwn }: { msg: { content: string; type: string; s
 // ── Active Conversation ──
 function ActiveConversation({ onBack }: { onBack: () => void }) {
   const { activeChat, messages, sendMessage, sendBuzz } = useChatContext();
-  const { user } = useAuth();
+  const { user, allUsers } = useAuth();
   const [text, setText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const chatTitle = useMemo(
+    () => (activeChat ? getChatDisplayName(activeChat, user?.id, allUsers) : ""),
+    [activeChat, user?.id, allUsers]
+  );
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -294,7 +351,7 @@ function ActiveConversation({ onBack }: { onBack: () => void }) {
           {activeChat.type === "department" ? <Users className="h-4 w-4" /> : <User className="h-4 w-4" />}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-heading font-semibold truncate">{activeChat.name}</p>
+          <p className="text-sm font-heading font-semibold truncate">{chatTitle}</p>
           <p className="text-[10px] text-muted-foreground">
             {activeChat.type === "department"
               ? `${activeChat.participants.length} participantes`
