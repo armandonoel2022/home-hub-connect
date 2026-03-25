@@ -11,7 +11,8 @@ type PanicType = "security" | "medical";
 const PanicButton = () => {
   const { user } = useAuth();
   const { addNotification } = useNotifications();
-  const { isChatOpen } = useChatContext();
+  const chatCtx = useChatContextSafe();
+  const isChatOpen = chatCtx?.isChatOpen ?? false;
   const [isOpen, setIsOpen] = useState(false);
   const [confirming, setConfirming] = useState<PanicType | null>(null);
   const [cooldown, setCooldown] = useState(false);
