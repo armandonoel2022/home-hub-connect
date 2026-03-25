@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { encryptMessage } from "@/lib/chatCrypto";
+import { encryptMessage, decryptMessage } from "@/lib/chatCrypto";
 import { isApiConfigured, chatApi } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import type { Chat, ChatMessage, ChatNotification, ChatType } from "@/lib/chatTypes";
