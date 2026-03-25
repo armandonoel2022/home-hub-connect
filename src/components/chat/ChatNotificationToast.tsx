@@ -4,7 +4,10 @@ import { MessageSquare, Vibrate, X } from "lucide-react";
 import { sendBrowserNotification, requestNotificationPermission } from "@/lib/windowsNotifications";
 
 const ChatNotificationToast = () => {
-  const { notifications, dismissNotification, setIsChatOpen } = useChatContext();
+  const ctx = useChatContextSafe();
+  const notifications = ctx?.notifications ?? [];
+  const dismissNotification = ctx?.dismissNotification ?? (() => {});
+  const setIsChatOpen = ctx?.setIsChatOpen ?? (() => {});
   const [buzzAnimation, setBuzzAnimation] = useState<string | null>(null);
   const seenIds = useRef<Set<string>>(new Set());
 
