@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useChatContext } from "@/contexts/ChatContext";
+import { useChatContext, useChatContextSafe } from "@/contexts/ChatContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { decryptMessage } from "@/lib/chatCrypto";
 import {
@@ -371,7 +371,10 @@ function ActiveConversation({ onBack }: { onBack: () => void }) {
 
 // ── Main Chat Window ──
 const ChatWindow = () => {
-  const { isChatOpen, setIsChatOpen, activeChat, setActiveChat, totalUnread, startIndividualChat, startDepartmentChat } = useChatContext();
+  const ctx = useChatContextSafe();
+  if (!ctx) return null;
+
+  const { isChatOpen, setIsChatOpen, activeChat, setActiveChat, totalUnread, startIndividualChat, startDepartmentChat } = ctx;
 
   if (!isChatOpen) {
     return (
