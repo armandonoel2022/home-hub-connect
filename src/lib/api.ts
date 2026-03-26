@@ -232,6 +232,20 @@ export const minorPurchasesApi = {
     apiFetch<MinorPurchase>(`/minor-purchases/${id}/reject`, { method: "POST", body: JSON.stringify(data) }),
 };
 
+// ─── KPIs API ───
+export const kpisApi = {
+  getObjectives: () => apiFetch<any[]>("/kpis/objectives"),
+  updateObjective: (id: string, data: any) =>
+    apiFetch<any>(`/kpis/objectives/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  getDeptKPIs: () => apiFetch<any[]>("/kpis/department"),
+  createDeptKPI: (kpi: any) =>
+    apiFetch<any>("/kpis/department", { method: "POST", body: JSON.stringify(kpi) }),
+  updateDeptKPI: (id: string, data: any) =>
+    apiFetch<any>(`/kpis/department/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteDeptKPI: (id: string) =>
+    apiFetch<void>(`/kpis/department/${id}`, { method: "DELETE" }),
+};
+
 // ─── Tasks API ───
 export const tasksApi = {
   getAll: () => apiFetch<any[]>("/tasks"),

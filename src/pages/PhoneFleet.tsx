@@ -13,12 +13,32 @@ const statusColors: Record<PhoneStatus, string> = {
   "Dado de Baja": "bg-gray-100 text-gray-500",
 };
 
+const ALLOWED_DEPARTMENTS = [
+  "Tecnología y Monitoreo", "Administración", "Gerencia", "Gerencia General", "Gerencia Comercial",
+];
+
 const PhoneFleetPage = () => {
   const { user } = useAuth();
   const { data: phones, setData: setPhones, create: createPhone, remove: removePhone } = usePhones();
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState<Partial<PhoneDevice>>({ status: "Disponible" });
+
+  // Access control: only IT, Admin, and Management
+  const hasAccess = user?.isAdmin || ALLOWED_DEPARTMENTS.includes(user?.department || "");
+  if (!hasAccess) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <Smartphone className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <h2 className="text-xl font-heading font-bold text-card-foreground mb-2">Acceso Restringido</h2>
+            <p className="text-muted-foreground">Solo los departamentos de IT, Administración y Gerencia pueden acceder a la flota celular.</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   // Non-admins only see their own assigned phone
   const userPhones = user?.isAdmin

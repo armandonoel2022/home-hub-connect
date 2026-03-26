@@ -21,6 +21,10 @@ const statusColors: Record<EquipmentStatus, string> = {
   "Dado de Baja": "bg-gray-100 text-gray-500",
 };
 
+const ALLOWED_DEPARTMENTS = [
+  "Tecnología y Monitoreo", "Administración", "Gerencia", "Gerencia General", "Gerencia Comercial",
+];
+
 const InventoryPage = () => {
   const { user } = useAuth();
   const { data: equipment, setData: setEquipment, create: createEquipment, remove: removeEquipment } = useEquipment();
@@ -28,6 +32,22 @@ const InventoryPage = () => {
   const [filterType, setFilterType] = useState("Todos");
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState<Partial<Equipment>>({ type: "Computadora", status: "Disponible" });
+
+  // Access control: only IT, Admin, and Management
+  const hasAccess = user?.isAdmin || ALLOWED_DEPARTMENTS.includes(user?.department || "");
+  if (!hasAccess) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <h2 className="text-xl font-heading font-bold text-card-foreground mb-2">Acceso Restringido</h2>
+            <p className="text-muted-foreground">Solo los departamentos de IT, Administración y Gerencia pueden acceder al inventario.</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   const filtered = equipment.filter((e) => {
     const matchSearch =
