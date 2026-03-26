@@ -256,16 +256,8 @@ export const tasksApi = {
     apiFetch<any>(`/tasks/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   delete: (id: string) =>
     apiFetch<void>(`/tasks/${id}`, { method: "DELETE" }),
-};
-  getAll: () => apiFetch<any[]>("/tasks"),
-  getById: (id: string) => apiFetch<any>(`/tasks/${id}`),
-  create: (task: any) =>
-    apiFetch<any>("/tasks", { method: "POST", body: JSON.stringify(task) }),
-  update: (id: string, data: any) =>
-    apiFetch<any>(`/tasks/${id}`, { method: "PUT", body: JSON.stringify(data) }),
-  delete: (id: string) =>
-    apiFetch<void>(`/tasks/${id}`, { method: "DELETE" }),
-};
+
+
 
 // ─── Department Folders API ───
 export const departmentFoldersApi = {
