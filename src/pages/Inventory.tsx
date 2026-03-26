@@ -28,6 +28,10 @@ const ALLOWED_DEPARTMENTS = [
 const InventoryPage = () => {
   const { user } = useAuth();
   const { data: equipment, setData: setEquipment, create: createEquipment, remove: removeEquipment } = useEquipment();
+  const [search, setSearch] = useState("");
+  const [filterType, setFilterType] = useState("Todos");
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState<Partial<Equipment>>({ type: "Computadora", status: "Disponible" });
 
   // Access control: only IT, Admin, and Management
   const hasAccess = user?.isAdmin || ALLOWED_DEPARTMENTS.includes(user?.department || "");
@@ -44,10 +48,6 @@ const InventoryPage = () => {
       </AppLayout>
     );
   }
-  const [search, setSearch] = useState("");
-  const [filterType, setFilterType] = useState("Todos");
-  const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState<Partial<Equipment>>({ type: "Computadora", status: "Disponible" });
 
   const filtered = equipment.filter((e) => {
     const matchSearch =

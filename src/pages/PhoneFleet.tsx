@@ -20,6 +20,9 @@ const ALLOWED_DEPARTMENTS = [
 const PhoneFleetPage = () => {
   const { user } = useAuth();
   const { data: phones, setData: setPhones, create: createPhone, remove: removePhone } = usePhones();
+  const [search, setSearch] = useState("");
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState<Partial<PhoneDevice>>({ status: "Disponible" });
 
   // Access control: only IT, Admin, and Management
   const hasAccess = user?.isAdmin || ALLOWED_DEPARTMENTS.includes(user?.department || "");
@@ -36,9 +39,6 @@ const PhoneFleetPage = () => {
       </AppLayout>
     );
   }
-  const [search, setSearch] = useState("");
-  const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState<Partial<PhoneDevice>>({ status: "Disponible" });
 
   // Non-admins only see their own assigned phone
   const userPhones = user?.isAdmin
