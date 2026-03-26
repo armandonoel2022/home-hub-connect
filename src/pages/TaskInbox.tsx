@@ -49,9 +49,9 @@ const TaskInbox = () => {
     assignedToUserId: "",
   });
 
-  // Show tasks assigned to user + tasks created by user
+  // Only show tasks assigned to this user (not tasks they created for others)
   const myTasks = (tasks as UserTask[]).filter((t) =>
-    t.assignedToUserId === user?.id || t.createdByUserId === user?.id
+    t.assignedToUserId === user?.id
   );
 
   const filteredTasks = myTasks.filter((t) =>
