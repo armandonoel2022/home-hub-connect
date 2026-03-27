@@ -492,6 +492,9 @@ const OperationsPage = () => {
       coordinates: form.coordinates || "", weaponCondition: form.weaponCondition || "",
       licenseNumber: form.licenseNumber || "", licenseExpiry: form.licenseExpiry || "",
       status: (form.status as ArmedPersonnel["status"]) || "Activo",
+      shiftType: form.shiftType as ShiftType || undefined,
+      shiftHours: Number(form.shiftHours) || undefined,
+      shiftNotes: form.shiftNotes || undefined,
     };
     try { await updatePersonnel(editingId, updateData); }
     catch { setPersonnel((prev) => prev.map(p => p.id === editingId ? { ...p, ...updateData } : p)); }
