@@ -81,6 +81,18 @@ export type WeaponCondition =
   | "Arma en fiscalia"
   | "Arma no estaba disponible";
 
+export interface PersonnelTransfer {
+  id: string;
+  date: string;
+  fromClient: string;
+  fromLocation: string;
+  toClient: string;
+  toLocation: string;
+  reason: string;
+  replacedBy?: string; // name or ID of replacement
+  authorizedBy: string;
+}
+
 export interface ArmedPersonnel {
   id: string;
   employeeCode: string;
@@ -105,6 +117,10 @@ export interface ArmedPersonnel {
   licenseExpiry: string;
   assignedDate: string;
   status: "Activo" | "Licencia" | "Inactivo";
+  transferHistory?: PersonnelTransfer[];
+  deletedAt?: string;
+  deletedBy?: string;
+  deletedReason?: string;
 }
 
 // Phone Fleet
