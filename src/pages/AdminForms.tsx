@@ -445,16 +445,29 @@ const AdminForms = () => {
                 )}
               </div>
 
-              {/* Virtual submit */}
+              {/* Order number + Virtual submit */}
               {formMode === "virtual" && (
-                <div className="flex justify-end gap-3 no-print">
-                  <Button variant="outline" onClick={handleBack}>Cancelar</Button>
-                  <Button variant="secondary" onClick={handleNoApprovalSubmit} className="gap-2">
-                    <Ban className="h-4 w-4" /> No Requiere Aprobación
-                  </Button>
-                  <Button onClick={handleVirtualSubmit} className="gap-2">
-                    <Send className="h-4 w-4" /> Enviar para Aprobación
-                  </Button>
+                <div className="space-y-3 no-print">
+                  <div className="flex items-end gap-3">
+                    <div className="w-60">
+                      <Label className="text-sm font-semibold text-card-foreground">No. de Orden (opcional)</Label>
+                      <Input
+                        placeholder={`Ej: ${activeForm === "orden-compra" ? "OC" : "OS"}-0001 (auto si vacío)`}
+                        value={customOrderNumber}
+                        onChange={e => setCustomOrderNumber(e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-3">
+                    <Button variant="outline" onClick={handleBack}>Cancelar</Button>
+                    <Button variant="secondary" onClick={handleNoApprovalSubmit} className="gap-2">
+                      <Ban className="h-4 w-4" /> No Requiere Aprobación
+                    </Button>
+                    <Button onClick={handleVirtualSubmit} className="gap-2">
+                      <Send className="h-4 w-4" /> Enviar para Aprobación
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
