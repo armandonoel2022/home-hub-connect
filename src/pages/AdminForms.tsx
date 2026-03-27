@@ -71,6 +71,12 @@ const AdminForms = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const printRef = useRef<HTMLDivElement>(null);
 
+  // Approval overlay states
+  const [showApprovalOverlay, setShowApprovalOverlay] = useState(false);
+  const [approvalTargetId, setApprovalTargetId] = useState<string | null>(null);
+  const [approvalComment, setApprovalComment] = useState("");
+  const [showResultOverlay, setShowResultOverlay] = useState<{ type: "approved" | "declined"; id: string } | null>(null);
+
   // Items state for line items
   const [items, setItems] = useState<{ tipo?: string; descripcion: string; cantidad: number; precio: number }[]>([
     { tipo: "", descripcion: "", cantidad: 1, precio: 0 },
