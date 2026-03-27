@@ -21,8 +21,13 @@ import type { AppNotification } from "./types";
 function getBaseUrl(): string {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
   // In production, assume API runs on same server, port 3000
+  // Skip auto-detection for Lovable preview/cloud domains
   if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
-    return `http://${window.location.hostname}:3000/api`;
+    const host = window.location.hostname;
+    if (host.includes('lovableproject.com') || host.includes('lovable.app') || host.includes('lovable.dev')) {
+      return "";
+    }
+    return `http://${host}:3000/api`;
   }
   return "";
 }
