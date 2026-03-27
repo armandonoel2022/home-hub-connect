@@ -36,8 +36,9 @@ const formConfig: { key: FormType; label: string; icon: any; color: string; desc
 // ── Simple localStorage persistence for admin requests ──
 interface AdminRequest {
   id: string;
+  orderNumber: string;
   formType: FormType;
-  status: string; // "Pendiente" | "Aprobada" | "Rechazada" | "Declinada" | "Sin Aprobación"
+  status: string;
   requestedBy: string;
   requestedByName: string;
   department: string;
@@ -59,6 +60,12 @@ function getAdminRequests(): AdminRequest[] {
 function saveAdminRequests(reqs: AdminRequest[]) {
   localStorage.setItem("safeone_admin_requests", JSON.stringify(reqs));
 }
+function getNextOrderNumber(formType: FormType): string {
+  const counter = parseInt(localStorage.getItem(`safeone_admin_counter_${formType}`) || "0", 10) + 1;
+  localStorage.setItem(`safeone_admin_counter_${formType}`, String(counter));
+  const prefix = formType === "orden-compra" ? "OC" : "OS";
+  return `${prefix}-${String(counter).padStart(4, "0")}`;
+}
 
 const AdminForms = () => {
   const navigate = useNavigate();
@@ -77,7 +84,9 @@ const AdminForms = () => {
   const [approvalComment, setApprovalComment] = useState("");
   const [showResultOverlay, setShowResultOverlay] = useState<{ type: "approved" | "declined"; id: string } | null>(null);
 
-  // Items state for line items
+  // Custom order number
+  const [customOrderNumber, setCustomOrderNumber] = useState("");
+
   const [items, setItems] = useState<{ tipo?: string; descripcion: string; cantidad: number; precio: number }[]>([
     { tipo: "", descripcion: "", cantidad: 1, precio: 0 },
   ]);
@@ -187,8 +196,11 @@ const AdminForms = () => {
       subtotal: it.cantidad * it.precio,
     }));
 
+    const orderNumber = customOrderNumber.trim() || getNextOrderNumber(activeForm!);
+
     return {
       id: `ADM-${Date.now().toString(36).toUpperCase()}`,
+      orderNumber,
       formType: activeForm!,
       status,
       requestedBy: user!.id,
@@ -214,10 +226,11 @@ const AdminForms = () => {
     all.unshift(req);
     saveAdminRequests(all);
     setRefreshKey(k => k + 1);
-    toast({ title: "Orden Enviada", description: `${formConfig.find(f => f.key === activeForm)?.label} #${req.id} enviada para aprobación de Aurelio Pérez.` });
+    toast({ title: "Orden Enviada", description: `${formConfig.find(f => f.key === activeForm)?.label} ${req.orderNumber} enviada para aprobación de Aurelio Pérez.` });
     setActiveForm(null);
     setFormMode(null);
     setItems([{ tipo: "", descripcion: "", cantidad: 1, precio: 0 }]);
+    setCustomOrderNumber("");
     setActiveView("my-requests");
   };
 
@@ -228,11 +241,19 @@ const AdminForms = () => {
     all.unshift(req);
     saveAdminRequests(all);
     setRefreshKey(k => k + 1);
-    toast({ title: "Orden Registrada", description: `${formConfig.find(f => f.key === activeForm)?.label} #${req.id} registrada sin requerir aprobación.` });
+    toast({ title: "Orden Registrada", description: `${formConfig.find(f => f.key === activeForm)?.label} ${req.orderNumber} registrada sin requerir aprobación.` });
     setActiveForm(null);
     setFormMode(null);
     setItems([{ tipo: "", descripcion: "", cantidad: 1, precio: 0 }]);
+    setCustomOrderNumber("");
     setActiveView("my-requests");
+  };
+
+  const handleDeleteRequest = (reqId: string) => {
+    const all = getAdminRequests().filter(r => r.id !== reqId);
+    saveAdminRequests(all);
+    setRefreshKey(k => k + 1);
+    toast({ title: "Orden Eliminada", description: `Orden ${reqId} eliminada correctamente.`, variant: "destructive" });
   };
 
   const handleApprove = (reqId: string) => {
@@ -424,16 +445,29 @@ const AdminForms = () => {
                 )}
               </div>
 
-              {/* Virtual submit */}
+              {/* Order number + Virtual submit */}
               {formMode === "virtual" && (
-                <div className="flex justify-end gap-3 no-print">
-                  <Button variant="outline" onClick={handleBack}>Cancelar</Button>
-                  <Button variant="secondary" onClick={handleNoApprovalSubmit} className="gap-2">
-                    <Ban className="h-4 w-4" /> No Requiere Aprobación
-                  </Button>
-                  <Button onClick={handleVirtualSubmit} className="gap-2">
-                    <Send className="h-4 w-4" /> Enviar para Aprobación
-                  </Button>
+                <div className="space-y-3 no-print">
+                  <div className="flex items-end gap-3">
+                    <div className="w-60">
+                      <Label className="text-sm font-semibold text-card-foreground">No. de Orden (opcional)</Label>
+                      <Input
+                        placeholder={`Ej: ${activeForm === "orden-compra" ? "OC" : "OS"}-0001 (auto si vacío)`}
+                        value={customOrderNumber}
+                        onChange={e => setCustomOrderNumber(e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-3">
+                    <Button variant="outline" onClick={handleBack}>Cancelar</Button>
+                    <Button variant="secondary" onClick={handleNoApprovalSubmit} className="gap-2">
+                      <Ban className="h-4 w-4" /> No Requiere Aprobación
+                    </Button>
+                    <Button onClick={handleVirtualSubmit} className="gap-2">
+                      <Send className="h-4 w-4" /> Enviar para Aprobación
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
@@ -453,13 +487,20 @@ const AdminForms = () => {
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-heading font-bold text-card-foreground text-sm">{req.id}</span>
+                        <span className="font-heading font-bold text-card-foreground text-sm">{req.orderNumber || req.id}</span>
                         <StatusBadge status={req.status} />
                       </div>
                       <p className="text-sm font-medium text-card-foreground mt-1">{formConfig.find(f => f.key === req.formType)?.label}</p>
                       <p className="text-xs text-muted-foreground">{format(new Date(req.requestedAt), "dd/MM/yyyy HH:mm")}</p>
                     </div>
-                    <span className="font-heading font-bold text-primary">{fmtCurrency(req.total)}</span>
+                    <div className="flex items-start gap-2">
+                      <span className="font-heading font-bold text-primary">{fmtCurrency(req.total)}</span>
+                      {isAdmin && (
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteRequest(req.id)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   {req.items.length > 0 && (
                     <div className="mt-3 text-xs text-muted-foreground">
