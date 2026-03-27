@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, lazy, Suspense } from "react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useArmedPersonnel } from "@/hooks/useApiHooks";
@@ -46,44 +46,10 @@ function parseCoords(coords: string): [number, number] | null {
 }
 
 // ─── Map Component ───
+const LazyMap = lazy(() => import("../components/PersonnelMapView"));
+
 function PersonnelMap({ personnel }: { personnel: ArmedPersonnel[] }) {
-  const [mapReady, setMapReady] = useState(false);
-  const [RL, setRL] = useState<any>(null);
-  const [mapError, setMapError] = useState(false);
-
-  useEffect(() => {
-    Promise.all([
-      import("leaflet"),
-      import("react-leaflet"),
-    ]).then(([leaflet, reactLeaflet]) => {
-      delete (leaflet.default.Icon.Default.prototype as any)._getIconUrl;
-      leaflet.default.Icon.Default.mergeOptions({
-        iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-        iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-      });
-      setRL(reactLeaflet);
-      setMapReady(true);
-    }).catch(() => setMapError(true));
-  }, []);
-
   const withCoords = personnel.filter(p => parseCoords(p.coordinates));
-
-  if (mapError) return (
-    <div className="h-[500px] flex items-center justify-center bg-muted rounded-xl">
-      <div className="text-center">
-        <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto mb-2" />
-        <p className="text-muted-foreground font-medium">No se pudo cargar el mapa</p>
-        <p className="text-xs text-muted-foreground mt-1">Puede estar bloqueado por el navegador. Usa los enlaces de Google Maps en la lista.</p>
-      </div>
-    </div>
-  );
-
-  if (!mapReady || !RL) return (
-    <div className="h-[500px] flex items-center justify-center bg-muted rounded-xl">
-      <p className="text-muted-foreground">Cargando mapa...</p>
-    </div>
-  );
 
   if (withCoords.length === 0) return (
     <div className="h-[500px] flex items-center justify-center bg-muted rounded-xl">
@@ -94,39 +60,10 @@ function PersonnelMap({ personnel }: { personnel: ArmedPersonnel[] }) {
     </div>
   );
 
-  const { MapContainer, TileLayer, Marker, Popup } = RL;
-  const center = parseCoords(withCoords[0].coordinates) || [18.5, -69.9];
-
   return (
-    <div className="h-[500px] rounded-xl overflow-hidden border border-border">
-      <MapContainer center={center} zoom={9} style={{ height: "100%", width: "100%" }} scrollWheelZoom={true}>
-        <TileLayer
-          attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-        />
-        {withCoords.map(p => {
-          const pos = parseCoords(p.coordinates)!;
-          const condIcon = p.weaponCondition?.includes("buenas") || p.weaponCondition === "En condiciones" ? "🟢" : p.weaponCondition?.includes("mantenimiento") ? "🟡" : "🔴";
-          return (
-            <Marker key={p.id} position={pos}>
-              <Popup>
-                <div className="text-xs min-w-[180px]">
-                  <p className="font-bold text-sm">{condIcon} {p.name || "Sin nombre"}</p>
-                  <p><strong>Código:</strong> {p.employeeCode}</p>
-                  <p><strong>Cliente:</strong> {p.client}</p>
-                  <p><strong>Puesto:</strong> {p.location}</p>
-                  <p><strong>Provincia:</strong> {p.province}</p>
-                  <p><strong>Arma:</strong> {p.weaponType} {p.weaponBrand}</p>
-                  <p><strong>Serial:</strong> {p.weaponSerial}</p>
-                  <p><strong>Estado:</strong> {p.weaponCondition}</p>
-                  <a href={`https://www.google.com/maps?q=${p.coordinates}`} target="_blank" rel="noopener" className="text-blue-600 underline block mt-1">Abrir en Google Maps</a>
-                </div>
-              </Popup>
-            </Marker>
-          );
-        })}
-      </MapContainer>
-    </div>
+    <Suspense fallback={<div className="h-[500px] flex items-center justify-center bg-muted rounded-xl"><p className="text-muted-foreground">Cargando mapa...</p></div>}>
+      <LazyMap personnel={withCoords} />
+    </Suspense>
   );
 }
 
