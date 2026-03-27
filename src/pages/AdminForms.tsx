@@ -315,6 +315,101 @@ const AdminForms = () => {
 
   const fmtCurrency = (n: number) => `RD$ ${n.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+  const handlePrintSavedRequest = (req: AdminRequest) => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    const formLabel = formConfig.find(f => f.key === req.formType)?.label || "";
+    const letterheadBg = `background-image: url('${new URL(safeOneLetterhead, window.location.origin).href}'); background-size: 100% 100%; background-repeat: no-repeat; background-position: center;`;
+
+    // Build form fields HTML
+    const fieldsHtml = Object.entries(req.formData)
+      .filter(([, v]) => v)
+      .map(([key, val]) => `<div class="form-field"><label>${key}</label><div class="field-value">${val}</div></div>`)
+      .join("");
+
+    const fieldsGrid = fieldsHtml ? `<div class="form-grid">${fieldsHtml}</div>` : "";
+
+    // Build items table
+    const isServiceOrder = req.formType === "orden-servicio";
+    const itemsHtml = req.items.length > 0 ? `
+      <table>
+        <thead><tr>
+          ${isServiceOrder ? '<th>TIPO</th>' : ''}
+          <th>DESCRIPCIÓN</th>
+          <th style="text-align:right">CANT</th>
+          <th style="text-align:right">PRECIO</th>
+          <th style="text-align:right">${isServiceOrder ? 'MONTO' : 'SUBTOTAL'}</th>
+        </tr></thead>
+        <tbody>
+          ${req.items.map(it => `<tr>
+            ${isServiceOrder ? `<td>${it.tipo || ''}</td>` : ''}
+            <td>${it.descripcion}</td>
+            <td style="text-align:right">${it.cantidad}</td>
+            <td style="text-align:right">${fmtCurrency(it.precio)}</td>
+            <td style="text-align:right">${fmtCurrency(it.subtotal)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+      <div class="totals">
+        <div>SUB TOTAL: <strong>${fmtCurrency(req.subtotal)}</strong></div>
+        <div>ITBIS (18%): <strong>${fmtCurrency(req.itbis)}</strong></div>
+        <div class="total-row">TOTAL RD$: <strong>${fmtCurrency(req.total)}</strong></div>
+      </div>
+    ` : '';
+
+    // Status stamp
+    const stampHtml = req.status === "Aprobada"
+      ? `<div style="margin-top:20px;padding:12px;border:2px solid #16a34a;border-radius:8px;text-align:center;color:#16a34a;font-weight:700;">✓ APROBADA POR AURELIO PÉREZ — ${req.approvedAt ? format(new Date(req.approvedAt), "dd/MM/yyyy HH:mm") : ""}</div>`
+      : req.status === "Declinada"
+      ? `<div style="margin-top:20px;padding:12px;border:2px solid #dc2626;border-radius:8px;text-align:center;color:#dc2626;font-weight:700;">✗ DECLINADA POR AURELIO PÉREZ${req.rejectionReason ? ' — ' + req.rejectionReason : ''}</div>`
+      : req.status === "Sin Aprobación"
+      ? `<div style="margin-top:20px;padding:12px;border:2px solid #6b7280;border-radius:8px;text-align:center;color:#6b7280;font-weight:700;">SIN APROBACIÓN REQUERIDA</div>`
+      : "";
+
+    // Signature block
+    const sigHtml = `<div class="sig-block">
+      <div><div class="sig-line"></div><div class="sig-label">Solicitado por: ${req.requestedByName}</div></div>
+      <div><div class="sig-line"></div><div class="sig-label">Aprobado por</div></div>
+    </div>`;
+
+    printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${formLabel} ${req.orderNumber || req.id} — SafeOne</title><style>
+      @page { size: A4; margin: 0; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a1a; }
+      .page { width: 210mm; min-height: 297mm; position: relative; ${letterheadBg} margin: 0 auto; }
+      .content-area { padding: 180px 60px 100px 60px; }
+      .form-title { font-size: 16px; font-weight: 700; text-align: center; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
+      .order-number { font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 16px; color: #555; }
+      .form-date { font-size: 11px; color: #666; text-align: right; margin-bottom: 16px; }
+      .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+      .form-field label { font-size: 11px; font-weight: 600; color: #555; display: block; margin-bottom: 2px; }
+      .field-value { font-size: 12px; padding: 4px 0; border-bottom: 1px solid #ddd; min-height: 20px; }
+      table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+      th, td { border: 1px solid #ccc; padding: 6px 8px; font-size: 11px; text-align: left; }
+      th { background: #f5f5f5; font-weight: 600; }
+      .totals { text-align: right; margin-top: 8px; }
+      .totals div { margin: 4px 0; font-size: 12px; }
+      .totals .total-row { font-weight: 700; font-size: 14px; }
+      .sig-block { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 36px; padding-top: 20px; border-top: 1px solid #ddd; }
+      .sig-block div { text-align: center; }
+      .sig-line { border-bottom: 1px solid #333; height: 50px; margin-bottom: 6px; }
+      .sig-label { font-size: 11px; color: #666; }
+      @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .page { width: 100%; min-height: 100vh; } }
+    </style></head><body>
+    <div class="page"><div class="content-area">
+      <div class="form-title">${formLabel}</div>
+      <div class="order-number">No. ${req.orderNumber || req.id}</div>
+      <div class="form-date">Fecha: ${format(new Date(req.requestedAt), "dd/MM/yyyy")} • Solicitado por: ${req.requestedByName} • ${req.department}</div>
+      ${fieldsGrid}
+      ${itemsHtml}
+      ${stampHtml}
+      ${sigHtml}
+    </div></div></body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => { printWindow.print(); printWindow.close(); }, 600);
+  };
   return (
     <AppLayout>
       <div className="flex flex-col min-h-screen">
