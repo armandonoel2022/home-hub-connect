@@ -640,7 +640,7 @@ const OperationsPage = () => {
         {/* MAP VIEW */}
         {viewMode === "map" && (
           <div className="px-6 py-4">
-            <PersonnelMap personnel={filtered} />
+            <PersonnelMap personnel={filtered} onTransfer={(p) => setTransferTarget(p)} />
           </div>
         )}
 
