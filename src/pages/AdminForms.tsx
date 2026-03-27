@@ -36,8 +36,9 @@ const formConfig: { key: FormType; label: string; icon: any; color: string; desc
 // ── Simple localStorage persistence for admin requests ──
 interface AdminRequest {
   id: string;
+  orderNumber: string;
   formType: FormType;
-  status: string; // "Pendiente" | "Aprobada" | "Rechazada" | "Declinada" | "Sin Aprobación"
+  status: string;
   requestedBy: string;
   requestedByName: string;
   department: string;
