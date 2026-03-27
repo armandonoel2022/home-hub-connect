@@ -226,10 +226,11 @@ const AdminForms = () => {
     all.unshift(req);
     saveAdminRequests(all);
     setRefreshKey(k => k + 1);
-    toast({ title: "Orden Enviada", description: `${formConfig.find(f => f.key === activeForm)?.label} #${req.id} enviada para aprobación de Aurelio Pérez.` });
+    toast({ title: "Orden Enviada", description: `${formConfig.find(f => f.key === activeForm)?.label} ${req.orderNumber} enviada para aprobación de Aurelio Pérez.` });
     setActiveForm(null);
     setFormMode(null);
     setItems([{ tipo: "", descripcion: "", cantidad: 1, precio: 0 }]);
+    setCustomOrderNumber("");
     setActiveView("my-requests");
   };
 
@@ -240,7 +241,7 @@ const AdminForms = () => {
     all.unshift(req);
     saveAdminRequests(all);
     setRefreshKey(k => k + 1);
-    toast({ title: "Orden Registrada", description: `${formConfig.find(f => f.key === activeForm)?.label} #${req.id} registrada sin requerir aprobación.` });
+    toast({ title: "Orden Registrada", description: `${formConfig.find(f => f.key === activeForm)?.label} ${req.orderNumber} registrada sin requerir aprobación.` });
     setActiveForm(null);
     setFormMode(null);
     setItems([{ tipo: "", descripcion: "", cantidad: 1, precio: 0 }]);
