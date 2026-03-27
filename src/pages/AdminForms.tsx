@@ -487,13 +487,20 @@ const AdminForms = () => {
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-heading font-bold text-card-foreground text-sm">{req.id}</span>
+                        <span className="font-heading font-bold text-card-foreground text-sm">{req.orderNumber || req.id}</span>
                         <StatusBadge status={req.status} />
                       </div>
                       <p className="text-sm font-medium text-card-foreground mt-1">{formConfig.find(f => f.key === req.formType)?.label}</p>
                       <p className="text-xs text-muted-foreground">{format(new Date(req.requestedAt), "dd/MM/yyyy HH:mm")}</p>
                     </div>
-                    <span className="font-heading font-bold text-primary">{fmtCurrency(req.total)}</span>
+                    <div className="flex items-start gap-2">
+                      <span className="font-heading font-bold text-primary">{fmtCurrency(req.total)}</span>
+                      {isAdmin && (
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteRequest(req.id)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   {req.items.length > 0 && (
                     <div className="mt-3 text-xs text-muted-foreground">
