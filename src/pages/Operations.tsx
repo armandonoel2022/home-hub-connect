@@ -386,6 +386,7 @@ const OperationsPage = () => {
   const [filterCondition, setFilterCondition] = useState("");
   const [transferTarget, setTransferTarget] = useState<ArmedPersonnel | null>(null);
   const [showDeletedLog, setShowDeletedLog] = useState(false);
+  const [showTransferLog, setShowTransferLog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Deleted log from localStorage
