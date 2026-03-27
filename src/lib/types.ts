@@ -93,6 +93,8 @@ export interface PersonnelTransfer {
   authorizedBy: string;
 }
 
+export type ShiftType = "12h" | "24h" | "24h+" | "Personalizado";
+
 export interface ArmedPersonnel {
   id: string;
   employeeCode: string;
@@ -117,6 +119,9 @@ export interface ArmedPersonnel {
   licenseExpiry: string;
   assignedDate: string;
   status: "Activo" | "Licencia" | "Inactivo";
+  shiftType?: ShiftType;
+  shiftHours?: number; // horas del turno (12, 24, etc.)
+  shiftNotes?: string; // notas sobre el turno
   transferHistory?: PersonnelTransfer[];
   deletedAt?: string;
   deletedBy?: string;
