@@ -590,6 +590,9 @@ const AdminForms = () => {
                     </div>
                     <div className="flex items-start gap-2">
                       <span className="font-heading font-bold text-primary">{fmtCurrency(req.total)}</span>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handlePrintSavedRequest(req)} title="Ver / Imprimir">
+                        <Printer className="h-3.5 w-3.5" />
+                      </Button>
                       {isAdmin && (
                         <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteRequest(req.id)}>
                           <Trash2 className="h-3.5 w-3.5" />
