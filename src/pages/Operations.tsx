@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useArmedPersonnel } from "@/hooks/useApiHooks";
 import type { ArmedPersonnel, PersonnelTransfer } from "@/lib/types";
 import { Search, Plus, User, MapPin, X, Phone, Upload, Image, Lock, Trash2, Pencil, Map, List, AlertTriangle, BarChart3, ArrowRightLeft, History, Shield, ChevronDown, ChevronRight } from "lucide-react";
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import "leaflet/dist/leaflet.css";
 
 const statusColors: Record<string, string> = {
@@ -210,7 +210,7 @@ function PersonnelDashboard({ personnel }: { personnel: ArmedPersonnel[] }) {
           <h3 className="font-heading font-semibold text-sm text-card-foreground mb-3">Estado de Armas</h3>
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
-              <Pie data={byCondition} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, value }) => `${name} (${value})`} labelLine={false} fontSize={10}>
+              <Pie data={byCondition} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label labelLine={false} fontSize={10}>
                 {byCondition.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
               </Pie>
               <Tooltip />
@@ -223,13 +223,12 @@ function PersonnelDashboard({ personnel }: { personnel: ArmedPersonnel[] }) {
           <h3 className="font-heading font-semibold text-sm text-card-foreground mb-3">Tipo de Munición</h3>
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
-              <Pie data={byLethal} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, value }) => `${name} (${value})`}>
+              <Pie data={byLethal} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
                 <Cell fill="#ef4444" />
                 <Cell fill="#3b82f6" />
                 {byLethal.length > 2 && <Cell fill="#9ca3af" />}
               </Pie>
               <Tooltip />
-              <Legend />
             </PieChart>
           </ResponsiveContainer>
         </div>
