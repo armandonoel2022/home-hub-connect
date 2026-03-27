@@ -1,4 +1,5 @@
 import type { Ticket, Equipment, Vehicle, ArmedPersonnel, PhoneDevice } from "./types";
+import { seedArmedPersonnel } from "./armedPersonnelData";
 
 export const mockTickets: Ticket[] = [
   {
@@ -80,12 +81,7 @@ export const mockVehicles: Vehicle[] = [
   { id: "VH-004", plate: "JKL-3456", brand: "Hyundai", model: "Tucson", year: 2023, status: "Disponible", assignedTo: null, acquisitionDate: "2023-11-05", mileage: 30000, notes: "" },
 ];
 
-export const mockArmedPersonnel: ArmedPersonnel[] = [
-  { id: "AP-001", name: "Roberto Martínez", photo: "", location: "Sede Principal - Garita 1", position: "Oficial de Seguridad", supervisor: "Fernando Castillo", fleetPhone: "+1 809-555-0001", personalPhone: "+1 809-555-1001", address: "Calle 1, Santo Domingo", weaponType: "Pistola", weaponSerial: "PST-2024-001", weaponBrand: "Glock", weaponCaliber: "9mm", ammunitionCount: 30, licenseNumber: "LIC-2024-0451", licenseExpiry: "2027-06-30", assignedDate: "2024-01-15", status: "Activo" },
-  { id: "AP-002", name: "Fernando Castillo", photo: "", location: "Sede Norte - Ronda", position: "Supervisor de Seguridad", supervisor: "Remit", fleetPhone: "+1 809-555-0002", personalPhone: "+1 809-555-1002", address: "Calle 2, Santo Domingo", weaponType: "Pistola", weaponSerial: "PST-2024-002", weaponBrand: "Beretta", weaponCaliber: "9mm", ammunitionCount: 30, licenseNumber: "LIC-2024-0452", licenseExpiry: "2027-03-15", assignedDate: "2024-02-01", status: "Activo" },
-  { id: "AP-003", name: "Miguel Ángel Torres", photo: "", location: "Sede Sur - Garita 2", position: "Oficial de Seguridad", supervisor: "Fernando Castillo", fleetPhone: "+1 809-555-0003", personalPhone: "+1 809-555-1003", address: "Calle 3, Santiago", weaponType: "Escopeta", weaponSerial: "ESC-2023-015", weaponBrand: "Remington", weaponCaliber: "12 Gauge", ammunitionCount: 15, licenseNumber: "LIC-2023-0890", licenseExpiry: "2026-12-31", assignedDate: "2023-08-20", status: "Activo" },
-  { id: "AP-004", name: "Luis Hernández", photo: "", location: "Sede Principal - Ronda", position: "Oficial de Seguridad", supervisor: "Fernando Castillo", fleetPhone: "", personalPhone: "+1 809-555-1004", address: "Calle 4, Santo Domingo", weaponType: "Pistola", weaponSerial: "PST-2023-008", weaponBrand: "Glock", weaponCaliber: "9mm", ammunitionCount: 30, licenseNumber: "LIC-2023-0567", licenseExpiry: "2026-08-15", assignedDate: "2023-05-10", status: "Licencia" },
-];
+export const mockArmedPersonnel: ArmedPersonnel[] = seedArmedPersonnel;
 
 export const mockPhones: PhoneDevice[] = [
   { id: "PH-001", imei: "354123098765432", serial: "SM-A54-001", brand: "Samsung", model: "Galaxy A54", status: "Activo", assignedTo: "María López", department: "Servicio al Cliente", acquisitionDate: "2025-01-15", phoneNumber: "+505 8888-0001", notes: "" },

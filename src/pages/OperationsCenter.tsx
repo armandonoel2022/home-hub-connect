@@ -5,7 +5,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
-import { mockArmedPersonnel } from "@/lib/mockData";
+import { seedArmedPersonnel } from "@/lib/armedPersonnelData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -65,7 +65,7 @@ const OperationsCenter = () => {
   const [coveringForId, setCoveringForId] = useState("");
 
   // Get armed personnel (agents)
-  const agents = mockArmedPersonnel.filter((a) => a.status === "Activo");
+  const agents = seedArmedPersonnel.filter((a) => a.status === "Activo");
 
   // Group by location
   const locations = agents.reduce<Record<string, typeof agents>>((acc, agent) => {
