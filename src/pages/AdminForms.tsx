@@ -196,8 +196,11 @@ const AdminForms = () => {
       subtotal: it.cantidad * it.precio,
     }));
 
+    const orderNumber = customOrderNumber.trim() || getNextOrderNumber(activeForm!);
+
     return {
       id: `ADM-${Date.now().toString(36).toUpperCase()}`,
+      orderNumber,
       formType: activeForm!,
       status,
       requestedBy: user!.id,
