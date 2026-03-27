@@ -48,7 +48,7 @@ function parseCoords(coords: string): [number, number] | null {
 // ─── Map Component ───
 const LazyMap = lazy(() => import("../components/PersonnelMapView"));
 
-function PersonnelMap({ personnel }: { personnel: ArmedPersonnel[] }) {
+function PersonnelMap({ personnel, onTransfer }: { personnel: ArmedPersonnel[]; onTransfer?: (p: ArmedPersonnel) => void }) {
   const withCoords = personnel.filter(p => parseCoords(p.coordinates));
 
   if (withCoords.length === 0) return (
@@ -62,7 +62,7 @@ function PersonnelMap({ personnel }: { personnel: ArmedPersonnel[] }) {
 
   return (
     <Suspense fallback={<div className="h-[500px] flex items-center justify-center bg-muted rounded-xl"><p className="text-muted-foreground">Cargando mapa...</p></div>}>
-      <LazyMap personnel={withCoords} />
+      <LazyMap personnel={withCoords} onTransfer={onTransfer} />
     </Suspense>
   );
 }
