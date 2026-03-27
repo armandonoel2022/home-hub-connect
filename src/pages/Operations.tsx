@@ -244,8 +244,10 @@ function TransferModal({ person, allPersonnel, onClose, onTransfer }: {
   const [toLocation, setToLocation] = useState("");
   const [reason, setReason] = useState("");
   const [replacementId, setReplacementId] = useState("");
+  const [shiftType, setShiftType] = useState<ShiftType>(person.shiftType || "12h");
+  const [shiftHours, setShiftHours] = useState<number>(person.shiftHours || 12);
+  const [shiftNotes, setShiftNotes] = useState(person.shiftNotes || "");
 
-  // Available replacements: active personnel NOT at this same location
   const availableReplacements = allPersonnel.filter(p =>
     p.id !== person.id && p.status === "Activo" && !(p.client === person.client && p.location === person.location)
   );
@@ -259,7 +261,7 @@ function TransferModal({ person, allPersonnel, onClose, onTransfer }: {
       fromLocation: person.location,
       toClient,
       toLocation,
-      reason,
+      reason: `${reason}${shiftType ? ` | Turno: ${shiftType} (${shiftHours}h)` : ""}${shiftNotes ? ` | Nota turno: ${shiftNotes}` : ""}`,
       replacedBy: replacementId ? allPersonnel.find(p => p.id === replacementId)?.name : undefined,
       authorizedBy: "Admin",
     };
@@ -285,6 +287,7 @@ function TransferModal({ person, allPersonnel, onClose, onTransfer }: {
             <p className="text-xs text-muted-foreground">Puesto Actual</p>
             <p className="font-medium text-card-foreground">{person.client} — {person.location}</p>
             <p className="text-xs text-muted-foreground">{person.province}</p>
+            {person.shiftType && <p className="text-xs text-muted-foreground mt-1">Turno actual: {person.shiftType} ({person.shiftHours || 12}h)</p>}
           </div>
 
           {/* New assignment */}
@@ -296,6 +299,45 @@ function TransferModal({ person, allPersonnel, onClose, onTransfer }: {
             <label className="text-sm font-medium text-card-foreground block mb-1.5">Nueva Ubicación / Puesto *</label>
             <input type="text" value={toLocation} onChange={e => setToLocation(e.target.value)} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" placeholder="Nombre del puesto" />
           </div>
+
+          {/* Shift configuration */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-3">
+            <label className="text-sm font-semibold text-blue-800 flex items-center gap-1.5">
+              <Clock className="h-4 w-4" /> Configuración de Turno
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-blue-700 block mb-1">Tipo de Turno</label>
+                <select value={shiftType} onChange={e => {
+                  const val = e.target.value as ShiftType;
+                  setShiftType(val);
+                  if (val === "12h") setShiftHours(12);
+                  else if (val === "24h") setShiftHours(24);
+                  else if (val === "24h+") setShiftHours(36);
+                }} className="w-full px-2 py-2 rounded-lg bg-white border border-blue-300 text-foreground text-sm outline-none">
+                  <option value="12h">12 horas</option>
+                  <option value="24h">24 horas</option>
+                  <option value="24h+">24+ horas (extendido)</option>
+                  <option value="Personalizado">Personalizado</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-blue-700 block mb-1">Horas del turno</label>
+                <input type="number" min={1} max={72} value={shiftHours} onChange={e => setShiftHours(Number(e.target.value))}
+                  className="w-full px-2 py-2 rounded-lg bg-white border border-blue-300 text-foreground text-sm outline-none" />
+              </div>
+            </div>
+            {shiftType === "24h+" && (
+              <p className="text-xs text-amber-700 bg-amber-50 rounded px-2 py-1">⚠️ Turnos de 24+ horas requieren consentimiento documentado del vigilante</p>
+            )}
+            <div>
+              <label className="text-xs text-blue-700 block mb-1">Notas del turno</label>
+              <input type="text" value={shiftNotes} onChange={e => setShiftNotes(e.target.value)}
+                className="w-full px-2 py-2 rounded-lg bg-white border border-blue-300 text-foreground text-sm outline-none"
+                placeholder="Ej: Vigilante aceptó turno extendido, rotación semanal..." />
+            </div>
+          </div>
+
           <div>
             <label className="text-sm font-medium text-card-foreground block mb-1.5">Razón del Traslado</label>
             <textarea value={reason} onChange={e => setReason(e.target.value)} rows={2} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none resize-none" placeholder="Motivo del movimiento..." />
@@ -309,7 +351,7 @@ function TransferModal({ person, allPersonnel, onClose, onTransfer }: {
             <select value={replacementId} onChange={e => setReplacementId(e.target.value)} className="w-full px-3 py-2.5 rounded-lg bg-white border border-amber-300 text-foreground text-sm outline-none">
               <option value="">Sin reemplazo (puesto quedará vacante)</option>
               {availableReplacements.map(r => (
-                <option key={r.id} value={r.id}>{r.name || r.employeeCode} — {r.client} / {r.location}</option>
+                <option key={r.id} value={r.id}>{r.name || r.employeeCode} — {r.client} / {r.location}{r.shiftType ? ` (${r.shiftType})` : ""}</option>
               ))}
             </select>
             {!replacementId && (
