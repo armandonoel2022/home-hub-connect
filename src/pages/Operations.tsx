@@ -223,13 +223,12 @@ function PersonnelDashboard({ personnel }: { personnel: ArmedPersonnel[] }) {
           <h3 className="font-heading font-semibold text-sm text-card-foreground mb-3">Tipo de Munición</h3>
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
-              <Pie data={byLethal} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, value }) => `${name} (${value})`}>
+              <Pie data={byLethal} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
                 <Cell fill="#ef4444" />
                 <Cell fill="#3b82f6" />
                 {byLethal.length > 2 && <Cell fill="#9ca3af" />}
               </Pie>
               <Tooltip />
-              <Legend />
             </PieChart>
           </ResponsiveContainer>
         </div>
