@@ -285,21 +285,6 @@ const AdminForms = () => {
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
 
-  const handleReject = (reqId: string) => {
-    if (!user || !rejectReason.trim()) return;
-    const all = getAdminRequests();
-    const idx = all.findIndex(r => r.id === reqId);
-    if (idx === -1) return;
-    all[idx].status = "Rechazada";
-    all[idx].rejectedBy = user.fullName;
-    all[idx].rejectionReason = rejectReason;
-    saveAdminRequests(all);
-    setRejectId(null);
-    setRejectReason("");
-    setRefreshKey(k => k + 1);
-    toast({ title: "Rechazada", description: `Orden ${reqId} rechazada.`, variant: "destructive" });
-  };
-
   const handleBack = () => {
     if (formMode) { setFormMode(null); }
     else if (activeForm) { setActiveForm(null); setItems([{ tipo: "", descripcion: "", cantidad: 1, precio: 0 }]); }
