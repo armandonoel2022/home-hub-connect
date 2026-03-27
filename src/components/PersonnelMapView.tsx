@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import type { ArmedPersonnel } from "@/lib/types";
 
 function parseCoords(coord?: string): [number, number] | null {
@@ -8,9 +8,20 @@ function parseCoords(coord?: string): [number, number] | null {
   return null;
 }
 
-export default function PersonnelMapView({ personnel }: { personnel: ArmedPersonnel[] }) {
+interface Props {
+  personnel: ArmedPersonnel[];
+  onTransfer?: (person: ArmedPersonnel) => void;
+}
+
+export default function PersonnelMapView({ personnel, onTransfer }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
+  const callbackRef = useRef(onTransfer);
+  callbackRef.current = onTransfer;
+
+  // Store personnel in ref for event handlers
+  const personnelRef = useRef(personnel);
+  personnelRef.current = personnel;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -23,7 +34,6 @@ export default function PersonnelMapView({ personnel }: { personnel: ArmedPerson
 
       if (cancelled || !containerRef.current) return;
 
-      // Fix default marker icons
       delete (L.Icon.Default.prototype as any)._getIconUrl;
       L.Icon.Default.mergeOptions({
         iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
@@ -39,13 +49,22 @@ export default function PersonnelMapView({ personnel }: { personnel: ArmedPerson
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
       }).addTo(map);
 
+      // Make transfer handler available globally for popup buttons
+      (window as any).__personnelTransfer = (id: string) => {
+        const p = personnelRef.current.find(x => x.id === id);
+        if (p && callbackRef.current) callbackRef.current(p);
+      };
+
       personnel.forEach(p => {
         const pos = parseCoords(p.coordinates);
         if (!pos) return;
         const condIcon = p.weaponCondition?.includes("buenas") || p.weaponCondition === "En condiciones" ? "🟢" : p.weaponCondition?.includes("mantenimiento") ? "🟡" : "🔴";
+        const shiftLabel = p.shiftType ? `<p><strong>Turno:</strong> ${p.shiftType}${p.shiftHours ? ` (${p.shiftHours}h)` : ""}</p>` : "";
+        const transferBtn = callbackRef.current ? `<button onclick="window.__personnelTransfer('${p.id}')" style="margin-top:6px;padding:4px 10px;background:#f59e0b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:11px;width:100%">⇄ Transferir Puesto</button>` : "";
+
         L.marker(pos).addTo(map).bindPopup(`
-          <div style="font-size:12px;min-width:180px">
-            <p style="font-weight:bold">${condIcon} ${p.name || "Sin nombre"}</p>
+          <div style="font-size:12px;min-width:200px">
+            <p style="font-weight:bold;margin-bottom:4px">${condIcon} ${p.name || "Sin nombre"}</p>
             <p><strong>Código:</strong> ${p.employeeCode}</p>
             <p><strong>Cliente:</strong> ${p.client}</p>
             <p><strong>Puesto:</strong> ${p.location}</p>
@@ -53,17 +72,19 @@ export default function PersonnelMapView({ personnel }: { personnel: ArmedPerson
             <p><strong>Arma:</strong> ${p.weaponType} ${p.weaponBrand}</p>
             <p><strong>Serial:</strong> ${p.weaponSerial}</p>
             <p><strong>Estado:</strong> ${p.weaponCondition}</p>
-            <a href="https://www.google.com/maps?q=${p.coordinates}" target="_blank" style="color:#2563eb;text-decoration:underline">Abrir en Google Maps</a>
+            ${shiftLabel}
+            <a href="https://www.google.com/maps?q=${p.coordinates}" target="_blank" style="color:#2563eb;text-decoration:underline;font-size:11px">Abrir en Google Maps</a>
+            ${transferBtn}
           </div>
         `);
       });
 
-      // Force resize
       setTimeout(() => map.invalidateSize(), 100);
     })();
 
     return () => {
       cancelled = true;
+      if ((window as any).__personnelTransfer) delete (window as any).__personnelTransfer;
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
