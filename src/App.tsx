@@ -44,18 +44,8 @@ import type { IntranetUser } from "./lib/types";
 
 const queryClient = new QueryClient();
 
-// Mock birthday users — replace with API call
-const getBirthdayUsers = (): IntranetUser[] => {
-  const today = new Date();
-  const todayStr = `${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-  const allUsers: IntranetUser[] = [
-    { id: "USR-004", fullName: "Carlos Méndez", email: "carlos.mendez@safeone.com", department: "Contabilidad", position: "Contador", birthday: "03-05", photoUrl: "", allowedDepartments: ["Contabilidad"], isAdmin: false },
-  ];
-  return allUsers.filter((u) => u.birthday === todayStr);
-};
-
 function ProtectedRoutes() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, activeUsers } = useAuth();
 
   if (isLoading) {
     return (
