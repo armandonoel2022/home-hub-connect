@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useArmedPersonnel } from "@/hooks/useApiHooks";
-import type { ArmedPersonnel } from "@/lib/types";
-import { Search, Plus, User, MapPin, X, Phone, Upload, Image, Lock, Trash2, Pencil, Map, List, AlertTriangle } from "lucide-react";
+import type { ArmedPersonnel, PersonnelTransfer } from "@/lib/types";
+import { Search, Plus, User, MapPin, X, Phone, Upload, Image, Lock, Trash2, Pencil, Map, List, AlertTriangle, BarChart3, ArrowRightLeft, History, Shield, ChevronDown, ChevronRight } from "lucide-react";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import "leaflet/dist/leaflet.css";
 
 const statusColors: Record<string, string> = {
@@ -23,8 +24,10 @@ const conditionColors: Record<string, string> = {
   "Arma no estaba disponible": "bg-gray-100 text-gray-500",
 };
 
+const CHART_COLORS = ["#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#3b82f6", "#ec4899", "#6366f1", "#14b8a6"];
+
 const PROVINCES = [
-  "Santiago", "Santo Domingo Oeste", "Santo Domingo Este", 
+  "Santiago", "Santo Domingo Oeste", "Santo Domingo Este",
   "Distrito Nacional Este", "Distrito Nacional Oeste", "Distrito Nacional Norte",
   "San Pedro de Macoris Este", "Este",
 ];
@@ -42,32 +45,39 @@ function parseCoords(coords: string): [number, number] | null {
   return null;
 }
 
-// Lazy-loaded map component
+// ─── Map Component ───
 function PersonnelMap({ personnel }: { personnel: ArmedPersonnel[] }) {
   const [mapReady, setMapReady] = useState(false);
-  const [L, setL] = useState<any>(null);
   const [RL, setRL] = useState<any>(null);
-  const mapRef = useRef<HTMLDivElement>(null);
+  const [mapError, setMapError] = useState(false);
 
   useEffect(() => {
     Promise.all([
       import("leaflet"),
       import("react-leaflet"),
     ]).then(([leaflet, reactLeaflet]) => {
-      // Fix default marker icons
       delete (leaflet.default.Icon.Default.prototype as any)._getIconUrl;
       leaflet.default.Icon.Default.mergeOptions({
         iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
         iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
         shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
       });
-      setL(leaflet.default);
       setRL(reactLeaflet);
       setMapReady(true);
-    });
+    }).catch(() => setMapError(true));
   }, []);
 
   const withCoords = personnel.filter(p => parseCoords(p.coordinates));
+
+  if (mapError) return (
+    <div className="h-[500px] flex items-center justify-center bg-muted rounded-xl">
+      <div className="text-center">
+        <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto mb-2" />
+        <p className="text-muted-foreground font-medium">No se pudo cargar el mapa</p>
+        <p className="text-xs text-muted-foreground mt-1">Puede estar bloqueado por el navegador. Usa los enlaces de Google Maps en la lista.</p>
+      </div>
+    </div>
+  );
 
   if (!mapReady || !RL) return (
     <div className="h-[500px] flex items-center justify-center bg-muted rounded-xl">
@@ -91,24 +101,25 @@ function PersonnelMap({ personnel }: { personnel: ArmedPersonnel[] }) {
     <div className="h-[500px] rounded-xl overflow-hidden border border-border">
       <MapContainer center={center} zoom={9} style={{ height: "100%", width: "100%" }} scrollWheelZoom={true}>
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
         />
         {withCoords.map(p => {
           const pos = parseCoords(p.coordinates)!;
-          const condColor = p.weaponCondition?.includes("buenas") || p.weaponCondition === "En condiciones" ? "🟢" : p.weaponCondition?.includes("mantenimiento") ? "🟡" : "🔴";
+          const condIcon = p.weaponCondition?.includes("buenas") || p.weaponCondition === "En condiciones" ? "🟢" : p.weaponCondition?.includes("mantenimiento") ? "🟡" : "🔴";
           return (
             <Marker key={p.id} position={pos}>
               <Popup>
                 <div className="text-xs min-w-[180px]">
-                  <p className="font-bold text-sm">{condColor} {p.name || "Sin nombre"}</p>
+                  <p className="font-bold text-sm">{condIcon} {p.name || "Sin nombre"}</p>
                   <p><strong>Código:</strong> {p.employeeCode}</p>
                   <p><strong>Cliente:</strong> {p.client}</p>
                   <p><strong>Puesto:</strong> {p.location}</p>
                   <p><strong>Provincia:</strong> {p.province}</p>
                   <p><strong>Arma:</strong> {p.weaponType} {p.weaponBrand}</p>
                   <p><strong>Serial:</strong> {p.weaponSerial}</p>
-                  <p><strong>Estado Arma:</strong> {p.weaponCondition}</p>
+                  <p><strong>Estado:</strong> {p.weaponCondition}</p>
+                  <a href={`https://www.google.com/maps?q=${p.coordinates}`} target="_blank" rel="noopener" className="text-blue-600 underline block mt-1">Abrir en Google Maps</a>
                 </div>
               </Popup>
             </Marker>
@@ -119,6 +130,270 @@ function PersonnelMap({ personnel }: { personnel: ArmedPersonnel[] }) {
   );
 }
 
+// ─── Dashboard Component ───
+function PersonnelDashboard({ personnel }: { personnel: ArmedPersonnel[] }) {
+  const byProvince = useMemo(() => {
+    const map: Record<string, number> = {};
+    personnel.forEach(p => { map[p.province || "Sin provincia"] = (map[p.province || "Sin provincia"] || 0) + 1; });
+    return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+  }, [personnel]);
+
+  const byClient = useMemo(() => {
+    const map: Record<string, number> = {};
+    personnel.forEach(p => { map[p.client || "Sin cliente"] = (map[p.client || "Sin cliente"] || 0) + 1; });
+    return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+  }, [personnel]);
+
+  const byCondition = useMemo(() => {
+    const map: Record<string, number> = {};
+    personnel.forEach(p => { map[p.weaponCondition || "Sin estado"] = (map[p.weaponCondition || "Sin estado"] || 0) + 1; });
+    return Object.entries(map).map(([name, value]) => ({ name, value }));
+  }, [personnel]);
+
+  const byWeaponType = useMemo(() => {
+    const map: Record<string, number> = {};
+    personnel.forEach(p => { if (p.weaponType) map[p.weaponType] = (map[p.weaponType] || 0) + 1; });
+    return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+  }, [personnel]);
+
+  const byLethal = useMemo(() => {
+    let letal = 0, noLetal = 0, sinArma = 0;
+    personnel.forEach(p => {
+      if (p.weaponCaliber === "Letal") letal++;
+      else if (p.weaponCaliber === "No letal") noLetal++;
+      else sinArma++;
+    });
+    return [
+      { name: "Letal", value: letal },
+      { name: "No letal", value: noLetal },
+      ...(sinArma > 0 ? [{ name: "Sin arma", value: sinArma }] : []),
+    ];
+  }, [personnel]);
+
+  // Locations with no assigned personnel (posts without a name)
+  const unfilledPosts = useMemo(() => {
+    return personnel.filter(p => !p.name || p.name.trim() === "").map(p => ({
+      client: p.client,
+      location: p.location,
+      province: p.province,
+    }));
+  }, [personnel]);
+
+  const totalAmmo = personnel.reduce((s, p) => s + (p.ammunitionCount || 0), 0);
+  const withCoords = personnel.filter(p => parseCoords(p.coordinates)).length;
+  const needsMaint = personnel.filter(p => p.weaponCondition === "Falta de mantenimiento").length;
+  const goodCond = personnel.filter(p => p.weaponCondition?.includes("buenas") || p.weaponCondition === "En condiciones").length;
+
+  return (
+    <div className="space-y-6">
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {[
+          { label: "Total Personal", value: personnel.length, color: "bg-card border-border" },
+          { label: "Buen Estado", value: goodCond, color: "bg-emerald-50 border-emerald-200 text-emerald-700" },
+          { label: "Mantenimiento", value: needsMaint, color: "bg-amber-50 border-amber-200 text-amber-700" },
+          { label: "Con Ubicación", value: withCoords, color: "bg-blue-50 border-blue-200 text-blue-700" },
+          { label: "Cápsulas Total", value: totalAmmo, color: "bg-purple-50 border-purple-200 text-purple-700" },
+          { label: "Puestos Vacíos", value: unfilledPosts.length, color: unfilledPosts.length > 0 ? "bg-red-50 border-red-200 text-red-700" : "bg-card border-border" },
+        ].map(kpi => (
+          <div key={kpi.label} className={`border rounded-xl p-3 text-center ${kpi.color}`}>
+            <p className="text-2xl font-bold">{kpi.value}</p>
+            <p className="text-xs">{kpi.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Condition Pie */}
+        <div className="bg-card border border-border rounded-xl p-4">
+          <h3 className="font-heading font-semibold text-sm text-card-foreground mb-3">Estado de Armas</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <PieChart>
+              <Pie data={byCondition} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, value }) => `${name} (${value})`} labelLine={false} fontSize={10}>
+                {byCondition.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Lethal Pie */}
+        <div className="bg-card border border-border rounded-xl p-4">
+          <h3 className="font-heading font-semibold text-sm text-card-foreground mb-3">Tipo de Munición</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <PieChart>
+              <Pie data={byLethal} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, value }) => `${name} (${value})`}>
+                <Cell fill="#ef4444" />
+                <Cell fill="#3b82f6" />
+                {byLethal.length > 2 && <Cell fill="#9ca3af" />}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Province Bar */}
+        <div className="bg-card border border-border rounded-xl p-4">
+          <h3 className="font-heading font-semibold text-sm text-card-foreground mb-3">Personal por Provincia</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={byProvince} layout="vertical">
+              <XAxis type="number" fontSize={10} />
+              <YAxis type="category" dataKey="name" width={140} fontSize={10} />
+              <Tooltip />
+              <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Client Bar */}
+        <div className="bg-card border border-border rounded-xl p-4">
+          <h3 className="font-heading font-semibold text-sm text-card-foreground mb-3">Personal por Cliente (Top 10)</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={byClient.slice(0, 10)} layout="vertical">
+              <XAxis type="number" fontSize={10} />
+              <YAxis type="category" dataKey="name" width={160} fontSize={10} />
+              <Tooltip />
+              <Bar dataKey="value" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Weapon Types */}
+      <div className="bg-card border border-border rounded-xl p-4">
+        <h3 className="font-heading font-semibold text-sm text-card-foreground mb-3">Tipos de Arma</h3>
+        <div className="flex flex-wrap gap-3">
+          {byWeaponType.map((wt, i) => (
+            <div key={wt.name} className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2">
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
+              <span className="text-sm font-medium text-card-foreground">{wt.name}</span>
+              <span className="text-sm font-bold text-foreground">{wt.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Unfilled Posts */}
+      {unfilledPosts.length > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+          <h3 className="font-heading font-semibold text-sm text-red-700 mb-3 flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4" />
+            Puestos sin Vigilante Asignado ({unfilledPosts.length})
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {unfilledPosts.map((p, i) => (
+              <div key={i} className="bg-white rounded-lg px-3 py-2 text-sm">
+                <span className="font-medium text-red-800">{p.client}</span>
+                <span className="text-red-600"> — {p.location}</span>
+                <span className="text-red-400 text-xs block">{p.province}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Transfer Modal ───
+function TransferModal({ person, allPersonnel, onClose, onTransfer }: {
+  person: ArmedPersonnel;
+  allPersonnel: ArmedPersonnel[];
+  onClose: () => void;
+  onTransfer: (transfer: PersonnelTransfer, replacementId?: string) => void;
+}) {
+  const [toClient, setToClient] = useState("");
+  const [toLocation, setToLocation] = useState("");
+  const [reason, setReason] = useState("");
+  const [replacementId, setReplacementId] = useState("");
+
+  // Available replacements: active personnel NOT at this same location
+  const availableReplacements = allPersonnel.filter(p =>
+    p.id !== person.id && p.status === "Activo" && !(p.client === person.client && p.location === person.location)
+  );
+
+  const handleSubmit = () => {
+    if (!toClient || !toLocation) return;
+    const transfer: PersonnelTransfer = {
+      id: `TR-${Date.now()}`,
+      date: new Date().toISOString(),
+      fromClient: person.client,
+      fromLocation: person.location,
+      toClient,
+      toLocation,
+      reason,
+      replacedBy: replacementId ? allPersonnel.find(p => p.id === replacementId)?.name : undefined,
+      authorizedBy: "Admin",
+    };
+    onTransfer(transfer, replacementId || undefined);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div className="bg-card rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="flex items-center justify-between p-5 border-b border-border">
+          <div>
+            <h2 className="font-heading font-bold text-lg text-card-foreground flex items-center gap-2">
+              <ArrowRightLeft className="h-5 w-5" /> Transferir Personal
+            </h2>
+            <p className="text-xs text-muted-foreground mt-1">Mover a {person.name || person.employeeCode} de su puesto actual</p>
+          </div>
+          <button onClick={onClose} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {/* Current assignment */}
+          <div className="bg-muted rounded-lg p-3">
+            <p className="text-xs text-muted-foreground">Puesto Actual</p>
+            <p className="font-medium text-card-foreground">{person.client} — {person.location}</p>
+            <p className="text-xs text-muted-foreground">{person.province}</p>
+          </div>
+
+          {/* New assignment */}
+          <div>
+            <label className="text-sm font-medium text-card-foreground block mb-1.5">Nuevo Cliente *</label>
+            <input type="text" value={toClient} onChange={e => setToClient(e.target.value)} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" placeholder="Nombre del cliente" />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-card-foreground block mb-1.5">Nueva Ubicación / Puesto *</label>
+            <input type="text" value={toLocation} onChange={e => setToLocation(e.target.value)} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" placeholder="Nombre del puesto" />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-card-foreground block mb-1.5">Razón del Traslado</label>
+            <textarea value={reason} onChange={e => setReason(e.target.value)} rows={2} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none resize-none" placeholder="Motivo del movimiento..." />
+          </div>
+
+          {/* Replacement */}
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+            <label className="text-sm font-medium text-amber-800 block mb-1.5 flex items-center gap-1.5">
+              <Shield className="h-4 w-4" /> ¿Quién cubrirá el puesto de {person.location}?
+            </label>
+            <select value={replacementId} onChange={e => setReplacementId(e.target.value)} className="w-full px-3 py-2.5 rounded-lg bg-white border border-amber-300 text-foreground text-sm outline-none">
+              <option value="">Sin reemplazo (puesto quedará vacante)</option>
+              {availableReplacements.map(r => (
+                <option key={r.id} value={r.id}>{r.name || r.employeeCode} — {r.client} / {r.location}</option>
+              ))}
+            </select>
+            {!replacementId && (
+              <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" /> El puesto quedará sin cobertura
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="p-5 border-t border-border flex gap-3 justify-end">
+          <button onClick={onClose} className="px-5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">Cancelar</button>
+          <button onClick={handleSubmit} disabled={!toClient || !toLocation} className="btn-gold text-sm disabled:opacity-50 disabled:cursor-not-allowed">Confirmar Traslado</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ───
 const OperationsPage = () => {
   const { user } = useAuth();
   const { data: personnel, setData: setPersonnel, create: createPersonnel, update: updatePersonnel, remove: removePersonnel } = useArmedPersonnel();
@@ -128,10 +403,25 @@ const OperationsPage = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Partial<ArmedPersonnel>>({ status: "Activo" });
   const [photoPreview, setPhotoPreview] = useState<string>("");
-  const [viewMode, setViewMode] = useState<"list" | "map">("list");
+  const [viewMode, setViewMode] = useState<"dashboard" | "list" | "map">("dashboard");
   const [filterProvince, setFilterProvince] = useState("");
   const [filterCondition, setFilterCondition] = useState("");
+  const [transferTarget, setTransferTarget] = useState<ArmedPersonnel | null>(null);
+  const [showDeletedLog, setShowDeletedLog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Deleted log from localStorage
+  const [deletedLog, setDeletedLog] = useState<ArmedPersonnel[]>(() => {
+    try {
+      const stored = localStorage.getItem("safeone_personnel_deleted");
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  });
+
+  const saveDeletedLog = (log: ArmedPersonnel[]) => {
+    setDeletedLog(log);
+    localStorage.setItem("safeone_personnel_deleted", JSON.stringify(log));
+  };
 
   const canView = user?.isAdmin || user?.department === "Operaciones";
 
@@ -162,25 +452,14 @@ const OperationsPage = () => {
     return matchSearch && matchProvince && matchCondition;
   });
 
-  // Stats
   const totalCount = personnel.length;
-  const withCoords = personnel.filter(p => parseCoords(p.coordinates)).length;
-  const needsMaintenance = personnel.filter(p => p.weaponCondition === "Falta de mantenimiento").length;
-  const inGoodCondition = personnel.filter(p => p.weaponCondition?.includes("buenas") || p.weaponCondition === "En condiciones").length;
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!["image/jpeg", "image/png"].includes(file.type)) {
-      alert("Solo se permiten archivos JPG o PNG");
-      return;
-    }
+    if (!["image/jpeg", "image/png"].includes(file.type)) { alert("Solo se permiten archivos JPG o PNG"); return; }
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      const url = ev.target?.result as string;
-      setPhotoPreview(url);
-      setForm({ ...form, photo: url });
-    };
+    reader.onload = (ev) => { const url = ev.target?.result as string; setPhotoPreview(url); setForm({ ...form, photo: url }); };
     reader.readAsDataURL(file);
   };
 
@@ -210,70 +489,91 @@ const OperationsPage = () => {
       licenseExpiry: form.licenseExpiry || "",
       assignedDate: form.assignedDate || new Date().toISOString().split("T")[0],
       status: (form.status as ArmedPersonnel["status"]) || "Activo",
+      transferHistory: [],
     };
-    try {
-      await createPersonnel(newP as any);
-    } catch {
-      // Fallback: add locally
-      setPersonnel((prev) => [{ ...newP, id: newP.id || `AP-${Date.now()}` } as ArmedPersonnel, ...prev]);
-    }
-    setShowAdd(false);
-    setEditingId(null);
-    setForm({ status: "Activo" });
-    setPhotoPreview("");
+    try { await createPersonnel(newP as any); }
+    catch { setPersonnel((prev) => [{ ...newP, id: newP.id || `AP-${Date.now()}` } as ArmedPersonnel, ...prev]); }
+    setShowAdd(false); setEditingId(null); setForm({ status: "Activo" }); setPhotoPreview("");
   };
 
   const handleStartEdit = (p: ArmedPersonnel) => {
-    setForm({ ...p });
-    setPhotoPreview(p.photo || "");
-    setEditingId(p.id);
-    setShowAdd(true);
-    setSelected(null);
+    setForm({ ...p }); setPhotoPreview(p.photo || ""); setEditingId(p.id); setShowAdd(true); setSelected(null);
   };
 
   const handleSaveEdit = async () => {
     if (!editingId) return;
     const updateData: Partial<ArmedPersonnel> = {
-      employeeCode: form.employeeCode || "",
-      name: form.name || "",
-      photo: form.photo || "",
-      client: form.client || "",
-      location: form.location || "",
-      province: form.province || "",
-      position: form.position || "",
-      supervisor: form.supervisor || "",
-      fleetPhone: form.fleetPhone || "",
-      personalPhone: form.personalPhone || "",
-      address: form.address || "",
-      weaponType: form.weaponType || "",
-      weaponSerial: form.weaponSerial || "",
-      weaponBrand: form.weaponBrand || "",
-      weaponCaliber: form.weaponCaliber || "",
-      ammunitionCount: Number(form.ammunitionCount) || 0,
-      coordinates: form.coordinates || "",
-      weaponCondition: form.weaponCondition || "",
-      licenseNumber: form.licenseNumber || "",
-      licenseExpiry: form.licenseExpiry || "",
+      employeeCode: form.employeeCode || "", name: form.name || "", photo: form.photo || "",
+      client: form.client || "", location: form.location || "", province: form.province || "",
+      position: form.position || "", supervisor: form.supervisor || "",
+      fleetPhone: form.fleetPhone || "", personalPhone: form.personalPhone || "",
+      address: form.address || "", weaponType: form.weaponType || "",
+      weaponSerial: form.weaponSerial || "", weaponBrand: form.weaponBrand || "",
+      weaponCaliber: form.weaponCaliber || "", ammunitionCount: Number(form.ammunitionCount) || 0,
+      coordinates: form.coordinates || "", weaponCondition: form.weaponCondition || "",
+      licenseNumber: form.licenseNumber || "", licenseExpiry: form.licenseExpiry || "",
       status: (form.status as ArmedPersonnel["status"]) || "Activo",
     };
-    try {
-      await updatePersonnel(editingId, updateData);
-    } catch {
-      setPersonnel((prev) => prev.map(p => p.id === editingId ? { ...p, ...updateData } : p));
-    }
-    setShowAdd(false);
-    setEditingId(null);
-    setForm({ status: "Activo" });
-    setPhotoPreview("");
+    try { await updatePersonnel(editingId, updateData); }
+    catch { setPersonnel((prev) => prev.map(p => p.id === editingId ? { ...p, ...updateData } : p)); }
+    setShowAdd(false); setEditingId(null); setForm({ status: "Activo" }); setPhotoPreview("");
   };
 
   const handleDelete = async (p: ArmedPersonnel) => {
-    if (!window.confirm(`¿Eliminar registro de ${p.name || p.employeeCode}?`)) return;
+    const reason = window.prompt(`¿Razón para eliminar a ${p.name || p.employeeCode}?`);
+    if (reason === null) return;
+    // Log deletion
+    const deletedEntry = { ...p, deletedAt: new Date().toISOString(), deletedBy: user?.fullName || "Admin", deletedReason: reason };
+    saveDeletedLog([deletedEntry, ...deletedLog]);
+    try { await removePersonnel(p.id); }
+    catch { setPersonnel((prev) => prev.filter(per => per.id !== p.id)); }
+  };
+
+  const handleTransfer = async (transfer: PersonnelTransfer, replacementId?: string) => {
+    if (!transferTarget) return;
+    const history = [...(transferTarget.transferHistory || []), transfer];
+    // Update the transferred person
     try {
-      await removePersonnel(p.id);
+      await updatePersonnel(transferTarget.id, {
+        client: transfer.toClient,
+        location: transfer.toLocation,
+        transferHistory: history,
+      });
     } catch {
-      setPersonnel((prev) => prev.filter(per => per.id !== p.id));
+      setPersonnel(prev => prev.map(p => p.id === transferTarget.id
+        ? { ...p, client: transfer.toClient, location: transfer.toLocation, transferHistory: history }
+        : p
+      ));
     }
+    // If replacement selected, move them to the vacated post
+    if (replacementId) {
+      const replacement = personnel.find(p => p.id === replacementId);
+      if (replacement) {
+        const replHistory: PersonnelTransfer = {
+          id: `TR-${Date.now()}-R`,
+          date: new Date().toISOString(),
+          fromClient: replacement.client,
+          fromLocation: replacement.location,
+          toClient: transfer.fromClient,
+          toLocation: transfer.fromLocation,
+          reason: `Reemplazo de ${transferTarget.name || transferTarget.employeeCode}`,
+          authorizedBy: "Admin",
+        };
+        try {
+          await updatePersonnel(replacementId, {
+            client: transfer.fromClient,
+            location: transfer.fromLocation,
+            transferHistory: [...(replacement.transferHistory || []), replHistory],
+          });
+        } catch {
+          setPersonnel(prev => prev.map(p => p.id === replacementId
+            ? { ...p, client: transfer.fromClient, location: transfer.fromLocation, transferHistory: [...(p.transferHistory || []), replHistory] }
+            : p
+          ));
+        }
+      }
+    }
+    setTransferTarget(null);
   };
 
   const formFields = [
@@ -304,66 +604,56 @@ const OperationsPage = () => {
                 <h1 className="font-heading font-bold text-2xl text-secondary-foreground">
                   Personal <span className="gold-accent-text">Armado</span>
                 </h1>
-                <p className="text-muted-foreground text-sm mt-1">Registro de armas, ubicaciones y vigilantes — {totalCount} registros</p>
+                <p className="text-muted-foreground text-sm mt-1">Control operativo — {totalCount} registros</p>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setViewMode(viewMode === "list" ? "map" : "list")}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-muted text-sm font-medium text-card-foreground hover:bg-border transition-colors"
-                >
-                  {viewMode === "list" ? <Map className="h-4 w-4" /> : <List className="h-4 w-4" />}
-                  {viewMode === "list" ? "Ver Mapa" : "Ver Lista"}
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* View mode tabs */}
+                {(["dashboard", "list", "map"] as const).map(mode => (
+                  <button key={mode} onClick={() => setViewMode(mode)}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${viewMode === mode ? "bg-primary text-primary-foreground" : "bg-muted text-card-foreground hover:bg-border"}`}>
+                    {mode === "dashboard" && <BarChart3 className="h-4 w-4" />}
+                    {mode === "list" && <List className="h-4 w-4" />}
+                    {mode === "map" && <Map className="h-4 w-4" />}
+                    {mode === "dashboard" ? "Dashboard" : mode === "list" ? "Lista" : "Mapa"}
+                  </button>
+                ))}
+                <button onClick={() => setShowDeletedLog(!showDeletedLog)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-muted text-card-foreground hover:bg-border transition-colors">
+                  <History className="h-4 w-4" /> Eliminados ({deletedLog.length})
                 </button>
                 <button onClick={() => { setForm({ status: "Activo" }); setEditingId(null); setPhotoPreview(""); setShowAdd(true); }} className="btn-gold flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  Registrar
+                  <Plus className="h-4 w-4" /> Registrar
                 </button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="px-6 py-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-card border border-border rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-foreground">{totalCount}</p>
-            <p className="text-xs text-muted-foreground">Total</p>
+        {/* DASHBOARD VIEW */}
+        {viewMode === "dashboard" && (
+          <div className="px-6 py-4">
+            <PersonnelDashboard personnel={personnel} />
           </div>
-          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-emerald-700">{inGoodCondition}</p>
-            <p className="text-xs text-emerald-600">Buen Estado</p>
-          </div>
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-amber-700">{needsMaintenance}</p>
-            <p className="text-xs text-amber-600">Mantenimiento</p>
-          </div>
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-blue-700">{withCoords}</p>
-            <p className="text-xs text-blue-600">Con Ubicación</p>
-          </div>
-        </div>
+        )}
 
-        {/* Filters */}
-        <div className="px-6 py-2 flex flex-wrap gap-3">
-          <div className="relative flex-1 min-w-[200px] max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Buscar por nombre, cliente, puesto, código, serial..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-card border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none"
-            />
+        {/* Filters for list/map */}
+        {(viewMode === "list" || viewMode === "map") && (
+          <div className="px-6 py-2 flex flex-wrap gap-3">
+            <div className="relative flex-1 min-w-[200px] max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input type="text" placeholder="Buscar por nombre, cliente, puesto, código, serial..." value={search} onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-card border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" />
+            </div>
+            <select value={filterProvince} onChange={e => setFilterProvince(e.target.value)} className="px-3 py-2.5 rounded-lg bg-card border border-border text-foreground text-sm">
+              <option value="">Todas las Provincias</option>
+              {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <select value={filterCondition} onChange={e => setFilterCondition(e.target.value)} className="px-3 py-2.5 rounded-lg bg-card border border-border text-foreground text-sm">
+              <option value="">Todas las Condiciones</option>
+              {WEAPON_CONDITIONS.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
           </div>
-          <select value={filterProvince} onChange={e => setFilterProvince(e.target.value)} className="px-3 py-2.5 rounded-lg bg-card border border-border text-foreground text-sm">
-            <option value="">Todas las Provincias</option>
-            {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
-          </select>
-          <select value={filterCondition} onChange={e => setFilterCondition(e.target.value)} className="px-3 py-2.5 rounded-lg bg-card border border-border text-foreground text-sm">
-            <option value="">Todas las Condiciones</option>
-            {WEAPON_CONDITIONS.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
+        )}
 
         {/* MAP VIEW */}
         {viewMode === "map" && (
@@ -420,31 +710,27 @@ const OperationsPage = () => {
                         </td>
                         <td className="px-3 py-2 text-center">
                           {hasCoords ? (
-                            <a
-                              href={`https://www.google.com/maps?q=${p.coordinates}`}
-                              target="_blank"
-                              rel="noopener"
-                              onClick={e => e.stopPropagation()}
-                              className="text-blue-600 hover:text-blue-800"
-                              title="Ver en Google Maps"
-                            >
+                            <a href={`https://www.google.com/maps?q=${p.coordinates}`} target="_blank" rel="noopener" onClick={e => e.stopPropagation()} className="text-blue-600 hover:text-blue-800" title="Ver en Google Maps">
                               <MapPin className="h-4 w-4" />
                             </a>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
+                          ) : <span className="text-muted-foreground">—</span>}
                         </td>
                         <td className="px-3 py-2">
-                          {user?.isAdmin && (
-                            <div className="flex gap-1">
-                              <button onClick={(e) => { e.stopPropagation(); handleStartEdit(p); }} className="p-1 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600" title="Editar">
-                                <Pencil className="h-3.5 w-3.5" />
-                              </button>
-                              <button onClick={(e) => { e.stopPropagation(); handleDelete(p); }} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-600" title="Eliminar">
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          )}
+                          <div className="flex gap-1">
+                            <button onClick={(e) => { e.stopPropagation(); setTransferTarget(p); }} className="p-1 rounded hover:bg-amber-50 text-muted-foreground hover:text-amber-600" title="Transferir">
+                              <ArrowRightLeft className="h-3.5 w-3.5" />
+                            </button>
+                            {user?.isAdmin && (
+                              <>
+                                <button onClick={(e) => { e.stopPropagation(); handleStartEdit(p); }} className="p-1 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600" title="Editar">
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </button>
+                                <button onClick={(e) => { e.stopPropagation(); handleDelete(p); }} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-600" title="Eliminar">
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -458,6 +744,44 @@ const OperationsPage = () => {
           </div>
         )}
 
+        {/* Deleted Log Panel */}
+        {showDeletedLog && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-card rounded-xl w-full max-w-2xl max-h-[80vh] overflow-y-auto shadow-2xl">
+              <div className="flex items-center justify-between p-5 border-b border-border">
+                <h2 className="font-heading font-bold text-lg text-card-foreground flex items-center gap-2">
+                  <History className="h-5 w-5" /> Registros Eliminados
+                </h2>
+                <button onClick={() => setShowDeletedLog(false)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
+              </div>
+              <div className="p-5">
+                {deletedLog.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">No hay registros eliminados</p>
+                ) : (
+                  <div className="space-y-3">
+                    {deletedLog.map((d, i) => (
+                      <div key={i} className="bg-red-50 border border-red-200 rounded-lg p-3">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-medium text-red-800">{d.name || d.employeeCode}</p>
+                            <p className="text-xs text-red-600">{d.client} — {d.location} ({d.province})</p>
+                            <p className="text-xs text-red-500 mt-1">Arma: {d.weaponType} {d.weaponBrand} Serial: {d.weaponSerial}</p>
+                          </div>
+                          <div className="text-right text-xs text-red-500">
+                            <p>{d.deletedAt ? new Date(d.deletedAt).toLocaleDateString("es-DO") : "—"}</p>
+                            <p>por {d.deletedBy || "—"}</p>
+                          </div>
+                        </div>
+                        {d.deletedReason && <p className="text-xs text-red-700 mt-2 bg-red-100 rounded px-2 py-1">Razón: {d.deletedReason}</p>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Detail Modal */}
         {selected && (
           <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
@@ -467,9 +791,7 @@ const OperationsPage = () => {
                   <h2 className="font-heading font-bold text-lg text-card-foreground">{selected.name || "Sin nombre"}</h2>
                   <p className="text-xs text-muted-foreground font-mono">{selected.employeeCode}</p>
                 </div>
-                <button onClick={() => setSelected(null)} className="p-1 hover:bg-muted rounded-lg">
-                  <X className="h-5 w-5 text-muted-foreground" />
-                </button>
+                <button onClick={() => setSelected(null)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
               </div>
               {selected.photo && (
                 <div className="px-5 pt-5 flex justify-center">
@@ -488,15 +810,12 @@ const OperationsPage = () => {
                     ["Estado", selected.status],
                     ["Cel. Empresa", selected.fleetPhone || "—"],
                     ["Cel. Personal", selected.personalPhone || "—"],
-                    ["Dirección", selected.address || "—"],
                     ["Tipo de Arma", selected.weaponType || "—"],
                     ["Marca", selected.weaponBrand || "—"],
                     ["Tipo Munición", selected.weaponCaliber || "—"],
                     ["Cápsulas", String(selected.ammunitionCount)],
                     ["Serial Arma", selected.weaponSerial || "—"],
                     ["Estado del Arma", selected.weaponCondition || "—"],
-                    ["Nro. Licencia", selected.licenseNumber || "—"],
-                    ["Venc. Licencia", selected.licenseExpiry || "—"],
                     ["Coordenadas", selected.coordinates || "—"],
                   ].map(([label, val]) => (
                     <div key={label} className="bg-muted rounded-lg p-3">
@@ -505,22 +824,42 @@ const OperationsPage = () => {
                     </div>
                   ))}
                 </div>
-                {/* Mini map in detail */}
+
+                {/* Transfer History */}
+                {selected.transferHistory && selected.transferHistory.length > 0 && (
+                  <div className="mt-4">
+                    <h3 className="text-sm font-semibold text-card-foreground mb-2 flex items-center gap-1.5">
+                      <ArrowRightLeft className="h-4 w-4" /> Historial de Traslados
+                    </h3>
+                    <div className="space-y-2">
+                      {selected.transferHistory.map((t) => (
+                        <div key={t.id} className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-xs">
+                          <div className="flex items-center gap-1 text-amber-800">
+                            <span className="font-medium">{t.fromClient}/{t.fromLocation}</span>
+                            <ChevronRight className="h-3 w-3" />
+                            <span className="font-medium">{t.toClient}/{t.toLocation}</span>
+                          </div>
+                          <p className="text-amber-600 mt-0.5">{new Date(t.date).toLocaleDateString("es-DO")} — {t.reason || "Sin razón"}</p>
+                          {t.replacedBy && <p className="text-amber-700">Reemplazo: {t.replacedBy}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {parseCoords(selected.coordinates) && (
                   <div className="mt-4">
-                    <a
-                      href={`https://www.google.com/maps?q=${selected.coordinates}`}
-                      target="_blank"
-                      rel="noopener"
-                      className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-blue-50 text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors w-full justify-center"
-                    >
-                      <MapPin className="h-4 w-4" />
-                      Ver ubicación en Google Maps
+                    <a href={`https://www.google.com/maps?q=${selected.coordinates}`} target="_blank" rel="noopener"
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-blue-50 text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors w-full justify-center">
+                      <MapPin className="h-4 w-4" /> Ver ubicación en Google Maps
                     </a>
                   </div>
                 )}
               </div>
               <div className="p-5 border-t border-border flex justify-end gap-2">
+                <button onClick={() => setTransferTarget(selected)} className="px-4 py-2 rounded-lg text-sm font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors flex items-center gap-1.5">
+                  <ArrowRightLeft className="h-3.5 w-3.5" /> Transferir
+                </button>
                 {user?.isAdmin && (
                   <button onClick={() => handleStartEdit(selected)} className="px-4 py-2 rounded-lg text-sm font-medium bg-muted text-card-foreground hover:bg-border transition-colors flex items-center gap-1.5">
                     <Pencil className="h-3.5 w-3.5" /> Editar
@@ -532,33 +871,35 @@ const OperationsPage = () => {
           </div>
         )}
 
+        {/* Transfer Modal */}
+        {transferTarget && (
+          <TransferModal
+            person={transferTarget}
+            allPersonnel={personnel}
+            onClose={() => setTransferTarget(null)}
+            onTransfer={handleTransfer}
+          />
+        )}
+
         {/* Add/Edit Modal */}
         {showAdd && (
           <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
             <div className="bg-card rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
               <div className="flex items-center justify-between p-5 border-b border-border">
                 <h2 className="font-heading font-bold text-lg text-card-foreground">{editingId ? "Editar Personal Armado" : "Registrar Personal Armado"}</h2>
-                <button onClick={() => { setShowAdd(false); setEditingId(null); setPhotoPreview(""); setForm({ status: "Activo" }); }} className="p-1 hover:bg-muted rounded-lg">
-                  <X className="h-5 w-5 text-muted-foreground" />
-                </button>
+                <button onClick={() => { setShowAdd(false); setEditingId(null); setPhotoPreview(""); setForm({ status: "Activo" }); }} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
               </div>
               <div className="p-5 space-y-4">
-                {/* Photo upload */}
                 <div>
                   <label className="text-sm font-medium text-card-foreground block mb-1.5">Foto</label>
                   <div className="flex items-center gap-4">
                     <div className="w-20 h-20 rounded-xl bg-muted flex items-center justify-center overflow-hidden border-2 border-dashed border-border">
-                      {photoPreview ? (
-                        <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
-                      ) : (
-                        <Image className="h-8 w-8 text-muted-foreground" />
-                      )}
+                      {photoPreview ? <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" /> : <Image className="h-8 w-8 text-muted-foreground" />}
                     </div>
                     <div>
                       <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png" onChange={handlePhotoUpload} className="hidden" />
                       <button type="button" onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-sm font-medium text-card-foreground hover:bg-border transition-colors">
-                        <Upload className="h-4 w-4" />
-                        Subir foto
+                        <Upload className="h-4 w-4" /> Subir foto
                       </button>
                     </div>
                   </div>
@@ -567,17 +908,12 @@ const OperationsPage = () => {
                 {formFields.map(({ key, label }) => (
                   <div key={key}>
                     <label className="text-sm font-medium text-card-foreground block mb-1.5">{label}</label>
-                    <input
-                      type="text"
-                      value={(form as any)[key] || ""}
-                      onChange={(e) => setForm({ ...form, [key]: key === "ammunitionCount" ? Number(e.target.value) || 0 : e.target.value })}
+                    <input type="text" value={(form as any)[key] || ""} onChange={(e) => setForm({ ...form, [key]: key === "ammunitionCount" ? Number(e.target.value) || 0 : e.target.value })}
                       className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none"
-                      placeholder={key === "coordinates" ? "ej: 18.49, -69.99" : ""}
-                    />
+                      placeholder={key === "coordinates" ? "ej: 18.49, -69.99" : ""} />
                   </div>
                 ))}
 
-                {/* Province select */}
                 <div>
                   <label className="text-sm font-medium text-card-foreground block mb-1.5">Provincia *</label>
                   <select value={form.province || ""} onChange={e => setForm({ ...form, province: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none">
@@ -586,7 +922,6 @@ const OperationsPage = () => {
                   </select>
                 </div>
 
-                {/* Weapon caliber (Letal/No letal) */}
                 <div>
                   <label className="text-sm font-medium text-card-foreground block mb-1.5">Tipo de Munición</label>
                   <select value={form.weaponCaliber || ""} onChange={e => setForm({ ...form, weaponCaliber: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none">
@@ -596,7 +931,6 @@ const OperationsPage = () => {
                   </select>
                 </div>
 
-                {/* Weapon condition */}
                 <div>
                   <label className="text-sm font-medium text-card-foreground block mb-1.5">Estado del Arma</label>
                   <select value={form.weaponCondition || ""} onChange={e => setForm({ ...form, weaponCondition: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none">
@@ -613,9 +947,7 @@ const OperationsPage = () => {
                   <div>
                     <label className="text-sm font-medium text-card-foreground block mb-1.5">Estado Vigilante</label>
                     <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as ArmedPersonnel["status"] })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none">
-                      {["Activo", "Licencia", "Inactivo"].map((s) => (
-                        <option key={s}>{s}</option>
-                      ))}
+                      {["Activo", "Licencia", "Inactivo"].map((s) => <option key={s}>{s}</option>)}
                     </select>
                   </div>
                 </div>
