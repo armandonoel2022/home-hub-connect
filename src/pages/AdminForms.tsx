@@ -776,7 +776,7 @@ function StatusBadge({ status }: { status: string }) {
     "Aprobada": "bg-emerald-100 text-emerald-800 border-emerald-200",
     "Declinada": "bg-red-100 text-red-800 border-red-200",
     "Rechazada": "bg-red-100 text-red-800 border-red-200",
-    "Sin Aprobación": "bg-blue-100 text-blue-800 border-blue-200",
+    "Sin Aprobación": "bg-muted text-muted-foreground border-border",
   };
   return (
     <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full border", colorMap[status] || "bg-muted text-muted-foreground")}>
