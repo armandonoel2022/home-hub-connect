@@ -523,7 +523,7 @@ const OperationsPage = () => {
     const reason = window.prompt(`¿Razón para eliminar a ${p.name || p.employeeCode}?`);
     if (reason === null) return;
     // Log deletion
-    const deletedEntry = { ...p, deletedAt: new Date().toISOString(), deletedBy: user?.name || "Admin", deletedReason: reason };
+    const deletedEntry = { ...p, deletedAt: new Date().toISOString(), deletedBy: user?.fullName || "Admin", deletedReason: reason };
     saveDeletedLog([deletedEntry, ...deletedLog]);
     try { await removePersonnel(p.id); }
     catch { setPersonnel((prev) => prev.filter(per => per.id !== p.id)); }
