@@ -15,9 +15,12 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from "@/components/ui/dialog";
+import {
   ArrowLeft, Printer, ShoppingCart, FileText, Send, Inbox,
   CheckCircle2, Clock, AlertCircle, ThumbsUp, ThumbsDown,
-  Plus, Trash2,
+  Plus, Trash2, ShieldCheck, ShieldX, Ban,
 } from "lucide-react";
 import safeOneLogo from "@/assets/safeone-logo.png";
 import safeOneLetterhead from "@/assets/safeone-letterhead.png";
@@ -34,7 +37,7 @@ const formConfig: { key: FormType; label: string; icon: any; color: string; desc
 interface AdminRequest {
   id: string;
   formType: FormType;
-  status: string;
+  status: string; // "Pendiente" | "Aprobada" | "Rechazada" | "Declinada" | "Sin Aprobación"
   requestedBy: string;
   requestedByName: string;
   department: string;
@@ -67,6 +70,12 @@ const AdminForms = () => {
   const [activeView, setActiveView] = useState<"forms" | "my-requests" | "approvals">("forms");
   const [refreshKey, setRefreshKey] = useState(0);
   const printRef = useRef<HTMLDivElement>(null);
+
+  // Approval overlay states
+  const [showApprovalOverlay, setShowApprovalOverlay] = useState(false);
+  const [approvalTargetId, setApprovalTargetId] = useState<string | null>(null);
+  const [approvalComment, setApprovalComment] = useState("");
+  const [showResultOverlay, setShowResultOverlay] = useState<{ type: "approved" | "declined"; id: string } | null>(null);
 
   // Items state for line items
   const [items, setItems] = useState<{ tipo?: string; descripcion: string; cantidad: number; precio: number }[]>([
@@ -155,8 +164,7 @@ const AdminForms = () => {
     setTimeout(() => { printWindow.print(); printWindow.close(); }, 600);
   };
 
-  const handleVirtualSubmit = () => {
-    if (!user || !activeForm) return;
+  const buildRequest = (status: string): AdminRequest => {
     const formData: Record<string, string> = {};
     const formEl = printRef.current;
     if (formEl) {
@@ -179,13 +187,13 @@ const AdminForms = () => {
       subtotal: it.cantidad * it.precio,
     }));
 
-    const req: AdminRequest = {
+    return {
       id: `ADM-${Date.now().toString(36).toUpperCase()}`,
-      formType: activeForm,
-      status: "Pendiente",
-      requestedBy: user.id,
-      requestedByName: user.fullName,
-      department: user.department,
+      formType: activeForm!,
+      status,
+      requestedBy: user!.id,
+      requestedByName: user!.fullName,
+      department: user!.department,
       requestedAt: new Date().toISOString(),
       formData,
       items: lineItems,
@@ -197,12 +205,30 @@ const AdminForms = () => {
       rejectedBy: null,
       rejectionReason: null,
     };
+  };
 
+  const handleVirtualSubmit = () => {
+    if (!user || !activeForm) return;
+    const req = buildRequest("Pendiente");
     const all = getAdminRequests();
     all.unshift(req);
     saveAdminRequests(all);
     setRefreshKey(k => k + 1);
-    toast({ title: "Orden Enviada", description: `${formConfig.find(f => f.key === activeForm)?.label} #${req.id} enviada para aprobación.` });
+    toast({ title: "Orden Enviada", description: `${formConfig.find(f => f.key === activeForm)?.label} #${req.id} enviada para aprobación de Aurelio Pérez.` });
+    setActiveForm(null);
+    setFormMode(null);
+    setItems([{ tipo: "", descripcion: "", cantidad: 1, precio: 0 }]);
+    setActiveView("my-requests");
+  };
+
+  const handleNoApprovalSubmit = () => {
+    if (!user || !activeForm) return;
+    const req = buildRequest("Sin Aprobación");
+    const all = getAdminRequests();
+    all.unshift(req);
+    saveAdminRequests(all);
+    setRefreshKey(k => k + 1);
+    toast({ title: "Orden Registrada", description: `${formConfig.find(f => f.key === activeForm)?.label} #${req.id} registrada sin requerir aprobación.` });
     setActiveForm(null);
     setFormMode(null);
     setItems([{ tipo: "", descripcion: "", cantidad: 1, precio: 0 }]);
@@ -210,35 +236,54 @@ const AdminForms = () => {
   };
 
   const handleApprove = (reqId: string) => {
-    if (!user) return;
+    setApprovalTargetId(reqId);
+    setShowApprovalOverlay(true);
+    setApprovalComment("");
+  };
+
+  const confirmApprove = () => {
+    if (!approvalTargetId) return;
     const all = getAdminRequests();
-    const idx = all.findIndex(r => r.id === reqId);
+    const idx = all.findIndex(r => r.id === approvalTargetId);
     if (idx === -1) return;
     all[idx].status = "Aprobada";
-    all[idx].approvedBy = user.fullName;
+    all[idx].approvedBy = "Aurelio Pérez";
     all[idx].approvedAt = new Date().toISOString();
+    if (approvalComment.trim()) {
+      all[idx].rejectionReason = approvalComment; // reuse field for comments
+    }
     saveAdminRequests(all);
+    setShowApprovalOverlay(false);
+    setShowResultOverlay({ type: "approved", id: approvalTargetId });
+    setApprovalTargetId(null);
+    setApprovalComment("");
     setRefreshKey(k => k + 1);
-    toast({ title: "Aprobada", description: `Orden ${reqId} aprobada.` });
+  };
+
+  const handleDecline = (reqId: string) => {
+    setApprovalTargetId(reqId);
+    setApprovalComment("");
+    setRejectId(reqId);
+  };
+
+  const confirmDecline = () => {
+    if (!user || !approvalTargetId) return;
+    const all = getAdminRequests();
+    const idx = all.findIndex(r => r.id === approvalTargetId);
+    if (idx === -1) return;
+    all[idx].status = "Declinada";
+    all[idx].rejectedBy = "Aurelio Pérez";
+    all[idx].rejectionReason = rejectReason.trim() || null;
+    saveAdminRequests(all);
+    setRejectId(null);
+    setRejectReason("");
+    setShowResultOverlay({ type: "declined", id: approvalTargetId });
+    setApprovalTargetId(null);
+    setRefreshKey(k => k + 1);
   };
 
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
-
-  const handleReject = (reqId: string) => {
-    if (!user || !rejectReason.trim()) return;
-    const all = getAdminRequests();
-    const idx = all.findIndex(r => r.id === reqId);
-    if (idx === -1) return;
-    all[idx].status = "Rechazada";
-    all[idx].rejectedBy = user.fullName;
-    all[idx].rejectionReason = rejectReason;
-    saveAdminRequests(all);
-    setRejectId(null);
-    setRejectReason("");
-    setRefreshKey(k => k + 1);
-    toast({ title: "Rechazada", description: `Orden ${reqId} rechazada.`, variant: "destructive" });
-  };
 
   const handleBack = () => {
     if (formMode) { setFormMode(null); }
@@ -383,6 +428,9 @@ const AdminForms = () => {
               {formMode === "virtual" && (
                 <div className="flex justify-end gap-3 no-print">
                   <Button variant="outline" onClick={handleBack}>Cancelar</Button>
+                  <Button variant="secondary" onClick={handleNoApprovalSubmit} className="gap-2">
+                    <Ban className="h-4 w-4" /> No Requiere Aprobación
+                  </Button>
                   <Button onClick={handleVirtualSubmit} className="gap-2">
                     <Send className="h-4 w-4" /> Enviar para Aprobación
                   </Button>
@@ -421,14 +469,20 @@ const AdminForms = () => {
                       {req.items.length > 3 && <div>...y {req.items.length - 3} más</div>}
                     </div>
                   )}
-                  {req.status === "Aprobada" && req.approvedBy && (
+                  {req.status === "Aprobada" && (
                     <div className="mt-2 flex items-center gap-1.5 text-xs text-emerald-600">
-                      <CheckCircle2 className="h-3.5 w-3.5" /> Aprobada por {req.approvedBy}
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Aprobada por Aurelio Pérez
                     </div>
                   )}
-                  {req.status === "Rechazada" && req.rejectionReason && (
+                  {req.status === "Declinada" && (
                     <div className="mt-2 flex items-start gap-1.5 text-xs text-destructive">
-                      <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" /> Rechazada: {req.rejectionReason}
+                      <ShieldX className="h-3.5 w-3.5 mt-0.5 shrink-0" /> Declinada por Aurelio Pérez
+                      {req.rejectionReason && <span>— {req.rejectionReason}</span>}
+                    </div>
+                  )}
+                  {req.status === "Sin Aprobación" && (
+                    <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Ban className="h-3.5 w-3.5" /> Registrada sin aprobación requerida
                     </div>
                   )}
                 </div>
@@ -457,7 +511,6 @@ const AdminForms = () => {
                     </div>
                     <span className="font-heading font-bold text-primary">{fmtCurrency(req.total)}</span>
                   </div>
-                  {/* Line items */}
                   {req.items.length > 0 && (
                     <div className="border border-border rounded-lg overflow-hidden mb-3">
                       <table className="w-full text-xs">
@@ -485,7 +538,6 @@ const AdminForms = () => {
                     <div className="text-muted-foreground">ITBIS (18%): {fmtCurrency(req.itbis)}</div>
                     <div className="font-bold text-card-foreground">Total: {fmtCurrency(req.total)}</div>
                   </div>
-                  {/* Form data */}
                   {Object.entries(req.formData).filter(([, v]) => v).length > 0 && (
                     <div className="grid grid-cols-2 gap-1 text-xs mb-3">
                       {Object.entries(req.formData).filter(([, v]) => v).map(([key, val]) => (
@@ -500,13 +552,13 @@ const AdminForms = () => {
                     </Button>
                     {rejectId === req.id ? (
                       <div className="flex-1 flex gap-2">
-                        <Input placeholder="Motivo del rechazo..." value={rejectReason} onChange={e => setRejectReason(e.target.value)} className="text-sm" />
-                        <Button size="sm" variant="destructive" onClick={() => handleReject(req.id)} disabled={!rejectReason.trim()}>Confirmar</Button>
+                        <Input placeholder="Comentario (opcional)..." value={rejectReason} onChange={e => setRejectReason(e.target.value)} className="text-sm" />
+                        <Button size="sm" variant="destructive" onClick={() => { setApprovalTargetId(req.id); confirmDecline(); }}>Declinar</Button>
                         <Button size="sm" variant="ghost" onClick={() => { setRejectId(null); setRejectReason(""); }}>×</Button>
                       </div>
                     ) : (
-                      <Button size="sm" variant="outline" className="gap-1 text-destructive" onClick={() => setRejectId(req.id)}>
-                        <ThumbsDown className="h-3.5 w-3.5" /> Rechazar
+                      <Button size="sm" variant="outline" className="gap-1 text-destructive" onClick={() => handleDecline(req.id)}>
+                        <ThumbsDown className="h-3.5 w-3.5" /> Declinar
                       </Button>
                     )}
                   </div>
@@ -515,6 +567,70 @@ const AdminForms = () => {
             </div>
           )}
         </div>
+
+        {/* ═══ APPROVAL CONFIRMATION OVERLAY ═══ */}
+        <Dialog open={showApprovalOverlay} onOpenChange={setShowApprovalOverlay}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-emerald-600" />
+                Confirmar Aprobación
+              </DialogTitle>
+              <DialogDescription>
+                Esta orden será aprobada a nombre de <strong>Aurelio Pérez</strong> (Gerencia General).
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div>
+                <Label className="text-sm text-muted-foreground">Comentarios (opcional)</Label>
+                <Textarea
+                  placeholder="Agregar comentarios sobre la aprobación..."
+                  value={approvalComment}
+                  onChange={e => setApprovalComment(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowApprovalOverlay(false)}>Cancelar</Button>
+              <Button onClick={confirmApprove} className="gap-2">
+                <CheckCircle2 className="h-4 w-4" /> Aprobar como Aurelio Pérez
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* ═══ RESULT OVERLAY ═══ */}
+        <Dialog open={!!showResultOverlay} onOpenChange={() => setShowResultOverlay(null)}>
+          <DialogContent className="sm:max-w-sm text-center">
+            <DialogHeader>
+              <DialogTitle className="flex flex-col items-center gap-3">
+                {showResultOverlay?.type === "approved" ? (
+                  <>
+                    <div className="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center">
+                      <ShieldCheck className="h-8 w-8 text-emerald-600" />
+                    </div>
+                    <span>Aprobada por Aurelio Pérez</span>
+                  </>
+                ) : (
+                  <>
+                    <div className="h-16 w-16 rounded-full bg-red-100 flex items-center justify-center">
+                      <ShieldX className="h-8 w-8 text-destructive" />
+                    </div>
+                    <span>Declinada por Aurelio Pérez</span>
+                  </>
+                )}
+              </DialogTitle>
+              <DialogDescription>
+                Orden <strong>{showResultOverlay?.id}</strong> ha sido {showResultOverlay?.type === "approved" ? "aprobada" : "declinada"} exitosamente.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="sm:justify-center">
+              <Button onClick={() => setShowResultOverlay(null)}>Entendido</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         <Footer />
       </div>
     </AppLayout>
@@ -526,7 +642,9 @@ function StatusBadge({ status }: { status: string }) {
   const colorMap: Record<string, string> = {
     "Pendiente": "bg-amber-100 text-amber-800 border-amber-200",
     "Aprobada": "bg-emerald-100 text-emerald-800 border-emerald-200",
+    "Declinada": "bg-red-100 text-red-800 border-red-200",
     "Rechazada": "bg-red-100 text-red-800 border-red-200",
+    "Sin Aprobación": "bg-blue-100 text-blue-800 border-blue-200",
   };
   return (
     <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full border", colorMap[status] || "bg-muted text-muted-foreground")}>
