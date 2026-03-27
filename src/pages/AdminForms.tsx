@@ -619,11 +619,6 @@ const AdminForms = () => {
                       {req.rejectionReason && <span>— {req.rejectionReason}</span>}
                     </div>
                   )}
-                  {req.status === "Sin Aprobación" && (
-                    <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Ban className="h-3.5 w-3.5" /> Registrada sin aprobación requerida
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
