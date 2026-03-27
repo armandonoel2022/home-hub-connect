@@ -859,7 +859,55 @@ const OperationsPage = () => {
           </div>
         )}
 
-        {/* Transfer Modal */}
+        {/* Transfer Log Panel */}
+        {showTransferLog && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-card rounded-xl w-full max-w-3xl max-h-[80vh] overflow-y-auto shadow-2xl">
+              <div className="flex items-center justify-between p-5 border-b border-border">
+                <h2 className="font-heading font-bold text-lg text-card-foreground flex items-center gap-2">
+                  <ArrowRightLeft className="h-5 w-5" /> Historial de Traslados
+                </h2>
+                <button onClick={() => setShowTransferLog(false)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
+              </div>
+              <div className="p-5">
+                {(() => {
+                  const allTransfers = personnel.flatMap(p =>
+                    (p.transferHistory || []).map(t => ({ ...t, personnelName: p.name || p.employeeCode, personnelId: p.id }))
+                  ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+                  if (allTransfers.length === 0) return (
+                    <p className="text-center text-muted-foreground py-8">No hay traslados registrados</p>
+                  );
+
+                  return (
+                    <div className="space-y-3">
+                      {allTransfers.map((t, i) => (
+                        <div key={i} className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-semibold text-amber-900 text-sm">{t.personnelName}</p>
+                              <div className="flex items-center gap-1 text-amber-800 text-xs mt-1">
+                                <span>{t.fromClient}/{t.fromLocation}</span>
+                                <ChevronRight className="h-3 w-3" />
+                                <span className="font-medium">{t.toClient}/{t.toLocation}</span>
+                              </div>
+                            </div>
+                            <span className="text-xs text-amber-600">{new Date(t.date).toLocaleDateString("es-DO", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                          </div>
+                          {t.reason && <p className="text-xs text-amber-700 mt-1.5 bg-amber-100 rounded px-2 py-1">{t.reason}</p>}
+                          {t.replacedBy && <p className="text-xs text-amber-800 mt-1">Reemplazo: <strong>{t.replacedBy}</strong></p>}
+                          <p className="text-xs text-amber-500 mt-0.5">Autorizado por: {t.authorizedBy}</p>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+        )}
+
+
         {transferTarget && (
           <TransferModal
             person={transferTarget}
