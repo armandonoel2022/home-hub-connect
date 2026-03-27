@@ -5,7 +5,7 @@ import { useArmedPersonnel } from "@/hooks/useApiHooks";
 import type { ArmedPersonnel, PersonnelTransfer } from "@/lib/types";
 import { Search, Plus, User, MapPin, X, Phone, Upload, Image, Lock, Trash2, Pencil, Map, List, AlertTriangle, BarChart3, ArrowRightLeft, History, Shield, ChevronDown, ChevronRight } from "lucide-react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import "leaflet/dist/leaflet.css";
+
 
 const statusColors: Record<string, string> = {
   Activo: "bg-emerald-50 text-emerald-700",
