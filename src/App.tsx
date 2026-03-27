@@ -62,7 +62,9 @@ function ProtectedRoutes() {
     return <Navigate to="/login" replace />;
   }
 
-  const birthdayUsers = getBirthdayUsers();
+  const today = new Date();
+  const todayStr = `${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const birthdayUsers = (activeUsers || []).filter((u) => u.birthday === todayStr);
 
   return (
     <>
