@@ -164,8 +164,7 @@ const AdminForms = () => {
     setTimeout(() => { printWindow.print(); printWindow.close(); }, 600);
   };
 
-  const handleVirtualSubmit = () => {
-    if (!user || !activeForm) return;
+  const buildRequest = (status: string): AdminRequest => {
     const formData: Record<string, string> = {};
     const formEl = printRef.current;
     if (formEl) {
@@ -188,13 +187,13 @@ const AdminForms = () => {
       subtotal: it.cantidad * it.precio,
     }));
 
-    const req: AdminRequest = {
+    return {
       id: `ADM-${Date.now().toString(36).toUpperCase()}`,
-      formType: activeForm,
-      status: "Pendiente",
-      requestedBy: user.id,
-      requestedByName: user.fullName,
-      department: user.department,
+      formType: activeForm!,
+      status,
+      requestedBy: user!.id,
+      requestedByName: user!.fullName,
+      department: user!.department,
       requestedAt: new Date().toISOString(),
       formData,
       items: lineItems,
@@ -206,12 +205,30 @@ const AdminForms = () => {
       rejectedBy: null,
       rejectionReason: null,
     };
+  };
 
+  const handleVirtualSubmit = () => {
+    if (!user || !activeForm) return;
+    const req = buildRequest("Pendiente");
     const all = getAdminRequests();
     all.unshift(req);
     saveAdminRequests(all);
     setRefreshKey(k => k + 1);
-    toast({ title: "Orden Enviada", description: `${formConfig.find(f => f.key === activeForm)?.label} #${req.id} enviada para aprobación.` });
+    toast({ title: "Orden Enviada", description: `${formConfig.find(f => f.key === activeForm)?.label} #${req.id} enviada para aprobación de Aurelio Pérez.` });
+    setActiveForm(null);
+    setFormMode(null);
+    setItems([{ tipo: "", descripcion: "", cantidad: 1, precio: 0 }]);
+    setActiveView("my-requests");
+  };
+
+  const handleNoApprovalSubmit = () => {
+    if (!user || !activeForm) return;
+    const req = buildRequest("Sin Aprobación");
+    const all = getAdminRequests();
+    all.unshift(req);
+    saveAdminRequests(all);
+    setRefreshKey(k => k + 1);
+    toast({ title: "Orden Registrada", description: `${formConfig.find(f => f.key === activeForm)?.label} #${req.id} registrada sin requerir aprobación.` });
     setActiveForm(null);
     setFormMode(null);
     setItems([{ tipo: "", descripcion: "", cantidad: 1, precio: 0 }]);
@@ -219,16 +236,50 @@ const AdminForms = () => {
   };
 
   const handleApprove = (reqId: string) => {
-    if (!user) return;
+    setApprovalTargetId(reqId);
+    setShowApprovalOverlay(true);
+    setApprovalComment("");
+  };
+
+  const confirmApprove = () => {
+    if (!approvalTargetId) return;
     const all = getAdminRequests();
-    const idx = all.findIndex(r => r.id === reqId);
+    const idx = all.findIndex(r => r.id === approvalTargetId);
     if (idx === -1) return;
     all[idx].status = "Aprobada";
-    all[idx].approvedBy = user.fullName;
+    all[idx].approvedBy = "Aurelio Pérez";
     all[idx].approvedAt = new Date().toISOString();
+    if (approvalComment.trim()) {
+      all[idx].rejectionReason = approvalComment; // reuse field for comments
+    }
     saveAdminRequests(all);
+    setShowApprovalOverlay(false);
+    setShowResultOverlay({ type: "approved", id: approvalTargetId });
+    setApprovalTargetId(null);
+    setApprovalComment("");
     setRefreshKey(k => k + 1);
-    toast({ title: "Aprobada", description: `Orden ${reqId} aprobada.` });
+  };
+
+  const handleDecline = (reqId: string) => {
+    setApprovalTargetId(reqId);
+    setApprovalComment("");
+    setRejectId(reqId);
+  };
+
+  const confirmDecline = () => {
+    if (!user || !approvalTargetId) return;
+    const all = getAdminRequests();
+    const idx = all.findIndex(r => r.id === approvalTargetId);
+    if (idx === -1) return;
+    all[idx].status = "Declinada";
+    all[idx].rejectedBy = "Aurelio Pérez";
+    all[idx].rejectionReason = rejectReason.trim() || null;
+    saveAdminRequests(all);
+    setRejectId(null);
+    setRejectReason("");
+    setShowResultOverlay({ type: "declined", id: approvalTargetId });
+    setApprovalTargetId(null);
+    setRefreshKey(k => k + 1);
   };
 
   const [rejectId, setRejectId] = useState<string | null>(null);
