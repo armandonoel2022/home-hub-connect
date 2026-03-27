@@ -84,7 +84,9 @@ const AdminForms = () => {
   const [approvalComment, setApprovalComment] = useState("");
   const [showResultOverlay, setShowResultOverlay] = useState<{ type: "approved" | "declined"; id: string } | null>(null);
 
-  // Items state for line items
+  // Custom order number
+  const [customOrderNumber, setCustomOrderNumber] = useState("");
+
   const [items, setItems] = useState<{ tipo?: string; descripcion: string; cantidad: number; precio: number }[]>([
     { tipo: "", descripcion: "", cantidad: 1, precio: 0 },
   ]);
