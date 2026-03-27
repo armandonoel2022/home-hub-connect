@@ -65,7 +65,7 @@ const OperationsCenter = () => {
   const [coveringForId, setCoveringForId] = useState("");
 
   // Get armed personnel (agents)
-  const agents = mockArmedPersonnel.filter((a) => a.status === "Activo");
+  const agents = seedArmedPersonnel.filter((a) => a.status === "Activo");
 
   // Group by location
   const locations = agents.reduce<Record<string, typeof agents>>((acc, agent) => {
