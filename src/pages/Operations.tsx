@@ -803,6 +803,8 @@ const OperationsPage = () => {
                     ["Serial Arma", selected.weaponSerial || "—"],
                     ["Estado del Arma", selected.weaponCondition || "—"],
                     ["Coordenadas", selected.coordinates || "—"],
+                    ["Turno", selected.shiftType ? `${selected.shiftType} (${selected.shiftHours || 12}h)` : "Sin asignar"],
+                    ["Notas Turno", selected.shiftNotes || "—"],
                   ].map(([label, val]) => (
                     <div key={label} className="bg-muted rounded-lg p-3">
                       <span className="text-xs text-muted-foreground block">{label}</span>
