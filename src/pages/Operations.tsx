@@ -927,6 +927,42 @@ const OperationsPage = () => {
                   </select>
                 </div>
 
+                {/* Shift Configuration */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-3">
+                  <label className="text-sm font-semibold text-blue-800 flex items-center gap-1.5">
+                    <Clock className="h-4 w-4" /> Turno de Trabajo
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-blue-700 block mb-1">Tipo de Turno</label>
+                      <select value={form.shiftType || ""} onChange={e => {
+                        const val = e.target.value as ShiftType;
+                        setForm({ ...form, shiftType: val, shiftHours: val === "12h" ? 12 : val === "24h" ? 24 : val === "24h+" ? 36 : form.shiftHours });
+                      }} className="w-full px-2 py-2 rounded-lg bg-white border border-blue-300 text-foreground text-sm outline-none">
+                        <option value="">Sin asignar</option>
+                        <option value="12h">12 horas</option>
+                        <option value="24h">24 horas</option>
+                        <option value="24h+">24+ horas (extendido)</option>
+                        <option value="Personalizado">Personalizado</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-blue-700 block mb-1">Horas</label>
+                      <input type="number" min={1} max={72} value={form.shiftHours || ""} onChange={e => setForm({ ...form, shiftHours: Number(e.target.value) })}
+                        className="w-full px-2 py-2 rounded-lg bg-white border border-blue-300 text-foreground text-sm outline-none" />
+                    </div>
+                  </div>
+                  {form.shiftType === "24h+" && (
+                    <p className="text-xs text-amber-700 bg-amber-50 rounded px-2 py-1">⚠️ Turnos de 24+ horas requieren consentimiento documentado del vigilante</p>
+                  )}
+                  <div>
+                    <label className="text-xs text-blue-700 block mb-1">Notas del turno</label>
+                    <input type="text" value={form.shiftNotes || ""} onChange={e => setForm({ ...form, shiftNotes: e.target.value })}
+                      className="w-full px-2 py-2 rounded-lg bg-white border border-blue-300 text-foreground text-sm outline-none"
+                      placeholder="Ej: Rotación semanal, vigilante aceptó turno extendido..." />
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-card-foreground block mb-1.5">Venc. Licencia</label>
