@@ -2,8 +2,8 @@ import { useState, useRef, useEffect, useMemo, lazy, Suspense } from "react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useArmedPersonnel } from "@/hooks/useApiHooks";
-import type { ArmedPersonnel, PersonnelTransfer } from "@/lib/types";
-import { Search, Plus, User, MapPin, X, Phone, Upload, Image, Lock, Trash2, Pencil, Map, List, AlertTriangle, BarChart3, ArrowRightLeft, History, Shield, ChevronDown, ChevronRight } from "lucide-react";
+import type { ArmedPersonnel, PersonnelTransfer, ShiftType } from "@/lib/types";
+import { Search, Plus, User, MapPin, X, Phone, Upload, Image, Lock, Trash2, Pencil, Map, List, AlertTriangle, BarChart3, ArrowRightLeft, History, Shield, ChevronDown, ChevronRight, Clock } from "lucide-react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 
@@ -48,7 +48,7 @@ function parseCoords(coords: string): [number, number] | null {
 // ─── Map Component ───
 const LazyMap = lazy(() => import("../components/PersonnelMapView"));
 
-function PersonnelMap({ personnel }: { personnel: ArmedPersonnel[] }) {
+function PersonnelMap({ personnel, onTransfer }: { personnel: ArmedPersonnel[]; onTransfer?: (p: ArmedPersonnel) => void }) {
   const withCoords = personnel.filter(p => parseCoords(p.coordinates));
 
   if (withCoords.length === 0) return (
@@ -62,7 +62,7 @@ function PersonnelMap({ personnel }: { personnel: ArmedPersonnel[] }) {
 
   return (
     <Suspense fallback={<div className="h-[500px] flex items-center justify-center bg-muted rounded-xl"><p className="text-muted-foreground">Cargando mapa...</p></div>}>
-      <LazyMap personnel={withCoords} />
+      <LazyMap personnel={withCoords} onTransfer={onTransfer} />
     </Suspense>
   );
 }
@@ -244,8 +244,10 @@ function TransferModal({ person, allPersonnel, onClose, onTransfer }: {
   const [toLocation, setToLocation] = useState("");
   const [reason, setReason] = useState("");
   const [replacementId, setReplacementId] = useState("");
+  const [shiftType, setShiftType] = useState<ShiftType>(person.shiftType || "12h");
+  const [shiftHours, setShiftHours] = useState<number>(person.shiftHours || 12);
+  const [shiftNotes, setShiftNotes] = useState(person.shiftNotes || "");
 
-  // Available replacements: active personnel NOT at this same location
   const availableReplacements = allPersonnel.filter(p =>
     p.id !== person.id && p.status === "Activo" && !(p.client === person.client && p.location === person.location)
   );
@@ -259,7 +261,7 @@ function TransferModal({ person, allPersonnel, onClose, onTransfer }: {
       fromLocation: person.location,
       toClient,
       toLocation,
-      reason,
+      reason: `${reason}${shiftType ? ` | Turno: ${shiftType} (${shiftHours}h)` : ""}${shiftNotes ? ` | Nota turno: ${shiftNotes}` : ""}`,
       replacedBy: replacementId ? allPersonnel.find(p => p.id === replacementId)?.name : undefined,
       authorizedBy: "Admin",
     };
@@ -285,6 +287,7 @@ function TransferModal({ person, allPersonnel, onClose, onTransfer }: {
             <p className="text-xs text-muted-foreground">Puesto Actual</p>
             <p className="font-medium text-card-foreground">{person.client} — {person.location}</p>
             <p className="text-xs text-muted-foreground">{person.province}</p>
+            {person.shiftType && <p className="text-xs text-muted-foreground mt-1">Turno actual: {person.shiftType} ({person.shiftHours || 12}h)</p>}
           </div>
 
           {/* New assignment */}
@@ -296,6 +299,45 @@ function TransferModal({ person, allPersonnel, onClose, onTransfer }: {
             <label className="text-sm font-medium text-card-foreground block mb-1.5">Nueva Ubicación / Puesto *</label>
             <input type="text" value={toLocation} onChange={e => setToLocation(e.target.value)} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" placeholder="Nombre del puesto" />
           </div>
+
+          {/* Shift configuration */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-3">
+            <label className="text-sm font-semibold text-blue-800 flex items-center gap-1.5">
+              <Clock className="h-4 w-4" /> Configuración de Turno
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-blue-700 block mb-1">Tipo de Turno</label>
+                <select value={shiftType} onChange={e => {
+                  const val = e.target.value as ShiftType;
+                  setShiftType(val);
+                  if (val === "12h") setShiftHours(12);
+                  else if (val === "24h") setShiftHours(24);
+                  else if (val === "24h+") setShiftHours(36);
+                }} className="w-full px-2 py-2 rounded-lg bg-white border border-blue-300 text-foreground text-sm outline-none">
+                  <option value="12h">12 horas</option>
+                  <option value="24h">24 horas</option>
+                  <option value="24h+">24+ horas (extendido)</option>
+                  <option value="Personalizado">Personalizado</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-blue-700 block mb-1">Horas del turno</label>
+                <input type="number" min={1} max={72} value={shiftHours} onChange={e => setShiftHours(Number(e.target.value))}
+                  className="w-full px-2 py-2 rounded-lg bg-white border border-blue-300 text-foreground text-sm outline-none" />
+              </div>
+            </div>
+            {shiftType === "24h+" && (
+              <p className="text-xs text-amber-700 bg-amber-50 rounded px-2 py-1">⚠️ Turnos de 24+ horas requieren consentimiento documentado del vigilante</p>
+            )}
+            <div>
+              <label className="text-xs text-blue-700 block mb-1">Notas del turno</label>
+              <input type="text" value={shiftNotes} onChange={e => setShiftNotes(e.target.value)}
+                className="w-full px-2 py-2 rounded-lg bg-white border border-blue-300 text-foreground text-sm outline-none"
+                placeholder="Ej: Vigilante aceptó turno extendido, rotación semanal..." />
+            </div>
+          </div>
+
           <div>
             <label className="text-sm font-medium text-card-foreground block mb-1.5">Razón del Traslado</label>
             <textarea value={reason} onChange={e => setReason(e.target.value)} rows={2} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none resize-none" placeholder="Motivo del movimiento..." />
@@ -309,7 +351,7 @@ function TransferModal({ person, allPersonnel, onClose, onTransfer }: {
             <select value={replacementId} onChange={e => setReplacementId(e.target.value)} className="w-full px-3 py-2.5 rounded-lg bg-white border border-amber-300 text-foreground text-sm outline-none">
               <option value="">Sin reemplazo (puesto quedará vacante)</option>
               {availableReplacements.map(r => (
-                <option key={r.id} value={r.id}>{r.name || r.employeeCode} — {r.client} / {r.location}</option>
+                <option key={r.id} value={r.id}>{r.name || r.employeeCode} — {r.client} / {r.location}{r.shiftType ? ` (${r.shiftType})` : ""}</option>
               ))}
             </select>
             {!replacementId && (
@@ -344,6 +386,7 @@ const OperationsPage = () => {
   const [filterCondition, setFilterCondition] = useState("");
   const [transferTarget, setTransferTarget] = useState<ArmedPersonnel | null>(null);
   const [showDeletedLog, setShowDeletedLog] = useState(false);
+  const [showTransferLog, setShowTransferLog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Deleted log from localStorage
@@ -449,6 +492,9 @@ const OperationsPage = () => {
       coordinates: form.coordinates || "", weaponCondition: form.weaponCondition || "",
       licenseNumber: form.licenseNumber || "", licenseExpiry: form.licenseExpiry || "",
       status: (form.status as ArmedPersonnel["status"]) || "Activo",
+      shiftType: form.shiftType as ShiftType || undefined,
+      shiftHours: Number(form.shiftHours) || undefined,
+      shiftNotes: form.shiftNotes || undefined,
     };
     try { await updatePersonnel(editingId, updateData); }
     catch { setPersonnel((prev) => prev.map(p => p.id === editingId ? { ...p, ...updateData } : p)); }
@@ -553,6 +599,10 @@ const OperationsPage = () => {
                     {mode === "dashboard" ? "Dashboard" : mode === "list" ? "Lista" : "Mapa"}
                   </button>
                 ))}
+                <button onClick={() => setShowTransferLog(!showTransferLog)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-muted text-card-foreground hover:bg-border transition-colors">
+                  <ArrowRightLeft className="h-4 w-4" /> Traslados
+                </button>
                 <button onClick={() => setShowDeletedLog(!showDeletedLog)}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-muted text-card-foreground hover:bg-border transition-colors">
                   <History className="h-4 w-4" /> Eliminados ({deletedLog.length})
@@ -594,7 +644,7 @@ const OperationsPage = () => {
         {/* MAP VIEW */}
         {viewMode === "map" && (
           <div className="px-6 py-4">
-            <PersonnelMap personnel={filtered} />
+            <PersonnelMap personnel={filtered} onTransfer={(p) => setTransferTarget(p)} />
           </div>
         )}
 
@@ -753,6 +803,8 @@ const OperationsPage = () => {
                     ["Serial Arma", selected.weaponSerial || "—"],
                     ["Estado del Arma", selected.weaponCondition || "—"],
                     ["Coordenadas", selected.coordinates || "—"],
+                    ["Turno", selected.shiftType ? `${selected.shiftType} (${selected.shiftHours || 12}h)` : "Sin asignar"],
+                    ["Notas Turno", selected.shiftNotes || "—"],
                   ].map(([label, val]) => (
                     <div key={label} className="bg-muted rounded-lg p-3">
                       <span className="text-xs text-muted-foreground block">{label}</span>
@@ -807,7 +859,55 @@ const OperationsPage = () => {
           </div>
         )}
 
-        {/* Transfer Modal */}
+        {/* Transfer Log Panel */}
+        {showTransferLog && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-card rounded-xl w-full max-w-3xl max-h-[80vh] overflow-y-auto shadow-2xl">
+              <div className="flex items-center justify-between p-5 border-b border-border">
+                <h2 className="font-heading font-bold text-lg text-card-foreground flex items-center gap-2">
+                  <ArrowRightLeft className="h-5 w-5" /> Historial de Traslados
+                </h2>
+                <button onClick={() => setShowTransferLog(false)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
+              </div>
+              <div className="p-5">
+                {(() => {
+                  const allTransfers = personnel.flatMap(p =>
+                    (p.transferHistory || []).map(t => ({ ...t, personnelName: p.name || p.employeeCode, personnelId: p.id }))
+                  ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+                  if (allTransfers.length === 0) return (
+                    <p className="text-center text-muted-foreground py-8">No hay traslados registrados</p>
+                  );
+
+                  return (
+                    <div className="space-y-3">
+                      {allTransfers.map((t, i) => (
+                        <div key={i} className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-semibold text-amber-900 text-sm">{t.personnelName}</p>
+                              <div className="flex items-center gap-1 text-amber-800 text-xs mt-1">
+                                <span>{t.fromClient}/{t.fromLocation}</span>
+                                <ChevronRight className="h-3 w-3" />
+                                <span className="font-medium">{t.toClient}/{t.toLocation}</span>
+                              </div>
+                            </div>
+                            <span className="text-xs text-amber-600">{new Date(t.date).toLocaleDateString("es-DO", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                          </div>
+                          {t.reason && <p className="text-xs text-amber-700 mt-1.5 bg-amber-100 rounded px-2 py-1">{t.reason}</p>}
+                          {t.replacedBy && <p className="text-xs text-amber-800 mt-1">Reemplazo: <strong>{t.replacedBy}</strong></p>}
+                          <p className="text-xs text-amber-500 mt-0.5">Autorizado por: {t.authorizedBy}</p>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+        )}
+
+
         {transferTarget && (
           <TransferModal
             person={transferTarget}
@@ -873,6 +973,42 @@ const OperationsPage = () => {
                     <option value="">Seleccionar...</option>
                     {WEAPON_CONDITIONS.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
+                </div>
+
+                {/* Shift Configuration */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-3">
+                  <label className="text-sm font-semibold text-blue-800 flex items-center gap-1.5">
+                    <Clock className="h-4 w-4" /> Turno de Trabajo
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-blue-700 block mb-1">Tipo de Turno</label>
+                      <select value={form.shiftType || ""} onChange={e => {
+                        const val = e.target.value as ShiftType;
+                        setForm({ ...form, shiftType: val, shiftHours: val === "12h" ? 12 : val === "24h" ? 24 : val === "24h+" ? 36 : form.shiftHours });
+                      }} className="w-full px-2 py-2 rounded-lg bg-white border border-blue-300 text-foreground text-sm outline-none">
+                        <option value="">Sin asignar</option>
+                        <option value="12h">12 horas</option>
+                        <option value="24h">24 horas</option>
+                        <option value="24h+">24+ horas (extendido)</option>
+                        <option value="Personalizado">Personalizado</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-blue-700 block mb-1">Horas</label>
+                      <input type="number" min={1} max={72} value={form.shiftHours || ""} onChange={e => setForm({ ...form, shiftHours: Number(e.target.value) })}
+                        className="w-full px-2 py-2 rounded-lg bg-white border border-blue-300 text-foreground text-sm outline-none" />
+                    </div>
+                  </div>
+                  {form.shiftType === "24h+" && (
+                    <p className="text-xs text-amber-700 bg-amber-50 rounded px-2 py-1">⚠️ Turnos de 24+ horas requieren consentimiento documentado del vigilante</p>
+                  )}
+                  <div>
+                    <label className="text-xs text-blue-700 block mb-1">Notas del turno</label>
+                    <input type="text" value={form.shiftNotes || ""} onChange={e => setForm({ ...form, shiftNotes: e.target.value })}
+                      className="w-full px-2 py-2 rounded-lg bg-white border border-blue-300 text-foreground text-sm outline-none"
+                      placeholder="Ej: Rotación semanal, vigilante aceptó turno extendido..." />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
