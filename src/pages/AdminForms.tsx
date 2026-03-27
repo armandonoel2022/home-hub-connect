@@ -15,9 +15,12 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from "@/components/ui/dialog";
+import {
   ArrowLeft, Printer, ShoppingCart, FileText, Send, Inbox,
   CheckCircle2, Clock, AlertCircle, ThumbsUp, ThumbsDown,
-  Plus, Trash2,
+  Plus, Trash2, ShieldCheck, ShieldX, Ban,
 } from "lucide-react";
 import safeOneLogo from "@/assets/safeone-logo.png";
 import safeOneLetterhead from "@/assets/safeone-letterhead.png";
