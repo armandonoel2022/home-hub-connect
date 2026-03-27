@@ -363,8 +363,6 @@ const AdminForms = () => {
       ? `<div style="margin-top:20px;padding:12px;border:2px solid #16a34a;border-radius:8px;text-align:center;color:#16a34a;font-weight:700;">✓ APROBADA POR AURELIO PÉREZ — ${req.approvedAt ? format(new Date(req.approvedAt), "dd/MM/yyyy HH:mm") : ""}</div>`
       : req.status === "Declinada"
       ? `<div style="margin-top:20px;padding:12px;border:2px solid #dc2626;border-radius:8px;text-align:center;color:#dc2626;font-weight:700;">✗ DECLINADA POR AURELIO PÉREZ${req.rejectionReason ? ' — ' + req.rejectionReason : ''}</div>`
-      : req.status === "Sin Aprobación"
-      ? `<div style="margin-top:20px;padding:12px;border:2px solid #6b7280;border-radius:8px;text-align:center;color:#6b7280;font-weight:700;">SIN APROBACIÓN REQUERIDA</div>`
       : "";
 
     // Signature block
@@ -619,11 +617,6 @@ const AdminForms = () => {
                       {req.rejectionReason && <span>— {req.rejectionReason}</span>}
                     </div>
                   )}
-                  {req.status === "Sin Aprobación" && (
-                    <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Ban className="h-3.5 w-3.5" /> Registrada sin aprobación requerida
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
@@ -783,7 +776,7 @@ function StatusBadge({ status }: { status: string }) {
     "Aprobada": "bg-emerald-100 text-emerald-800 border-emerald-200",
     "Declinada": "bg-red-100 text-red-800 border-red-200",
     "Rechazada": "bg-red-100 text-red-800 border-red-200",
-    "Sin Aprobación": "bg-blue-100 text-blue-800 border-blue-200",
+    "Sin Aprobación": "bg-muted text-muted-foreground border-border",
   };
   return (
     <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full border", colorMap[status] || "bg-muted text-muted-foreground")}>
