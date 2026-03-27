@@ -21,6 +21,7 @@ import BASC from "./pages/BASC";
 import PurchaseRequests from "./pages/PurchaseRequests";
 import HiringRequests from "./pages/HiringRequests";
 import HRForms from "./pages/HRForms";
+import AdminForms from "./pages/AdminForms";
 import UserManagement from "./pages/UserManagement";
 import Directory from "./pages/Directory";
 import CalendarPage from "./pages/CalendarPage";
