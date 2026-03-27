@@ -26,8 +26,8 @@ export default function PersonnelMapView({ personnel }: { personnel: ArmedPerson
     <div className="h-[500px] rounded-xl overflow-hidden border border-border">
       <MapContainer center={center} zoom={9} style={{ height: "100%", width: "100%" }} scrollWheelZoom={true}>
         <TileLayer
-          attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         {personnel.map(p => {
           const pos = parseCoords(p.coordinates)!;
