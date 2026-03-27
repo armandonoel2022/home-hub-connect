@@ -40,7 +40,7 @@ import General from "./pages/General";
 import Adonis from "./pages/Adonis";
 import Presentation from "./pages/Presentation";
 import NotFound from "./pages/NotFound";
-import type { IntranetUser } from "./lib/types";
+
 
 const queryClient = new QueryClient();
 
