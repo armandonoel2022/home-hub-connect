@@ -599,6 +599,10 @@ const OperationsPage = () => {
                     {mode === "dashboard" ? "Dashboard" : mode === "list" ? "Lista" : "Mapa"}
                   </button>
                 ))}
+                <button onClick={() => setShowTransferLog(!showTransferLog)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-muted text-card-foreground hover:bg-border transition-colors">
+                  <ArrowRightLeft className="h-4 w-4" /> Traslados
+                </button>
                 <button onClick={() => setShowDeletedLog(!showDeletedLog)}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-muted text-card-foreground hover:bg-border transition-colors">
                   <History className="h-4 w-4" /> Eliminados ({deletedLog.length})
