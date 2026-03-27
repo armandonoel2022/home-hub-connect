@@ -37,7 +37,7 @@ const formConfig: { key: FormType; label: string; icon: any; color: string; desc
 interface AdminRequest {
   id: string;
   formType: FormType;
-  status: string;
+  status: string; // "Pendiente" | "Aprobada" | "Rechazada" | "Declinada" | "Sin Aprobación"
   requestedBy: string;
   requestedByName: string;
   department: string;
