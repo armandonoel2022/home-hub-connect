@@ -71,11 +71,24 @@ export interface Vehicle {
   notes: string;
 }
 
+export type WeaponCondition =
+  | "En buenas condiciones"
+  | "En condiciones"
+  | "Falta de mantenimiento"
+  | "Arma inoperativa"
+  | "El seguro no sirve"
+  | "No esta en condiciones"
+  | "Arma en fiscalia"
+  | "Arma no estaba disponible";
+
 export interface ArmedPersonnel {
   id: string;
+  employeeCode: string;
   name: string;
   photo: string;
-  location: string;
+  client: string;
+  location: string; // puesto
+  province: string;
   position: string;
   supervisor: string;
   fleetPhone: string;
@@ -84,8 +97,10 @@ export interface ArmedPersonnel {
   weaponType: string;
   weaponSerial: string;
   weaponBrand: string;
-  weaponCaliber: string;
+  weaponCaliber: string; // "Letal" | "No letal"
   ammunitionCount: number;
+  coordinates: string; // "lat, lng"
+  weaponCondition: string;
   licenseNumber: string;
   licenseExpiry: string;
   assignedDate: string;
