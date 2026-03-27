@@ -363,8 +363,6 @@ const AdminForms = () => {
       ? `<div style="margin-top:20px;padding:12px;border:2px solid #16a34a;border-radius:8px;text-align:center;color:#16a34a;font-weight:700;">✓ APROBADA POR AURELIO PÉREZ — ${req.approvedAt ? format(new Date(req.approvedAt), "dd/MM/yyyy HH:mm") : ""}</div>`
       : req.status === "Declinada"
       ? `<div style="margin-top:20px;padding:12px;border:2px solid #dc2626;border-radius:8px;text-align:center;color:#dc2626;font-weight:700;">✗ DECLINADA POR AURELIO PÉREZ${req.rejectionReason ? ' — ' + req.rejectionReason : ''}</div>`
-      : req.status === "Sin Aprobación"
-      ? `<div style="margin-top:20px;padding:12px;border:2px solid #6b7280;border-radius:8px;text-align:center;color:#6b7280;font-weight:700;">SIN APROBACIÓN REQUERIDA</div>`
       : "";
 
     // Signature block
