@@ -245,7 +245,15 @@ const AdminForms = () => {
     setActiveForm(null);
     setFormMode(null);
     setItems([{ tipo: "", descripcion: "", cantidad: 1, precio: 0 }]);
+    setCustomOrderNumber("");
     setActiveView("my-requests");
+  };
+
+  const handleDeleteRequest = (reqId: string) => {
+    const all = getAdminRequests().filter(r => r.id !== reqId);
+    saveAdminRequests(all);
+    setRefreshKey(k => k + 1);
+    toast({ title: "Orden Eliminada", description: `Orden ${reqId} eliminada correctamente.`, variant: "destructive" });
   };
 
   const handleApprove = (reqId: string) => {
