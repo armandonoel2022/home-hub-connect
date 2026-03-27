@@ -60,6 +60,12 @@ function getAdminRequests(): AdminRequest[] {
 function saveAdminRequests(reqs: AdminRequest[]) {
   localStorage.setItem("safeone_admin_requests", JSON.stringify(reqs));
 }
+function getNextOrderNumber(formType: FormType): string {
+  const counter = parseInt(localStorage.getItem(`safeone_admin_counter_${formType}`) || "0", 10) + 1;
+  localStorage.setItem(`safeone_admin_counter_${formType}`, String(counter));
+  const prefix = formType === "orden-compra" ? "OC" : "OS";
+  return `${prefix}-${String(counter).padStart(4, "0")}`;
+}
 
 const AdminForms = () => {
   const navigate = useNavigate();
