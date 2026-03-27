@@ -43,12 +43,22 @@ import type { AppNotification } from "@/lib/types";
 import { useState, useCallback, useEffect } from "react";
 
 // ─── Helper: localStorage state manager for mock mode ───
+const SEED_VERSION = "v3"; // Bump this to force re-seed of mock data
+
 function useLocalState<T>(key: string, initial: T[]) {
   const [data, setData] = useState<T[]>(() => {
     if (isApiConfigured()) return initial;
     try {
-      const stored = localStorage.getItem(key);
-      return stored ? JSON.parse(stored) : initial;
+      const versionKey = `${key}_version`;
+      const storedVersion = localStorage.getItem(versionKey);
+      if (storedVersion === SEED_VERSION) {
+        const stored = localStorage.getItem(key);
+        return stored ? JSON.parse(stored) : initial;
+      }
+      // Version mismatch or first load: use seed data
+      localStorage.setItem(key, JSON.stringify(initial));
+      localStorage.setItem(versionKey, SEED_VERSION);
+      return initial;
     } catch {
       return initial;
     }
