@@ -126,10 +126,13 @@ function showNativeNotification(
       };
     }
 
-    setTimeout(() => notification.close(), 6000);
+    // Auto-close after 8s (buzz stays longer)
+    const timeout = options?.type === "buzz" ? 12000 : 8000;
+    setTimeout(() => notification.close(), timeout);
 
     return notification;
-  } catch {
+  } catch (err) {
+    console.warn("Error showing notification:", err);
     return null;
   }
 }
