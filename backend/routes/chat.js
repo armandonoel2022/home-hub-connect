@@ -1,15 +1,21 @@
 /**
  * Chat routes — persists chats and messages in JSON files
- * Supports polling-based real-time messaging
+ * Files/audio are saved to disk, not in JSON
  */
 const express = require('express');
-const { readData, writeData, generateId } = require('../config/database');
+const fs = require('fs');
+const path = require('path');
+const { readData, writeData, generateId, UPLOADS_DIR } = require('../config/database');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
 
 const CHATS_FILE = 'chats.json';
 const MESSAGES_FILE = 'chat-messages.json';
+const CHAT_UPLOADS_DIR = path.join(UPLOADS_DIR, 'chat');
+
+// Ensure chat uploads dir exists
+if (!fs.existsSync(CHAT_UPLOADS_DIR)) fs.mkdirSync(CHAT_UPLOADS_DIR, { recursive: true });
 
 // ── GET /api/chat/chats — get all chats for the current user ──
 router.get('/chats', auth, (req, res) => {
@@ -24,7 +30,6 @@ router.post('/chats', auth, (req, res) => {
   const { type, name, participants, departmentId } = req.body;
   const chats = readData(CHATS_FILE);
 
-  // Try to find existing chat
   let existing;
   if (type === 'individual') {
     existing = chats.find(c =>
@@ -37,7 +42,6 @@ router.post('/chats', auth, (req, res) => {
   }
 
   if (existing) {
-    // Update participants if needed (new dept members)
     if (type === 'department' && participants) {
       const merged = [...new Set([...existing.participants, ...participants])];
       existing.participants = merged;
@@ -61,10 +65,31 @@ router.post('/chats', auth, (req, res) => {
   res.status(201).json(newChat);
 });
 
+/**
+ * Save base64 file data to disk and return the URL path.
+ */
+function saveFileToChat(fileData, fileName, msgId) {
+  const ext = path.extname(fileName) || '.bin';
+  const safeFileName = `${msgId}${ext}`;
+  const filePath = path.join(CHAT_UPLOADS_DIR, safeFileName);
+
+  let buffer;
+  if (typeof fileData === 'string' && fileData.includes('base64,')) {
+    buffer = Buffer.from(fileData.split('base64,')[1], 'base64');
+  } else if (typeof fileData === 'string') {
+    buffer = Buffer.from(fileData, 'base64');
+  } else {
+    buffer = fileData;
+  }
+
+  fs.writeFileSync(filePath, buffer);
+  return `/uploads/chat/${safeFileName}`;
+}
+
 // ── GET /api/chat/messages/:chatId — get messages for a chat ──
 router.get('/messages/:chatId', auth, (req, res) => {
   const { chatId } = req.params;
-  const since = req.query.since; // ISO timestamp for polling
+  const since = req.query.since;
   const messages = readData(MESSAGES_FILE);
   let chatMessages = messages.filter(m => m.chatId === chatId);
   if (since) {
@@ -73,20 +98,47 @@ router.get('/messages/:chatId', auth, (req, res) => {
   res.json(chatMessages);
 });
 
+// ── GET /api/chat/file/:msgId — serve a chat file by message ID ──
+router.get('/file/:msgId', auth, (req, res) => {
+  const { msgId } = req.params;
+  const messages = readData(MESSAGES_FILE);
+  const msg = messages.find(m => m.id === msgId);
+  if (!msg || !msg.fileUrl) {
+    return res.status(404).json({ message: 'Archivo no encontrado' });
+  }
+  // fileUrl is like /uploads/chat/MSG-001.pdf
+  const filePath = path.join(__dirname, '..', 'data', msg.fileUrl);
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ message: 'Archivo no encontrado en disco' });
+  }
+  res.sendFile(filePath);
+});
+
 // ── POST /api/chat/messages — send a message ──
 router.post('/messages', auth, (req, res) => {
   const { chatId, content, type, fileName, fileData, senderName } = req.body;
   const messages = readData(MESSAGES_FILE);
+  const msgId = generateId('MSG', messages);
+
+  let fileUrl = null;
+  if ((type === 'file' || type === 'audio') && fileData) {
+    try {
+      fileUrl = saveFileToChat(fileData, fileName || 'file.bin', msgId);
+    } catch (err) {
+      console.error('Error saving chat file:', err.message);
+      return res.status(500).json({ message: 'Error al guardar archivo' });
+    }
+  }
 
   const msg = {
-    id: generateId('MSG', messages),
+    id: msgId,
     chatId,
     senderId: req.user.id,
     senderName: senderName || req.user.fullName || 'Usuario',
     content,
     type: type || 'text',
     fileName: fileName || null,
-    fileData: fileData || null,
+    fileUrl,  // URL path to file on disk (NOT base64)
     timestamp: new Date().toISOString(),
     read: false,
   };
@@ -99,6 +151,7 @@ router.post('/messages', auth, (req, res) => {
   if (chatIdx !== -1) {
     const preview = type === 'text' ? (content || '').slice(0, 50)
       : type === 'buzz' ? '🔔 ¡Zumbido!'
+      : type === 'audio' ? '🎤 Audio'
       : `📎 ${fileName || 'Archivo'}`;
     chats[chatIdx].lastMessage = preview;
     chats[chatIdx].lastMessageTime = msg.timestamp;
