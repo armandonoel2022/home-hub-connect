@@ -207,8 +207,11 @@ function ChatList({
 }
 
 // ── Message Bubble ──
-function MessageBubble({ msg, isOwn }: { msg: { content: string; type: string; senderName: string; timestamp: string; fileName?: string; fileData?: string }; isOwn: boolean }) {
+function MessageBubble({ msg, isOwn }: { msg: { id?: string; content: string; type: string; senderName: string; timestamp: string; fileName?: string; fileData?: string; fileUrl?: string }; isOwn: boolean }) {
   const [decrypted, setDecrypted] = useState("");
+
+  // Resolve the file source: prefer server URL, fallback to base64
+  const fileSrc = msg.fileUrl ? getFileUrl(msg.fileUrl) : msg.fileData || null;
 
   useEffect(() => {
     if (msg.type === "text") {
@@ -242,17 +245,20 @@ function MessageBubble({ msg, isOwn }: { msg: { content: string; type: string; s
         {!isOwn && (
           <p className="text-[10px] font-semibold opacity-70 mb-0.5">{msg.senderName}</p>
         )}
-        {msg.type === "file" && msg.fileData ? (
+        {msg.type === "file" && fileSrc ? (
           <a
-            href={msg.fileData}
+            href={fileSrc}
             download={msg.fileName}
-            className="flex items-center gap-2 underline text-sm"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 underline text-sm hover:opacity-80 transition-opacity"
           >
-            <Paperclip className="h-4 w-4" />
-            {msg.fileName}
+            <FileText className="h-4 w-4 shrink-0" />
+            <span className="truncate">{msg.fileName}</span>
+            <Download className="h-3.5 w-3.5 shrink-0" />
           </a>
-        ) : msg.type === "audio" && msg.fileData ? (
-          <audio controls src={msg.fileData} className="max-w-full" />
+        ) : msg.type === "audio" && fileSrc ? (
+          <audio controls src={fileSrc} className="max-w-full" />
         ) : (
           <p className="text-sm whitespace-pre-wrap break-words">{decrypted}</p>
         )}
