@@ -51,11 +51,22 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const apiMode = isApiConfigured();
   const [chats, setChats] = useState<Chat[]>(() => loadFromStorage(STORAGE_KEY, []));
   const [allMessages, setAllMessages] = useState<ChatMessage[]>(() => loadFromStorage(MSG_KEY, []));
-  const [activeChat, setActiveChat] = useState<Chat | null>(null);
+  const [activeChat, setActiveChatRaw] = useState<Chat | null>(null);
   const [notifications, setNotifications] = useState<ChatNotification[]>([]);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const lastPollRef = useRef<string>(new Date().toISOString());
   const pollErrorCount = useRef(0);
+  const activeChatRef = useRef<Chat | null>(null);
+
+  // Keep ref in sync so poll callback sees current active chat
+  const setActiveChat = useCallback((chat: Chat | null) => {
+    setActiveChatRaw(chat);
+    activeChatRef.current = chat;
+    // Clear notifications for this chat when opening it
+    if (chat) {
+      setNotifications(prev => prev.filter(n => n.chatId !== chat.id));
+    }
+  }, []);
 
   // Persist to localStorage only in mock mode
   useEffect(() => {
