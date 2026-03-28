@@ -8,7 +8,8 @@ export interface ChatMessage {
   content: string; // encrypted
   type: "text" | "audio" | "file" | "buzz";
   fileName?: string;
-  fileData?: string; // base64 for files
+  fileData?: string; // legacy base64 for local mode
+  fileUrl?: string;  // server-side file URL
   timestamp: string;
   read: boolean;
 }
