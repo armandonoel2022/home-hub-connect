@@ -95,14 +95,23 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             const newMsgs = result.messages.filter(m => !existingIds.has(m.id));
             if (newMsgs.length === 0) return prev;
 
-            // Only notify for messages from OTHER users
+            // Only notify for messages from OTHER users, not for the active chat
             newMsgs
               .filter(m => m.senderId !== user?.id)
               .forEach(m => {
-                // Decrypt message content for notification preview
+                // Skip notification if this chat is currently open and visible
+                const currentActive = activeChatRef.current;
+                if (isChatOpen && currentActive && currentActive.id === m.chatId) return;
+
                 const createNotif = async () => {
-                  let preview = "¡Te ha enviado un zumbido! 🔔";
-                  if (m.type !== "buzz") {
+                  let preview: string;
+                  if (m.type === "buzz") {
+                    preview = "¡Te ha enviado un zumbido! 🔔";
+                  } else if (m.type === "audio") {
+                    preview = "🎤 Mensaje de voz";
+                  } else if (m.type === "file") {
+                    preview = `📎 ${m.fileName || "Archivo"}`;
+                  } else {
                     try {
                       const decrypted = await decryptMessage(m.content || "");
                       preview = decrypted.slice(0, 50);
@@ -118,7 +127,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
                     timestamp: m.timestamp,
                     type: m.type === "buzz" ? "buzz" : "message",
                   };
-                  setNotifications(p => [...p, notif]);
+                  // Keep max 10 notifications
+                  setNotifications(p => [...p.slice(-9), notif]);
                 };
                 createNotif();
               });
