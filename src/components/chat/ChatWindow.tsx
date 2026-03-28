@@ -4,10 +4,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { decryptMessage } from "@/lib/chatCrypto";
 import {
   MessageSquare, X, Send, Vibrate, Paperclip, Mic, MicOff,
-  ArrowLeft, Users, User, Search, Building2,
+  ArrowLeft, Users, User, Search, Building2, Download, FileText,
 } from "lucide-react";
 import { DEPARTMENTS } from "@/lib/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { getFileUrl } from "@/lib/api";
 
 function getChatSortTime(chat: { lastMessageTime?: string | null; createdAt?: string | null }) {
   const fallback = typeof chat.createdAt === "string" ? chat.createdAt : "";

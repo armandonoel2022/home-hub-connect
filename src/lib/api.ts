@@ -37,6 +37,16 @@ const BASE_URL = getBaseUrl();
 /** Returns true when a backend API URL is configured */
 export const isApiConfigured = () => !!BASE_URL;
 
+/** Build full URL for a file served by the backend (e.g. /uploads/chat/MSG-001.pdf) */
+export function getFileUrl(relativePath: string): string {
+  if (!relativePath) return "";
+  // Already absolute URL
+  if (relativePath.startsWith("http") || relativePath.startsWith("data:")) return relativePath;
+  // Build from API base (remove /api suffix)
+  const serverBase = BASE_URL.replace(/\/api\/?$/, "");
+  return `${serverBase}${relativePath}`;
+}
+
 // ─── Core Fetch Helper ───
 async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
   if (!BASE_URL) {
