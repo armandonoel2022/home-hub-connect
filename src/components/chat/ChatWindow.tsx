@@ -145,11 +145,18 @@ function ChatList({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium truncate">{displayName}</p>
-                        {c.unreadCount > 0 && (
-                          <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center shrink-0">
-                            {c.unreadCount}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {c.lastMessageTime && (
+                            <span className="text-[10px] text-muted-foreground">
+                              {formatChatListTime(c.lastMessageTime)}
+                            </span>
+                          )}
+                          {c.unreadCount > 0 && (
+                            <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+                              {c.unreadCount}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       {preview && (
                         <p className="text-xs text-muted-foreground truncate">{preview}</p>
