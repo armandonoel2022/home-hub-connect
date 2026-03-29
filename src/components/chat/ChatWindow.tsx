@@ -548,42 +548,85 @@ function ActiveConversation({ onBack }: { onBack: () => void }) {
       </div>
 
       {/* Input */}
-      <div className="p-3 border-t border-border">
-        <div className="flex items-center gap-2">
-          <input ref={fileInputRef} type="file" className="hidden" onChange={handleFile} />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
-            title="Adjuntar archivo"
-          >
-            <Paperclip className="h-5 w-5" />
-          </button>
-          <button
-            onClick={toggleRecording}
-            className={`p-2 rounded-lg transition-colors shrink-0 ${
-              isRecording
-                ? "text-destructive bg-destructive/10 animate-pulse"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted"
-            }`}
-            title={isRecording ? "Detener grabación" : "Grabar audio"}
-          >
-            {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-          </button>
-          <input
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Escribe un mensaje..."
-            className="flex-1 bg-muted rounded-lg px-3 py-2 text-sm outline-none text-foreground placeholder:text-muted-foreground"
-          />
-          <button
-            onClick={handleSend}
-            disabled={!text.trim()}
-            className="p-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-40 shrink-0"
-          >
-            <Send className="h-5 w-5" />
-          </button>
-        </div>
+      <div className="p-3 border-t border-border" onKeyDown={handleKeyDown} tabIndex={-1}>
+        {isRecording ? (
+          /* ── WhatsApp-style recording UI ── */
+          <div className="flex items-center gap-2">
+            <button
+              onClick={cancelRecording}
+              className="p-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors shrink-0"
+              title="Cancelar grabación"
+            >
+              <Trash2 className="h-5 w-5" />
+            </button>
+
+            {/* Waveform + timer */}
+            <div className="flex-1 flex items-center gap-2 bg-muted rounded-lg px-3 py-2 min-w-0">
+              <span className="text-xs font-mono text-destructive font-semibold shrink-0 tabular-nums">
+                {formatTime(recordingTime)}
+              </span>
+              <div className="flex items-end gap-[2px] h-7 flex-1 overflow-hidden">
+                {waveformBars.map((h, i) => (
+                  <div
+                    key={i}
+                    className="w-[3px] rounded-full bg-destructive/70 transition-all duration-100"
+                    style={{ height: `${h}px` }}
+                  />
+                ))}
+              </div>
+              <span className="w-2 h-2 rounded-full bg-destructive animate-pulse shrink-0" />
+            </div>
+
+            <button
+              onClick={pauseRecording}
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+              title={isPaused ? "Reanudar" : "Pausar"}
+            >
+              {isPaused ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
+            </button>
+
+            <button
+              onClick={stopAndSendRecording}
+              className="p-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shrink-0"
+              title="Enviar audio (Enter)"
+            >
+              <Send className="h-5 w-5" />
+            </button>
+          </div>
+        ) : (
+          /* ── Normal text input ── */
+          <div className="flex items-center gap-2">
+            <input ref={fileInputRef} type="file" className="hidden" onChange={handleFile} />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+              title="Adjuntar archivo"
+            >
+              <Paperclip className="h-5 w-5" />
+            </button>
+            <button
+              onClick={startRecording}
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+              title="Grabar audio"
+            >
+              <Mic className="h-5 w-5" />
+            </button>
+            <input
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Escribe un mensaje..."
+              className="flex-1 bg-muted rounded-lg px-3 py-2 text-sm outline-none text-foreground placeholder:text-muted-foreground"
+            />
+            <button
+              onClick={handleSend}
+              disabled={!text.trim()}
+              className="p-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-40 shrink-0"
+            >
+              <Send className="h-5 w-5" />
+            </button>
+          </div>
+        )}
         <p className="text-[10px] text-muted-foreground mt-1.5 flex items-center gap-1">
           <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
           Cifrado AES-256 activo
