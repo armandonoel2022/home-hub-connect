@@ -318,8 +318,15 @@ function ActiveConversation({ onBack }: { onBack: () => void }) {
   const { user, allUsers } = useAuth();
   const [text, setText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [waveformBars, setWaveformBars] = useState<number[]>(new Array(30).fill(4));
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animFrameRef = useRef<number>(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatTitle = useMemo(
@@ -331,6 +338,15 @@ function ActiveConversation({ onBack }: { onBack: () => void }) {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cancelAnimationFrame(animFrameRef.current);
+      if (timerRef.current) clearInterval(timerRef.current);
+      streamRef.current?.getTracks().forEach(t => t.stop());
+    };
+  }, []);
+
   const handleSend = async () => {
     const trimmed = text.trim();
     if (!trimmed) return;
@@ -338,10 +354,14 @@ function ActiveConversation({ onBack }: { onBack: () => void }) {
     setText("");
   };
 
-  const handleKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = async (e: React.KeyboardEvent) => {
     if (e.key !== "Enter" || e.shiftKey) return;
     e.preventDefault();
-    await handleSend();
+    if (isRecording) {
+      await stopAndSendRecording();
+    } else {
+      await handleSend();
+    }
   };
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -356,32 +376,119 @@ function ActiveConversation({ onBack }: { onBack: () => void }) {
     e.target.value = "";
   };
 
-  const toggleRecording = async () => {
-    if (isRecording) {
-      mediaRecorderRef.current?.stop();
-      setIsRecording(false);
-      return;
+  const updateWaveform = () => {
+    const analyser = analyserRef.current;
+    if (!analyser) return;
+    const data = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(data);
+    // Sample 30 bars from the frequency data
+    const bars: number[] = [];
+    const step = Math.floor(data.length / 30);
+    for (let i = 0; i < 30; i++) {
+      const val = data[i * step] / 255;
+      bars.push(4 + val * 24); // min 4px, max 28px
     }
+    setWaveformBars(bars);
+    animFrameRef.current = requestAnimationFrame(updateWaveform);
+  };
+
+  const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+
+      // Set up analyser for waveform
+      const audioCtx = new AudioContext();
+      const source = audioCtx.createMediaStreamSource(stream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+      analyserRef.current = analyser;
+
       const recorder = new MediaRecorder(stream);
       audioChunksRef.current = [];
-      recorder.ondataavailable = (e) => audioChunksRef.current.push(e.data);
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      recorder.start(200); // collect data every 200ms for smoother chunks
+      mediaRecorderRef.current = recorder;
+      setIsRecording(true);
+      setIsPaused(false);
+      setRecordingTime(0);
+
+      // Start timer
+      timerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+
+      // Start waveform animation
+      updateWaveform();
+    } catch {
+      console.error("No se pudo acceder al micrófono");
+    }
+  };
+
+  const pauseRecording = () => {
+    const recorder = mediaRecorderRef.current;
+    if (!recorder) return;
+    if (isPaused) {
+      recorder.resume();
+      setIsPaused(false);
+      timerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+      updateWaveform();
+    } else {
+      recorder.pause();
+      setIsPaused(true);
+      if (timerRef.current) clearInterval(timerRef.current);
+      cancelAnimationFrame(animFrameRef.current);
+      // Freeze waveform bars at low level
+      setWaveformBars(new Array(30).fill(4));
+    }
+  };
+
+  const cancelRecording = () => {
+    mediaRecorderRef.current?.stop();
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    cancelAnimationFrame(animFrameRef.current);
+    if (timerRef.current) clearInterval(timerRef.current);
+    setIsRecording(false);
+    setIsPaused(false);
+    setRecordingTime(0);
+    setWaveformBars(new Array(30).fill(4));
+    audioChunksRef.current = [];
+  };
+
+  const stopAndSendRecording = async () => {
+    return new Promise<void>((resolve) => {
+      const recorder = mediaRecorderRef.current;
+      if (!recorder || recorder.state === "inactive") { resolve(); return; }
+
       recorder.onstop = async () => {
         const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
         const reader = new FileReader();
         reader.onload = async () => {
-          await sendMessage("audio", "audio", "audio.webm", reader.result as string);
+          await sendMessage("audio", "audio", "audio.mp3", reader.result as string);
+          resolve();
         };
         reader.readAsDataURL(blob);
-        stream.getTracks().forEach((t) => t.stop());
+        streamRef.current?.getTracks().forEach(t => t.stop());
+        cancelAnimationFrame(animFrameRef.current);
+        if (timerRef.current) clearInterval(timerRef.current);
+        setIsRecording(false);
+        setIsPaused(false);
+        setRecordingTime(0);
+        setWaveformBars(new Array(30).fill(4));
       };
-      recorder.start();
-      mediaRecorderRef.current = recorder;
-      setIsRecording(true);
-    } catch {
-      console.error("No se pudo acceder al micrófono");
-    }
+      recorder.stop();
+    });
+  };
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, "0");
+    const s = (seconds % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
   };
 
   if (!activeChat) return null;
