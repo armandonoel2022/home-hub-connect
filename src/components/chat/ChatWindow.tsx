@@ -15,6 +15,39 @@ function getChatSortTime(chat: { lastMessageTime?: string | null; createdAt?: st
   return Date.parse(chat.lastMessageTime ?? fallback) || 0;
 }
 
+function formatChatListTime(timestamp: string): string {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) {
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  } else if (diffDays === 1) {
+    return "Ayer";
+  } else if (diffDays < 7) {
+    return date.toLocaleDateString("es", { weekday: "short" });
+  }
+  return date.toLocaleDateString("es", { day: "2-digit", month: "2-digit", year: "2-digit" });
+}
+
+function formatDateSeparator(timestamp: string): string {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday = date.toDateString() === yesterday.toDateString();
+  
+  if (isToday) return "Hoy";
+  if (isYesterday) return "Ayer";
+  return date.toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+}
+
+function getDateKey(timestamp: string): string {
+  return new Date(timestamp).toDateString();
+}
+
 function getChatDisplayName(
   chat: { type: string; participants: string[]; name: string },
   currentUserId?: string,
@@ -145,11 +178,18 @@ function ChatList({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium truncate">{displayName}</p>
-                        {c.unreadCount > 0 && (
-                          <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center shrink-0">
-                            {c.unreadCount}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {c.lastMessageTime && (
+                            <span className="text-[10px] text-muted-foreground">
+                              {formatChatListTime(c.lastMessageTime)}
+                            </span>
+                          )}
+                          {c.unreadCount > 0 && (
+                            <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+                              {c.unreadCount}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       {preview && (
                         <p className="text-xs text-muted-foreground truncate">{preview}</p>
@@ -381,9 +421,21 @@ function ActiveConversation({ onBack }: { onBack: () => void }) {
             Inicia la conversación enviando un mensaje.
           </p>
         ) : (
-          messages.map((m) => (
-            <MessageBubble key={m.id} msg={m} isOwn={m.senderId === user?.id} />
-          ))
+          messages.map((m, idx) => {
+            const showDateSep = idx === 0 || getDateKey(m.timestamp) !== getDateKey(messages[idx - 1].timestamp);
+            return (
+              <div key={m.id}>
+                {showDateSep && (
+                  <div className="flex justify-center py-2 my-1">
+                    <span className="text-[10px] text-muted-foreground bg-muted px-3 py-1 rounded-full font-medium">
+                      {formatDateSeparator(m.timestamp)}
+                    </span>
+                  </div>
+                )}
+                <MessageBubble msg={m} isOwn={m.senderId === user?.id} />
+              </div>
+            );
+          })
         )}
       </div>
 
