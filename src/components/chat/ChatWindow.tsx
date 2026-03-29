@@ -15,6 +15,39 @@ function getChatSortTime(chat: { lastMessageTime?: string | null; createdAt?: st
   return Date.parse(chat.lastMessageTime ?? fallback) || 0;
 }
 
+function formatChatListTime(timestamp: string): string {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) {
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  } else if (diffDays === 1) {
+    return "Ayer";
+  } else if (diffDays < 7) {
+    return date.toLocaleDateString("es", { weekday: "short" });
+  }
+  return date.toLocaleDateString("es", { day: "2-digit", month: "2-digit", year: "2-digit" });
+}
+
+function formatDateSeparator(timestamp: string): string {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday = date.toDateString() === yesterday.toDateString();
+  
+  if (isToday) return "Hoy";
+  if (isYesterday) return "Ayer";
+  return date.toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+}
+
+function getDateKey(timestamp: string): string {
+  return new Date(timestamp).toDateString();
+}
+
 function getChatDisplayName(
   chat: { type: string; participants: string[]; name: string },
   currentUserId?: string,

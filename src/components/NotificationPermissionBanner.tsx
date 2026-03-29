@@ -27,7 +27,7 @@ const NotificationPermissionBanner = () => {
       try {
         new Notification("SafeOne Intranet", {
           body: "¡Notificaciones activadas! Recibirás alertas del chat aquí.",
-          icon: "/placeholder.svg",
+          icon: "/logo-192.png",
           tag: "test-notification",
         });
       } catch {}

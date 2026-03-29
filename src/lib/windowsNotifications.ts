@@ -111,9 +111,9 @@ function showNativeNotification(
   try {
     const notification = new Notification(title, {
       body,
-      icon: options?.icon || "/placeholder.svg",
+      icon: options?.icon || "/logo-192.png",
       tag: options?.tag,
-      badge: options?.icon || "/placeholder.svg",
+      badge: options?.icon || "/logo-192.png",
       silent: false,
       requireInteraction: options?.type === "buzz",
     });
