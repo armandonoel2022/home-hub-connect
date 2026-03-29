@@ -149,7 +149,7 @@ router.post('/messages', auth, (req, res) => {
   const chats = readData(CHATS_FILE);
   const chatIdx = chats.findIndex(c => c.id === chatId);
   if (chatIdx !== -1) {
-    const preview = type === 'text' ? (content || '').slice(0, 50)
+    const preview = type === 'text' ? content
       : type === 'buzz' ? '🔔 ¡Zumbido!'
       : type === 'audio' ? '🎤 Audio'
       : `📎 ${fileName || 'Archivo'}`;
