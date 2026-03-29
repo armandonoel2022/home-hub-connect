@@ -421,9 +421,21 @@ function ActiveConversation({ onBack }: { onBack: () => void }) {
             Inicia la conversación enviando un mensaje.
           </p>
         ) : (
-          messages.map((m) => (
-            <MessageBubble key={m.id} msg={m} isOwn={m.senderId === user?.id} />
-          ))
+          messages.map((m, idx) => {
+            const showDateSep = idx === 0 || getDateKey(m.timestamp) !== getDateKey(messages[idx - 1].timestamp);
+            return (
+              <div key={m.id}>
+                {showDateSep && (
+                  <div className="flex justify-center py-2 my-1">
+                    <span className="text-[10px] text-muted-foreground bg-muted px-3 py-1 rounded-full font-medium">
+                      {formatDateSeparator(m.timestamp)}
+                    </span>
+                  </div>
+                )}
+                <MessageBubble msg={m} isOwn={m.senderId === user?.id} />
+              </div>
+            );
+          })
         )}
       </div>
 
