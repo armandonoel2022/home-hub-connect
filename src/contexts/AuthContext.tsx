@@ -451,6 +451,7 @@ const INITIAL_USERS: IntranetUser[] = [
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<IntranetUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
   const apiMode = isApiConfigured();
 
   const [allUsers, setAllUsers] = useState<IntranetUser[]>(() => {
