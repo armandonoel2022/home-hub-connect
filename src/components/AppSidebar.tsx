@@ -62,9 +62,10 @@ const adminItems = [
 const AppSidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, changePassword } = useAuth();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const { totalUnread: chatUnread } = useChatContext();
   const combinedUnread = unreadCount + chatUnread;
