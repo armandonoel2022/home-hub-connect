@@ -3,14 +3,18 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import logo from "@/assets/safeone-logo.png";
 import { Lock, User, LogIn } from "lucide-react";
+import ChangePasswordModal from "@/components/ChangePasswordModal";
+import ForgotPasswordModal from "@/components/ForgotPasswordModal";
 
 const LoginPage = () => {
-  const { login, user } = useAuth();
+  const { login, user, mustChangePassword, changePassword, createForgotPasswordTicket } = useAuth();
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,11 +27,36 @@ const LoginPage = () => {
     const ok = await login(username.trim(), password);
     setLoading(false);
     if (ok) {
-      navigate("/", { replace: true });
+      // mustChangePassword will be checked after state update
+      // We use a small timeout to let state propagate
+      setTimeout(() => {
+        // The check happens in the render via mustChangePassword
+      }, 0);
     } else {
       setError("Usuario o contraseña incorrectos");
     }
   };
+
+  // If logged in and must change password, show modal
+  if (user && mustChangePassword) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "var(--gradient-dark)" }}>
+        <ChangePasswordModal
+          isForced={true}
+          onChangePassword={(newPw) => {
+            changePassword(newPw);
+            navigate("/", { replace: true });
+          }}
+        />
+      </div>
+    );
+  }
+
+  // If logged in and no password change needed, redirect
+  if (user && !mustChangePassword) {
+    navigate("/", { replace: true });
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "var(--gradient-dark)" }}>
@@ -82,12 +111,29 @@ const LoginPage = () => {
             {loading ? "Ingresando..." : "Ingresar"}
           </button>
 
-          <p className="text-xs text-muted-foreground text-center mt-3">
-            ¿No tienes cuenta?{" "}
-            <Link to="/registro" className="gold-accent-text hover:underline font-medium">Solicitar Acceso</Link>
-          </p>
+          <div className="flex items-center justify-between text-xs mt-3">
+            <button
+              type="button"
+              onClick={() => setShowForgotPassword(true)}
+              className="gold-accent-text hover:underline font-medium"
+            >
+              ¿Olvidaste tu contraseña?
+            </button>
+            <Link to="/registro" className="gold-accent-text hover:underline font-medium">
+              Solicitar Acceso
+            </Link>
+          </div>
         </form>
       </div>
+
+      {showForgotPassword && (
+        <ForgotPasswordModal
+          onClose={() => setShowForgotPassword(false)}
+          onSubmit={(email, fullName) => {
+            createForgotPasswordTicket(email, fullName);
+          }}
+        />
+      )}
     </div>
   );
 };

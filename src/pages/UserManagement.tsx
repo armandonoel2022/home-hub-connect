@@ -28,7 +28,8 @@ const emptyForm = (): Partial<IntranetUser> => ({
 });
 
 const UserManagementPage = () => {
-  const { user, allUsers, activeUsers, inactiveUsers, addUser, updateUser, deleteUser } = useAuth();
+  const { user, allUsers, activeUsers, inactiveUsers, addUser, updateUser, deleteUser, resetUserPassword } = useAuth();
+  const [resetConfirm, setResetConfirm] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<IntranetUser | null>(null);
