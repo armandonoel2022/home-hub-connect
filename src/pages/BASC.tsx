@@ -1,20 +1,24 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { DEPARTMENTS } from "@/lib/types";
 import {
   INITIAL_OBJECTIVES, INITIAL_PROCEDURES, BASC_OBJECTIVE_CATEGORIES,
-  type BASCObjective, type BASCProcedure, type BASCEvidence,
+  type BASCObjective, type BASCProcedure, type BASCEvidence, type BASCSubItem,
+  calcCompliance, calcStatus,
 } from "@/lib/bascData";
+import { useNotifications } from "@/contexts/NotificationContext";
 import {
   FolderOpen, FileText, Upload, ChevronRight, ChevronDown, X, File, Download, Trash2, Plus, Shield,
   Target, CheckCircle2, AlertTriangle, Clock, Eye, BarChart3, Link2, ClipboardCheck, TrendingUp,
+  Bell, CheckSquare, Square, Paperclip, FileUp,
 } from "lucide-react";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
+import { toast } from "sonner";
 
 const COLORS = ["hsl(160,60%,40%)", "hsl(42,100%,50%)", "hsl(200,70%,50%)", "hsl(0,60%,50%)", "hsl(280,50%,50%)"];
+const AUDITOR_NAME = "Bilianny Fernández";
 
-// Tabs
 type BASCTab = "documentos" | "objetivos" | "procedimientos";
 
 interface BASCDocument {
@@ -51,21 +55,93 @@ const auditColors = {
   observación: "bg-amber-50 text-amber-700",
 };
 
+const STORAGE_KEY = "safeone-basc-objectives-v3";
+
 const BASCPage = () => {
   const { user } = useAuth();
+  const { addNotification } = useNotifications();
   const [activeTab, setActiveTab] = useState<BASCTab>("objetivos");
   const [documents, setDocuments] = useState<BASCDocument[]>(initialDocs);
-  const [objectives, setObjectives] = useState<BASCObjective[]>(INITIAL_OBJECTIVES);
+  const [objectives, setObjectives] = useState<BASCObjective[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved) : INITIAL_OBJECTIVES;
+    } catch { return INITIAL_OBJECTIVES; }
+  });
   const [procedures] = useState<BASCProcedure[]>(INITIAL_PROCEDURES);
   const [expandedDept, setExpandedDept] = useState<string | null>(user?.department || "Operaciones");
   const [expandedCat, setExpandedCat] = useState<string | null>("Procedimientos");
   const [showUpload, setShowUpload] = useState(false);
-  const [showObjectiveDetail, setShowObjectiveDetail] = useState<BASCObjective | null>(null);
-  const [showAddEvidence, setShowAddEvidence] = useState<string | null>(null);
+  const [showObjectiveDetail, setShowObjectiveDetail] = useState<string | null>(null);
+  const [showAddEvidence, setShowAddEvidence] = useState<{ objectiveId: string; subItemId?: string } | null>(null);
   const [uploadForm, setUploadForm] = useState({ department: user?.department || "", category: "", file: null as File | null });
   const [search, setSearch] = useState("");
   const [filterDept, setFilterDept] = useState("");
-  const [evidenceForm, setEvidenceForm] = useState({ title: "", description: "", type: "documento" as BASCEvidence["type"], fileName: "" });
+  const [evidenceForm, setEvidenceForm] = useState({ title: "", description: "", type: "documento" as BASCEvidence["type"], file: null as File | null });
+
+  // Persist objectives
+  const saveObjectives = useCallback((objs: BASCObjective[]) => {
+    setObjectives(objs);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(objs)); } catch {}
+  }, []);
+
+  // Send notification to auditor
+  const notifyAuditor = useCallback((title: string, message: string) => {
+    addNotification({
+      title: `🔔 BASC: ${title}`,
+      message,
+      type: "info",
+      forUserId: "ALL", // In production, target Bilianny's user ID
+    });
+    toast.success(`Notificación enviada a ${AUDITOR_NAME}`, { description: title });
+  }, [addNotification]);
+
+  // Toggle sub-item completion
+  const toggleSubItem = useCallback((objectiveId: string, subItemId: string) => {
+    const obj = objectives.find(o => o.id === objectiveId);
+    if (!obj) return;
+    const subItem = obj.subItems.find(s => s.id === subItemId);
+    if (!subItem) return;
+
+    // If requires evidence and not yet completed, prompt for evidence
+    if (subItem.requiredEvidence && !subItem.completed) {
+      const hasEvidence = obj.evidences.some(e => e.subItemId === subItemId);
+      if (!hasEvidence) {
+        setShowAddEvidence({ objectiveId, subItemId });
+        toast.info("Debe cargar evidencia para completar este acápite");
+        return;
+      }
+    }
+
+    const updated = objectives.map(o => {
+      if (o.id !== objectiveId) return o;
+      const newSubItems = o.subItems.map(s =>
+        s.id === subItemId
+          ? { ...s, completed: !s.completed, completedBy: !s.completed ? (user?.fullName || "Usuario") : undefined, completedAt: !s.completed ? new Date().toISOString().split("T")[0] : undefined }
+          : s
+      );
+      const newObj = { ...o, subItems: newSubItems };
+      newObj.compliancePercent = calcCompliance(newObj);
+      newObj.status = calcStatus(newObj);
+      return newObj;
+    });
+
+    saveObjectives(updated);
+
+    // Notify auditor
+    const updatedObj = updated.find(o => o.id === objectiveId)!;
+    if (!subItem.completed) {
+      notifyAuditor(
+        `Acápite completado — ${updatedObj.code}`,
+        `${user?.fullName || "Usuario"} completó "${subItem.text}" en ${updatedObj.title}. Compliance: ${updatedObj.compliancePercent}%`
+      );
+    }
+
+    // Refresh detail if open
+    if (showObjectiveDetail === objectiveId) {
+      // state already updated
+    }
+  }, [objectives, user, saveObjectives, notifyAuditor, showObjectiveDetail]);
 
   // Document logic
   const accessibleDocs = user?.isAdmin ? documents : documents.filter((d) => d.department === user?.department);
@@ -100,37 +176,70 @@ const BASCPage = () => {
   const handleDelete = (id: string) => setDocuments(documents.filter((d) => d.id !== id));
   const getFileExtension = (name: string) => name.split(".").pop()?.toUpperCase() || "";
 
-  // Objective stats
-  const complianceAvg = objectives.length > 0 ? Math.round(objectives.reduce((a, o) => a + o.compliancePercent, 0) / objectives.length) : 0;
-  const completedCount = objectives.filter((o) => o.status === "cumplido").length;
-  const inProgressCount = objectives.filter((o) => o.status === "en_progreso").length;
-  const pendingCount = objectives.filter((o) => o.status === "pendiente" || o.status === "vencido").length;
-
-  const compliancePieData = [
-    { name: "Cumplidos", value: completedCount },
-    { name: "En Progreso", value: inProgressCount },
-    { name: "Pendientes/Vencidos", value: pendingCount },
-  ].filter((d) => d.value > 0);
-
-  // Add evidence
-  const handleAddEvidence = (objectiveId: string) => {
-    if (!evidenceForm.title || !evidenceForm.fileName) return;
+  // Add evidence with file upload
+  const handleAddEvidence = () => {
+    if (!showAddEvidence || !evidenceForm.title || !evidenceForm.file) return;
+    const { objectiveId, subItemId } = showAddEvidence;
     const ev: BASCEvidence = {
       id: `EV-${Date.now()}`, objectiveId, title: evidenceForm.title,
       description: evidenceForm.description, type: evidenceForm.type,
       uploadedBy: user?.fullName || "Usuario", uploadedAt: new Date().toISOString().split("T")[0],
-      fileName: evidenceForm.fileName,
+      fileName: evidenceForm.file.name, fileSize: `${(evidenceForm.file.size / 1024).toFixed(0)} KB`,
+      subItemId,
     };
-    setObjectives(objectives.map((o) => o.id === objectiveId ? { ...o, evidences: [...o.evidences, ev] } : o));
+
+    const updated = objectives.map((o) => {
+      if (o.id !== objectiveId) return o;
+      const newEvidences = [...o.evidences, ev];
+      let newSubItems = o.subItems;
+      // Auto-complete sub-item if evidence uploaded for it
+      if (subItemId) {
+        newSubItems = o.subItems.map(s =>
+          s.id === subItemId ? { ...s, completed: true, completedBy: user?.fullName || "Usuario", completedAt: new Date().toISOString().split("T")[0] } : s
+        );
+      }
+      const newObj = { ...o, evidences: newEvidences, subItems: newSubItems };
+      newObj.compliancePercent = calcCompliance(newObj);
+      newObj.status = calcStatus(newObj);
+      return newObj;
+    });
+
+    saveObjectives(updated);
+
+    // Notify auditor
+    const updatedObj = updated.find(o => o.id === objectiveId)!;
+    notifyAuditor(
+      `Nueva evidencia — ${updatedObj.code}`,
+      `${user?.fullName || "Usuario"} cargó "${ev.title}" (${ev.fileName}) en ${updatedObj.title}. Compliance ahora: ${updatedObj.compliancePercent}%`
+    );
+
+    toast.success("Evidencia cargada exitosamente", {
+      description: `${updatedObj.title} — ${updatedObj.compliancePercent}% completado`,
+    });
+
     setShowAddEvidence(null);
-    setEvidenceForm({ title: "", description: "", type: "documento", fileName: "" });
+    setEvidenceForm({ title: "", description: "", type: "documento", file: null });
   };
+
+  // Objective stats (recalculated)
+  const complianceAvg = objectives.length > 0 ? Math.round(objectives.reduce((a, o) => a + calcCompliance(o), 0) / objectives.length) : 0;
+  const completedCount = objectives.filter((o) => calcCompliance(o) === 100).length;
+  const inProgressCount = objectives.filter((o) => { const c = calcCompliance(o); return c > 0 && c < 100; }).length;
+  const pendingCount = objectives.filter((o) => calcCompliance(o) === 0).length;
+
+  const compliancePieData = [
+    { name: "Cumplidos", value: completedCount },
+    { name: "En Progreso", value: inProgressCount },
+    { name: "Pendientes", value: pendingCount },
+  ].filter((d) => d.value > 0);
 
   const tabs: { id: BASCTab; label: string; icon: any }[] = [
     { id: "objetivos", label: "Objetivos y Compliance", icon: Target },
     { id: "procedimientos", label: "Procedimientos", icon: ClipboardCheck },
     { id: "documentos", label: "Documentos", icon: FolderOpen },
   ];
+
+  const detailObj = objectives.find(o => o.id === showObjectiveDetail) || null;
 
   return (
     <AppLayout>
@@ -151,11 +260,20 @@ const BASCPage = () => {
                   </p>
                 </div>
               </div>
-              {activeTab === "documentos" && (
-                <button onClick={() => setShowUpload(true)} className="btn-gold flex items-center gap-2">
-                  <Upload className="h-4 w-4" /> Subir Documento
-                </button>
-              )}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 bg-card rounded-lg border border-border px-4 py-2">
+                  <TrendingUp className={`h-5 w-5 ${complianceAvg >= 80 ? "text-emerald-600" : complianceAvg >= 50 ? "text-amber-500" : "text-destructive"}`} />
+                  <span className="text-sm text-muted-foreground">Compliance General:</span>
+                  <span className={`text-xl font-heading font-bold ${complianceAvg >= 80 ? "text-emerald-600" : complianceAvg >= 50 ? "gold-accent-text" : "text-destructive"}`}>
+                    {complianceAvg}%
+                  </span>
+                </div>
+                {activeTab === "documentos" && (
+                  <button onClick={() => setShowUpload(true)} className="btn-gold flex items-center gap-2">
+                    <Upload className="h-4 w-4" /> Subir Documento
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -180,6 +298,10 @@ const BASCPage = () => {
                 <p className={`text-3xl font-heading font-bold ${complianceAvg >= 80 ? "text-emerald-600" : complianceAvg >= 50 ? "gold-accent-text" : "text-destructive"}`}>
                   {complianceAvg}%
                 </p>
+                <div className="w-full h-2 bg-muted rounded-full mt-2">
+                  <div className={`h-full rounded-full transition-all duration-500 ${complianceAvg >= 80 ? "bg-emerald-500" : complianceAvg >= 50 ? "bg-gold" : "bg-destructive"}`}
+                    style={{ width: `${complianceAvg}%` }} />
+                </div>
               </div>
               <div className="bg-card rounded-xl border border-border p-4">
                 <p className="text-xs text-muted-foreground">Objetivos</p>
@@ -194,12 +316,15 @@ const BASCPage = () => {
                 <p className="text-2xl font-heading font-bold gold-accent-text">{inProgressCount}</p>
               </div>
               <div className="bg-card rounded-xl border border-border p-4">
-                <p className="text-xs text-muted-foreground">Pendientes</p>
-                <p className="text-2xl font-heading font-bold text-destructive">{pendingCount}</p>
+                <p className="text-xs text-muted-foreground">Auditora</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <Bell className="h-4 w-4 text-gold" />
+                  <p className="text-sm font-medium text-card-foreground">{AUDITOR_NAME}</p>
+                </div>
               </div>
             </div>
 
-            {/* Compliance Pie + Objectives List */}
+            {/* Pie + Objectives List */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <div className="bg-card rounded-xl border border-border p-5">
                 <h3 className="font-heading font-bold text-card-foreground mb-3">Estado de Objetivos</h3>
@@ -212,18 +337,23 @@ const BASCPage = () => {
                     <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--card-foreground))" }} />
                   </PieChart>
                 </ResponsiveContainer>
+                <div className="mt-3 text-xs text-muted-foreground text-center">
+                  Total sub-acápites: {objectives.reduce((a, o) => a + o.subItems.length, 0)} · Completados: {objectives.reduce((a, o) => a + o.subItems.filter(s => s.completed).length, 0)}
+                </div>
               </div>
 
               <div className="lg:col-span-2 space-y-3">
                 {objectives.map((obj) => {
-                  const sc = statusConfig[obj.status];
-                  const proc = procedures.filter((p) => obj.linkedProcedures.includes(p.id));
+                  const pct = calcCompliance(obj);
+                  const st = calcStatus(obj);
+                  const sc = statusConfig[st];
+                  const completedSubs = obj.subItems.filter(s => s.completed).length;
                   return (
                     <div key={obj.id} className="bg-card rounded-xl border border-border p-4 hover:shadow-md transition-shadow cursor-pointer"
-                      onClick={() => setShowObjectiveDetail(obj)}>
+                      onClick={() => setShowObjectiveDetail(obj.id)}>
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <span className="text-xs font-mono text-muted-foreground">{obj.code}</span>
                             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${sc.color}`}>{sc.label}</span>
                             {obj.auditResult && (
@@ -234,24 +364,19 @@ const BASCPage = () => {
                           </div>
                           <h4 className="font-heading font-bold text-sm text-card-foreground">{obj.title}</h4>
                           <p className="text-xs text-muted-foreground mt-1">{obj.category} · {obj.responsible} · {obj.department}</p>
-                          {proc.length > 0 && (
-                            <div className="flex items-center gap-1 mt-2">
-                              <Link2 className="h-3 w-3 text-muted-foreground" />
-                              {proc.map((p) => (
-                                <span key={p.id} className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground">{p.code}</span>
-                              ))}
-                            </div>
-                          )}
+                          <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1"><CheckSquare className="h-3 w-3" /> {completedSubs}/{obj.subItems.length} acápites</span>
+                            <span className="flex items-center gap-1"><Paperclip className="h-3 w-3" /> {obj.evidences.length} evidencias</span>
+                          </div>
                         </div>
                         <div className="text-right shrink-0">
-                          <div className={`text-xl font-heading font-bold ${obj.compliancePercent >= 80 ? "text-emerald-600" : obj.compliancePercent >= 50 ? "gold-accent-text" : "text-destructive"}`}>
-                            {obj.compliancePercent}%
+                          <div className={`text-xl font-heading font-bold ${pct >= 80 ? "text-emerald-600" : pct >= 50 ? "gold-accent-text" : "text-destructive"}`}>
+                            {pct}%
                           </div>
                           <div className="w-20 h-2 bg-muted rounded-full mt-1">
-                            <div className={`h-full rounded-full transition-all ${obj.compliancePercent >= 80 ? "bg-emerald-500" : obj.compliancePercent >= 50 ? "bg-gold" : "bg-destructive"}`}
-                              style={{ width: `${obj.compliancePercent}%` }} />
+                            <div className={`h-full rounded-full transition-all duration-500 ${pct >= 80 ? "bg-emerald-500" : pct >= 50 ? "bg-gold" : "bg-destructive"}`}
+                              style={{ width: `${pct}%` }} />
                           </div>
-                          <p className="text-[10px] text-muted-foreground mt-1">{obj.evidences.length} evidencias</p>
                         </div>
                       </div>
                     </div>
@@ -307,13 +432,16 @@ const BASCPage = () => {
                       {linkedObjs.length > 0 && (
                         <div className="space-y-1">
                           <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Objetivos vinculados</p>
-                          {linkedObjs.map((o) => (
-                            <div key={o.id} className="flex items-center gap-2">
-                              <div className={`w-2 h-2 rounded-full ${o.compliancePercent >= 80 ? "bg-emerald-500" : o.compliancePercent >= 50 ? "bg-gold" : "bg-destructive"}`} />
-                              <span className="text-xs text-card-foreground">{o.compliancePercent}%</span>
-                              <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">{o.title}</span>
-                            </div>
-                          ))}
+                          {linkedObjs.map((o) => {
+                            const p = calcCompliance(o);
+                            return (
+                              <div key={o.id} className="flex items-center gap-2">
+                                <div className={`w-2 h-2 rounded-full ${p >= 80 ? "bg-emerald-500" : p >= 50 ? "bg-gold" : "bg-destructive"}`} />
+                                <span className="text-xs text-card-foreground">{p}%</span>
+                                <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">{o.title}</span>
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
@@ -466,40 +594,91 @@ const BASCPage = () => {
           </div>
         )}
 
-        {/* Objective Detail Modal */}
-        {showObjectiveDetail && (
+        {/* ══════ OBJECTIVE DETAIL MODAL ══════ */}
+        {detailObj && (
           <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-            <div className="bg-card rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
-              <div className="flex items-center justify-between p-5 border-b border-border">
+            <div className="bg-card rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl">
+              <div className="flex items-center justify-between p-5 border-b border-border sticky top-0 bg-card z-10">
                 <div>
-                  <p className="text-xs font-mono text-muted-foreground">{showObjectiveDetail.code}</p>
-                  <h2 className="font-heading font-bold text-lg text-card-foreground">{showObjectiveDetail.title}</h2>
+                  <p className="text-xs font-mono text-muted-foreground">{detailObj.code}</p>
+                  <h2 className="font-heading font-bold text-lg text-card-foreground">{detailObj.title}</h2>
                 </div>
                 <button onClick={() => setShowObjectiveDetail(null)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
               </div>
               <div className="p-5 space-y-5">
-                <p className="text-sm text-muted-foreground">{showObjectiveDetail.description}</p>
+                <p className="text-sm text-muted-foreground">{detailObj.description}</p>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div className="bg-muted rounded-lg p-3">
                     <p className="text-[10px] text-muted-foreground">Compliance</p>
-                    <p className={`text-xl font-bold ${showObjectiveDetail.compliancePercent >= 80 ? "text-emerald-600" : showObjectiveDetail.compliancePercent >= 50 ? "gold-accent-text" : "text-destructive"}`}>
-                      {showObjectiveDetail.compliancePercent}%
+                    <p className={`text-xl font-bold ${calcCompliance(detailObj) >= 80 ? "text-emerald-600" : calcCompliance(detailObj) >= 50 ? "gold-accent-text" : "text-destructive"}`}>
+                      {calcCompliance(detailObj)}%
                     </p>
+                    <div className="w-full h-1.5 bg-card rounded-full mt-1">
+                      <div className={`h-full rounded-full transition-all duration-500 ${calcCompliance(detailObj) >= 80 ? "bg-emerald-500" : calcCompliance(detailObj) >= 50 ? "bg-gold" : "bg-destructive"}`}
+                        style={{ width: `${calcCompliance(detailObj)}%` }} />
+                    </div>
                   </div>
                   <div className="bg-muted rounded-lg p-3">
                     <p className="text-[10px] text-muted-foreground">Estado</p>
-                    <p className="text-sm font-semibold text-card-foreground">{statusConfig[showObjectiveDetail.status].label}</p>
+                    <p className="text-sm font-semibold text-card-foreground">{statusConfig[calcStatus(detailObj)].label}</p>
                   </div>
                   <div className="bg-muted rounded-lg p-3">
                     <p className="text-[10px] text-muted-foreground">Fecha Objetivo</p>
-                    <p className="text-sm font-semibold text-card-foreground">{showObjectiveDetail.targetDate}</p>
+                    <p className="text-sm font-semibold text-card-foreground">{detailObj.targetDate}</p>
                   </div>
                   <div className="bg-muted rounded-lg p-3">
                     <p className="text-[10px] text-muted-foreground">Auditoría</p>
                     <p className="text-sm font-semibold text-card-foreground">
-                      {showObjectiveDetail.auditResult ? (showObjectiveDetail.auditResult === "conforme" ? "✓ Conforme" : showObjectiveDetail.auditResult === "observación" ? "⚠ Observación" : "✗ No conforme") : "Sin auditar"}
+                      {detailObj.auditResult ? (detailObj.auditResult === "conforme" ? "✓ Conforme" : detailObj.auditResult === "observación" ? "⚠ Observación" : "✗ No conforme") : "Sin auditar"}
                     </p>
+                  </div>
+                </div>
+
+                {/* ── Sub-Items Checklist ── */}
+                <div>
+                  <h4 className="text-sm font-heading font-bold text-card-foreground mb-3 flex items-center gap-2">
+                    <CheckSquare className="h-4 w-4 text-gold" /> Acápites de Cumplimiento ({detailObj.subItems.filter(s => s.completed).length}/{detailObj.subItems.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {detailObj.subItems.map((sub) => {
+                      const linkedEvidence = detailObj.evidences.filter(e => e.subItemId === sub.id);
+                      return (
+                        <div key={sub.id} className={`rounded-lg border p-3 transition-all ${sub.completed ? "bg-emerald-50/50 border-emerald-200" : "bg-muted/50 border-border"}`}>
+                          <div className="flex items-start gap-3">
+                            <button onClick={(e) => { e.stopPropagation(); toggleSubItem(detailObj.id, sub.id); }}
+                              className="mt-0.5 shrink-0">
+                              {sub.completed
+                                ? <CheckSquare className="h-5 w-5 text-emerald-600" />
+                                : <Square className="h-5 w-5 text-muted-foreground hover:text-card-foreground transition-colors" />
+                              }
+                            </button>
+                            <div className="flex-1">
+                              <p className={`text-sm ${sub.completed ? "line-through text-muted-foreground" : "text-card-foreground"}`}>{sub.text}</p>
+                              {sub.completed && sub.completedBy && (
+                                <p className="text-[10px] text-muted-foreground mt-0.5">✓ {sub.completedBy} · {sub.completedAt}</p>
+                              )}
+                              {linkedEvidence.length > 0 && (
+                                <div className="mt-1 flex flex-wrap gap-1">
+                                  {linkedEvidence.map(ev => (
+                                    <span key={ev.id} className="inline-flex items-center gap-1 text-[10px] bg-card px-2 py-0.5 rounded-full text-muted-foreground border border-border">
+                                      <Paperclip className="h-2.5 w-2.5" /> {ev.fileName}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            {!sub.completed && sub.requiredEvidence && (
+                              <button onClick={(e) => { e.stopPropagation(); setShowAddEvidence({ objectiveId: detailObj.id, subItemId: sub.id }); }}
+                                className="shrink-0 flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg bg-gold/10 text-gold hover:bg-gold/20 transition-colors"
+                                title="Cargar evidencia">
+                                <FileUp className="h-3 w-3" /> Evidencia
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -507,7 +686,7 @@ const BASCPage = () => {
                 <div>
                   <h4 className="text-sm font-heading font-bold text-card-foreground mb-2 flex items-center gap-2"><Link2 className="h-4 w-4" /> Procedimientos Vinculados</h4>
                   <div className="space-y-2">
-                    {procedures.filter((p) => showObjectiveDetail.linkedProcedures.includes(p.id)).map((p) => (
+                    {procedures.filter((p) => detailObj.linkedProcedures.includes(p.id)).map((p) => (
                       <div key={p.id} className="bg-muted rounded-lg p-3 flex items-center justify-between">
                         <div>
                           <span className="text-xs font-mono text-muted-foreground">{p.code}</span>
@@ -522,14 +701,14 @@ const BASCPage = () => {
                 {/* Evidences */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-sm font-heading font-bold text-card-foreground flex items-center gap-2"><Eye className="h-4 w-4" /> Evidencias ({showObjectiveDetail.evidences.length})</h4>
-                    <button onClick={() => setShowAddEvidence(showObjectiveDetail.id)} className="text-xs gold-accent-text hover:underline flex items-center gap-1"><Plus className="h-3 w-3" /> Agregar Evidencia</button>
+                    <h4 className="text-sm font-heading font-bold text-card-foreground flex items-center gap-2"><Eye className="h-4 w-4" /> Evidencias ({detailObj.evidences.length})</h4>
+                    <button onClick={() => setShowAddEvidence({ objectiveId: detailObj.id })} className="text-xs gold-accent-text hover:underline flex items-center gap-1"><Plus className="h-3 w-3" /> Agregar Evidencia</button>
                   </div>
-                  {showObjectiveDetail.evidences.length === 0 ? (
-                    <p className="text-sm text-muted-foreground bg-muted rounded-lg p-4 text-center">Sin evidencias registradas</p>
+                  {detailObj.evidences.length === 0 ? (
+                    <p className="text-sm text-muted-foreground bg-muted rounded-lg p-4 text-center">Sin evidencias registradas — cargue documentos para avanzar el compliance</p>
                   ) : (
                     <div className="space-y-2">
-                      {showObjectiveDetail.evidences.map((ev) => (
+                      {detailObj.evidences.map((ev) => (
                         <div key={ev.id} className="bg-muted rounded-lg p-3">
                           <div className="flex items-center justify-between">
                             <div>
@@ -538,7 +717,7 @@ const BASCPage = () => {
                                 <span className="text-sm font-medium text-card-foreground">{ev.title}</span>
                               </div>
                               <p className="text-xs text-muted-foreground mt-0.5">{ev.description}</p>
-                              <p className="text-[10px] text-muted-foreground mt-1">{ev.uploadedBy} · {ev.uploadedAt} · {ev.fileName}</p>
+                              <p className="text-[10px] text-muted-foreground mt-1">{ev.uploadedBy} · {ev.uploadedAt} · {ev.fileName} {ev.fileSize && `· ${ev.fileSize}`}</p>
                             </div>
                             <Download className="h-4 w-4 text-muted-foreground hover:text-card-foreground cursor-pointer" />
                           </div>
@@ -555,23 +734,32 @@ const BASCPage = () => {
           </div>
         )}
 
-        {/* Add Evidence Modal */}
+        {/* ══════ ADD EVIDENCE MODAL ══════ */}
         {showAddEvidence && (
           <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4">
             <div className="bg-card rounded-xl w-full max-w-md shadow-2xl">
               <div className="flex items-center justify-between p-5 border-b border-border">
-                <h2 className="font-heading font-bold text-lg text-card-foreground">Agregar Evidencia</h2>
+                <div>
+                  <h2 className="font-heading font-bold text-lg text-card-foreground">Cargar Evidencia</h2>
+                  {showAddEvidence.subItemId && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Para: {objectives.find(o => o.id === showAddEvidence.objectiveId)?.subItems.find(s => s.id === showAddEvidence.subItemId)?.text}
+                    </p>
+                  )}
+                </div>
                 <button onClick={() => setShowAddEvidence(null)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
               </div>
               <div className="p-5 space-y-4">
                 <div>
-                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Título *</label>
+                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Título de la evidencia *</label>
                   <input type="text" value={evidenceForm.title} onChange={(e) => setEvidenceForm({ ...evidenceForm, title: e.target.value })}
+                    placeholder="Ej: Acta de revisión firmada"
                     className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-card-foreground block mb-1.5">Descripción</label>
                   <textarea value={evidenceForm.description} onChange={(e) => setEvidenceForm({ ...evidenceForm, description: e.target.value })} rows={2}
+                    placeholder="Detalle breve de la evidencia..."
                     className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none resize-none" />
                 </div>
                 <div>
@@ -586,14 +774,39 @@ const BASCPage = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Nombre del archivo *</label>
-                  <input type="text" value={evidenceForm.fileName} onChange={(e) => setEvidenceForm({ ...evidenceForm, fileName: e.target.value })} placeholder="ejemplo.pdf"
-                    className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" />
+                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Archivo de evidencia *</label>
+                  <div className="border-2 border-dashed border-border rounded-lg p-5 text-center">
+                    {evidenceForm.file ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <Paperclip className="h-5 w-5 text-gold" />
+                        <span className="text-sm text-card-foreground font-medium truncate max-w-[200px]">{evidenceForm.file.name}</span>
+                        <span className="text-xs text-muted-foreground">({(evidenceForm.file.size / 1024).toFixed(0)} KB)</span>
+                        <button onClick={() => setEvidenceForm({ ...evidenceForm, file: null })} className="p-1 hover:bg-muted rounded"><X className="h-4 w-4 text-muted-foreground" /></button>
+                      </div>
+                    ) : (
+                      <>
+                        <FileUp className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground mb-2">PDF, Word, Excel, Imagen</p>
+                        <label className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-sm font-medium text-card-foreground cursor-pointer hover:bg-border transition-colors">
+                          <Plus className="h-4 w-4" /> Seleccionar archivo
+                          <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.bmp" className="hidden"
+                            onChange={(e) => { const file = e.target.files?.[0]; if (file) setEvidenceForm({ ...evidenceForm, file }); }} />
+                        </label>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="bg-amber-50 rounded-lg p-3 flex items-start gap-2">
+                  <Bell className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                  <p className="text-xs text-amber-700">Al cargar esta evidencia se notificará automáticamente a <strong>{AUDITOR_NAME}</strong> para su revisión y auditoría.</p>
                 </div>
               </div>
               <div className="p-5 border-t border-border flex gap-3 justify-end">
                 <button onClick={() => setShowAddEvidence(null)} className="px-5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">Cancelar</button>
-                <button onClick={() => handleAddEvidence(showAddEvidence)} className="btn-gold text-sm">Guardar Evidencia</button>
+                <button onClick={handleAddEvidence} disabled={!evidenceForm.title || !evidenceForm.file}
+                  className="btn-gold text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                  <FileUp className="h-4 w-4 inline mr-1" /> Cargar Evidencia
+                </button>
               </div>
             </div>
           </div>
