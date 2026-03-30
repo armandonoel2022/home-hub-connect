@@ -25,26 +25,7 @@ const AUDITOR_NAME = "Bilianny Fernández";
 
 type BASCTab = "documentos" | "objetivos" | "procedimientos";
 
-interface BASCDocument {
-  id: string; name: string; type: "pdf" | "word" | "excel" | "other";
-  category: string; department: string; uploadedBy: string; uploadedAt: string; size: string;
-}
-
-const BASC_CATEGORIES = ["Procedimientos", "Formularios", "Matriz de Riesgos", "Políticas", "Registros", "Manuales", "Auditorías"];
-
-const fileTypeColors: Record<string, string> = {
-  pdf: "bg-red-50 text-red-700", word: "bg-blue-50 text-blue-700",
-  excel: "bg-emerald-50 text-emerald-700", other: "bg-gray-100 text-gray-600",
-};
-
-const initialDocs: BASCDocument[] = [
-  { id: "DOC-001", name: "Procedimiento de Control de Acceso.pdf", type: "pdf", category: "Procedimientos", department: "Operaciones", uploadedBy: "Anoel", uploadedAt: "2026-02-15", size: "2.4 MB" },
-  { id: "DOC-002", name: "Formulario de Inspección Vehicular.pdf", type: "pdf", category: "Formularios", department: "Operaciones", uploadedBy: "Remit", uploadedAt: "2026-02-20", size: "1.1 MB" },
-  { id: "DOC-003", name: "Matriz de Riesgos General.xlsx", type: "excel", category: "Matriz de Riesgos", department: "Administración", uploadedBy: "Anoel", uploadedAt: "2026-03-01", size: "890 KB" },
-  { id: "DOC-004", name: "Política de Seguridad Física.pdf", type: "pdf", category: "Políticas", department: "Gerencia General", uploadedBy: "Anoel", uploadedAt: "2026-01-10", size: "3.2 MB" },
-  { id: "DOC-005", name: "Registro de Capacitaciones.docx", type: "word", category: "Registros", department: "Administración", uploadedBy: "Anoel", uploadedAt: "2026-02-28", size: "560 KB" },
-  { id: "DOC-006", name: "Procedimiento de Manejo de Armas.pdf", type: "pdf", category: "Procedimientos", department: "Operaciones", uploadedBy: "Remit", uploadedAt: "2026-03-03", size: "1.8 MB" },
-];
+// Legacy doc interface removed — using BASCManagedDocument from bascDocuments.ts
 
 const statusConfig = {
   cumplido: { label: "Cumplido", color: "bg-emerald-50 text-emerald-700", icon: CheckCircle2 },
