@@ -139,37 +139,69 @@ const BASCPage = () => {
   }, [objectives, user, saveObjectives, notifyAuditor, showObjectiveDetail]);
 
   // Document logic
-  const accessibleDocs = user?.isAdmin ? documents : documents.filter((d) => d.department === user?.department);
-  const filteredDocs = accessibleDocs.filter((d) => {
-    const matchSearch = !search || d.name.toLowerCase().includes(search.toLowerCase());
+  const saveManagedDocs = useCallback((docs: BASCManagedDocument[]) => {
+    setManagedDocs(docs);
+    saveDocuments(docs);
+  }, []);
+
+  const filteredManagedDocs = managedDocs.filter((d) => {
+    const matchSearch = !search || d.name.toLowerCase().includes(search.toLowerCase()) || d.code.toLowerCase().includes(search.toLowerCase());
     const matchDept = !filterDept || d.department === filterDept;
     return matchSearch && matchDept;
   });
 
-  const grouped: Record<string, Record<string, BASCDocument[]>> = {};
-  filteredDocs.forEach((d) => {
-    if (!grouped[d.department]) grouped[d.department] = {};
-    if (!grouped[d.department][d.category]) grouped[d.department][d.category] = [];
-    grouped[d.department][d.category].push(d);
+  const groupedByDept: Record<string, Record<string, BASCManagedDocument[]>> = {};
+  filteredManagedDocs.forEach((d) => {
+    if (!groupedByDept[d.department]) groupedByDept[d.department] = {};
+    const typeLabel = DOC_TYPE_PREFIXES[d.type] ? `${DOC_TYPE_PREFIXES[d.type]} — ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}s` : d.type;
+    if (!groupedByDept[d.department][typeLabel]) groupedByDept[d.department][typeLabel] = [];
+    groupedByDept[d.department][typeLabel].push(d);
   });
 
-  const handleUpload = () => {
-    if (!uploadForm.file || !uploadForm.department || !uploadForm.category) return;
-    const ext = uploadForm.file.name.split(".").pop()?.toLowerCase();
-    let type: BASCDocument["type"] = "other";
-    if (ext === "pdf") type = "pdf"; else if (ext === "doc" || ext === "docx") type = "word"; else if (ext === "xls" || ext === "xlsx") type = "excel";
-    const newDoc: BASCDocument = {
-      id: `DOC-${String(documents.length + 1).padStart(3, "0")}`, name: uploadForm.file.name, type,
-      category: uploadForm.category, department: uploadForm.department, uploadedBy: user?.fullName || "Usuario",
-      uploadedAt: new Date().toISOString().split("T")[0], size: `${(uploadForm.file.size / 1024).toFixed(0)} KB`,
+  const handleNewDoc = () => {
+    if (!newDocForm.name || !newDocForm.department) return;
+    const deptPrefix = DEPARTMENT_PREFIXES[newDocForm.department] || "GEN";
+    const seq = getNextSequence(managedDocs, newDocForm.type, deptPrefix);
+    const code = generateDocCode(newDocForm.type, deptPrefix, seq);
+    const ext = newDocForm.file?.name.split(".").pop()?.toLowerCase();
+    let fileType: BASCManagedDocument["fileType"] = "other";
+    if (ext === "pdf") fileType = "pdf"; else if (ext === "doc" || ext === "docx") fileType = "word"; else if (ext === "xls" || ext === "xlsx") fileType = "excel";
+    const now = new Date().toISOString().split("T")[0];
+    const newDoc: BASCManagedDocument = {
+      id: `MDOC-${Date.now()}`, code, name: newDocForm.name, content: newDocForm.content || `<h2>${newDocForm.name}</h2><p>Contenido del documento...</p>`,
+      type: newDocForm.type, fileType, department: newDocForm.department, departmentPrefix: deptPrefix,
+      version: "1.0", status: "borrador", createdBy: user?.fullName || "Usuario", createdAt: now,
+      updatedBy: user?.fullName || "Usuario", updatedAt: now, hasFile: !!newDocForm.file,
+      fileName: newDocForm.file?.name, fileSize: newDocForm.file ? `${(newDocForm.file.size / 1024).toFixed(0)} KB` : undefined,
     };
-    setDocuments([newDoc, ...documents]);
-    setShowUpload(false);
-    setUploadForm({ department: "", category: "", file: null });
+    saveManagedDocs([newDoc, ...managedDocs]);
+    setShowNewDoc(false);
+    setNewDocForm({ name: "", type: "procedimiento", department: user?.department || "Tecnología y Monitoreo", content: "", file: null });
+    toast.success(`Documento ${code} creado`, { description: newDoc.name });
   };
 
-  const handleDelete = (id: string) => setDocuments(documents.filter((d) => d.id !== id));
-  const getFileExtension = (name: string) => name.split(".").pop()?.toUpperCase() || "";
+  const handleDeleteDoc = (id: string) => saveManagedDocs(managedDocs.filter((d) => d.id !== id));
+
+  const handleSaveContent = (docId: string) => {
+    saveManagedDocs(managedDocs.map(d => d.id === docId ? { ...d, content: editContent, updatedBy: user?.fullName || "Usuario", updatedAt: new Date().toISOString().split("T")[0] } : d));
+    setEditingDoc(null);
+    toast.success("Contenido guardado");
+  };
+
+  const handleRename = (docId: string) => {
+    saveManagedDocs(managedDocs.map(d => d.id === docId ? { ...d, code: renameForm.code || d.code, name: renameForm.name || d.name, updatedBy: user?.fullName || "Usuario", updatedAt: new Date().toISOString().split("T")[0] } : d));
+    setRenamingDoc(null);
+    toast.success("Documento renombrado");
+  };
+
+  const fileTypeColors: Record<string, string> = {
+    pdf: "bg-red-50 text-red-700", word: "bg-blue-50 text-blue-700",
+    excel: "bg-emerald-50 text-emerald-700", image: "bg-purple-50 text-purple-700", other: "bg-muted text-muted-foreground",
+  };
+  const statusColors: Record<string, string> = {
+    vigente: "bg-emerald-50 text-emerald-700", borrador: "bg-amber-50 text-amber-700",
+    en_revisión: "bg-blue-50 text-blue-700", obsoleto: "bg-red-50 text-red-700",
+  };
 
   // Add evidence with file upload
   const handleAddEvidence = () => {
