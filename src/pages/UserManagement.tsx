@@ -267,14 +267,19 @@ const UserManagementPage = () => {
                         )}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
+                         <div className="flex items-center justify-end gap-1">
                           <button onClick={() => openEdit(u)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-card-foreground transition-colors" title="Editar">
                             <Pencil className="h-4 w-4" />
                           </button>
                           {u.id !== user?.id && (
-                            <button onClick={() => setShowDeleteConfirm(u.id)} className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors" title="Eliminar">
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                            <>
+                              <button onClick={() => setResetConfirm(u.id)} className="p-2 rounded-lg hover:bg-gold/10 text-muted-foreground hover:text-gold transition-colors" title="Resetear Contraseña">
+                                <KeyRound className="h-4 w-4" />
+                              </button>
+                              <button onClick={() => setShowDeleteConfirm(u.id)} className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors" title="Eliminar">
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </>
                           )}
                         </div>
                       </td>
