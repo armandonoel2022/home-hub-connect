@@ -539,19 +539,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const localLogin = (username: string, password: string): boolean => {
-    if (password.trim().toLowerCase() !== "safeone") return false;
     const found = allUsers.find(
       (u) =>
         u.email?.toLowerCase() === username.trim().toLowerCase() ||
         u.fullName.toLowerCase() === username.trim().toLowerCase()
     );
-    if (found) {
-      setUser(found);
-      localStorage.setItem("safeone_user", JSON.stringify(found));
-      localStorage.setItem("safeone_token", "mock-token-" + found.id);
-      return true;
+    if (!found) return false;
+
+    // Check password: if user has a custom password hash, verify against it
+    if (found.passwordHash) {
+      const inputHash = simpleHash(password.trim());
+      if (inputHash !== found.passwordHash) return false;
+    } else {
+      // No custom password set = still using default "safeone"
+      if (password.trim().toLowerCase() !== "safeone") return false;
     }
-    return false;
+
+    setUser(found);
+    localStorage.setItem("safeone_user", JSON.stringify(found));
+    localStorage.setItem("safeone_token", "mock-token-" + found.id);
+
+    // Check if must change password: default password or flagged
+    const isDefaultPassword = !found.passwordHash || password.trim().toLowerCase() === "safeone";
+    if (isDefaultPassword || found.mustChangePassword) {
+      setMustChangePassword(true);
+    } else {
+      setMustChangePassword(false);
+    }
+
+    return true;
   };
 
   const logout = () => {
