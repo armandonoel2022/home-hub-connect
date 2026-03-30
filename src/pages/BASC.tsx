@@ -46,7 +46,7 @@ const BASCPage = () => {
   const { user } = useAuth();
   const { addNotification } = useNotifications();
   const [activeTab, setActiveTab] = useState<BASCTab>("objetivos");
-  const [documents, setDocuments] = useState<BASCDocument[]>(initialDocs);
+  const [managedDocs, setManagedDocs] = useState<BASCManagedDocument[]>(loadDocuments);
   const [objectives, setObjectives] = useState<BASCObjective[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -54,15 +54,23 @@ const BASCPage = () => {
     } catch { return INITIAL_OBJECTIVES; }
   });
   const [procedures] = useState<BASCProcedure[]>(INITIAL_PROCEDURES);
-  const [expandedDept, setExpandedDept] = useState<string | null>(user?.department || "Operaciones");
-  const [expandedCat, setExpandedCat] = useState<string | null>("Procedimientos");
+  const [expandedDept, setExpandedDept] = useState<string | null>(user?.department || "Tecnología y Monitoreo");
+  const [expandedType, setExpandedType] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
   const [showObjectiveDetail, setShowObjectiveDetail] = useState<string | null>(null);
   const [showAddEvidence, setShowAddEvidence] = useState<{ objectiveId: string; subItemId?: string } | null>(null);
-  const [uploadForm, setUploadForm] = useState({ department: user?.department || "", category: "", file: null as File | null });
   const [search, setSearch] = useState("");
   const [filterDept, setFilterDept] = useState("");
   const [evidenceForm, setEvidenceForm] = useState({ title: "", description: "", type: "documento" as BASCEvidence["type"], file: null as File | null });
+  const [editingDoc, setEditingDoc] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
+  const [renamingDoc, setRenamingDoc] = useState<string | null>(null);
+  const [renameForm, setRenameForm] = useState({ code: "", name: "" });
+  const [showNewDoc, setShowNewDoc] = useState(false);
+  const [newDocForm, setNewDocForm] = useState({
+    name: "", type: "procedimiento" as BASCManagedDocument["type"],
+    department: user?.department || "Tecnología y Monitoreo", content: "", file: null as File | null,
+  });
 
   // Persist objectives
   const saveObjectives = useCallback((objs: BASCObjective[]) => {
