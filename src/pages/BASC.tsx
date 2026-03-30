@@ -738,36 +738,36 @@ const BASCPage = () => {
 
         {/* ══════ ADD EVIDENCE MODAL ══════ */}
         {showAddEvidence && (
-          <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4">
-            <div className="bg-card rounded-xl w-full max-w-md shadow-2xl">
-              <div className="flex items-center justify-between p-5 border-b border-border">
-                <div>
-                  <h2 className="font-heading font-bold text-lg text-card-foreground">Cargar Evidencia</h2>
+          <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4" onClick={() => setShowAddEvidence(null)}>
+            <div className="bg-card rounded-xl w-full max-w-md max-h-[85vh] flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
+                <div className="min-w-0 flex-1">
+                  <h2 className="font-heading font-bold text-base text-card-foreground">Cargar Evidencia</h2>
                   {showAddEvidence.subItemId && (
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Para: {objectives.find(o => o.id === showAddEvidence.objectiveId)?.subItems.find(s => s.id === showAddEvidence.subItemId)?.text}
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                      {objectives.find(o => o.id === showAddEvidence.objectiveId)?.subItems.find(s => s.id === showAddEvidence.subItemId)?.text}
                     </p>
                   )}
                 </div>
-                <button onClick={() => setShowAddEvidence(null)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
+                <button onClick={() => setShowAddEvidence(null)} className="p-2 hover:bg-muted rounded-lg shrink-0 ml-2"><X className="h-5 w-5 text-muted-foreground" /></button>
               </div>
-              <div className="p-5 space-y-4">
+              <div className="p-4 space-y-3 overflow-y-auto flex-1">
                 <div>
-                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Título de la evidencia *</label>
+                  <label className="text-sm font-medium text-card-foreground block mb-1">Título *</label>
                   <input type="text" value={evidenceForm.title} onChange={(e) => setEvidenceForm({ ...evidenceForm, title: e.target.value })}
                     placeholder="Ej: Acta de revisión firmada"
-                    className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" />
+                    className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Descripción</label>
+                  <label className="text-sm font-medium text-card-foreground block mb-1">Descripción</label>
                   <textarea value={evidenceForm.description} onChange={(e) => setEvidenceForm({ ...evidenceForm, description: e.target.value })} rows={2}
-                    placeholder="Detalle breve de la evidencia..."
-                    className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none resize-none" />
+                    placeholder="Detalle breve..."
+                    className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none resize-none" />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Tipo de Evidencia</label>
+                  <label className="text-sm font-medium text-card-foreground block mb-1">Tipo</label>
                   <select value={evidenceForm.type} onChange={(e) => setEvidenceForm({ ...evidenceForm, type: e.target.value as BASCEvidence["type"] })}
-                    className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none">
+                    className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none">
                     <option value="documento">Documento</option>
                     <option value="foto">Foto</option>
                     <option value="registro">Registro</option>
@@ -776,21 +776,21 @@ const BASCPage = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Archivo de evidencia *</label>
-                  <div className="border-2 border-dashed border-border rounded-lg p-5 text-center">
+                  <label className="text-sm font-medium text-card-foreground block mb-1">Archivo *</label>
+                  <div className="border-2 border-dashed border-border rounded-lg p-4 text-center">
                     {evidenceForm.file ? (
                       <div className="flex items-center justify-center gap-2">
-                        <Paperclip className="h-5 w-5 text-gold" />
-                        <span className="text-sm text-card-foreground font-medium truncate max-w-[200px]">{evidenceForm.file.name}</span>
-                        <span className="text-xs text-muted-foreground">({(evidenceForm.file.size / 1024).toFixed(0)} KB)</span>
-                        <button onClick={() => setEvidenceForm({ ...evidenceForm, file: null })} className="p-1 hover:bg-muted rounded"><X className="h-4 w-4 text-muted-foreground" /></button>
+                        <Paperclip className="h-4 w-4 text-gold shrink-0" />
+                        <span className="text-sm text-card-foreground font-medium truncate max-w-[180px]">{evidenceForm.file.name}</span>
+                        <span className="text-xs text-muted-foreground shrink-0">({(evidenceForm.file.size / 1024).toFixed(0)} KB)</span>
+                        <button onClick={() => setEvidenceForm({ ...evidenceForm, file: null })} className="p-1 hover:bg-muted rounded shrink-0"><X className="h-3 w-3 text-muted-foreground" /></button>
                       </div>
                     ) : (
                       <>
-                        <FileUp className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                        <p className="text-sm text-muted-foreground mb-2">PDF, Word, Excel, Imagen</p>
-                        <label className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-sm font-medium text-card-foreground cursor-pointer hover:bg-border transition-colors">
-                          <Plus className="h-4 w-4" /> Seleccionar archivo
+                        <FileUp className="h-6 w-6 text-muted-foreground mx-auto mb-1" />
+                        <p className="text-xs text-muted-foreground mb-2">PDF, Word, Excel, Imagen</p>
+                        <label className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-muted text-sm font-medium text-card-foreground cursor-pointer hover:bg-border transition-colors">
+                          <Plus className="h-3 w-3" /> Seleccionar archivo
                           <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.bmp" className="hidden"
                             onChange={(e) => { const file = e.target.files?.[0]; if (file) setEvidenceForm({ ...evidenceForm, file }); }} />
                         </label>
@@ -798,16 +798,16 @@ const BASCPage = () => {
                     )}
                   </div>
                 </div>
-                <div className="bg-amber-50 rounded-lg p-3 flex items-start gap-2">
-                  <Bell className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-                  <p className="text-xs text-amber-700">Al cargar esta evidencia se notificará automáticamente a <strong>{AUDITOR_NAME}</strong> para su revisión y auditoría.</p>
+                <div className="bg-amber-50 rounded-lg p-2.5 flex items-start gap-2">
+                  <Bell className="h-3.5 w-3.5 text-amber-600 mt-0.5 shrink-0" />
+                  <p className="text-[11px] text-amber-700">Se notificará a <strong>{AUDITOR_NAME}</strong> para revisión.</p>
                 </div>
               </div>
-              <div className="p-5 border-t border-border flex gap-3 justify-end">
-                <button onClick={() => setShowAddEvidence(null)} className="px-5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">Cancelar</button>
+              <div className="p-4 border-t border-border flex gap-3 justify-end shrink-0">
+                <button onClick={() => setShowAddEvidence(null)} className="px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">Cancelar</button>
                 <button onClick={handleAddEvidence} disabled={!evidenceForm.title || !evidenceForm.file}
                   className="btn-gold text-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                  <FileUp className="h-4 w-4 inline mr-1" /> Cargar Evidencia
+                  <FileUp className="h-4 w-4 inline mr-1" /> Cargar
                 </button>
               </div>
             </div>
