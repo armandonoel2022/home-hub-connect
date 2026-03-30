@@ -3,6 +3,17 @@ import type { IntranetUser, OffboardingReason } from "@/lib/types";
 import { DEPARTMENTS } from "@/lib/types";
 import { isApiConfigured, authApi, usersApi } from "@/lib/api";
 
+// Simple hash for local mode (not cryptographically secure, but sufficient for mock)
+const simpleHash = (str: string): string => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return "h_" + Math.abs(hash).toString(36);
+};
+
 interface AuthContextType {
   user: IntranetUser | null;
   login: (username: string, password: string) => Promise<boolean>;
@@ -17,6 +28,10 @@ interface AuthContextType {
   deleteUser: (id: string) => void;
   offboardUser: (id: string, reason: OffboardingReason, notes: string) => void;
   reactivateUser: (id: string) => void;
+  mustChangePassword: boolean;
+  changePassword: (newPassword: string) => void;
+  resetUserPassword: (userId: string) => void;
+  createForgotPasswordTicket: (email: string, fullName: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
