@@ -3,6 +3,17 @@ import type { IntranetUser, OffboardingReason } from "@/lib/types";
 import { DEPARTMENTS } from "@/lib/types";
 import { isApiConfigured, authApi, usersApi } from "@/lib/api";
 
+// Simple hash for local mode (not cryptographically secure, but sufficient for mock)
+const simpleHash = (str: string): string => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return "h_" + Math.abs(hash).toString(36);
+};
+
 interface AuthContextType {
   user: IntranetUser | null;
   login: (username: string, password: string) => Promise<boolean>;
@@ -17,6 +28,10 @@ interface AuthContextType {
   deleteUser: (id: string) => void;
   offboardUser: (id: string, reason: OffboardingReason, notes: string) => void;
   reactivateUser: (id: string) => void;
+  mustChangePassword: boolean;
+  changePassword: (newPassword: string) => void;
+  resetUserPassword: (userId: string) => void;
+  createForgotPasswordTicket: (email: string, fullName: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -436,6 +451,7 @@ const INITIAL_USERS: IntranetUser[] = [
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<IntranetUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
   const apiMode = isApiConfigured();
 
   const [allUsers, setAllUsers] = useState<IntranetUser[]>(() => {
@@ -523,19 +539,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const localLogin = (username: string, password: string): boolean => {
-    if (password.trim().toLowerCase() !== "safeone") return false;
     const found = allUsers.find(
       (u) =>
         u.email?.toLowerCase() === username.trim().toLowerCase() ||
         u.fullName.toLowerCase() === username.trim().toLowerCase()
     );
-    if (found) {
-      setUser(found);
-      localStorage.setItem("safeone_user", JSON.stringify(found));
-      localStorage.setItem("safeone_token", "mock-token-" + found.id);
-      return true;
+    if (!found) return false;
+
+    // Check password: if user has a custom password hash, verify against it
+    if (found.passwordHash) {
+      const inputHash = simpleHash(password.trim());
+      if (inputHash !== found.passwordHash) return false;
+    } else {
+      // No custom password set = still using default "safeone"
+      if (password.trim().toLowerCase() !== "safeone") return false;
     }
-    return false;
+
+    setUser(found);
+    localStorage.setItem("safeone_user", JSON.stringify(found));
+    localStorage.setItem("safeone_token", "mock-token-" + found.id);
+
+    // Check if must change password: default password or flagged
+    const isDefaultPassword = !found.passwordHash || password.trim().toLowerCase() === "safeone";
+    if (isDefaultPassword || found.mustChangePassword) {
+      setMustChangePassword(true);
+    } else {
+      setMustChangePassword(false);
+    }
+
+    return true;
   };
 
   const logout = () => {
@@ -653,8 +685,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const activeUsers = allUsers.filter((u) => u.employeeStatus !== "Inactivo");
   const inactiveUsers = allUsers.filter((u) => u.employeeStatus === "Inactivo");
 
+  const changePassword = (newPassword: string) => {
+    if (!user) return;
+    const hash = simpleHash(newPassword);
+    const updates: Partial<IntranetUser> = {
+      passwordHash: hash,
+      mustChangePassword: false,
+      lastPasswordChange: new Date().toISOString(),
+    };
+    // Update in allUsers
+    setAllUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, ...updates } : u)));
+    const updatedUser = { ...user, ...updates };
+    setUser(updatedUser);
+    localStorage.setItem("safeone_user", JSON.stringify(updatedUser));
+    setMustChangePassword(false);
+  };
+
+  const resetUserPassword = (userId: string) => {
+    const updates: Partial<IntranetUser> = {
+      passwordHash: undefined,
+      mustChangePassword: true,
+      lastPasswordChange: undefined,
+    };
+    setAllUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, ...updates } : u)));
+  };
+
+  const createForgotPasswordTicket = (email: string, fullName: string) => {
+    // Create a high-priority ticket in localStorage
+    const existingTickets = JSON.parse(localStorage.getItem("safeone_tickets") || "[]");
+    const now = new Date();
+    const newTicket = {
+      id: `TK-${String(Date.now()).slice(-6)}`,
+      title: `Restablecimiento de contraseña: ${fullName || email}`,
+      description: `El usuario ${fullName || "N/A"} (${email || "N/A"}) ha solicitado el restablecimiento de su contraseña a través del formulario de recuperación.`,
+      category: "Otros",
+      priority: "Alta",
+      status: "Abierto",
+      createdBy: fullName || email || "Usuario sin identificar",
+      assignedTo: "Tecnología y Monitoreo",
+      assignedToId: "USR-002",
+      department: "Tecnología y Monitoreo",
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      slaHours: 8,
+      slaDeadline: new Date(now.getTime() + 8 * 60 * 60 * 1000).toISOString(),
+      attachments: [],
+      comments: [],
+    };
+    existingTickets.push(newTicket);
+    localStorage.setItem("safeone_tickets", JSON.stringify(existingTickets));
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading, hasAccess, allUsers, activeUsers, inactiveUsers, addUser, updateUser, deleteUser, offboardUser, reactivateUser }}>
+    <AuthContext.Provider value={{ user, login, logout, isLoading, hasAccess, allUsers, activeUsers, inactiveUsers, addUser, updateUser, deleteUser, offboardUser, reactivateUser, mustChangePassword, changePassword, resetUserPassword, createForgotPasswordTicket }}>
       {children}
     </AuthContext.Provider>
   );

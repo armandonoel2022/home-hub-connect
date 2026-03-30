@@ -3,7 +3,7 @@ import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { DEPARTMENTS } from "@/lib/types";
 import type { IntranetUser } from "@/lib/types";
-import { Plus, X, Search, Pencil, Trash2, User, Shield, Mail, Building2, Phone, Upload, Image } from "lucide-react";
+import { Plus, X, Search, Pencil, Trash2, User, Shield, Mail, Building2, Phone, Upload, Image, KeyRound } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import RegistrationRequests from "@/components/RegistrationRequests";
 import ExportMenu from "@/components/ExportMenu";
@@ -28,7 +28,8 @@ const emptyForm = (): Partial<IntranetUser> => ({
 });
 
 const UserManagementPage = () => {
-  const { user, allUsers, activeUsers, inactiveUsers, addUser, updateUser, deleteUser } = useAuth();
+  const { user, allUsers, activeUsers, inactiveUsers, addUser, updateUser, deleteUser, resetUserPassword } = useAuth();
+  const [resetConfirm, setResetConfirm] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<IntranetUser | null>(null);
@@ -266,14 +267,19 @@ const UserManagementPage = () => {
                         )}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
+                         <div className="flex items-center justify-end gap-1">
                           <button onClick={() => openEdit(u)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-card-foreground transition-colors" title="Editar">
                             <Pencil className="h-4 w-4" />
                           </button>
                           {u.id !== user?.id && (
-                            <button onClick={() => setShowDeleteConfirm(u.id)} className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors" title="Eliminar">
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                            <>
+                              <button onClick={() => setResetConfirm(u.id)} className="p-2 rounded-lg hover:bg-gold/10 text-muted-foreground hover:text-gold transition-colors" title="Resetear Contraseña">
+                                <KeyRound className="h-4 w-4" />
+                              </button>
+                              <button onClick={() => setShowDeleteConfirm(u.id)} className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors" title="Eliminar">
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </>
                           )}
                         </div>
                       </td>
@@ -479,6 +485,40 @@ const UserManagementPage = () => {
                 </button>
                 <button onClick={() => handleDelete(showDeleteConfirm)} className="px-5 py-2.5 rounded-lg text-sm font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors">
                   Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reset Password Confirmation */}
+        {resetConfirm && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-card rounded-xl w-full max-w-sm shadow-2xl">
+              <div className="p-6 text-center">
+                <div className="w-14 h-14 rounded-full bg-gold/10 flex items-center justify-center mx-auto mb-4">
+                  <KeyRound className="h-7 w-7 text-gold" />
+                </div>
+                <h3 className="font-heading font-bold text-lg text-card-foreground mb-2">¿Resetear contraseña?</h3>
+                <p className="text-sm text-muted-foreground mb-1">
+                  {allUsers.find((u) => u.id === resetConfirm)?.fullName}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  La contraseña volverá a "safeone" y el usuario deberá cambiarla en su próximo ingreso.
+                </p>
+              </div>
+              <div className="p-5 border-t border-border flex gap-3 justify-end">
+                <button onClick={() => setResetConfirm(null)} className="px-5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    resetUserPassword(resetConfirm);
+                    setResetConfirm(null);
+                  }}
+                  className="btn-gold text-sm"
+                >
+                  Resetear Contraseña
                 </button>
               </div>
             </div>

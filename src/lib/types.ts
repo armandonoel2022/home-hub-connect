@@ -168,6 +168,10 @@ export interface IntranetUser {
   // Work schedule
   workDaysPerWeek?: number; // días laborables por semana (default 5)
   hireDate?: string; // fecha de ingreso (ISO date)
+  // Password management
+  passwordHash?: string; // hashed password (local mode uses simple hash)
+  mustChangePassword?: boolean; // forced change on next login
+  lastPasswordChange?: string; // ISO date of last password change
   // Offboarding
   employeeStatus?: EmployeeStatus;
   offboardingDate?: string;

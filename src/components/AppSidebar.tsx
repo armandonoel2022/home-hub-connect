@@ -1,4 +1,5 @@
 import logo from "@/assets/safeone-logo.png";
+import { useState } from "react";
 import {
   LayoutDashboard,
   Ticket,
@@ -23,13 +24,14 @@ import {
   BookMarked,
   CheckSquare,
   Wallet,
+  KeyRound,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { useChatContext } from "@/contexts/ChatContext";
+import ChangePasswordModal from "@/components/ChangePasswordModal";
 import GlobalSearch from "@/components/GlobalSearch";
 
 const navItems = [
@@ -60,9 +62,10 @@ const adminItems = [
 const AppSidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, changePassword } = useAuth();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const { totalUnread: chatUnread } = useChatContext();
   const combinedUnread = unreadCount + chatUnread;
@@ -223,15 +226,24 @@ const AppSidebar = () => {
         )}
       </nav>
 
-      {/* Logout */}
+      {/* Change Password & Logout */}
       {user && (
-        <button
-          onClick={logout}
-          className="flex items-center gap-3 mx-2 mb-2 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-destructive hover:bg-charcoal-light/50 transition-all"
-        >
-          <LogOut className="h-5 w-5 shrink-0" />
-          {!collapsed && <span>Cerrar Sesión</span>}
-        </button>
+        <div className="mx-2 mb-2 space-y-1">
+          <button
+            onClick={() => setShowChangePassword(true)}
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-gold hover:bg-charcoal-light/50 transition-all"
+          >
+            <KeyRound className="h-5 w-5 shrink-0" />
+            {!collapsed && <span>Cambiar Contraseña</span>}
+          </button>
+          <button
+            onClick={logout}
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-destructive hover:bg-charcoal-light/50 transition-all"
+          >
+            <LogOut className="h-5 w-5 shrink-0" />
+            {!collapsed && <span>Cerrar Sesión</span>}
+          </button>
+        </div>
       )}
 
       {/* Collapse toggle */}
@@ -241,6 +253,18 @@ const AppSidebar = () => {
       >
         {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
       </button>
+
+      {/* Change Password Modal */}
+      {showChangePassword && (
+        <ChangePasswordModal
+          isForced={false}
+          onChangePassword={(newPw) => {
+            changePassword(newPw);
+            setShowChangePassword(false);
+          }}
+          onClose={() => setShowChangePassword(false)}
+        />
+      )}
     </aside>
   );
 };
