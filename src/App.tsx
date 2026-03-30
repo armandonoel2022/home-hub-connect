@@ -39,6 +39,9 @@ import MinorPurchases from "./pages/MinorPurchases";
 import General from "./pages/General";
 import Adonis from "./pages/Adonis";
 import Presentation from "./pages/Presentation";
+import DepartmentProcesses from "./pages/DepartmentProcesses";
+import AuditLog from "./pages/AuditLog";
+import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
 
 
