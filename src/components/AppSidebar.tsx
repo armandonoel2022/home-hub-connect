@@ -26,36 +26,12 @@ import {
   Wallet,
   KeyRound,
 } from "lucide-react";
-  LayoutDashboard,
-  Ticket,
-  Package,
-  Truck,
-  Smartphone,
-  Shield,
-  FileCheck,
-  ShoppingCart,
-  Users,
-  UserCog,
-  Bell,
-  ChevronLeft,
-  ChevronRight,
-  LogOut,
-  Phone,
-  Calendar,
-  FolderOpen,
-  BookOpen,
-  TrendingUp,
-  ClipboardList,
-  BookMarked,
-  CheckSquare,
-  Wallet,
-} from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { useChatContext } from "@/contexts/ChatContext";
+import ChangePasswordModal from "@/components/ChangePasswordModal";
 import GlobalSearch from "@/components/GlobalSearch";
 
 const navItems = [
