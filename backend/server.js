@@ -44,6 +44,8 @@ app.use('/api/chat', require('./routes/chat'));
 app.use('/api/tasks', require('./routes/tasks'));
 app.use('/api/department-folders', require('./routes/department-folders'));
 app.use('/api/kpis', require('./routes/kpis'));
+app.use('/api/department-processes', require('./routes/department-processes'));
+app.use('/api/audit-log', require('./routes/audit-log'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({

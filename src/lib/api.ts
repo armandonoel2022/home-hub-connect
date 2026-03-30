@@ -333,4 +333,30 @@ export const registrationApi = {
     apiFetch<any>(`/registration-requests/${id}/reject`, { method: "POST", body: JSON.stringify(data) }),
 };
 
+// ─── Department Processes API ───
+export const processesApi = {
+  getAll: () => apiFetch<any[]>("/department-processes"),
+  getByDepartment: (dept: string) => apiFetch<any[]>(`/department-processes?department=${encodeURIComponent(dept)}`),
+  getById: (id: string) => apiFetch<any>(`/department-processes/${id}`),
+  create: (data: any) =>
+    apiFetch<any>("/department-processes", { method: "POST", body: JSON.stringify(data) }),
+  update: (id: string, data: any) =>
+    apiFetch<any>(`/department-processes/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  delete: (id: string) =>
+    apiFetch<void>(`/department-processes/${id}`, { method: "DELETE" }),
+  updateChecklist: (id: string, checklist: any[]) =>
+    apiFetch<any>(`/department-processes/${id}/checklist`, { method: "PUT", body: JSON.stringify({ checklist }) }),
+};
+
+// ─── Audit Log API ───
+export const auditApi = {
+  getAll: (filters?: Record<string, string>) => {
+    const params = new URLSearchParams(filters || {});
+    return apiFetch<any[]>(`/audit-log?${params.toString()}`);
+  },
+  create: (entry: any) =>
+    apiFetch<any>("/audit-log", { method: "POST", body: JSON.stringify(entry) }),
+  getStats: () => apiFetch<any>("/audit-log/stats"),
+};
+
 export default apiFetch;

@@ -98,6 +98,9 @@ function ProtectedRoutes() {
         <Route path="/general" element={<General />} />
         <Route path="/adonis" element={<Adonis />} />
         <Route path="/admin/usuarios" element={<UserManagement />} />
+        <Route path="/procesos" element={<DepartmentProcesses />} />
+        <Route path="/auditoria" element={<AuditLog />} />
+        <Route path="/reportes" element={<Reports />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </>
