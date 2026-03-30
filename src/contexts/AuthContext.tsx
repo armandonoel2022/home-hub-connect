@@ -685,8 +685,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const activeUsers = allUsers.filter((u) => u.employeeStatus !== "Inactivo");
   const inactiveUsers = allUsers.filter((u) => u.employeeStatus === "Inactivo");
 
+  const changePassword = (newPassword: string) => {
+    if (!user) return;
+    const hash = simpleHash(newPassword);
+    const updates: Partial<IntranetUser> = {
+      passwordHash: hash,
+      mustChangePassword: false,
+      lastPasswordChange: new Date().toISOString(),
+    };
+    // Update in allUsers
+    setAllUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, ...updates } : u)));
+    const updatedUser = { ...user, ...updates };
+    setUser(updatedUser);
+    localStorage.setItem("safeone_user", JSON.stringify(updatedUser));
+    setMustChangePassword(false);
+  };
+
+  const resetUserPassword = (userId: string) => {
+    const updates: Partial<IntranetUser> = {
+      passwordHash: undefined,
+      mustChangePassword: true,
+      lastPasswordChange: undefined,
+    };
+    setAllUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, ...updates } : u)));
+  };
+
+  const createForgotPasswordTicket = (email: string, fullName: string) => {
+    // Create a high-priority ticket in localStorage
+    const existingTickets = JSON.parse(localStorage.getItem("safeone_tickets") || "[]");
+    const now = new Date();
+    const newTicket = {
+      id: `TK-${String(Date.now()).slice(-6)}`,
+      title: `Restablecimiento de contraseña: ${fullName || email}`,
+      description: `El usuario ${fullName || "N/A"} (${email || "N/A"}) ha solicitado el restablecimiento de su contraseña a través del formulario de recuperación.`,
+      category: "Otros",
+      priority: "Alta",
+      status: "Abierto",
+      createdBy: fullName || email || "Usuario sin identificar",
+      assignedTo: "Tecnología y Monitoreo",
+      assignedToId: "USR-002",
+      department: "Tecnología y Monitoreo",
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      slaHours: 8,
+      slaDeadline: new Date(now.getTime() + 8 * 60 * 60 * 1000).toISOString(),
+      attachments: [],
+      comments: [],
+    };
+    existingTickets.push(newTicket);
+    localStorage.setItem("safeone_tickets", JSON.stringify(existingTickets));
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading, hasAccess, allUsers, activeUsers, inactiveUsers, addUser, updateUser, deleteUser, offboardUser, reactivateUser }}>
+    <AuthContext.Provider value={{ user, login, logout, isLoading, hasAccess, allUsers, activeUsers, inactiveUsers, addUser, updateUser, deleteUser, offboardUser, reactivateUser, mustChangePassword, changePassword, resetUserPassword, createForgotPasswordTicket }}>
       {children}
     </AuthContext.Provider>
   );
