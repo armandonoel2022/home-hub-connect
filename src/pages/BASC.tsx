@@ -7,11 +7,15 @@ import {
   type BASCObjective, type BASCProcedure, type BASCEvidence, type BASCSubItem,
   calcCompliance, calcStatus,
 } from "@/lib/bascData";
+import {
+  type BASCManagedDocument, DEPARTMENT_PREFIXES, DOC_TYPE_PREFIXES,
+  generateDocCode, getNextSequence, loadDocuments, saveDocuments,
+} from "@/lib/bascDocuments";
 import { useNotifications } from "@/contexts/NotificationContext";
 import {
   FolderOpen, FileText, Upload, ChevronRight, ChevronDown, X, File, Download, Trash2, Plus, Shield,
   Target, CheckCircle2, AlertTriangle, Clock, Eye, BarChart3, Link2, ClipboardCheck, TrendingUp,
-  Bell, CheckSquare, Square, Paperclip, FileUp,
+  Bell, CheckSquare, Square, Paperclip, FileUp, Edit3, Save, Code, Tag,
 } from "lucide-react";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 import { toast } from "sonner";
@@ -21,26 +25,7 @@ const AUDITOR_NAME = "Bilianny Fernández";
 
 type BASCTab = "documentos" | "objetivos" | "procedimientos";
 
-interface BASCDocument {
-  id: string; name: string; type: "pdf" | "word" | "excel" | "other";
-  category: string; department: string; uploadedBy: string; uploadedAt: string; size: string;
-}
-
-const BASC_CATEGORIES = ["Procedimientos", "Formularios", "Matriz de Riesgos", "Políticas", "Registros", "Manuales", "Auditorías"];
-
-const fileTypeColors: Record<string, string> = {
-  pdf: "bg-red-50 text-red-700", word: "bg-blue-50 text-blue-700",
-  excel: "bg-emerald-50 text-emerald-700", other: "bg-gray-100 text-gray-600",
-};
-
-const initialDocs: BASCDocument[] = [
-  { id: "DOC-001", name: "Procedimiento de Control de Acceso.pdf", type: "pdf", category: "Procedimientos", department: "Operaciones", uploadedBy: "Anoel", uploadedAt: "2026-02-15", size: "2.4 MB" },
-  { id: "DOC-002", name: "Formulario de Inspección Vehicular.pdf", type: "pdf", category: "Formularios", department: "Operaciones", uploadedBy: "Remit", uploadedAt: "2026-02-20", size: "1.1 MB" },
-  { id: "DOC-003", name: "Matriz de Riesgos General.xlsx", type: "excel", category: "Matriz de Riesgos", department: "Administración", uploadedBy: "Anoel", uploadedAt: "2026-03-01", size: "890 KB" },
-  { id: "DOC-004", name: "Política de Seguridad Física.pdf", type: "pdf", category: "Políticas", department: "Gerencia General", uploadedBy: "Anoel", uploadedAt: "2026-01-10", size: "3.2 MB" },
-  { id: "DOC-005", name: "Registro de Capacitaciones.docx", type: "word", category: "Registros", department: "Administración", uploadedBy: "Anoel", uploadedAt: "2026-02-28", size: "560 KB" },
-  { id: "DOC-006", name: "Procedimiento de Manejo de Armas.pdf", type: "pdf", category: "Procedimientos", department: "Operaciones", uploadedBy: "Remit", uploadedAt: "2026-03-03", size: "1.8 MB" },
-];
+// Legacy doc interface removed — using BASCManagedDocument from bascDocuments.ts
 
 const statusConfig = {
   cumplido: { label: "Cumplido", color: "bg-emerald-50 text-emerald-700", icon: CheckCircle2 },
@@ -61,7 +46,7 @@ const BASCPage = () => {
   const { user } = useAuth();
   const { addNotification } = useNotifications();
   const [activeTab, setActiveTab] = useState<BASCTab>("objetivos");
-  const [documents, setDocuments] = useState<BASCDocument[]>(initialDocs);
+  const [managedDocs, setManagedDocs] = useState<BASCManagedDocument[]>(loadDocuments);
   const [objectives, setObjectives] = useState<BASCObjective[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -69,15 +54,23 @@ const BASCPage = () => {
     } catch { return INITIAL_OBJECTIVES; }
   });
   const [procedures] = useState<BASCProcedure[]>(INITIAL_PROCEDURES);
-  const [expandedDept, setExpandedDept] = useState<string | null>(user?.department || "Operaciones");
-  const [expandedCat, setExpandedCat] = useState<string | null>("Procedimientos");
+  const [expandedDept, setExpandedDept] = useState<string | null>(user?.department || "Tecnología y Monitoreo");
+  const [expandedType, setExpandedType] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
   const [showObjectiveDetail, setShowObjectiveDetail] = useState<string | null>(null);
   const [showAddEvidence, setShowAddEvidence] = useState<{ objectiveId: string; subItemId?: string } | null>(null);
-  const [uploadForm, setUploadForm] = useState({ department: user?.department || "", category: "", file: null as File | null });
   const [search, setSearch] = useState("");
   const [filterDept, setFilterDept] = useState("");
   const [evidenceForm, setEvidenceForm] = useState({ title: "", description: "", type: "documento" as BASCEvidence["type"], file: null as File | null });
+  const [editingDoc, setEditingDoc] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
+  const [renamingDoc, setRenamingDoc] = useState<string | null>(null);
+  const [renameForm, setRenameForm] = useState({ code: "", name: "" });
+  const [showNewDoc, setShowNewDoc] = useState(false);
+  const [newDocForm, setNewDocForm] = useState({
+    name: "", type: "procedimiento" as BASCManagedDocument["type"],
+    department: user?.department || "Tecnología y Monitoreo", content: "", file: null as File | null,
+  });
 
   // Persist objectives
   const saveObjectives = useCallback((objs: BASCObjective[]) => {
@@ -146,37 +139,69 @@ const BASCPage = () => {
   }, [objectives, user, saveObjectives, notifyAuditor, showObjectiveDetail]);
 
   // Document logic
-  const accessibleDocs = user?.isAdmin ? documents : documents.filter((d) => d.department === user?.department);
-  const filteredDocs = accessibleDocs.filter((d) => {
-    const matchSearch = !search || d.name.toLowerCase().includes(search.toLowerCase());
+  const saveManagedDocs = useCallback((docs: BASCManagedDocument[]) => {
+    setManagedDocs(docs);
+    saveDocuments(docs);
+  }, []);
+
+  const filteredManagedDocs = managedDocs.filter((d) => {
+    const matchSearch = !search || d.name.toLowerCase().includes(search.toLowerCase()) || d.code.toLowerCase().includes(search.toLowerCase());
     const matchDept = !filterDept || d.department === filterDept;
     return matchSearch && matchDept;
   });
 
-  const grouped: Record<string, Record<string, BASCDocument[]>> = {};
-  filteredDocs.forEach((d) => {
-    if (!grouped[d.department]) grouped[d.department] = {};
-    if (!grouped[d.department][d.category]) grouped[d.department][d.category] = [];
-    grouped[d.department][d.category].push(d);
+  const groupedByDept: Record<string, Record<string, BASCManagedDocument[]>> = {};
+  filteredManagedDocs.forEach((d) => {
+    if (!groupedByDept[d.department]) groupedByDept[d.department] = {};
+    const typeLabel = DOC_TYPE_PREFIXES[d.type] ? `${DOC_TYPE_PREFIXES[d.type]} — ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}s` : d.type;
+    if (!groupedByDept[d.department][typeLabel]) groupedByDept[d.department][typeLabel] = [];
+    groupedByDept[d.department][typeLabel].push(d);
   });
 
-  const handleUpload = () => {
-    if (!uploadForm.file || !uploadForm.department || !uploadForm.category) return;
-    const ext = uploadForm.file.name.split(".").pop()?.toLowerCase();
-    let type: BASCDocument["type"] = "other";
-    if (ext === "pdf") type = "pdf"; else if (ext === "doc" || ext === "docx") type = "word"; else if (ext === "xls" || ext === "xlsx") type = "excel";
-    const newDoc: BASCDocument = {
-      id: `DOC-${String(documents.length + 1).padStart(3, "0")}`, name: uploadForm.file.name, type,
-      category: uploadForm.category, department: uploadForm.department, uploadedBy: user?.fullName || "Usuario",
-      uploadedAt: new Date().toISOString().split("T")[0], size: `${(uploadForm.file.size / 1024).toFixed(0)} KB`,
+  const handleNewDoc = () => {
+    if (!newDocForm.name || !newDocForm.department) return;
+    const deptPrefix = DEPARTMENT_PREFIXES[newDocForm.department] || "GEN";
+    const seq = getNextSequence(managedDocs, newDocForm.type, deptPrefix);
+    const code = generateDocCode(newDocForm.type, deptPrefix, seq);
+    const ext = newDocForm.file?.name.split(".").pop()?.toLowerCase();
+    let fileType: BASCManagedDocument["fileType"] = "other";
+    if (ext === "pdf") fileType = "pdf"; else if (ext === "doc" || ext === "docx") fileType = "word"; else if (ext === "xls" || ext === "xlsx") fileType = "excel";
+    const now = new Date().toISOString().split("T")[0];
+    const newDoc: BASCManagedDocument = {
+      id: `MDOC-${Date.now()}`, code, name: newDocForm.name, content: newDocForm.content || `<h2>${newDocForm.name}</h2><p>Contenido del documento...</p>`,
+      type: newDocForm.type, fileType, department: newDocForm.department, departmentPrefix: deptPrefix,
+      version: "1.0", status: "borrador", createdBy: user?.fullName || "Usuario", createdAt: now,
+      updatedBy: user?.fullName || "Usuario", updatedAt: now, hasFile: !!newDocForm.file,
+      fileName: newDocForm.file?.name, fileSize: newDocForm.file ? `${(newDocForm.file.size / 1024).toFixed(0)} KB` : undefined,
     };
-    setDocuments([newDoc, ...documents]);
-    setShowUpload(false);
-    setUploadForm({ department: "", category: "", file: null });
+    saveManagedDocs([newDoc, ...managedDocs]);
+    setShowNewDoc(false);
+    setNewDocForm({ name: "", type: "procedimiento", department: user?.department || "Tecnología y Monitoreo", content: "", file: null });
+    toast.success(`Documento ${code} creado`, { description: newDoc.name });
   };
 
-  const handleDelete = (id: string) => setDocuments(documents.filter((d) => d.id !== id));
-  const getFileExtension = (name: string) => name.split(".").pop()?.toUpperCase() || "";
+  const handleDeleteDoc = (id: string) => saveManagedDocs(managedDocs.filter((d) => d.id !== id));
+
+  const handleSaveContent = (docId: string) => {
+    saveManagedDocs(managedDocs.map(d => d.id === docId ? { ...d, content: editContent, updatedBy: user?.fullName || "Usuario", updatedAt: new Date().toISOString().split("T")[0] } : d));
+    setEditingDoc(null);
+    toast.success("Contenido guardado");
+  };
+
+  const handleRename = (docId: string) => {
+    saveManagedDocs(managedDocs.map(d => d.id === docId ? { ...d, code: renameForm.code || d.code, name: renameForm.name || d.name, updatedBy: user?.fullName || "Usuario", updatedAt: new Date().toISOString().split("T")[0] } : d));
+    setRenamingDoc(null);
+    toast.success("Documento renombrado");
+  };
+
+  const fileTypeColors: Record<string, string> = {
+    pdf: "bg-red-50 text-red-700", word: "bg-blue-50 text-blue-700",
+    excel: "bg-emerald-50 text-emerald-700", image: "bg-purple-50 text-purple-700", other: "bg-muted text-muted-foreground",
+  };
+  const statusColors: Record<string, string> = {
+    vigente: "bg-emerald-50 text-emerald-700", borrador: "bg-amber-50 text-amber-700",
+    en_revisión: "bg-blue-50 text-blue-700", obsoleto: "bg-red-50 text-red-700",
+  };
 
   // Add evidence with file upload
   const handleAddEvidence = () => {
@@ -271,8 +296,8 @@ const BASCPage = () => {
                   </span>
                 </div>
                 {activeTab === "documentos" && (
-                  <button onClick={() => setShowUpload(true)} className="btn-gold flex items-center gap-2">
-                    <Upload className="h-4 w-4" /> Subir Documento
+                  <button onClick={() => setShowNewDoc(true)} className="btn-gold flex items-center gap-2">
+                    <Plus className="h-4 w-4" /> Nuevo Documento
                   </button>
                 )}
               </div>
@@ -460,7 +485,7 @@ const BASCPage = () => {
             <div className="px-6 py-4 flex flex-wrap gap-4">
               <div className="relative flex-1 max-w-md">
                 <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input type="text" placeholder="Buscar documento..." value={search} onChange={(e) => setSearch(e.target.value)}
+                <input type="text" placeholder="Buscar por nombre o código..." value={search} onChange={(e) => setSearch(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-card border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" />
               </div>
               <select value={filterDept} onChange={(e) => setFilterDept(e.target.value)}
@@ -472,10 +497,10 @@ const BASCPage = () => {
 
             <div className="px-6 pb-4 grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
-                { label: "Total Documentos", value: documents.length, color: "text-card-foreground" },
-                { label: "Procedimientos", value: documents.filter((d) => d.category === "Procedimientos").length, color: "gold-accent-text" },
-                { label: "Formularios", value: documents.filter((d) => d.category === "Formularios").length, color: "gold-accent-text" },
-                { label: "Departamentos", value: new Set(documents.map((d) => d.department)).size, color: "text-card-foreground" },
+                { label: "Total Documentos", value: managedDocs.length, color: "text-card-foreground" },
+                { label: "Procedimientos", value: managedDocs.filter(d => d.type === "procedimiento").length, color: "gold-accent-text" },
+                { label: "Matrices", value: managedDocs.filter(d => d.type === "matriz").length, color: "gold-accent-text" },
+                { label: "Departamentos", value: new Set(managedDocs.map(d => d.department)).size, color: "text-card-foreground" },
               ].map((s) => (
                 <div key={s.label} className="bg-card rounded-lg p-4 border border-border">
                   <p className="text-xs text-muted-foreground">{s.label}</p>
@@ -485,45 +510,64 @@ const BASCPage = () => {
             </div>
 
             <div className="px-6 pb-8">
-              {Object.keys(grouped).length === 0 ? (
+              {Object.keys(groupedByDept).length === 0 ? (
                 <div className="text-center py-16 text-muted-foreground">
                   <FolderOpen className="h-12 w-12 mx-auto mb-3 opacity-40" />
                   <p>No se encontraron documentos</p>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([dept, cats]) => (
+                  {Object.entries(groupedByDept).sort(([a], [b]) => a.localeCompare(b)).map(([dept, types]) => (
                     <div key={dept} className="bg-card rounded-lg border border-border overflow-hidden">
                       <button onClick={() => setExpandedDept(expandedDept === dept ? null : dept)}
                         className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-muted/50 transition-colors">
                         {expandedDept === dept ? <ChevronDown className="h-4 w-4 text-gold shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
                         <FolderOpen className="h-5 w-5 text-gold shrink-0" />
                         <span className="font-heading font-bold text-card-foreground">{dept}</span>
-                        <span className="text-xs text-muted-foreground ml-auto">{Object.values(cats).flat().length} documentos</span>
+                        <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground ml-2">{DEPARTMENT_PREFIXES[dept] || "—"}</span>
+                        <span className="text-xs text-muted-foreground ml-auto">{Object.values(types).flat().length} docs</span>
                       </button>
                       {expandedDept === dept && (
                         <div className="border-t border-border">
-                          {Object.entries(cats).sort(([a], [b]) => a.localeCompare(b)).map(([cat, docs]) => (
-                            <div key={cat}>
-                              <button onClick={() => setExpandedCat(expandedCat === `${dept}-${cat}` ? null : `${dept}-${cat}`)}
+                          {Object.entries(types).sort(([a], [b]) => a.localeCompare(b)).map(([typeLabel, docs]) => (
+                            <div key={typeLabel}>
+                              <button onClick={() => setExpandedType(expandedType === `${dept}-${typeLabel}` ? null : `${dept}-${typeLabel}`)}
                                 className="w-full flex items-center gap-3 pl-12 pr-5 py-3 text-left hover:bg-muted/30 transition-colors">
-                                {expandedCat === `${dept}-${cat}` ? <ChevronDown className="h-3 w-3 text-gold shrink-0" /> : <ChevronRight className="h-3 w-3 text-muted-foreground shrink-0" />}
+                                {expandedType === `${dept}-${typeLabel}` ? <ChevronDown className="h-3 w-3 text-gold shrink-0" /> : <ChevronRight className="h-3 w-3 text-muted-foreground shrink-0" />}
                                 <FolderOpen className="h-4 w-4 text-muted-foreground shrink-0" />
-                                <span className="text-sm font-medium text-card-foreground">{cat}</span>
+                                <span className="text-sm font-medium text-card-foreground">{typeLabel}</span>
                                 <span className="text-xs text-muted-foreground ml-auto">{docs.length}</span>
                               </button>
-                              {expandedCat === `${dept}-${cat}` && (
-                                <div className="pl-20 pr-5 pb-3 space-y-2">
-                                  {docs.map((doc) => (
+                              {expandedType === `${dept}-${typeLabel}` && (
+                                <div className="pl-16 pr-5 pb-3 space-y-2">
+                                  {docs.sort((a, b) => a.code.localeCompare(b.code)).map((doc) => (
                                     <div key={doc.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group">
-                                      <span className={`text-xs font-bold px-2 py-1 rounded ${fileTypeColors[doc.type]}`}>{getFileExtension(doc.name)}</span>
+                                      <span className={`text-[10px] font-bold px-2 py-1 rounded ${fileTypeColors[doc.fileType]}`}>{doc.fileType.toUpperCase()}</span>
                                       <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-xs font-mono font-bold text-gold">{doc.code}</span>
+                                          <span className={`text-[10px] px-1.5 py-0.5 rounded ${statusColors[doc.status]}`}>{doc.status}</span>
+                                          <span className="text-[10px] text-muted-foreground">v{doc.version}</span>
+                                        </div>
                                         <p className="text-sm font-medium text-card-foreground truncate">{doc.name}</p>
-                                        <p className="text-xs text-muted-foreground">{doc.uploadedBy} · {doc.uploadedAt} · {doc.size}</p>
+                                        <p className="text-xs text-muted-foreground">{doc.updatedBy} · {doc.updatedAt} {doc.fileSize && `· ${doc.fileSize}`}</p>
                                       </div>
                                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button className="p-1.5 rounded-lg hover:bg-card text-muted-foreground hover:text-card-foreground transition-colors" title="Descargar"><Download className="h-4 w-4" /></button>
-                                        <button onClick={() => handleDelete(doc.id)} className="p-1.5 rounded-lg hover:bg-card text-muted-foreground hover:text-destructive transition-colors" title="Eliminar"><Trash2 className="h-4 w-4" /></button>
+                                        <button onClick={() => { setEditingDoc(doc.id); setEditContent(doc.content); }}
+                                          className="p-1.5 rounded-lg hover:bg-card text-muted-foreground hover:text-card-foreground transition-colors" title="Editar contenido">
+                                          <Edit3 className="h-4 w-4" />
+                                        </button>
+                                        <button onClick={() => { setRenamingDoc(doc.id); setRenameForm({ code: doc.code, name: doc.name }); }}
+                                          className="p-1.5 rounded-lg hover:bg-card text-muted-foreground hover:text-card-foreground transition-colors" title="Cambiar código/nombre">
+                                          <Tag className="h-4 w-4" />
+                                        </button>
+                                        <button className="p-1.5 rounded-lg hover:bg-card text-muted-foreground hover:text-card-foreground transition-colors" title="Descargar">
+                                          <Download className="h-4 w-4" />
+                                        </button>
+                                        <button onClick={() => handleDeleteDoc(doc.id)}
+                                          className="p-1.5 rounded-lg hover:bg-card text-muted-foreground hover:text-destructive transition-colors" title="Eliminar">
+                                          <Trash2 className="h-4 w-4" />
+                                        </button>
                                       </div>
                                     </div>
                                   ))}
@@ -541,56 +585,143 @@ const BASCPage = () => {
           </>
         )}
 
-        {/* Upload Modal */}
-        {showUpload && (
-          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-            <div className="bg-card rounded-xl w-full max-w-md shadow-2xl">
-              <div className="flex items-center justify-between p-5 border-b border-border">
-                <h2 className="font-heading font-bold text-lg text-card-foreground">Subir Documento</h2>
-                <button onClick={() => setShowUpload(false)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
+        {/* ══════ NEW DOCUMENT MODAL ══════ */}
+        {showNewDoc && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setShowNewDoc(false)}>
+            <div className="bg-card rounded-xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-5 border-b border-border shrink-0">
+                <h2 className="font-heading font-bold text-lg text-card-foreground">Nuevo Documento</h2>
+                <button onClick={() => setShowNewDoc(false)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
               </div>
-              <div className="p-5 space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Departamento *</label>
-                  <select value={uploadForm.department} onChange={(e) => setUploadForm({ ...uploadForm, department: e.target.value })}
-                    className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none">
-                    <option value="">Seleccionar...</option>
-                    {DEPARTMENTS.map((d) => (<option key={d} value={d}>{d}</option>))}
-                  </select>
+              <div className="p-5 space-y-4 overflow-y-auto flex-1">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-medium text-card-foreground block mb-1.5">Tipo de Documento *</label>
+                    <select value={newDocForm.type} onChange={(e) => setNewDocForm({ ...newDocForm, type: e.target.value as BASCManagedDocument["type"] })}
+                      className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none">
+                      <option value="procedimiento">PRO — Procedimiento</option>
+                      <option value="formulario">F — Formulario</option>
+                      <option value="matriz">M — Matriz</option>
+                      <option value="politica">POL — Política</option>
+                      <option value="registro">REG — Registro</option>
+                      <option value="manual">MAN — Manual</option>
+                      <option value="informe">INF — Informe</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-card-foreground block mb-1.5">Departamento *</label>
+                    <select value={newDocForm.department} onChange={(e) => setNewDocForm({ ...newDocForm, department: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none">
+                      {Object.entries(DEPARTMENT_PREFIXES).map(([dept, prefix]) => (
+                        <option key={dept} value={dept}>{prefix} — {dept}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="bg-muted rounded-lg p-3 flex items-center gap-2">
+                  <Code className="h-4 w-4 text-gold shrink-0" />
+                  <span className="text-sm text-muted-foreground">Código automático:</span>
+                  <span className="font-mono font-bold text-card-foreground">
+                    {generateDocCode(newDocForm.type, DEPARTMENT_PREFIXES[newDocForm.department] || "GEN", getNextSequence(managedDocs, newDocForm.type, DEPARTMENT_PREFIXES[newDocForm.department] || "GEN"))}
+                  </span>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Categoría *</label>
-                  <select value={uploadForm.category} onChange={(e) => setUploadForm({ ...uploadForm, category: e.target.value })}
-                    className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none">
-                    <option value="">Seleccionar...</option>
-                    {BASC_CATEGORIES.map((c) => (<option key={c} value={c}>{c}</option>))}
-                  </select>
+                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Nombre del Documento *</label>
+                  <input type="text" value={newDocForm.name} onChange={(e) => setNewDocForm({ ...newDocForm, name: e.target.value })}
+                    placeholder="Ej: Procedimiento de Control de Acceso"
+                    className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Archivo *</label>
-                  <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-                    {uploadForm.file ? (
+                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Contenido inicial</label>
+                  <textarea value={newDocForm.content} onChange={(e) => setNewDocForm({ ...newDocForm, content: e.target.value })} rows={4}
+                    placeholder="Escriba el contenido del documento o déjelo vacío para editar después..."
+                    className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none resize-none" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Archivo adjunto (opcional)</label>
+                  <div className="border-2 border-dashed border-border rounded-lg p-4 text-center">
+                    {newDocForm.file ? (
                       <div className="flex items-center justify-center gap-2">
                         <File className="h-5 w-5 text-gold" />
-                        <span className="text-sm text-card-foreground font-medium">{uploadForm.file.name}</span>
-                        <button onClick={() => setUploadForm({ ...uploadForm, file: null })} className="p-1 hover:bg-muted rounded"><X className="h-4 w-4 text-muted-foreground" /></button>
+                        <span className="text-sm text-card-foreground font-medium truncate max-w-[200px]">{newDocForm.file.name}</span>
+                        <button onClick={() => setNewDocForm({ ...newDocForm, file: null })} className="p-1 hover:bg-muted rounded"><X className="h-4 w-4 text-muted-foreground" /></button>
                       </div>
                     ) : (
-                      <>
-                        <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                        <p className="text-sm text-muted-foreground mb-2">PDF, Word o Excel</p>
-                        <label className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-sm font-medium text-card-foreground cursor-pointer hover:bg-border transition-colors">
-                          <Plus className="h-4 w-4" /> Seleccionar archivo
-                          <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) setUploadForm({ ...uploadForm, file }); }} />
-                        </label>
-                      </>
+                      <label className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-sm font-medium text-card-foreground cursor-pointer hover:bg-border transition-colors">
+                        <Upload className="h-4 w-4" /> Seleccionar archivo
+                        <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" className="hidden"
+                          onChange={(e) => { const file = e.target.files?.[0]; if (file) setNewDocForm({ ...newDocForm, file }); }} />
+                      </label>
                     )}
                   </div>
                 </div>
               </div>
+              <div className="p-5 border-t border-border flex gap-3 justify-end shrink-0">
+                <button onClick={() => setShowNewDoc(false)} className="px-5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">Cancelar</button>
+                <button onClick={handleNewDoc} disabled={!newDocForm.name} className="btn-gold text-sm disabled:opacity-50">Crear Documento</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══════ EDIT CONTENT MODAL ══════ */}
+        {editingDoc && (
+          <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4" onClick={() => setEditingDoc(null)}>
+            <div className="bg-card rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
+                <div>
+                  <p className="text-xs font-mono text-muted-foreground">{managedDocs.find(d => d.id === editingDoc)?.code}</p>
+                  <h2 className="font-heading font-bold text-card-foreground">{managedDocs.find(d => d.id === editingDoc)?.name}</h2>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => handleSaveContent(editingDoc)} className="btn-gold text-sm flex items-center gap-1">
+                    <Save className="h-4 w-4" /> Guardar
+                  </button>
+                  <button onClick={() => setEditingDoc(null)} className="p-2 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4">
+                <textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  className="w-full h-full min-h-[400px] px-4 py-3 rounded-lg bg-background border border-border text-foreground text-sm font-mono focus:ring-2 focus:ring-gold outline-none resize-none"
+                  placeholder="Escriba el contenido del documento aquí..."
+                />
+              </div>
+              <div className="p-3 border-t border-border shrink-0 flex items-center justify-between text-xs text-muted-foreground">
+                <span>Puede usar HTML: &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;strong&gt;, &lt;em&gt;</span>
+                <span>{editContent.length} caracteres</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══════ RENAME MODAL ══════ */}
+        {renamingDoc && (
+          <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4" onClick={() => setRenamingDoc(null)}>
+            <div className="bg-card rounded-xl w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-5 border-b border-border">
+                <h2 className="font-heading font-bold text-lg text-card-foreground">Cambiar Código / Nombre</h2>
+                <button onClick={() => setRenamingDoc(null)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
+              </div>
+              <div className="p-5 space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Código del Documento</label>
+                  <input type="text" value={renameForm.code} onChange={(e) => setRenameForm({ ...renameForm, code: e.target.value })}
+                    placeholder="Ej: PRO-IT-01"
+                    className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm font-mono focus:ring-2 focus:ring-gold outline-none" />
+                  <p className="text-xs text-muted-foreground mt-1">Formato: TIPO-DEPTO-## (PRO-IT-01, F-ADM-03, M-IT-02)</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Nombre del Documento</label>
+                  <input type="text" value={renameForm.name} onChange={(e) => setRenameForm({ ...renameForm, name: e.target.value })}
+                    placeholder="Nombre descriptivo..."
+                    className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" />
+                </div>
+              </div>
               <div className="p-5 border-t border-border flex gap-3 justify-end">
-                <button onClick={() => setShowUpload(false)} className="px-5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">Cancelar</button>
-                <button onClick={handleUpload} className="btn-gold text-sm">Subir</button>
+                <button onClick={() => setRenamingDoc(null)} className="px-5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">Cancelar</button>
+                <button onClick={() => handleRename(renamingDoc)} className="btn-gold text-sm">Guardar Cambios</button>
               </div>
             </div>
           </div>
