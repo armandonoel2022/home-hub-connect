@@ -91,7 +91,9 @@ const BASCPage = () => {
       title: `🔔 BASC: ${title}`,
       message,
       type: "info",
-      forUserId: "ALL", // In production, target Bilianny's user ID
+      forUserId: "ALL",
+      relatedId: "BASC",
+      actionUrl: "/basc",
     });
     toast.success(`Notificación enviada a ${AUDITOR_NAME}`, { description: title });
   }, [addNotification]);
