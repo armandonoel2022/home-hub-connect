@@ -7,11 +7,15 @@ import {
   type BASCObjective, type BASCProcedure, type BASCEvidence, type BASCSubItem,
   calcCompliance, calcStatus,
 } from "@/lib/bascData";
+import {
+  type BASCManagedDocument, DEPARTMENT_PREFIXES, DOC_TYPE_PREFIXES,
+  generateDocCode, getNextSequence, loadDocuments, saveDocuments,
+} from "@/lib/bascDocuments";
 import { useNotifications } from "@/contexts/NotificationContext";
 import {
   FolderOpen, FileText, Upload, ChevronRight, ChevronDown, X, File, Download, Trash2, Plus, Shield,
   Target, CheckCircle2, AlertTriangle, Clock, Eye, BarChart3, Link2, ClipboardCheck, TrendingUp,
-  Bell, CheckSquare, Square, Paperclip, FileUp,
+  Bell, CheckSquare, Square, Paperclip, FileUp, Edit3, Save, Code, Tag,
 } from "lucide-react";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 import { toast } from "sonner";
