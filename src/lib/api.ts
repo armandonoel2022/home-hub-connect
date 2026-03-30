@@ -93,7 +93,7 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
 // ─── Auth API ───
 export const authApi = {
   login: (email: string, password: string) =>
-    apiFetch<{ token: string; user: IntranetUser }>("/auth/login", {
+    apiFetch<{ token: string; user: IntranetUser; mustChangePassword?: boolean }>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     }),
@@ -102,7 +102,6 @@ export const authApi = {
     localStorage.removeItem("safeone_token");
     localStorage.removeItem("safeone_user");
     if (BASE_URL && token) {
-      // Fire-and-forget server logout
       fetch(`${BASE_URL}/auth/logout`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
@@ -113,6 +112,23 @@ export const authApi = {
     apiFetch<{ token: string }>("/auth/refresh", { method: "POST" }),
   me: () =>
     apiFetch<IntranetUser>("/auth/me"),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    apiFetch<{ message: string }>("/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }),
+  forgotPassword: (email: string, fullName?: string) =>
+    apiFetch<{ message: string }>("/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email, fullName }),
+    }),
+  getPasswordResetRequests: () =>
+    apiFetch<any[]>("/auth/password-reset-requests"),
+  adminResetPassword: (userId: string, tempPassword: string) =>
+    apiFetch<{ message: string }>(`/auth/admin-reset-password/${userId}`, {
+      method: "POST",
+      body: JSON.stringify({ tempPassword }),
+    }),
 };
 
 // ─── Users API ───
