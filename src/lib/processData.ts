@@ -1,4 +1,10 @@
-import type { ChecklistItem } from "@/pages/DepartmentProcesses";
+export interface ChecklistItem {
+  id: string;
+  text: string;
+  completed: boolean;
+  completedBy?: string;
+  completedAt?: string;
+}
 
 export interface ProcessSeed {
   id: string;
