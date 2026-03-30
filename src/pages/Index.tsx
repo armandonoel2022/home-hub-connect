@@ -5,6 +5,7 @@ import HeroBanner from "@/components/HeroBanner";
 import DepartmentGrid from "@/components/DepartmentGrid";
 import QuickLinks from "@/components/QuickLinks";
 import Announcements from "@/components/Announcements";
+import DashboardMetrics from "@/components/DashboardMetrics";
 import Footer from "@/components/Footer";
 import { Building2, Calculator } from "lucide-react";
 
@@ -38,6 +39,9 @@ const Index = () => {
             </button>
           </div>
         </section>
+
+        {/* Real-time Metrics */}
+        <DashboardMetrics />
 
         <DepartmentGrid />
         <QuickLinks />

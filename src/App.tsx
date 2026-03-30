@@ -39,6 +39,9 @@ import MinorPurchases from "./pages/MinorPurchases";
 import General from "./pages/General";
 import Adonis from "./pages/Adonis";
 import Presentation from "./pages/Presentation";
+import DepartmentProcesses from "./pages/DepartmentProcesses";
+import AuditLog from "./pages/AuditLog";
+import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
 
 
@@ -95,6 +98,9 @@ function ProtectedRoutes() {
         <Route path="/general" element={<General />} />
         <Route path="/adonis" element={<Adonis />} />
         <Route path="/admin/usuarios" element={<UserManagement />} />
+        <Route path="/procesos" element={<DepartmentProcesses />} />
+        <Route path="/auditoria" element={<AuditLog />} />
+        <Route path="/reportes" element={<Reports />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </>
