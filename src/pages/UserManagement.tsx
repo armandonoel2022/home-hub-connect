@@ -490,6 +490,40 @@ const UserManagementPage = () => {
             </div>
           </div>
         )}
+
+        {/* Reset Password Confirmation */}
+        {resetConfirm && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-card rounded-xl w-full max-w-sm shadow-2xl">
+              <div className="p-6 text-center">
+                <div className="w-14 h-14 rounded-full bg-gold/10 flex items-center justify-center mx-auto mb-4">
+                  <KeyRound className="h-7 w-7 text-gold" />
+                </div>
+                <h3 className="font-heading font-bold text-lg text-card-foreground mb-2">¿Resetear contraseña?</h3>
+                <p className="text-sm text-muted-foreground mb-1">
+                  {allUsers.find((u) => u.id === resetConfirm)?.fullName}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  La contraseña volverá a "safeone" y el usuario deberá cambiarla en su próximo ingreso.
+                </p>
+              </div>
+              <div className="p-5 border-t border-border flex gap-3 justify-end">
+                <button onClick={() => setResetConfirm(null)} className="px-5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    resetUserPassword(resetConfirm);
+                    setResetConfirm(null);
+                  }}
+                  className="btn-gold text-sm"
+                >
+                  Resetear Contraseña
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AppLayout>
   );
