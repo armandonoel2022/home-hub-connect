@@ -253,6 +253,14 @@ const UserManagementPage = () => {
             birthdayUsers={birthdayTestUsers}
             isTest
             onDismissTest={() => setShowBirthdayTest(false)}
+            onSendCongrats={(bdayUser) => {
+              if (chatCtx) {
+                chatCtx.startIndividualChat(bdayUser.id);
+                setTimeout(() => {
+                  chatCtx.sendMessage(`🎂🎉 ¡Feliz Cumpleaños, ${bdayUser.fullName}! De parte de SafeOne Security Company te deseamos un maravilloso día lleno de éxitos y bendiciones. 🥳`);
+                }, 500);
+              }
+            }}
           />
         )}
 
