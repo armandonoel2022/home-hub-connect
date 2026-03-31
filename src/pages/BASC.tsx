@@ -218,7 +218,7 @@ const BASCPage = () => {
     addNotification({
       title: "✅ Documento BASC Aprobado",
       message: `${doc?.code} — ${doc?.name} fue aprobado por ${user?.fullName || AUDITOR_NAME}`,
-      type: "success", forUserId: "ALL", relatedId: "BASC", actionUrl: "/basc",
+      type: "info", forUserId: "ALL", relatedId: "BASC", actionUrl: "/basc",
     });
   }, [managedDocs, saveManagedDocs, reviewComment, user, addNotification]);
 
