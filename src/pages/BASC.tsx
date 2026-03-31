@@ -244,7 +244,7 @@ const BASCPage = () => {
     addNotification({
       title: "❌ Documento BASC Rechazado",
       message: `${doc?.code} — ${doc?.name} fue rechazado: "${reviewComment}"`,
-      type: "warning", forUserId: "ALL", relatedId: "BASC", actionUrl: "/basc",
+      type: "info", forUserId: "ALL", relatedId: "BASC", actionUrl: "/basc",
     });
   }, [managedDocs, saveManagedDocs, reviewComment, user, addNotification]);
 
