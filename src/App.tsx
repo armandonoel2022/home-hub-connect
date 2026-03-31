@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
-import { ChatProvider } from "@/contexts/ChatContext";
+import { ChatProvider, useChatContextSafe } from "@/contexts/ChatContext";
 import ChatWindow from "@/components/chat/ChatWindow";
 import ChatNotificationToast from "@/components/chat/ChatNotificationToast";
 import BirthdayOverlay from "@/components/BirthdayOverlay";
