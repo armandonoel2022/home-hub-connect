@@ -373,7 +373,8 @@ const BASCDepartmentObjectives = () => {
           )}
           {canAddMore && !isReviewer && (
             <button onClick={() => setShowNewObjective(true)} className="btn-gold flex items-center gap-2 text-sm">
-              <Plus className="h-4 w-4" /> Nuevo Objetivo ({deptObjectives.filter(o => o.status !== "rechazado").length}/{MAX_OBJECTIVES_PER_DEPT})
+              <Plus className="h-4 w-4" /> Nuevo Objetivo
+              {maxObjectives > 0 && <span className="text-xs opacity-75">({deptObjectives.filter(o => o.status !== "rechazado").length}/{maxObjectives})</span>}
             </button>
           )}
           {isReviewer && (
