@@ -38,6 +38,8 @@ const UserManagementPage = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [birthdayTestUsers, setBirthdayTestUsers] = useState<IntranetUser[]>([]);
+  const [showBirthdayTest, setShowBirthdayTest] = useState(false);
 
   const compressImage = (file: File, maxSize = 300): Promise<string> => {
     return new Promise((resolve) => {
