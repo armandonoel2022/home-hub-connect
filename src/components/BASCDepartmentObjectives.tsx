@@ -378,9 +378,14 @@ const BASCDepartmentObjectives = () => {
             </button>
           )}
           {isReviewer && (
-            <button onClick={() => setShowNewObjective(true)} className="btn-gold flex items-center gap-2 text-sm">
-              <Plus className="h-4 w-4" /> Crear Objetivo
-            </button>
+            <>
+              <button onClick={() => setShowSettings(true)} className="px-3 py-2 rounded-lg text-sm font-medium bg-muted hover:bg-border text-card-foreground transition-colors">
+                ⚙ Límite: {maxObjectives === 0 ? "Sin límite" : `${maxObjectives} por depto`}
+              </button>
+              <button onClick={() => setShowNewObjective(true)} className="btn-gold flex items-center gap-2 text-sm">
+                <Plus className="h-4 w-4" /> Crear Objetivo
+              </button>
+            </>
           )}
         </div>
       </div>
