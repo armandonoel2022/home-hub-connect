@@ -3,9 +3,10 @@ import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { DEPARTMENTS } from "@/lib/types";
 import type { IntranetUser } from "@/lib/types";
-import { Plus, X, Search, Pencil, Trash2, User, Shield, Mail, Building2, Phone, Upload, Image, KeyRound } from "lucide-react";
+import { Plus, X, Search, Pencil, Trash2, User, Shield, Mail, Building2, Phone, Upload, Image, KeyRound, Cake } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import RegistrationRequests from "@/components/RegistrationRequests";
+import BirthdayOverlay from "@/components/BirthdayOverlay";
 import ExportMenu from "@/components/ExportMenu";
 
 const emptyForm = (): Partial<IntranetUser> => ({
@@ -37,6 +38,8 @@ const UserManagementPage = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [birthdayTestUsers, setBirthdayTestUsers] = useState<IntranetUser[]>([]);
+  const [showBirthdayTest, setShowBirthdayTest] = useState(false);
 
   const compressImage = (file: File, maxSize = 300): Promise<string> => {
     return new Promise((resolve) => {
@@ -206,6 +209,32 @@ const UserManagementPage = () => {
             </div>
           ))}
         </div>
+
+        {/* Admin Tools */}
+        <div className="px-6 pb-4 flex gap-3">
+          <button
+            onClick={() => {
+              const testUser = activeUsers[0];
+              if (testUser) {
+                setBirthdayTestUsers([testUser]);
+                setShowBirthdayTest(true);
+              }
+            }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-card border border-border text-sm font-medium text-card-foreground hover:bg-muted transition-colors"
+          >
+            <Cake className="h-4 w-4 text-gold" />
+            Probar Overlay de Cumpleaños
+          </button>
+        </div>
+
+        {/* Birthday Test Overlay */}
+        {showBirthdayTest && birthdayTestUsers.length > 0 && (
+          <BirthdayOverlay
+            birthdayUsers={birthdayTestUsers}
+            isTest
+            onDismissTest={() => setShowBirthdayTest(false)}
+          />
+        )}
 
         {/* Registration Requests */}
         <div className="px-6 pb-4">

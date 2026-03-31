@@ -4,25 +4,36 @@ import type { IntranetUser } from "@/lib/types";
 
 interface BirthdayOverlayProps {
   birthdayUsers: IntranetUser[];
+  isTest?: boolean;
+  onDismissTest?: () => void;
 }
 
-const BirthdayOverlay = ({ birthdayUsers }: BirthdayOverlayProps) => {
+const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest }: BirthdayOverlayProps) => {
   const [visible, setVisible] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
+    if (isTest) {
+      setVisible(true);
+      setDismissed(false);
+      return;
+    }
     if (birthdayUsers.length > 0 && !dismissed) {
       const dismissedToday = sessionStorage.getItem("safeone_bday_dismissed");
       if (!dismissedToday) {
         setVisible(true);
       }
     }
-  }, [birthdayUsers, dismissed]);
+  }, [birthdayUsers, dismissed, isTest]);
 
   const handleDismiss = () => {
     setVisible(false);
     setDismissed(true);
-    sessionStorage.setItem("safeone_bday_dismissed", "true");
+    if (isTest) {
+      onDismissTest?.();
+    } else {
+      sessionStorage.setItem("safeone_bday_dismissed", "true");
+    }
   };
 
   if (!visible || birthdayUsers.length === 0) return null;
