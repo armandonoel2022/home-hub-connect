@@ -49,6 +49,7 @@ const queryClient = new QueryClient();
 
 function ProtectedRoutes() {
   const { user, isLoading, activeUsers } = useAuth();
+  const chatCtx = useChatContextSafe();
 
   if (isLoading) {
     return (
@@ -71,7 +72,17 @@ function ProtectedRoutes() {
 
   return (
     <>
-      <BirthdayOverlay birthdayUsers={birthdayUsers} />
+      <BirthdayOverlay
+        birthdayUsers={birthdayUsers}
+        onSendCongrats={(bdayUser) => {
+          if (chatCtx) {
+            chatCtx.startIndividualChat(bdayUser.id);
+            setTimeout(() => {
+              chatCtx.sendMessage(`🎂🎉 ¡Feliz Cumpleaños, ${bdayUser.fullName}! De parte de SafeOne Security Company te deseamos un maravilloso día lleno de éxitos y bendiciones. 🥳`);
+            }, 500);
+          }
+        }}
+      />
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/kpis" element={<KPIDashboard />} />
