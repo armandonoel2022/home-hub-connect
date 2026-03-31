@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { X, PartyPopper, Cake, Download, Send } from "lucide-react";
 import html2canvas from "html2canvas";
+import { sendBrowserNotification } from "@/lib/windowsNotifications";
 import type { IntranetUser } from "@/lib/types";
 
 interface BirthdayOverlayProps {
@@ -10,12 +11,30 @@ interface BirthdayOverlayProps {
   onSendCongrats?: (user: IntranetUser) => void;
 }
 
+const DISMISS_KEY_PREFIX = "safeone_bday_dismissed_";
+
+function getTodayKey(): string {
+  const d = new Date();
+  return `${DISMISS_KEY_PREFIX}${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function cleanOldKeys() {
+  const todayKey = getTodayKey();
+  for (let i = localStorage.length - 1; i >= 0; i--) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith(DISMISS_KEY_PREFIX) && key !== todayKey) {
+      localStorage.removeItem(key);
+    }
+  }
+}
+
 const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest, onSendCongrats }: BirthdayOverlayProps) => {
   const [visible, setVisible] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [sent, setSent] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const notificationSentRef = useRef(false);
 
   useEffect(() => {
     if (isTest) {
@@ -24,10 +43,38 @@ const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest, onSendCongrats 
       setSent(false);
       return;
     }
-    if (birthdayUsers.length > 0 && !dismissed) {
-      const dismissedToday = sessionStorage.getItem("safeone_bday_dismissed");
-      if (!dismissedToday) {
-        setVisible(true);
+
+    if (birthdayUsers.length === 0) return;
+
+    cleanOldKeys();
+    const alreadyDismissed = localStorage.getItem(getTodayKey()) === "true";
+
+    if (alreadyDismissed) {
+      setDismissed(true);
+      return;
+    }
+
+    setVisible(true);
+
+    // Send native notification once per day
+    if (!notificationSentRef.current) {
+      notificationSentRef.current = true;
+      const nativeKey = `safeone_bday_notified_${getTodayKey().replace(DISMISS_KEY_PREFIX, "")}`;
+      if (!localStorage.getItem(nativeKey)) {
+        localStorage.setItem(nativeKey, "true");
+
+        const names = birthdayUsers.map((u) => u.fullName);
+        const title = birthdayUsers.length === 1
+          ? `🎂 ¡Hoy cumple años ${names[0]}!`
+          : `🎂 ¡Hoy cumplen años ${names.length} compañeros!`;
+        const body = birthdayUsers.length === 1
+          ? `${birthdayUsers[0].position} — ${birthdayUsers[0].department}. ¡Envíale una felicitación!`
+          : `${names.join(", ")}. ¡Envíales una felicitación!`;
+
+        sendBrowserNotification(title, body, {
+          tag: "birthday-today",
+          type: "message",
+        });
       }
     }
   }, [birthdayUsers, dismissed, isTest]);
@@ -38,15 +85,12 @@ const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest, onSendCongrats 
     if (isTest) {
       onDismissTest?.();
     } else {
-      sessionStorage.setItem("safeone_bday_dismissed", "true");
+      localStorage.setItem(getTodayKey(), "true");
     }
   };
 
   const handleSendCongrats = () => {
-    if (birthdayUsers.length === 1 && onSendCongrats) {
-      onSendCongrats(birthdayUsers[0]);
-      setSent(true);
-    } else if (onSendCongrats) {
+    if (onSendCongrats) {
       birthdayUsers.forEach((u) => onSendCongrats(u));
       setSent(true);
     }
@@ -202,7 +246,7 @@ const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest, onSendCongrats 
           </button>
           <button onClick={handleSendCongrats} disabled={sent} className="flex-1 btn-gold text-xs flex items-center justify-center gap-1.5">
             <Send className="h-3.5 w-3.5" />
-            {sent ? "¡Enviado!" : "¡Felicitar!"}  🥳
+            {sent ? "¡Enviado!" : "¡Felicitar!"} 🥳
           </button>
         </div>
       </div>
