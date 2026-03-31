@@ -11,18 +11,22 @@ import {
 import {
   type BASCManagedDocument, DEPARTMENT_PREFIXES, DOC_TYPE_PREFIXES,
   generateDocCode, getNextSequence, loadDocuments, saveDocuments,
+  saveFileData, loadFileData, deleteFileData, getFileTypeFromName, getMimeType,
+  calcDocCompliance,
 } from "@/lib/bascDocuments";
 import { useNotifications } from "@/contexts/NotificationContext";
 import {
   FolderOpen, FileText, Upload, ChevronRight, ChevronDown, X, File, Download, Trash2, Plus, Shield,
   Target, CheckCircle2, AlertTriangle, Clock, Eye, BarChart3, Link2, ClipboardCheck, TrendingUp,
-  Bell, CheckSquare, Square, Paperclip, FileUp, Edit3, Save, Code, Tag,
+  Bell, CheckSquare, Square, Paperclip, FileUp, Edit3, Save, Code, Tag, MessageSquare,
+  Printer, CheckCircle, XCircle, FileWarning,
 } from "lucide-react";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 import { toast } from "sonner";
 
 const COLORS = ["hsl(160,60%,40%)", "hsl(42,100%,50%)", "hsl(200,70%,50%)", "hsl(0,60%,50%)", "hsl(280,50%,50%)"];
 const AUDITOR_NAME = "Bilianny Fernández";
+const ADMIN_EMAIL = "tecnologia@safeone.com.do";
 
 type BASCTab = "documentos" | "objetivos" | "procedimientos" | "dept_objetivos";
 
@@ -63,15 +67,18 @@ const BASCPage = () => {
   const [search, setSearch] = useState("");
   const [filterDept, setFilterDept] = useState("");
   const [evidenceForm, setEvidenceForm] = useState({ title: "", description: "", type: "documento" as BASCEvidence["type"], file: null as File | null });
-  const [editingDoc, setEditingDoc] = useState<string | null>(null);
-  const [editContent, setEditContent] = useState("");
-  const [renamingDoc, setRenamingDoc] = useState<string | null>(null);
-  const [renameForm, setRenameForm] = useState({ code: "", name: "" });
+  const [previewDoc, setPreviewDoc] = useState<string | null>(null);
+  const [reviewingDoc, setReviewingDoc] = useState<string | null>(null);
+  const [reviewComment, setReviewComment] = useState("");
+  const [uploadingDocId, setUploadingDocId] = useState<string | null>(null);
   const [showNewDoc, setShowNewDoc] = useState(false);
   const [newDocForm, setNewDocForm] = useState({
     name: "", type: "procedimiento" as BASCManagedDocument["type"],
-    department: user?.department || "Tecnología y Monitoreo", content: "", file: null as File | null,
+    department: user?.department || "Tecnología y Monitoreo", file: null as File | null,
   });
+
+  const isAdmin = user?.email === ADMIN_EMAIL;
+  const isAuditor = user?.fullName === AUDITOR_NAME || isAdmin;
 
   // Persist objectives
   const saveObjectives = useCallback((objs: BASCObjective[]) => {
@@ -159,45 +166,172 @@ const BASCPage = () => {
     groupedByDept[d.department][typeLabel].push(d);
   });
 
+  // File upload handler
+  const handleFileUpload = useCallback((docId: string, file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(",")[1];
+      const mimeType = getMimeType(file.name);
+      saveFileData(docId, base64, mimeType);
+
+      const updated = managedDocs.map(d =>
+        d.id === docId ? {
+          ...d,
+          hasFile: true,
+          fileName: file.name,
+          fileSize: `${(file.size / 1024).toFixed(0)} KB`,
+          fileType: getFileTypeFromName(file.name),
+          fileMimeType: mimeType,
+          reviewStatus: "pendiente" as const,
+          reviewComment: undefined,
+          reviewedBy: undefined,
+          reviewedAt: undefined,
+          updatedBy: user?.fullName || "Usuario",
+          updatedAt: new Date().toISOString().split("T")[0],
+        } : d
+      );
+      saveManagedDocs(updated);
+      setUploadingDocId(null);
+      toast.success(`Archivo "${file.name}" cargado`, { description: "Pendiente de revisión por " + AUDITOR_NAME });
+      notifyAuditor("Documento cargado para revisión", `${user?.fullName || "Usuario"} subió "${file.name}" para ${managedDocs.find(d => d.id === docId)?.name}`);
+    };
+    reader.readAsDataURL(file);
+  }, [managedDocs, saveManagedDocs, user, notifyAuditor]);
+
+  // Review handlers
+  const handleApprove = useCallback((docId: string) => {
+    const updated = managedDocs.map(d =>
+      d.id === docId ? {
+        ...d,
+        reviewStatus: "aprobado" as const,
+        reviewComment: reviewComment || undefined,
+        reviewedBy: user?.fullName || AUDITOR_NAME,
+        reviewedAt: new Date().toISOString().split("T")[0],
+        status: "vigente" as const,
+      } : d
+    );
+    saveManagedDocs(updated);
+    setReviewingDoc(null);
+    setReviewComment("");
+    const doc = managedDocs.find(d => d.id === docId);
+    toast.success(`Documento ${doc?.code} aprobado`);
+    addNotification({
+      title: "✅ Documento BASC Aprobado",
+      message: `${doc?.code} — ${doc?.name} fue aprobado por ${user?.fullName || AUDITOR_NAME}`,
+      type: "info", forUserId: "ALL", relatedId: "BASC", actionUrl: "/basc",
+    });
+  }, [managedDocs, saveManagedDocs, reviewComment, user, addNotification]);
+
+  const handleReject = useCallback((docId: string) => {
+    if (!reviewComment.trim()) {
+      toast.error("Debe indicar el motivo del rechazo");
+      return;
+    }
+    const updated = managedDocs.map(d =>
+      d.id === docId ? {
+        ...d,
+        reviewStatus: "rechazado" as const,
+        reviewComment,
+        reviewedBy: user?.fullName || AUDITOR_NAME,
+        reviewedAt: new Date().toISOString().split("T")[0],
+      } : d
+    );
+    saveManagedDocs(updated);
+    setReviewingDoc(null);
+    setReviewComment("");
+    const doc = managedDocs.find(d => d.id === docId);
+    toast.info(`Documento ${doc?.code} rechazado`);
+    addNotification({
+      title: "❌ Documento BASC Rechazado",
+      message: `${doc?.code} — ${doc?.name} fue rechazado: "${reviewComment}"`,
+      type: "info", forUserId: "ALL", relatedId: "BASC", actionUrl: "/basc",
+    });
+  }, [managedDocs, saveManagedDocs, reviewComment, user, addNotification]);
+
+  // Preview / Download
+  const handlePreview = useCallback((docId: string) => {
+    const fileInfo = loadFileData(docId);
+    if (!fileInfo) { toast.error("No hay archivo cargado"); return; }
+    setPreviewDoc(docId);
+  }, []);
+
+  const handleDownload = useCallback((docId: string) => {
+    const doc = managedDocs.find(d => d.id === docId);
+    const fileInfo = loadFileData(docId);
+    if (!doc || !fileInfo) { toast.error("No hay archivo disponible"); return; }
+    const byteChars = atob(fileInfo.data);
+    const byteNums = new Array(byteChars.length);
+    for (let i = 0; i < byteChars.length; i++) byteNums[i] = byteChars.charCodeAt(i);
+    const blob = new Blob([new Uint8Array(byteNums)], { type: fileInfo.mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = doc.fileName || `${doc.code}.pdf`; a.click();
+    URL.revokeObjectURL(url);
+  }, [managedDocs]);
+
+  const handlePrint = useCallback((docId: string) => {
+    const fileInfo = loadFileData(docId);
+    if (!fileInfo) { toast.error("No hay archivo para imprimir"); return; }
+    const byteChars = atob(fileInfo.data);
+    const byteNums = new Array(byteChars.length);
+    for (let i = 0; i < byteChars.length; i++) byteNums[i] = byteChars.charCodeAt(i);
+    const blob = new Blob([new Uint8Array(byteNums)], { type: fileInfo.mimeType });
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, "_blank");
+    if (win) { win.onload = () => { win.print(); }; }
+    else { toast.error("Habilite ventanas emergentes para imprimir"); }
+  }, []);
+
   const handleNewDoc = () => {
-    if (!newDocForm.name || !newDocForm.department) return;
+    if (!newDocForm.name || !newDocForm.department || !newDocForm.file) return;
     const deptPrefix = DEPARTMENT_PREFIXES[newDocForm.department] || "GEN";
     const seq = getNextSequence(managedDocs, newDocForm.type, deptPrefix);
     const code = generateDocCode(newDocForm.type, deptPrefix, seq);
-    const ext = newDocForm.file?.name.split(".").pop()?.toLowerCase();
-    let fileType: BASCManagedDocument["fileType"] = "other";
-    if (ext === "pdf") fileType = "pdf"; else if (ext === "doc" || ext === "docx") fileType = "word"; else if (ext === "xls" || ext === "xlsx") fileType = "excel";
     const now = new Date().toISOString().split("T")[0];
+    const fileType = getFileTypeFromName(newDocForm.file.name);
+    const mimeType = getMimeType(newDocForm.file.name);
     const newDoc: BASCManagedDocument = {
-      id: `MDOC-${Date.now()}`, code, name: newDocForm.name, content: newDocForm.content || `<h2>${newDocForm.name}</h2><p>Contenido del documento...</p>`,
+      id: `MDOC-${Date.now()}`, code, name: newDocForm.name,
       type: newDocForm.type, fileType, department: newDocForm.department, departmentPrefix: deptPrefix,
       version: "1.0", status: "borrador", createdBy: user?.fullName || "Usuario", createdAt: now,
-      updatedBy: user?.fullName || "Usuario", updatedAt: now, hasFile: !!newDocForm.file,
-      fileName: newDocForm.file?.name, fileSize: newDocForm.file ? `${(newDocForm.file.size / 1024).toFixed(0)} KB` : undefined,
+      updatedBy: user?.fullName || "Usuario", updatedAt: now, hasFile: true,
+      fileName: newDocForm.file.name, fileSize: `${(newDocForm.file.size / 1024).toFixed(0)} KB`,
+      fileMimeType: mimeType, reviewStatus: "pendiente",
     };
-    saveManagedDocs([newDoc, ...managedDocs]);
-    setShowNewDoc(false);
-    setNewDocForm({ name: "", type: "procedimiento", department: user?.department || "Tecnología y Monitoreo", content: "", file: null });
-    toast.success(`Documento ${code} creado`, { description: newDoc.name });
+    // Read file and save
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(",")[1];
+      saveFileData(newDoc.id, base64, mimeType);
+      saveManagedDocs([newDoc, ...managedDocs]);
+      setShowNewDoc(false);
+      setNewDocForm({ name: "", type: "procedimiento", department: user?.department || "Tecnología y Monitoreo", file: null });
+      toast.success(`Documento ${code} creado`, { description: newDoc.name });
+      notifyAuditor("Nuevo documento para revisión", `${user?.fullName || "Usuario"} creó ${code} — ${newDoc.name}`);
+    };
+    reader.readAsDataURL(newDocForm.file);
   };
 
-  const handleDeleteDoc = (id: string) => saveManagedDocs(managedDocs.filter((d) => d.id !== id));
-
-  const handleSaveContent = (docId: string) => {
-    saveManagedDocs(managedDocs.map(d => d.id === docId ? { ...d, content: editContent, updatedBy: user?.fullName || "Usuario", updatedAt: new Date().toISOString().split("T")[0] } : d));
-    setEditingDoc(null);
-    toast.success("Contenido guardado");
+  const handleDeleteDoc = (id: string) => {
+    saveManagedDocs(managedDocs.filter((d) => d.id !== id));
+    deleteFileData(id);
   };
 
-  const handleRename = (docId: string) => {
-    saveManagedDocs(managedDocs.map(d => d.id === docId ? { ...d, code: renameForm.code || d.code, name: renameForm.name || d.name, updatedBy: user?.fullName || "Usuario", updatedAt: new Date().toISOString().split("T")[0] } : d));
-    setRenamingDoc(null);
-    toast.success("Documento renombrado");
+  const reviewStatusColors: Record<string, string> = {
+    sin_archivo: "bg-muted text-muted-foreground",
+    pendiente: "bg-amber-50 text-amber-700",
+    aprobado: "bg-emerald-50 text-emerald-700",
+    rechazado: "bg-red-50 text-red-700",
+  };
+  const reviewStatusLabels: Record<string, string> = {
+    sin_archivo: "Sin archivo", pendiente: "Pendiente revisión",
+    aprobado: "Aprobado", rechazado: "Rechazado",
   };
 
   const fileTypeColors: Record<string, string> = {
     pdf: "bg-red-50 text-red-700", word: "bg-blue-50 text-blue-700",
-    excel: "bg-emerald-50 text-emerald-700", image: "bg-purple-50 text-purple-700", other: "bg-muted text-muted-foreground",
+    excel: "bg-emerald-50 text-emerald-700", image: "bg-purple-50 text-purple-700",
+    other: "bg-muted text-muted-foreground", none: "bg-muted text-muted-foreground",
   };
   const statusColors: Record<string, string> = {
     vigente: "bg-emerald-50 text-emerald-700", borrador: "bg-amber-50 text-amber-700",
@@ -500,12 +634,13 @@ const BASCPage = () => {
               </select>
             </div>
 
-            <div className="px-6 pb-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="px-6 pb-4 grid grid-cols-2 md:grid-cols-5 gap-3">
               {[
                 { label: "Total Documentos", value: managedDocs.length, color: "text-card-foreground" },
-                { label: "Procedimientos", value: managedDocs.filter(d => d.type === "procedimiento").length, color: "gold-accent-text" },
-                { label: "Matrices", value: managedDocs.filter(d => d.type === "matriz").length, color: "gold-accent-text" },
-                { label: "Departamentos", value: new Set(managedDocs.map(d => d.department)).size, color: "text-card-foreground" },
+                { label: "Con Archivo", value: managedDocs.filter(d => d.hasFile).length, color: "text-blue-600" },
+                { label: "Aprobados", value: managedDocs.filter(d => d.reviewStatus === "aprobado").length, color: "text-emerald-600" },
+                { label: "Pendientes", value: managedDocs.filter(d => d.reviewStatus === "pendiente").length, color: "text-amber-600" },
+                { label: "Compliance Docs", value: `${calcDocCompliance(managedDocs)}%`, color: calcDocCompliance(managedDocs) >= 80 ? "text-emerald-600" : "text-amber-600" },
               ].map((s) => (
                 <div key={s.label} className="bg-card rounded-lg p-4 border border-border">
                   <p className="text-xs text-muted-foreground">{s.label}</p>
@@ -522,7 +657,11 @@ const BASCPage = () => {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {Object.entries(groupedByDept).sort(([a], [b]) => a.localeCompare(b)).map(([dept, types]) => (
+                  {Object.entries(groupedByDept).sort(([a], [b]) => a.localeCompare(b)).map(([dept, types]) => {
+                    const deptDocs = Object.values(types).flat();
+                    const deptApproved = deptDocs.filter(d => d.reviewStatus === "aprobado").length;
+                    const deptPct = deptDocs.length > 0 ? Math.round((deptApproved / deptDocs.length) * 100) : 0;
+                    return (
                     <div key={dept} className="bg-card rounded-lg border border-border overflow-hidden">
                       <button onClick={() => setExpandedDept(expandedDept === dept ? null : dept)}
                         className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-muted/50 transition-colors">
@@ -530,7 +669,10 @@ const BASCPage = () => {
                         <FolderOpen className="h-5 w-5 text-gold shrink-0" />
                         <span className="font-heading font-bold text-card-foreground">{dept}</span>
                         <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground ml-2">{DEPARTMENT_PREFIXES[dept] || "—"}</span>
-                        <span className="text-xs text-muted-foreground ml-auto">{Object.values(types).flat().length} docs</span>
+                        <div className="ml-auto flex items-center gap-3">
+                          <span className={`text-xs font-bold ${deptPct >= 80 ? "text-emerald-600" : deptPct > 0 ? "text-amber-600" : "text-muted-foreground"}`}>{deptPct}%</span>
+                          <span className="text-xs text-muted-foreground">{deptDocs.length} docs</span>
+                        </div>
                       </button>
                       {expandedDept === dept && (
                         <div className="border-t border-border">
@@ -547,32 +689,71 @@ const BASCPage = () => {
                                 <div className="pl-16 pr-5 pb-3 space-y-2">
                                   {docs.sort((a, b) => a.code.localeCompare(b.code)).map((doc) => (
                                     <div key={doc.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group">
-                                      <span className={`text-[10px] font-bold px-2 py-1 rounded ${fileTypeColors[doc.fileType]}`}>{doc.fileType.toUpperCase()}</span>
+                                      {/* File type badge */}
+                                      <span className={`text-[10px] font-bold px-2 py-1 rounded ${fileTypeColors[doc.fileType]}`}>
+                                        {doc.fileType === "none" ? "—" : doc.fileType.toUpperCase()}
+                                      </span>
+                                      {/* Doc info */}
                                       <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 flex-wrap">
                                           <span className="text-xs font-mono font-bold text-gold">{doc.code}</span>
-                                          <span className={`text-[10px] px-1.5 py-0.5 rounded ${statusColors[doc.status]}`}>{doc.status}</span>
-                                          <span className="text-[10px] text-muted-foreground">v{doc.version}</span>
+                                          <span className={`text-[10px] px-1.5 py-0.5 rounded ${reviewStatusColors[doc.reviewStatus]}`}>
+                                            {reviewStatusLabels[doc.reviewStatus]}
+                                          </span>
+                                          {doc.reviewStatus === "rechazado" && doc.reviewComment && (
+                                            <span className="text-[10px] text-red-600 italic truncate max-w-[150px]" title={doc.reviewComment}>
+                                              "{doc.reviewComment}"
+                                            </span>
+                                          )}
                                         </div>
                                         <p className="text-sm font-medium text-card-foreground truncate">{doc.name}</p>
-                                        <p className="text-xs text-muted-foreground">{doc.updatedBy} · {doc.updatedAt} {doc.fileSize && `· ${doc.fileSize}`}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {doc.hasFile ? (
+                                            <><Paperclip className="h-3 w-3 inline mr-1" />{doc.fileName} · {doc.fileSize}</>
+                                          ) : "Sin archivo cargado"}
+                                          {doc.reviewedBy && ` · Revisado por ${doc.reviewedBy} (${doc.reviewedAt})`}
+                                        </p>
                                       </div>
-                                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => { setEditingDoc(doc.id); setEditContent(doc.content); }}
-                                          className="p-1.5 rounded-lg hover:bg-card text-muted-foreground hover:text-card-foreground transition-colors" title="Editar contenido">
-                                          <Edit3 className="h-4 w-4" />
-                                        </button>
-                                        <button onClick={() => { setRenamingDoc(doc.id); setRenameForm({ code: doc.code, name: doc.name }); }}
-                                          className="p-1.5 rounded-lg hover:bg-card text-muted-foreground hover:text-card-foreground transition-colors" title="Cambiar código/nombre">
-                                          <Tag className="h-4 w-4" />
-                                        </button>
-                                        <button className="p-1.5 rounded-lg hover:bg-card text-muted-foreground hover:text-card-foreground transition-colors" title="Descargar">
-                                          <Download className="h-4 w-4" />
-                                        </button>
-                                        <button onClick={() => handleDeleteDoc(doc.id)}
-                                          className="p-1.5 rounded-lg hover:bg-card text-muted-foreground hover:text-destructive transition-colors" title="Eliminar">
-                                          <Trash2 className="h-4 w-4" />
-                                        </button>
+                                      {/* Actions */}
+                                      <div className="flex items-center gap-1 shrink-0">
+                                        {/* Upload / Re-upload */}
+                                        <label className="p-1.5 rounded-lg hover:bg-card text-muted-foreground hover:text-card-foreground transition-colors cursor-pointer"
+                                          title={doc.hasFile ? "Reemplazar archivo" : "Subir archivo"}>
+                                          <Upload className="h-4 w-4" />
+                                          <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.bmp" className="hidden"
+                                            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileUpload(doc.id, f); }} />
+                                        </label>
+                                        {/* Preview */}
+                                        {doc.hasFile && (
+                                          <>
+                                            <button onClick={() => handlePreview(doc.id)}
+                                              className="p-1.5 rounded-lg hover:bg-card text-muted-foreground hover:text-card-foreground transition-colors" title="Visualizar">
+                                              <Eye className="h-4 w-4" />
+                                            </button>
+                                            <button onClick={() => handleDownload(doc.id)}
+                                              className="p-1.5 rounded-lg hover:bg-card text-muted-foreground hover:text-card-foreground transition-colors" title="Descargar">
+                                              <Download className="h-4 w-4" />
+                                            </button>
+                                            <button onClick={() => handlePrint(doc.id)}
+                                              className="p-1.5 rounded-lg hover:bg-card text-muted-foreground hover:text-card-foreground transition-colors" title="Imprimir">
+                                              <Printer className="h-4 w-4" />
+                                            </button>
+                                          </>
+                                        )}
+                                        {/* Review (auditor only) */}
+                                        {isAuditor && doc.hasFile && doc.reviewStatus === "pendiente" && (
+                                          <button onClick={() => { setReviewingDoc(doc.id); setReviewComment(""); }}
+                                            className="p-1.5 rounded-lg bg-gold/10 text-gold hover:bg-gold/20 transition-colors" title="Revisar documento">
+                                            <ClipboardCheck className="h-4 w-4" />
+                                          </button>
+                                        )}
+                                        {/* Delete (admin) */}
+                                        {isAdmin && (
+                                          <button onClick={() => handleDeleteDoc(doc.id)}
+                                            className="p-1.5 rounded-lg hover:bg-card text-muted-foreground hover:text-destructive transition-colors" title="Eliminar">
+                                            <Trash2 className="h-4 w-4" />
+                                          </button>
+                                        )}
                                       </div>
                                     </div>
                                   ))}
@@ -583,7 +764,7 @@ const BASCPage = () => {
                         </div>
                       )}
                     </div>
-                  ))}
+                  );})}
                 </div>
               )}
             </div>
@@ -607,9 +788,9 @@ const BASCPage = () => {
                       <option value="procedimiento">PRO — Procedimiento</option>
                       <option value="formulario">F — Formulario</option>
                       <option value="matriz">M — Matriz</option>
-                      <option value="politica">POL — Política</option>
+                      <option value="politica">PO — Política</option>
                       <option value="registro">REG — Registro</option>
-                      <option value="manual">MAN — Manual</option>
+                      <option value="manual">MAN — Manual / Programa</option>
                       <option value="informe">INF — Informe</option>
                     </select>
                   </div>
@@ -637,100 +818,129 @@ const BASCPage = () => {
                     className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Contenido inicial</label>
-                  <textarea value={newDocForm.content} onChange={(e) => setNewDocForm({ ...newDocForm, content: e.target.value })} rows={4}
-                    placeholder="Escriba el contenido del documento o déjelo vacío para editar después..."
-                    className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none resize-none" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Archivo adjunto (opcional)</label>
+                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Archivo del documento *</label>
                   <div className="border-2 border-dashed border-border rounded-lg p-4 text-center">
                     {newDocForm.file ? (
                       <div className="flex items-center justify-center gap-2">
                         <File className="h-5 w-5 text-gold" />
                         <span className="text-sm text-card-foreground font-medium truncate max-w-[200px]">{newDocForm.file.name}</span>
+                        <span className="text-xs text-muted-foreground">({(newDocForm.file.size / 1024).toFixed(0)} KB)</span>
                         <button onClick={() => setNewDocForm({ ...newDocForm, file: null })} className="p-1 hover:bg-muted rounded"><X className="h-4 w-4 text-muted-foreground" /></button>
                       </div>
                     ) : (
-                      <label className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-sm font-medium text-card-foreground cursor-pointer hover:bg-border transition-colors">
-                        <Upload className="h-4 w-4" /> Seleccionar archivo
-                        <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" className="hidden"
-                          onChange={(e) => { const file = e.target.files?.[0]; if (file) setNewDocForm({ ...newDocForm, file }); }} />
-                      </label>
+                      <>
+                        <FileUp className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                        <p className="text-xs text-muted-foreground mb-2">Word, Excel, PDF, Imagen</p>
+                        <label className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-sm font-medium text-card-foreground cursor-pointer hover:bg-border transition-colors">
+                          <Upload className="h-4 w-4" /> Seleccionar archivo
+                          <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.bmp" className="hidden"
+                            onChange={(e) => { const file = e.target.files?.[0]; if (file) setNewDocForm({ ...newDocForm, file }); }} />
+                        </label>
+                      </>
                     )}
                   </div>
                 </div>
               </div>
               <div className="p-5 border-t border-border flex gap-3 justify-end shrink-0">
                 <button onClick={() => setShowNewDoc(false)} className="px-5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">Cancelar</button>
-                <button onClick={handleNewDoc} disabled={!newDocForm.name} className="btn-gold text-sm disabled:opacity-50">Crear Documento</button>
+                <button onClick={handleNewDoc} disabled={!newDocForm.name || !newDocForm.file} className="btn-gold text-sm disabled:opacity-50">Crear Documento</button>
               </div>
             </div>
           </div>
         )}
 
-        {/* ══════ EDIT CONTENT MODAL ══════ */}
-        {editingDoc && (
-          <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4" onClick={() => setEditingDoc(null)}>
-            <div className="bg-card rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
-                <div>
-                  <p className="text-xs font-mono text-muted-foreground">{managedDocs.find(d => d.id === editingDoc)?.code}</p>
-                  <h2 className="font-heading font-bold text-card-foreground">{managedDocs.find(d => d.id === editingDoc)?.name}</h2>
+        {/* ══════ REVIEW MODAL ══════ */}
+        {reviewingDoc && (() => {
+          const rDoc = managedDocs.find(d => d.id === reviewingDoc);
+          return (
+            <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4" onClick={() => setReviewingDoc(null)}>
+              <div className="bg-card rounded-xl w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between p-5 border-b border-border">
+                  <div>
+                    <p className="text-xs font-mono text-muted-foreground">{rDoc?.code}</p>
+                    <h2 className="font-heading font-bold text-card-foreground">{rDoc?.name}</h2>
+                    <p className="text-xs text-muted-foreground mt-1">Archivo: {rDoc?.fileName}</p>
+                  </div>
+                  <button onClick={() => setReviewingDoc(null)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => handleSaveContent(editingDoc)} className="btn-gold text-sm flex items-center gap-1">
-                    <Save className="h-4 w-4" /> Guardar
+                <div className="p-5 space-y-4">
+                  <div className="flex gap-2">
+                    <button onClick={() => handlePreview(reviewingDoc)} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-muted text-sm font-medium text-card-foreground hover:bg-border transition-colors">
+                      <Eye className="h-4 w-4" /> Ver documento
+                    </button>
+                    <button onClick={() => handleDownload(reviewingDoc)} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-muted text-sm font-medium text-card-foreground hover:bg-border transition-colors">
+                      <Download className="h-4 w-4" /> Descargar
+                    </button>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-card-foreground block mb-1.5">Comentario (obligatorio para rechazar)</label>
+                    <textarea value={reviewComment} onChange={(e) => setReviewComment(e.target.value)} rows={3}
+                      placeholder="Observaciones sobre el documento..."
+                      className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none resize-none" />
+                  </div>
+                </div>
+                <div className="p-5 border-t border-border flex gap-3 justify-end">
+                  <button onClick={() => handleReject(reviewingDoc)}
+                    className="px-5 py-2.5 rounded-lg text-sm font-medium bg-red-50 text-red-700 hover:bg-red-100 transition-colors flex items-center gap-1">
+                    <XCircle className="h-4 w-4" /> Rechazar
                   </button>
-                  <button onClick={() => setEditingDoc(null)} className="p-2 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
+                  <button onClick={() => handleApprove(reviewingDoc)}
+                    className="btn-gold text-sm flex items-center gap-1">
+                    <CheckCircle className="h-4 w-4" /> Aprobar
+                  </button>
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto p-4">
-                <textarea
-                  value={editContent}
-                  onChange={(e) => setEditContent(e.target.value)}
-                  className="w-full h-full min-h-[400px] px-4 py-3 rounded-lg bg-background border border-border text-foreground text-sm font-mono focus:ring-2 focus:ring-gold outline-none resize-none"
-                  placeholder="Escriba el contenido del documento aquí..."
-                />
-              </div>
-              <div className="p-3 border-t border-border shrink-0 flex items-center justify-between text-xs text-muted-foreground">
-                <span>Puede usar HTML: &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;strong&gt;, &lt;em&gt;</span>
-                <span>{editContent.length} caracteres</span>
-              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
-        {/* ══════ RENAME MODAL ══════ */}
-        {renamingDoc && (
-          <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4" onClick={() => setRenamingDoc(null)}>
-            <div className="bg-card rounded-xl w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-between p-5 border-b border-border">
-                <h2 className="font-heading font-bold text-lg text-card-foreground">Cambiar Código / Nombre</h2>
-                <button onClick={() => setRenamingDoc(null)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
-              </div>
-              <div className="p-5 space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Código del Documento</label>
-                  <input type="text" value={renameForm.code} onChange={(e) => setRenameForm({ ...renameForm, code: e.target.value })}
-                    placeholder="Ej: PRO-IT-01"
-                    className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm font-mono focus:ring-2 focus:ring-gold outline-none" />
-                  <p className="text-xs text-muted-foreground mt-1">Formato: TIPO-DEPTO-## (PRO-IT-01, F-ADM-03, M-IT-02)</p>
+        {/* ══════ FILE PREVIEW MODAL ══════ */}
+        {previewDoc && (() => {
+          const pDoc = managedDocs.find(d => d.id === previewDoc);
+          const fileInfo = loadFileData(previewDoc);
+          if (!pDoc || !fileInfo) return null;
+          const isImage = pDoc.fileType === "image";
+          const isPdf = pDoc.fileType === "pdf";
+          const dataUrl = `data:${fileInfo.mimeType};base64,${fileInfo.data}`;
+          return (
+            <div className="fixed inset-0 z-[70] bg-black/50 flex items-center justify-center p-4" onClick={() => setPreviewDoc(null)}>
+              <div className="bg-card rounded-xl w-full max-w-5xl max-h-[95vh] flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
+                  <div>
+                    <p className="text-xs font-mono text-muted-foreground">{pDoc.code}</p>
+                    <h2 className="font-heading font-bold text-card-foreground">{pDoc.name}</h2>
+                    <p className="text-xs text-muted-foreground">{pDoc.fileName} · {pDoc.fileSize}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => handleDownload(previewDoc)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-muted text-sm text-card-foreground hover:bg-border transition-colors">
+                      <Download className="h-4 w-4" /> Descargar
+                    </button>
+                    <button onClick={() => handlePrint(previewDoc)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-muted text-sm text-card-foreground hover:bg-border transition-colors">
+                      <Printer className="h-4 w-4" /> Imprimir
+                    </button>
+                    <button onClick={() => setPreviewDoc(null)} className="p-2 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Nombre del Documento</label>
-                  <input type="text" value={renameForm.name} onChange={(e) => setRenameForm({ ...renameForm, name: e.target.value })}
-                    placeholder="Nombre descriptivo..."
-                    className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" />
+                <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-muted/30">
+                  {isPdf ? (
+                    <iframe src={dataUrl} className="w-full h-[75vh] rounded-lg border border-border" title={pDoc.name} />
+                  ) : isImage ? (
+                    <img src={dataUrl} alt={pDoc.name} className="max-w-full max-h-[75vh] rounded-lg shadow-lg" />
+                  ) : (
+                    <div className="text-center py-16">
+                      <FileWarning className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-card-foreground font-heading font-bold text-lg mb-2">Vista previa no disponible</p>
+                      <p className="text-sm text-muted-foreground mb-4">Los archivos {pDoc.fileType.toUpperCase()} no se pueden previsualizar en el navegador.</p>
+                      <button onClick={() => handleDownload(previewDoc)} className="btn-gold text-sm inline-flex items-center gap-2">
+                        <Download className="h-4 w-4" /> Descargar para ver
+                      </button>
+                    </div>
+                  )}
                 </div>
-              </div>
-              <div className="p-5 border-t border-border flex gap-3 justify-end">
-                <button onClick={() => setRenamingDoc(null)} className="px-5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">Cancelar</button>
-                <button onClick={() => handleRename(renamingDoc)} className="btn-gold text-sm">Guardar Cambios</button>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* ══════ OBJECTIVE DETAIL MODAL ══════ */}
         {detailObj && (
