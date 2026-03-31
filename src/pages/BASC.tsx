@@ -11,18 +11,22 @@ import {
 import {
   type BASCManagedDocument, DEPARTMENT_PREFIXES, DOC_TYPE_PREFIXES,
   generateDocCode, getNextSequence, loadDocuments, saveDocuments,
+  saveFileData, loadFileData, deleteFileData, getFileTypeFromName, getMimeType,
+  calcDocCompliance,
 } from "@/lib/bascDocuments";
 import { useNotifications } from "@/contexts/NotificationContext";
 import {
   FolderOpen, FileText, Upload, ChevronRight, ChevronDown, X, File, Download, Trash2, Plus, Shield,
   Target, CheckCircle2, AlertTriangle, Clock, Eye, BarChart3, Link2, ClipboardCheck, TrendingUp,
-  Bell, CheckSquare, Square, Paperclip, FileUp, Edit3, Save, Code, Tag,
+  Bell, CheckSquare, Square, Paperclip, FileUp, Edit3, Save, Code, Tag, MessageSquare,
+  Printer, CheckCircle, XCircle, FileWarning,
 } from "lucide-react";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 import { toast } from "sonner";
 
 const COLORS = ["hsl(160,60%,40%)", "hsl(42,100%,50%)", "hsl(200,70%,50%)", "hsl(0,60%,50%)", "hsl(280,50%,50%)"];
 const AUDITOR_NAME = "Bilianny Fernández";
+const ADMIN_EMAIL = "tecnologia@safeone.com.do";
 
 type BASCTab = "documentos" | "objetivos" | "procedimientos" | "dept_objetivos";
 
