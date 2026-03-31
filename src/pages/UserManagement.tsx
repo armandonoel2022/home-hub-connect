@@ -31,6 +31,7 @@ const emptyForm = (): Partial<IntranetUser> => ({
 
 const UserManagementPage = () => {
   const { user, allUsers, activeUsers, inactiveUsers, addUser, updateUser, deleteUser, resetUserPassword } = useAuth();
+  const chatCtx = useChatContextSafe();
   const [resetConfirm, setResetConfirm] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
