@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
+import { useChatContextSafe } from "@/contexts/ChatContext";
 import { DEPARTMENTS } from "@/lib/types";
 import type { IntranetUser } from "@/lib/types";
 import { Plus, X, Search, Pencil, Trash2, User, Shield, Mail, Building2, Phone, Upload, Image, KeyRound, Cake } from "lucide-react";
@@ -30,6 +31,7 @@ const emptyForm = (): Partial<IntranetUser> => ({
 
 const UserManagementPage = () => {
   const { user, allUsers, activeUsers, inactiveUsers, addUser, updateUser, deleteUser, resetUserPassword } = useAuth();
+  const chatCtx = useChatContextSafe();
   const [resetConfirm, setResetConfirm] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -251,6 +253,14 @@ const UserManagementPage = () => {
             birthdayUsers={birthdayTestUsers}
             isTest
             onDismissTest={() => setShowBirthdayTest(false)}
+            onSendCongrats={(bdayUser) => {
+              if (chatCtx) {
+                chatCtx.startIndividualChat(bdayUser.id);
+                setTimeout(() => {
+                  chatCtx.sendMessage(`🎂🎉 ¡Feliz Cumpleaños, ${bdayUser.fullName}! De parte de SafeOne Security Company te deseamos un maravilloso día lleno de éxitos y bendiciones. 🥳`);
+                }, 500);
+              }
+            }}
           />
         )}
 

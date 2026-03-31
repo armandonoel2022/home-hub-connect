@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { X, PartyPopper, Cake, Download } from "lucide-react";
+import { X, PartyPopper, Cake, Download, Send } from "lucide-react";
 import html2canvas from "html2canvas";
 import type { IntranetUser } from "@/lib/types";
 
@@ -7,18 +7,21 @@ interface BirthdayOverlayProps {
   birthdayUsers: IntranetUser[];
   isTest?: boolean;
   onDismissTest?: () => void;
+  onSendCongrats?: (user: IntranetUser) => void;
 }
 
-const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest }: BirthdayOverlayProps) => {
+const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest, onSendCongrats }: BirthdayOverlayProps) => {
   const [visible, setVisible] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [sent, setSent] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isTest) {
       setVisible(true);
       setDismissed(false);
+      setSent(false);
       return;
     }
     if (birthdayUsers.length > 0 && !dismissed) {
@@ -37,6 +40,17 @@ const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest }: BirthdayOverl
     } else {
       sessionStorage.setItem("safeone_bday_dismissed", "true");
     }
+  };
+
+  const handleSendCongrats = () => {
+    if (birthdayUsers.length === 1 && onSendCongrats) {
+      onSendCongrats(birthdayUsers[0]);
+      setSent(true);
+    } else if (onSendCongrats) {
+      birthdayUsers.forEach((u) => onSendCongrats(u));
+      setSent(true);
+    }
+    handleDismiss();
   };
 
   const handleDownload = useCallback(async () => {
@@ -90,9 +104,9 @@ const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest }: BirthdayOverl
         ))}
       </div>
 
-      <div className="relative bg-card rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+      <div className="relative bg-card rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
         {/* Top action buttons */}
-        <div className="absolute top-4 right-4 flex items-center gap-1 z-10">
+        <div className="absolute top-3 right-3 flex items-center gap-1 z-10">
           <button
             onClick={handleDownload}
             disabled={downloading}
@@ -110,73 +124,69 @@ const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest }: BirthdayOverl
         </div>
 
         {/* Capturable card area */}
-        <div ref={cardRef} className="bg-card">
-          <div className="h-2 w-full" style={{ background: "var(--gradient-gold)" }} />
+        <div ref={cardRef} className="bg-card overflow-y-auto flex-1">
+          <div className="h-1.5 w-full" style={{ background: "var(--gradient-gold)" }} />
 
-          <div className="p-8 text-center">
-            <div className="flex items-center justify-center gap-3 mb-6">
-              <PartyPopper className="h-8 w-8 text-gold animate-bounce" />
-              <Cake className="h-10 w-10 text-gold" />
-              <PartyPopper className="h-8 w-8 text-gold animate-bounce" style={{ animationDelay: "0.3s" }} />
+          <div className="px-6 py-5 text-center">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <PartyPopper className="h-6 w-6 text-gold animate-bounce" />
+              <Cake className="h-8 w-8 text-gold" />
+              <PartyPopper className="h-6 w-6 text-gold animate-bounce" style={{ animationDelay: "0.3s" }} />
             </div>
 
             {isSingle && person ? (
               <>
-                <h2 className="font-heading font-black text-2xl text-card-foreground mb-2">
+                <h2 className="font-heading font-black text-xl text-card-foreground mb-1">
                   ¡Feliz Cumpleaños! 🎉
                 </h2>
-                <p className="text-muted-foreground text-sm mb-6">
-                  Hoy es un día muy especial
-                </p>
+                <p className="text-muted-foreground text-xs mb-4">Hoy es un día muy especial</p>
 
-                <div className="bg-muted rounded-xl p-5 mb-6">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="w-20 h-20 rounded-full bg-gold/20 flex items-center justify-center shrink-0">
+                <div className="bg-muted rounded-xl p-4 mb-4">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-16 h-16 rounded-full bg-gold/20 flex items-center justify-center shrink-0">
                       {person.photoUrl ? (
                         <img src={person.photoUrl} alt={person.fullName} className="w-full h-full rounded-full object-cover" />
                       ) : (
-                        <Cake className="h-10 w-10 text-gold" />
+                        <Cake className="h-8 w-8 text-gold" />
                       )}
                     </div>
                     <div>
-                      <h3 className="font-heading font-bold text-lg text-card-foreground">{person.fullName}</h3>
-                      <p className="text-sm text-muted-foreground">{person.position} — {person.department}</p>
+                      <h3 className="font-heading font-bold text-base text-card-foreground">{person.fullName}</h3>
+                      <p className="text-xs text-muted-foreground">{person.position} — {person.department}</p>
                     </div>
                   </div>
                 </div>
 
-                <p className="text-sm text-muted-foreground italic mb-4">
+                <p className="text-xs text-muted-foreground italic mb-2">
                   SafeOne Security Company te desea un maravilloso día lleno de éxitos y bendiciones 🎂
                 </p>
               </>
             ) : (
               <>
-                <h2 className="font-heading font-black text-2xl text-card-foreground mb-2">
+                <h2 className="font-heading font-black text-xl text-card-foreground mb-1">
                   ¡Feliz Cumpleaños! 🎉
                 </h2>
-                <p className="text-muted-foreground text-sm mb-6">
-                  Hoy celebramos a quienes cumplen años
-                </p>
+                <p className="text-muted-foreground text-xs mb-4">Hoy celebramos a quienes cumplen años</p>
 
-                <div className="space-y-4 mb-6">
+                <div className="space-y-3 mb-4">
                   {birthdayUsers.map((u) => (
-                    <div key={u.id} className="bg-muted rounded-xl p-4 flex items-center gap-4">
-                      <div className="w-14 h-14 rounded-full bg-gold/20 flex items-center justify-center shrink-0">
+                    <div key={u.id} className="bg-muted rounded-xl p-3 flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-gold/20 flex items-center justify-center shrink-0">
                         {u.photoUrl ? (
                           <img src={u.photoUrl} alt={u.fullName} className="w-full h-full rounded-full object-cover" />
                         ) : (
-                          <Cake className="h-7 w-7 text-gold" />
+                          <Cake className="h-6 w-6 text-gold" />
                         )}
                       </div>
                       <div className="text-left">
-                        <h3 className="font-heading font-bold text-card-foreground">{u.fullName}</h3>
-                        <p className="text-sm text-muted-foreground">{u.position} — {u.department}</p>
+                        <h3 className="font-heading font-bold text-sm text-card-foreground">{u.fullName}</h3>
+                        <p className="text-xs text-muted-foreground">{u.position} — {u.department}</p>
                       </div>
                     </div>
                   ))}
                 </div>
 
-                <p className="text-sm text-muted-foreground italic mb-4">
+                <p className="text-xs text-muted-foreground italic mb-2">
                   SafeOne Security Company les desea un maravilloso día lleno de éxitos y bendiciones 🎂
                 </p>
               </>
@@ -185,13 +195,14 @@ const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest }: BirthdayOverl
         </div>
 
         {/* Action buttons outside capture area */}
-        <div className="px-8 pb-6 flex gap-3">
-          <button onClick={handleDownload} disabled={downloading} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-muted text-sm font-medium text-card-foreground hover:bg-border transition-colors">
-            <Download className="h-4 w-4" />
-            {downloading ? "Descargando..." : "Descargar"}
+        <div className="px-6 py-4 border-t border-border flex gap-2 shrink-0">
+          <button onClick={handleDownload} disabled={downloading} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-muted text-xs font-medium text-card-foreground hover:bg-border transition-colors">
+            <Download className="h-3.5 w-3.5" />
+            {downloading ? "..." : "Descargar"}
           </button>
-          <button onClick={handleDismiss} className="flex-1 btn-gold text-sm">
-            ¡Muchas Felicidades! 🥳
+          <button onClick={handleSendCongrats} disabled={sent} className="flex-1 btn-gold text-xs flex items-center justify-center gap-1.5">
+            <Send className="h-3.5 w-3.5" />
+            {sent ? "¡Enviado!" : "¡Felicitar!"}  🥳
           </button>
         </div>
       </div>
