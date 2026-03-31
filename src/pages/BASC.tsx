@@ -166,45 +166,172 @@ const BASCPage = () => {
     groupedByDept[d.department][typeLabel].push(d);
   });
 
+  // File upload handler
+  const handleFileUpload = useCallback((docId: string, file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(",")[1];
+      const mimeType = getMimeType(file.name);
+      saveFileData(docId, base64, mimeType);
+
+      const updated = managedDocs.map(d =>
+        d.id === docId ? {
+          ...d,
+          hasFile: true,
+          fileName: file.name,
+          fileSize: `${(file.size / 1024).toFixed(0)} KB`,
+          fileType: getFileTypeFromName(file.name),
+          fileMimeType: mimeType,
+          reviewStatus: "pendiente" as const,
+          reviewComment: undefined,
+          reviewedBy: undefined,
+          reviewedAt: undefined,
+          updatedBy: user?.fullName || "Usuario",
+          updatedAt: new Date().toISOString().split("T")[0],
+        } : d
+      );
+      saveManagedDocs(updated);
+      setUploadingDocId(null);
+      toast.success(`Archivo "${file.name}" cargado`, { description: "Pendiente de revisión por " + AUDITOR_NAME });
+      notifyAuditor("Documento cargado para revisión", `${user?.fullName || "Usuario"} subió "${file.name}" para ${managedDocs.find(d => d.id === docId)?.name}`);
+    };
+    reader.readAsDataURL(file);
+  }, [managedDocs, saveManagedDocs, user, notifyAuditor]);
+
+  // Review handlers
+  const handleApprove = useCallback((docId: string) => {
+    const updated = managedDocs.map(d =>
+      d.id === docId ? {
+        ...d,
+        reviewStatus: "aprobado" as const,
+        reviewComment: reviewComment || undefined,
+        reviewedBy: user?.fullName || AUDITOR_NAME,
+        reviewedAt: new Date().toISOString().split("T")[0],
+        status: "vigente" as const,
+      } : d
+    );
+    saveManagedDocs(updated);
+    setReviewingDoc(null);
+    setReviewComment("");
+    const doc = managedDocs.find(d => d.id === docId);
+    toast.success(`Documento ${doc?.code} aprobado`);
+    addNotification({
+      title: "✅ Documento BASC Aprobado",
+      message: `${doc?.code} — ${doc?.name} fue aprobado por ${user?.fullName || AUDITOR_NAME}`,
+      type: "success", forUserId: "ALL", relatedId: "BASC", actionUrl: "/basc",
+    });
+  }, [managedDocs, saveManagedDocs, reviewComment, user, addNotification]);
+
+  const handleReject = useCallback((docId: string) => {
+    if (!reviewComment.trim()) {
+      toast.error("Debe indicar el motivo del rechazo");
+      return;
+    }
+    const updated = managedDocs.map(d =>
+      d.id === docId ? {
+        ...d,
+        reviewStatus: "rechazado" as const,
+        reviewComment,
+        reviewedBy: user?.fullName || AUDITOR_NAME,
+        reviewedAt: new Date().toISOString().split("T")[0],
+      } : d
+    );
+    saveManagedDocs(updated);
+    setReviewingDoc(null);
+    setReviewComment("");
+    const doc = managedDocs.find(d => d.id === docId);
+    toast.info(`Documento ${doc?.code} rechazado`);
+    addNotification({
+      title: "❌ Documento BASC Rechazado",
+      message: `${doc?.code} — ${doc?.name} fue rechazado: "${reviewComment}"`,
+      type: "warning", forUserId: "ALL", relatedId: "BASC", actionUrl: "/basc",
+    });
+  }, [managedDocs, saveManagedDocs, reviewComment, user, addNotification]);
+
+  // Preview / Download
+  const handlePreview = useCallback((docId: string) => {
+    const fileInfo = loadFileData(docId);
+    if (!fileInfo) { toast.error("No hay archivo cargado"); return; }
+    setPreviewDoc(docId);
+  }, []);
+
+  const handleDownload = useCallback((docId: string) => {
+    const doc = managedDocs.find(d => d.id === docId);
+    const fileInfo = loadFileData(docId);
+    if (!doc || !fileInfo) { toast.error("No hay archivo disponible"); return; }
+    const byteChars = atob(fileInfo.data);
+    const byteNums = new Array(byteChars.length);
+    for (let i = 0; i < byteChars.length; i++) byteNums[i] = byteChars.charCodeAt(i);
+    const blob = new Blob([new Uint8Array(byteNums)], { type: fileInfo.mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = doc.fileName || `${doc.code}.pdf`; a.click();
+    URL.revokeObjectURL(url);
+  }, [managedDocs]);
+
+  const handlePrint = useCallback((docId: string) => {
+    const fileInfo = loadFileData(docId);
+    if (!fileInfo) { toast.error("No hay archivo para imprimir"); return; }
+    const byteChars = atob(fileInfo.data);
+    const byteNums = new Array(byteChars.length);
+    for (let i = 0; i < byteChars.length; i++) byteNums[i] = byteChars.charCodeAt(i);
+    const blob = new Blob([new Uint8Array(byteNums)], { type: fileInfo.mimeType });
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, "_blank");
+    if (win) { win.onload = () => { win.print(); }; }
+    else { toast.error("Habilite ventanas emergentes para imprimir"); }
+  }, []);
+
   const handleNewDoc = () => {
-    if (!newDocForm.name || !newDocForm.department) return;
+    if (!newDocForm.name || !newDocForm.department || !newDocForm.file) return;
     const deptPrefix = DEPARTMENT_PREFIXES[newDocForm.department] || "GEN";
     const seq = getNextSequence(managedDocs, newDocForm.type, deptPrefix);
     const code = generateDocCode(newDocForm.type, deptPrefix, seq);
-    const ext = newDocForm.file?.name.split(".").pop()?.toLowerCase();
-    let fileType: BASCManagedDocument["fileType"] = "other";
-    if (ext === "pdf") fileType = "pdf"; else if (ext === "doc" || ext === "docx") fileType = "word"; else if (ext === "xls" || ext === "xlsx") fileType = "excel";
     const now = new Date().toISOString().split("T")[0];
+    const fileType = getFileTypeFromName(newDocForm.file.name);
+    const mimeType = getMimeType(newDocForm.file.name);
     const newDoc: BASCManagedDocument = {
-      id: `MDOC-${Date.now()}`, code, name: newDocForm.name, content: newDocForm.content || `<h2>${newDocForm.name}</h2><p>Contenido del documento...</p>`,
+      id: `MDOC-${Date.now()}`, code, name: newDocForm.name,
       type: newDocForm.type, fileType, department: newDocForm.department, departmentPrefix: deptPrefix,
       version: "1.0", status: "borrador", createdBy: user?.fullName || "Usuario", createdAt: now,
-      updatedBy: user?.fullName || "Usuario", updatedAt: now, hasFile: !!newDocForm.file,
-      fileName: newDocForm.file?.name, fileSize: newDocForm.file ? `${(newDocForm.file.size / 1024).toFixed(0)} KB` : undefined,
+      updatedBy: user?.fullName || "Usuario", updatedAt: now, hasFile: true,
+      fileName: newDocForm.file.name, fileSize: `${(newDocForm.file.size / 1024).toFixed(0)} KB`,
+      fileMimeType: mimeType, reviewStatus: "pendiente",
     };
-    saveManagedDocs([newDoc, ...managedDocs]);
-    setShowNewDoc(false);
-    setNewDocForm({ name: "", type: "procedimiento", department: user?.department || "Tecnología y Monitoreo", content: "", file: null });
-    toast.success(`Documento ${code} creado`, { description: newDoc.name });
+    // Read file and save
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(",")[1];
+      saveFileData(newDoc.id, base64, mimeType);
+      saveManagedDocs([newDoc, ...managedDocs]);
+      setShowNewDoc(false);
+      setNewDocForm({ name: "", type: "procedimiento", department: user?.department || "Tecnología y Monitoreo", file: null });
+      toast.success(`Documento ${code} creado`, { description: newDoc.name });
+      notifyAuditor("Nuevo documento para revisión", `${user?.fullName || "Usuario"} creó ${code} — ${newDoc.name}`);
+    };
+    reader.readAsDataURL(newDocForm.file);
   };
 
-  const handleDeleteDoc = (id: string) => saveManagedDocs(managedDocs.filter((d) => d.id !== id));
-
-  const handleSaveContent = (docId: string) => {
-    saveManagedDocs(managedDocs.map(d => d.id === docId ? { ...d, content: editContent, updatedBy: user?.fullName || "Usuario", updatedAt: new Date().toISOString().split("T")[0] } : d));
-    setEditingDoc(null);
-    toast.success("Contenido guardado");
+  const handleDeleteDoc = (id: string) => {
+    saveManagedDocs(managedDocs.filter((d) => d.id !== id));
+    deleteFileData(id);
   };
 
-  const handleRename = (docId: string) => {
-    saveManagedDocs(managedDocs.map(d => d.id === docId ? { ...d, code: renameForm.code || d.code, name: renameForm.name || d.name, updatedBy: user?.fullName || "Usuario", updatedAt: new Date().toISOString().split("T")[0] } : d));
-    setRenamingDoc(null);
-    toast.success("Documento renombrado");
+  const reviewStatusColors: Record<string, string> = {
+    sin_archivo: "bg-muted text-muted-foreground",
+    pendiente: "bg-amber-50 text-amber-700",
+    aprobado: "bg-emerald-50 text-emerald-700",
+    rechazado: "bg-red-50 text-red-700",
+  };
+  const reviewStatusLabels: Record<string, string> = {
+    sin_archivo: "Sin archivo", pendiente: "Pendiente revisión",
+    aprobado: "Aprobado", rechazado: "Rechazado",
   };
 
   const fileTypeColors: Record<string, string> = {
     pdf: "bg-red-50 text-red-700", word: "bg-blue-50 text-blue-700",
-    excel: "bg-emerald-50 text-emerald-700", image: "bg-purple-50 text-purple-700", other: "bg-muted text-muted-foreground",
+    excel: "bg-emerald-50 text-emerald-700", image: "bg-purple-50 text-purple-700",
+    other: "bg-muted text-muted-foreground", none: "bg-muted text-muted-foreground",
   };
   const statusColors: Record<string, string> = {
     vigente: "bg-emerald-50 text-emerald-700", borrador: "bg-amber-50 text-amber-700",
