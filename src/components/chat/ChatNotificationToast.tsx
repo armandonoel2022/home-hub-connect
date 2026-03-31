@@ -63,9 +63,9 @@ const ChatNotificationToast = () => {
     });
   }, [sortedNotifications, setIsChatOpen, dismissNotification]);
 
-  // Auto-dismiss after 6s
+  // Auto-dismiss after 4s
   useEffect(() => {
-    const timers = sortedNotifications.map((n) => setTimeout(() => dismissNotification(n.id), 6000));
+    const timers = sortedNotifications.map((n) => setTimeout(() => dismissNotification(n.id), 4000));
     return () => timers.forEach((timer) => clearTimeout(timer));
   }, [sortedNotifications, dismissNotification]);
 
