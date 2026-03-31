@@ -43,8 +43,18 @@ export interface DeptBASCObjective {
 }
 
 const STORAGE_KEY = "safeone-basc-dept-objectives-v1";
+const MAX_OBJ_KEY = "safeone-basc-max-objectives";
 const AUDITOR_NAME = "Bilianny Fernández";
-const MAX_OBJECTIVES_PER_DEPT = 2;
+
+function getMaxObjectives(): number {
+  try {
+    const saved = localStorage.getItem(MAX_OBJ_KEY);
+    return saved ? parseInt(saved, 10) : 0; // 0 = unlimited
+  } catch { return 0; }
+}
+function saveMaxObjectives(n: number) {
+  try { localStorage.setItem(MAX_OBJ_KEY, JSON.stringify(n)); } catch {}
+}
 
 const statusConfig: Record<DeptObjectiveStatus, { label: string; color: string; icon: any }> = {
   borrador: { label: "Borrador", color: "bg-muted text-muted-foreground", icon: Edit3 },
