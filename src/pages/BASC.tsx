@@ -67,15 +67,18 @@ const BASCPage = () => {
   const [search, setSearch] = useState("");
   const [filterDept, setFilterDept] = useState("");
   const [evidenceForm, setEvidenceForm] = useState({ title: "", description: "", type: "documento" as BASCEvidence["type"], file: null as File | null });
-  const [editingDoc, setEditingDoc] = useState<string | null>(null);
-  const [editContent, setEditContent] = useState("");
-  const [renamingDoc, setRenamingDoc] = useState<string | null>(null);
-  const [renameForm, setRenameForm] = useState({ code: "", name: "" });
+  const [previewDoc, setPreviewDoc] = useState<string | null>(null);
+  const [reviewingDoc, setReviewingDoc] = useState<string | null>(null);
+  const [reviewComment, setReviewComment] = useState("");
+  const [uploadingDocId, setUploadingDocId] = useState<string | null>(null);
   const [showNewDoc, setShowNewDoc] = useState(false);
   const [newDocForm, setNewDocForm] = useState({
     name: "", type: "procedimiento" as BASCManagedDocument["type"],
-    department: user?.department || "Tecnología y Monitoreo", content: "", file: null as File | null,
+    department: user?.department || "Tecnología y Monitoreo", file: null as File | null,
   });
+
+  const isAdmin = user?.email === ADMIN_EMAIL;
+  const isAuditor = user?.fullName === AUDITOR_NAME || isAdmin;
 
   // Persist objectives
   const saveObjectives = useCallback((objs: BASCObjective[]) => {
