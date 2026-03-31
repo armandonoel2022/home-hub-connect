@@ -494,7 +494,7 @@ const DepartmentGrid = () => {
         const leaderUser = allUsers.find((u) => u.department === showLeader.name && u.isDepartmentLeader);
         const leader = leaderUser
           ? { name: leaderUser.fullName, position: leaderUser.position, photo: leaderUser.photoUrl, fleetPhone: leaderUser.fleetPhone || "", email: leaderUser.email }
-          : showLeader.leader;
+          : { name: "Sin asignar", position: "—", photo: "", fleetPhone: "", email: "—" };
         return (
           <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
             <div className="bg-card rounded-xl w-full max-w-sm shadow-2xl overflow-hidden">
