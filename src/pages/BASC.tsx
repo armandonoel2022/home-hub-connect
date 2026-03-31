@@ -46,7 +46,7 @@ const STORAGE_KEY = "safeone-basc-objectives-v3";
 const BASCPage = () => {
   const { user } = useAuth();
   const { addNotification } = useNotifications();
-  const [activeTab, setActiveTab] = useState<BASCTab>("objetivos");
+  const [activeTab, setActiveTab] = useState<BASCTab>("dept_objetivos");
   const [managedDocs, setManagedDocs] = useState<BASCManagedDocument[]>(loadDocuments);
   const [objectives, setObjectives] = useState<BASCObjective[]>(() => {
     try {
