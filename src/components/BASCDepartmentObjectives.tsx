@@ -683,6 +683,31 @@ const BASCDepartmentObjectives = () => {
           </div>
         );
       })()}
+
+      {/* ══════ SETTINGS MODAL ══════ */}
+      {showSettings && (
+        <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4" onClick={() => setShowSettings(false)}>
+          <div className="bg-card rounded-xl w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-border">
+              <h2 className="font-heading font-bold text-lg text-card-foreground">Configuración de Objetivos</h2>
+              <button onClick={() => setShowSettings(false)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="text-sm font-medium text-card-foreground block mb-1.5">Máximo de objetivos por departamento</label>
+                <input type="number" min={0} value={maxObjectives} onChange={e => setMaxObjectives(parseInt(e.target.value, 10) || 0)}
+                  className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" />
+                <p className="text-xs text-muted-foreground mt-1">Ingrese 0 para no establecer límite</p>
+              </div>
+            </div>
+            <div className="p-5 border-t border-border flex gap-3 justify-end">
+              <button onClick={() => setShowSettings(false)} className="px-4 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">Cancelar</button>
+              <button onClick={() => { saveMaxObjectives(maxObjectives); setShowSettings(false); toast.success(`Límite actualizado: ${maxObjectives === 0 ? "Sin límite" : maxObjectives + " por departamento"}`); }}
+                className="btn-gold text-sm">Guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
