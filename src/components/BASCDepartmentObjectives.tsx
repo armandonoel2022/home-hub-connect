@@ -104,7 +104,7 @@ const BASCDepartmentObjectives = () => {
   }, []);
 
   const deptObjectives = objectives.filter(o => o.department === user?.department);
-  const canAddMore = deptObjectives.filter(o => o.status !== "rechazado").length < MAX_OBJECTIVES_PER_DEPT;
+  const canAddMore = maxObjectives === 0 || deptObjectives.filter(o => o.status !== "rechazado").length < maxObjectives;
 
   // Group by department for reviewer
   const byDepartment: Record<string, DeptBASCObjective[]> = {};
