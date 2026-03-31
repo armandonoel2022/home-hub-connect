@@ -210,21 +210,39 @@ const UserManagementPage = () => {
           ))}
         </div>
 
-        {/* Admin Tools */}
-        <div className="px-6 pb-4 flex gap-3">
-          <button
-            onClick={() => {
-              const testUser = activeUsers[0];
-              if (testUser) {
-                setBirthdayTestUsers([testUser]);
-                setShowBirthdayTest(true);
-              }
-            }}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-card border border-border text-sm font-medium text-card-foreground hover:bg-muted transition-colors"
-          >
-            <Cake className="h-4 w-4 text-gold" />
-            Probar Overlay de Cumpleaños
-          </button>
+        {/* Admin Tools — Birthday Test */}
+        <div className="px-6 pb-4">
+          <div className="bg-card rounded-lg border border-border p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Cake className="h-4 w-4 text-gold" />
+              <h3 className="font-heading font-bold text-sm text-card-foreground">Probar Overlay de Cumpleaños</h3>
+            </div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <select
+                value={birthdayTestUsers[0]?.id || ""}
+                onChange={(e) => {
+                  const selected = activeUsers.find((u) => u.id === e.target.value);
+                  if (selected) setBirthdayTestUsers([selected]);
+                }}
+                className="flex-1 min-w-[200px] px-3 py-2 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none"
+              >
+                <option value="">Seleccionar usuario...</option>
+                {activeUsers.map((u) => (
+                  <option key={u.id} value={u.id}>{u.fullName} — {u.department}</option>
+                ))}
+              </select>
+              <button
+                onClick={() => {
+                  if (birthdayTestUsers.length > 0) setShowBirthdayTest(true);
+                }}
+                disabled={birthdayTestUsers.length === 0}
+                className="btn-gold text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Cake className="h-4 w-4" />
+                Previsualizar
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Birthday Test Overlay */}
