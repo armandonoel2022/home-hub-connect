@@ -262,7 +262,8 @@ const BASCPage = () => {
   ].filter((d) => d.value > 0);
 
   const tabs: { id: BASCTab; label: string; icon: any }[] = [
-    { id: "objetivos", label: "Objetivos y Compliance", icon: Target },
+    { id: "dept_objetivos", label: "Objetivos Departamentales", icon: Target },
+    { id: "objetivos", label: "Auditoría y Compliance", icon: Target },
     { id: "procedimientos", label: "Procedimientos", icon: ClipboardCheck },
     { id: "documentos", label: "Documentos", icon: FolderOpen },
   ];
