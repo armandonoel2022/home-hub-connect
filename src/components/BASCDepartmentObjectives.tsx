@@ -190,7 +190,7 @@ const BASCDepartmentObjectives = () => {
     addNotification({
       title: `BASC: Objetivo ${actionLabel}`,
       message: `${user?.fullName} ${actionLabel}: "${obj?.title}" (${obj?.department})${reviewComment ? ` — ${reviewComment}` : ""}`,
-      type: action === "aprobado" ? "success" : "info",
+      type: "info",
       forUserId: "ALL",
       relatedId: "BASC",
       actionUrl: "/basc",
