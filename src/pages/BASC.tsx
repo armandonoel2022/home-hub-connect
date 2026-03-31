@@ -2,6 +2,10 @@ import { useState, useCallback } from "react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { DEPARTMENTS } from "@/lib/types";
+import BASCDepartmentObjectives from "@/components/BASCDepartmentObjectives";
+import AppLayout from "@/components/AppLayout";
+import { useAuth } from "@/contexts/AuthContext";
+import { DEPARTMENTS } from "@/lib/types";
 import {
   INITIAL_OBJECTIVES, INITIAL_PROCEDURES, BASC_OBJECTIVE_CATEGORIES,
   type BASCObjective, type BASCProcedure, type BASCEvidence, type BASCSubItem,
