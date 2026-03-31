@@ -63,17 +63,36 @@ const ChatNotificationToast = () => {
     });
   }, [sortedNotifications, setIsChatOpen, dismissNotification]);
 
-  // Auto-dismiss after 6s
+  // Auto-dismiss after 4s
   useEffect(() => {
-    const timers = sortedNotifications.map((n) => setTimeout(() => dismissNotification(n.id), 6000));
+    const timers = sortedNotifications.map((n) => setTimeout(() => dismissNotification(n.id), 4000));
     return () => timers.forEach((timer) => clearTimeout(timer));
   }, [sortedNotifications, dismissNotification]);
 
+  const dismissAll = () => {
+    notifications.forEach(n => dismissNotification(n.id));
+  };
+
   if (notifications.length === 0) return null;
+
+  // Show max 3 notifications to prevent flooding
+  const visibleNotifications = sortedNotifications.slice(0, 3);
+  const hiddenCount = sortedNotifications.length - visibleNotifications.length;
 
   return (
     <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 max-w-sm">
-      {sortedNotifications.map((n) => (
+      {notifications.length > 1 && (
+        <button
+          onClick={dismissAll}
+          className="self-end text-xs px-2 py-1 rounded bg-muted hover:bg-muted/80 text-muted-foreground transition-colors"
+        >
+          Cerrar todas ({notifications.length})
+        </button>
+      )}
+      {hiddenCount > 0 && (
+        <p className="text-xs text-muted-foreground text-right">+{hiddenCount} más</p>
+      )}
+      {visibleNotifications.map((n) => (
         <div
           key={n.id}
           className={`flex items-start gap-3 p-4 rounded-xl border shadow-2xl backdrop-blur-sm transition-all duration-300 animate-in slide-in-from-right-5 ${

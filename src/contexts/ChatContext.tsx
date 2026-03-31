@@ -82,56 +82,85 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     chatApi.getChats().then(setChats).catch(() => {});
   }, [apiMode, user]);
 
+  // Track which message IDs we've already notified about
+  const notifiedMsgIds = useRef<Set<string>>(new Set());
+
   // Poll for new messages every 5 seconds (with backoff on errors)
   useEffect(() => {
     if (!apiMode || !user) return;
+    let polling = false; // prevent overlapping polls
+
     const poll = async () => {
+      if (polling) return;
+      polling = true;
       try {
         const result = await chatApi.poll(lastPollRef.current);
-        pollErrorCount.current = 0; // reset on success
+        pollErrorCount.current = 0;
         if (result.messages.length > 0) {
           setAllMessages(prev => {
             const existingIds = new Set(prev.map(m => m.id));
             const newMsgs = result.messages.filter(m => !existingIds.has(m.id));
             if (newMsgs.length === 0) return prev;
 
-            // Only notify for messages from OTHER users, not for the active chat
-            newMsgs
-              .filter(m => m.senderId !== user?.id)
-              .forEach(m => {
-                // Skip notification if this chat is currently open and visible
-                const currentActive = activeChatRef.current;
-                if (isChatOpen && currentActive && currentActive.id === m.chatId) return;
+            // Notify only for truly new messages from other users
+            const msgsToNotify = newMsgs.filter(m =>
+              m.senderId !== user?.id && !notifiedMsgIds.current.has(m.id)
+            );
 
-                const createNotif = async () => {
-                  let preview: string;
-                  if (m.type === "buzz") {
-                    preview = "¡Te ha enviado un zumbido! 🔔";
-                  } else if (m.type === "audio") {
-                    preview = "🎤 Mensaje de voz";
-                  } else if (m.type === "file") {
-                    preview = `📎 ${m.fileName || "Archivo"}`;
-                  } else {
-                    try {
-                      const decrypted = await decryptMessage(m.content || "");
-                      preview = decrypted.slice(0, 50);
-                    } catch {
-                      preview = "Nuevo mensaje";
-                    }
+            // Group notifications by sender to avoid flooding
+            const bySender = new Map<string, typeof msgsToNotify>();
+            msgsToNotify.forEach(m => {
+              // Skip if this chat is currently open and visible
+              const currentActive = activeChatRef.current;
+              if (isChatOpen && currentActive && currentActive.id === m.chatId) {
+                notifiedMsgIds.current.add(m.id);
+                return;
+              }
+              notifiedMsgIds.current.add(m.id);
+              const key = `${m.chatId}-${m.senderName}`;
+              if (!bySender.has(key)) bySender.set(key, []);
+              bySender.get(key)!.push(m);
+            });
+
+            // Create one notification per sender-chat group (latest message)
+            bySender.forEach((msgs) => {
+              const latest = msgs[msgs.length - 1];
+              const count = msgs.length;
+
+              const createNotif = async () => {
+                let preview: string;
+                if (latest.type === "buzz") {
+                  preview = "¡Te ha enviado un zumbido! 🔔";
+                } else if (latest.type === "audio") {
+                  preview = "🎤 Mensaje de voz";
+                } else if (latest.type === "file") {
+                  preview = `📎 ${latest.fileName || "Archivo"}`;
+                } else {
+                  try {
+                    const decrypted = await decryptMessage(latest.content || "");
+                    preview = decrypted.slice(0, 50);
+                  } catch {
+                    preview = "Nuevo mensaje";
                   }
-                  const notif: ChatNotification = {
-                    id: `notif-${m.id}`,
-                    chatId: m.chatId,
-                    senderName: m.senderName,
-                    message: preview,
-                    timestamp: m.timestamp,
-                    type: m.type === "buzz" ? "buzz" : "message",
-                  };
-                  // Keep max 10 notifications
-                  setNotifications(p => [...p.slice(-9), notif]);
+                }
+                if (count > 1) preview = `(${count}) ${preview}`;
+
+                const notif: ChatNotification = {
+                  id: `notif-${latest.id}`,
+                  chatId: latest.chatId,
+                  senderName: latest.senderName,
+                  message: preview,
+                  timestamp: latest.timestamp,
+                  type: latest.type === "buzz" ? "buzz" : "message",
                 };
-                createNotif();
-              });
+                // Replace existing notification from same chat, keep max 5
+                setNotifications(p => {
+                  const filtered = p.filter(n => n.chatId !== latest.chatId);
+                  return [...filtered.slice(-4), notif];
+                });
+              };
+              createNotif();
+            });
 
             lastPollRef.current = newMsgs[newMsgs.length - 1].timestamp;
             return [...prev, ...newMsgs];
@@ -140,10 +169,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         }
       } catch {
         pollErrorCount.current++;
+      } finally {
+        polling = false;
       }
     };
 
-    // Use longer interval if errors keep happening (backoff)
     const getInterval = () => {
       if (pollErrorCount.current > 10) return 30000;
       if (pollErrorCount.current > 5) return 15000;
