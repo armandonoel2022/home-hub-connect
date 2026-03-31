@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { DEPARTMENTS } from "@/lib/types";
+import BASCDepartmentObjectives from "@/components/BASCDepartmentObjectives";
 import {
   INITIAL_OBJECTIVES, INITIAL_PROCEDURES, BASC_OBJECTIVE_CATEGORIES,
   type BASCObjective, type BASCProcedure, type BASCEvidence, type BASCSubItem,
@@ -23,7 +24,7 @@ import { toast } from "sonner";
 const COLORS = ["hsl(160,60%,40%)", "hsl(42,100%,50%)", "hsl(200,70%,50%)", "hsl(0,60%,50%)", "hsl(280,50%,50%)"];
 const AUDITOR_NAME = "Bilianny Fernández";
 
-type BASCTab = "documentos" | "objetivos" | "procedimientos";
+type BASCTab = "documentos" | "objetivos" | "procedimientos" | "dept_objetivos";
 
 // Legacy doc interface removed — using BASCManagedDocument from bascDocuments.ts
 
@@ -45,7 +46,7 @@ const STORAGE_KEY = "safeone-basc-objectives-v3";
 const BASCPage = () => {
   const { user } = useAuth();
   const { addNotification } = useNotifications();
-  const [activeTab, setActiveTab] = useState<BASCTab>("objetivos");
+  const [activeTab, setActiveTab] = useState<BASCTab>("dept_objetivos");
   const [managedDocs, setManagedDocs] = useState<BASCManagedDocument[]>(loadDocuments);
   const [objectives, setObjectives] = useState<BASCObjective[]>(() => {
     try {
@@ -261,7 +262,8 @@ const BASCPage = () => {
   ].filter((d) => d.value > 0);
 
   const tabs: { id: BASCTab; label: string; icon: any }[] = [
-    { id: "objetivos", label: "Objetivos y Compliance", icon: Target },
+    { id: "dept_objetivos", label: "Objetivos Departamentales", icon: Target },
+    { id: "objetivos", label: "Auditoría y Compliance", icon: Target },
     { id: "procedimientos", label: "Procedimientos", icon: ClipboardCheck },
     { id: "documentos", label: "Documentos", icon: FolderOpen },
   ];
@@ -314,6 +316,9 @@ const BASCPage = () => {
             </button>
           ))}
         </div>
+
+        {/* ══════ DEPT OBJECTIVES TAB ══════ */}
+        {activeTab === "dept_objetivos" && <BASCDepartmentObjectives />}
 
         {/* ══════ OBJECTIVES TAB ══════ */}
         {activeTab === "objetivos" && (
