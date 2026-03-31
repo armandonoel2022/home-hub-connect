@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
+import { useChatContextSafe } from "@/contexts/ChatContext";
 import { DEPARTMENTS } from "@/lib/types";
 import type { IntranetUser } from "@/lib/types";
 import { Plus, X, Search, Pencil, Trash2, User, Shield, Mail, Building2, Phone, Upload, Image, KeyRound, Cake } from "lucide-react";
