@@ -43,8 +43,18 @@ export interface DeptBASCObjective {
 }
 
 const STORAGE_KEY = "safeone-basc-dept-objectives-v1";
+const MAX_OBJ_KEY = "safeone-basc-max-objectives";
 const AUDITOR_NAME = "Bilianny Fernández";
-const MAX_OBJECTIVES_PER_DEPT = 2;
+
+function getMaxObjectives(): number {
+  try {
+    const saved = localStorage.getItem(MAX_OBJ_KEY);
+    return saved ? parseInt(saved, 10) : 0; // 0 = unlimited
+  } catch { return 0; }
+}
+function saveMaxObjectives(n: number) {
+  try { localStorage.setItem(MAX_OBJ_KEY, JSON.stringify(n)); } catch {}
+}
 
 const statusConfig: Record<DeptObjectiveStatus, { label: string; color: string; icon: any }> = {
   borrador: { label: "Borrador", color: "bg-muted text-muted-foreground", icon: Edit3 },
@@ -70,6 +80,8 @@ const BASCDepartmentObjectives = () => {
   const { addNotification } = useNotifications();
   const [objectives, setObjectives] = useState<DeptBASCObjective[]>(loadDeptObjectives);
   const [showNewObjective, setShowNewObjective] = useState(false);
+  const [maxObjectives, setMaxObjectives] = useState(getMaxObjectives);
+  const [showSettings, setShowSettings] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedDept, setExpandedDept] = useState<string | null>(null);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
@@ -92,7 +104,7 @@ const BASCDepartmentObjectives = () => {
   }, []);
 
   const deptObjectives = objectives.filter(o => o.department === user?.department);
-  const canAddMore = deptObjectives.filter(o => o.status !== "rechazado").length < MAX_OBJECTIVES_PER_DEPT;
+  const canAddMore = maxObjectives === 0 || deptObjectives.filter(o => o.status !== "rechazado").length < maxObjectives;
 
   // Group by department for reviewer
   const byDepartment: Record<string, DeptBASCObjective[]> = {};
@@ -361,13 +373,19 @@ const BASCDepartmentObjectives = () => {
           )}
           {canAddMore && !isReviewer && (
             <button onClick={() => setShowNewObjective(true)} className="btn-gold flex items-center gap-2 text-sm">
-              <Plus className="h-4 w-4" /> Nuevo Objetivo ({deptObjectives.filter(o => o.status !== "rechazado").length}/{MAX_OBJECTIVES_PER_DEPT})
+              <Plus className="h-4 w-4" /> Nuevo Objetivo
+              {maxObjectives > 0 && <span className="text-xs opacity-75">({deptObjectives.filter(o => o.status !== "rechazado").length}/{maxObjectives})</span>}
             </button>
           )}
           {isReviewer && (
-            <button onClick={() => setShowNewObjective(true)} className="btn-gold flex items-center gap-2 text-sm">
-              <Plus className="h-4 w-4" /> Crear Objetivo
-            </button>
+            <>
+              <button onClick={() => setShowSettings(true)} className="px-3 py-2 rounded-lg text-sm font-medium bg-muted hover:bg-border text-card-foreground transition-colors">
+                ⚙ Límite: {maxObjectives === 0 ? "Sin límite" : `${maxObjectives} por depto`}
+              </button>
+              <button onClick={() => setShowNewObjective(true)} className="btn-gold flex items-center gap-2 text-sm">
+                <Plus className="h-4 w-4" /> Crear Objetivo
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -665,6 +683,31 @@ const BASCDepartmentObjectives = () => {
           </div>
         );
       })()}
+
+      {/* ══════ SETTINGS MODAL ══════ */}
+      {showSettings && (
+        <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4" onClick={() => setShowSettings(false)}>
+          <div className="bg-card rounded-xl w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-border">
+              <h2 className="font-heading font-bold text-lg text-card-foreground">Configuración de Objetivos</h2>
+              <button onClick={() => setShowSettings(false)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="text-sm font-medium text-card-foreground block mb-1.5">Máximo de objetivos por departamento</label>
+                <input type="number" min={0} value={maxObjectives} onChange={e => setMaxObjectives(parseInt(e.target.value, 10) || 0)}
+                  className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" />
+                <p className="text-xs text-muted-foreground mt-1">Ingrese 0 para no establecer límite</p>
+              </div>
+            </div>
+            <div className="p-5 border-t border-border flex gap-3 justify-end">
+              <button onClick={() => setShowSettings(false)} className="px-4 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">Cancelar</button>
+              <button onClick={() => { saveMaxObjectives(maxObjectives); setShowSettings(false); toast.success(`Límite actualizado: ${maxObjectives === 0 ? "Sin límite" : maxObjectives + " por departamento"}`); }}
+                className="btn-gold text-sm">Guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
