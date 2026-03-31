@@ -86,7 +86,7 @@ const DepartmentGrid = () => {
   const { addNotification } = useNotifications();
   const navigate = useNavigate();
   const apiMode = isApiConfigured();
-  const [showLeader, setShowLeader] = useState<Department | null>(null);
+  const [showLeader, setShowLeader] = useState<DepartmentMeta | null>(null);
   const [showFiles, setShowFiles] = useState<string | null>(null);
   const [showTeam, setShowTeam] = useState<string | null>(null);
   const [showExEmployees, setShowExEmployees] = useState<string | null>(null);
