@@ -27,7 +27,7 @@ import { toast } from "sonner";
 const COLORS = ["hsl(160,60%,40%)", "hsl(42,100%,50%)", "hsl(200,70%,50%)", "hsl(0,60%,50%)", "hsl(280,50%,50%)"];
 const AUDITOR_NAME = "Bilianny Fernández";
 
-type BASCTab = "documentos" | "objetivos" | "procedimientos";
+type BASCTab = "documentos" | "objetivos" | "procedimientos" | "dept_objetivos";
 
 // Legacy doc interface removed — using BASCManagedDocument from bascDocuments.ts
 
