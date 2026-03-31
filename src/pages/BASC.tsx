@@ -317,6 +317,9 @@ const BASCPage = () => {
           ))}
         </div>
 
+        {/* ══════ DEPT OBJECTIVES TAB ══════ */}
+        {activeTab === "dept_objetivos" && <BASCDepartmentObjectives />}
+
         {/* ══════ OBJECTIVES TAB ══════ */}
         {activeTab === "objetivos" && (
           <div className="px-6 py-4 space-y-4">
