@@ -80,6 +80,8 @@ const BASCDepartmentObjectives = () => {
   const { addNotification } = useNotifications();
   const [objectives, setObjectives] = useState<DeptBASCObjective[]>(loadDeptObjectives);
   const [showNewObjective, setShowNewObjective] = useState(false);
+  const [maxObjectives, setMaxObjectives] = useState(getMaxObjectives);
+  const [showSettings, setShowSettings] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedDept, setExpandedDept] = useState<string | null>(null);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
