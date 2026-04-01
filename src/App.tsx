@@ -113,6 +113,7 @@ function ProtectedRoutes() {
         <Route path="/procesos" element={<DepartmentProcesses />} />
         <Route path="/auditoria" element={<AuditLog />} />
         <Route path="/reportes" element={<Reports />} />
+        <Route path="/tech-tasks" element={<TechTasks />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </>
