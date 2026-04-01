@@ -25,6 +25,7 @@ import {
   CheckSquare,
   Wallet,
   KeyRound,
+  Monitor,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -222,6 +223,29 @@ const AppSidebar = () => {
                 </NavLink>
               );
             })}
+          </>
+        )}
+
+        {/* Tech Tasks - only for authorized users */}
+        {user && ["anoel@safeone.com.do", "tecnologia@safeone.com.do"].includes(user.email.toLowerCase()) && (
+          <>
+            {!collapsed && (
+              <div className="pt-3 pb-1 px-3">
+                <p className="text-[10px] font-semibold text-muted-foreground tracking-widest uppercase">Tecnología</p>
+              </div>
+            )}
+            <NavLink
+              to="/tech-tasks"
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
+                location.pathname === "/tech-tasks"
+                  ? "bg-charcoal-light text-gold font-semibold"
+                  : "text-muted-foreground hover:text-secondary-foreground hover:bg-charcoal-light/50"
+              }`}
+              activeClassName=""
+            >
+              <Monitor className="h-5 w-5 shrink-0" />
+              {!collapsed && <span>Registro Tareas IT</span>}
+            </NavLink>
           </>
         )}
       </nav>
