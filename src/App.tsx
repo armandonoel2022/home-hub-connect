@@ -42,6 +42,7 @@ import Presentation from "./pages/Presentation";
 import DepartmentProcesses from "./pages/DepartmentProcesses";
 import AuditLog from "./pages/AuditLog";
 import Reports from "./pages/Reports";
+import TechTasks from "./pages/TechTasks";
 import NotFound from "./pages/NotFound";
 
 
