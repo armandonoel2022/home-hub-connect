@@ -736,6 +736,15 @@ const DepartmentGrid = () => {
           </div>
         );
       })()}
+
+      {/* Asset Return Overlay — shown only for resignations */}
+      {showAssetReturnOverlay && (
+        <AssetReturnOverlay
+          userName={showAssetReturnOverlay.userName}
+          assets={showAssetReturnOverlay.assets.assets}
+          onClose={() => setShowAssetReturnOverlay(null)}
+        />
+      )}
     </section>
   );
 };
