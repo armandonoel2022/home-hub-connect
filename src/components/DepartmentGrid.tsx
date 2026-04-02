@@ -2,6 +2,10 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
+import { useEquipment, usePhones, useVehicles, useArmedPersonnel } from "@/hooks/useApiHooks";
+import { getUserAssignedAssets, generateOffboardingTicketDescription } from "@/lib/assetLinking";
+import type { UserAssetSummary } from "@/lib/assetLinking";
+import AssetReturnOverlay from "@/components/AssetReturnOverlay";
 import { cn } from "@/lib/utils";
 import { isApiConfigured, departmentFoldersApi } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
@@ -35,6 +39,8 @@ import {
   UserX,
   Clock,
   RotateCcw,
+  Package,
+  AlertTriangle,
 } from "lucide-react";
 
 interface DeptFolder {
@@ -84,6 +90,10 @@ const DEPT_MULTI_ROUTES: Record<string, { label: string; route: string; icon: an
 const DepartmentGrid = () => {
   const { user, allUsers, activeUsers, inactiveUsers, offboardUser, reactivateUser } = useAuth();
   const { addNotification } = useNotifications();
+  const { data: equipment } = useEquipment();
+  const { data: phones } = usePhones();
+  const { data: vehicles } = useVehicles();
+  const { data: armedPersonnel } = useArmedPersonnel();
   const navigate = useNavigate();
   const apiMode = isApiConfigured();
   const [showLeader, setShowLeader] = useState<DepartmentMeta | null>(null);
@@ -98,6 +108,8 @@ const DepartmentGrid = () => {
   const [newFolderName, setNewFolderName] = useState("");
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [showDeptMenu, setShowDeptMenu] = useState<string | null>(null);
+  const [offboardAssetSummary, setOffboardAssetSummary] = useState<UserAssetSummary | null>(null);
+  const [showAssetReturnOverlay, setShowAssetReturnOverlay] = useState<{ userName: string; assets: UserAssetSummary } | null>(null);
 
   // Check if user belongs to a department
   const userBelongsToDept = useCallback((deptName: string) => {
@@ -125,10 +137,25 @@ const DepartmentGrid = () => {
     }
   }, [apiMode, loadingFolders]);
 
+  // Calculate assets when offboarding modal opens
+  useEffect(() => {
+    if (showOffboarding) {
+      const targetUser = allUsers.find((u) => u.id === showOffboarding);
+      if (targetUser) {
+        const summary = getUserAssignedAssets(targetUser.fullName, targetUser.id, equipment, phones, vehicles, armedPersonnel);
+        setOffboardAssetSummary(summary);
+      }
+    } else {
+      setOffboardAssetSummary(null);
+    }
+  }, [showOffboarding, allUsers, equipment, phones, vehicles, armedPersonnel]);
+
   const handleOffboard = () => {
     if (!showOffboarding) return;
     const targetUser = allUsers.find((u) => u.id === showOffboarding);
     if (!targetUser) return;
+
+    const assetSummary = offboardAssetSummary || getUserAssignedAssets(targetUser.fullName, targetUser.id, equipment, phones, vehicles, armedPersonnel);
 
     offboardUser(showOffboarding, offboardReason, offboardNotes);
 
@@ -136,20 +163,82 @@ const DepartmentGrid = () => {
     addNotification({
       type: "info",
       title: "Baja de Personal",
-      message: `${targetUser.fullName} (${targetUser.department}) ha sido dado de baja. Motivo: ${offboardReason}`,
+      message: `${targetUser.fullName} (${targetUser.department}) ha sido dado de baja. Motivo: ${offboardReason}. ${assetSummary.totalCount > 0 ? `Tiene ${assetSummary.totalCount} activo(s) asignado(s) pendientes de devolución.` : "No tiene activos asignados."}`,
       relatedId: targetUser.id,
       forUserId: "USR-006", // Dilia - RRHH
       actionUrl: "/",
     });
 
-    // Notify IT
+    // Notify IT with asset details
     addNotification({
       type: "info",
-      title: "Retiro de Equipos - Baja de Personal",
-      message: `${targetUser.fullName} (${targetUser.department}) ha sido dado de baja. Verificar y retirar equipos asignados.`,
+      title: "🔴 Retiro de Equipos - Baja de Personal",
+      message: `${targetUser.fullName} (${targetUser.department}) ha sido dado de baja (${offboardReason}). ${assetSummary.totalCount > 0 ? `URGENTE: Tiene ${assetSummary.totalCount} activo(s) asignado(s) que deben ser recuperados.` : "No tiene activos asignados."}`,
       relatedId: targetUser.id,
       forUserId: "USR-002", // Armando - IT
       actionUrl: "/inventario",
+    });
+
+    // Notify all IT department members
+    const itMembers = allUsers.filter((u) => u.department === "Tecnología y Monitoreo" && u.id !== "USR-002" && u.employeeStatus !== "Inactivo");
+    itMembers.forEach((itUser) => {
+      addNotification({
+        type: "info",
+        title: "Retiro de Equipos - Baja de Personal",
+        message: `${targetUser.fullName} ha sido desvinculado. ${assetSummary.totalCount > 0 ? `Tiene ${assetSummary.totalCount} activo(s) por recuperar.` : ""}`,
+        relatedId: targetUser.id,
+        forUserId: itUser.id,
+        actionUrl: "/inventario",
+      });
+    });
+
+    // Notify all HR department members
+    const hrMembers = allUsers.filter((u) => u.department === "Recursos Humanos" && u.id !== "USR-006" && u.employeeStatus !== "Inactivo");
+    hrMembers.forEach((hrUser) => {
+      addNotification({
+        type: "info",
+        title: "Baja de Personal",
+        message: `${targetUser.fullName} (${targetUser.department}) ha sido dado de baja. Motivo: ${offboardReason}.`,
+        relatedId: targetUser.id,
+        forUserId: hrUser.id,
+        actionUrl: "/",
+      });
+    });
+
+    // Auto-create IT ticket for offboarding
+    const ticketDescription = generateOffboardingTicketDescription(targetUser.fullName, targetUser.department, offboardReason, assetSummary);
+    const now = new Date();
+    const existingTickets = JSON.parse(localStorage.getItem("safeone_tickets") || "[]");
+    const offboardTicket = {
+      id: `TK-${String(Date.now()).slice(-6)}`,
+      title: `Desvinculación: ${targetUser.fullName} — Retiro de equipos y accesos`,
+      description: ticketDescription,
+      category: "Movimientos de Equipos",
+      priority: offboardReason === "Despido" ? "Crítica" : "Alta",
+      status: "Abierto",
+      createdBy: user?.fullName || "Sistema",
+      createdById: user?.id,
+      assignedTo: "Tecnología y Monitoreo",
+      assignedToId: "USR-002",
+      department: "Tecnología y Monitoreo",
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      slaHours: offboardReason === "Despido" ? 2 : 8,
+      slaDeadline: new Date(now.getTime() + (offboardReason === "Despido" ? 2 : 8) * 60 * 60 * 1000).toISOString(),
+      attachments: [],
+      comments: [],
+    };
+    existingTickets.push(offboardTicket);
+    localStorage.setItem("safeone_tickets", JSON.stringify(existingTickets));
+
+    // If resignation, show asset return overlay to the person (only if they have assets)
+    if (offboardReason === "Renuncia" && assetSummary.totalCount > 0) {
+      setShowAssetReturnOverlay({ userName: targetUser.fullName, assets: assetSummary });
+    }
+
+    toast({
+      title: "✅ Baja procesada",
+      description: `${targetUser.fullName} ha sido dado de baja. Se generó ticket de IT automáticamente.${assetSummary.totalCount > 0 ? ` ${assetSummary.totalCount} activo(s) pendientes de devolución.` : ""}`,
     });
 
     setShowOffboarding(null);
@@ -556,7 +645,7 @@ const DepartmentGrid = () => {
                   <X className="h-5 w-5 text-muted-foreground" />
                 </button>
               </div>
-              <div className="p-5 space-y-4">
+              <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
                 <div className="flex items-center gap-3 bg-muted rounded-lg p-3">
                   <div className="w-10 h-10 rounded-full bg-background flex items-center justify-center overflow-hidden shrink-0">
                     {target.photoUrl ? <img src={target.photoUrl} alt="" className="w-full h-full object-cover" /> : <User className="h-5 w-5 text-muted-foreground" />}
@@ -566,6 +655,38 @@ const DepartmentGrid = () => {
                     <p className="text-xs text-muted-foreground">{target.position} — {target.department}</p>
                   </div>
                 </div>
+
+                {/* Assets assigned to this user */}
+                {offboardAssetSummary && offboardAssetSummary.totalCount > 0 && (
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-destructive" />
+                      <p className="text-sm font-semibold text-destructive">
+                        {offboardAssetSummary.totalCount} activo(s) asignado(s)
+                      </p>
+                    </div>
+                    <div className="space-y-1.5">
+                      {offboardAssetSummary.assets.map((asset) => (
+                        <div key={asset.id} className="flex items-center gap-2 text-xs bg-background/50 rounded-lg px-2.5 py-1.5">
+                          <Package className="h-3 w-3 text-muted-foreground shrink-0" />
+                          <span className="font-medium text-card-foreground">[{asset.typeLabel}]</span>
+                          <span className="text-card-foreground">{asset.description}</span>
+                          <span className="text-muted-foreground ml-auto font-mono">{asset.id}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Se generará un ticket automático para la recuperación de estos equipos.
+                    </p>
+                  </div>
+                )}
+                {offboardAssetSummary && offboardAssetSummary.totalCount === 0 && (
+                  <div className="rounded-lg border border-border bg-muted/30 p-3 flex items-center gap-2">
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                    <p className="text-xs text-muted-foreground">No se encontraron activos asignados a este usuario.</p>
+                  </div>
+                )}
+
                 <div>
                   <label className="text-sm font-medium text-card-foreground block mb-1.5">Motivo *</label>
                   <select
@@ -591,9 +712,14 @@ const DepartmentGrid = () => {
                 <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-3 text-xs text-amber-700 dark:text-amber-400">
                   <p className="font-semibold mb-1">Al dar de baja:</p>
                   <ul className="list-disc pl-4 space-y-0.5">
-                    <li>Se notificará a RRHH y Tecnología</li>
-                    <li>IT verificará equipos asignados para retiro</li>
-                    <li>Equipos asignados quedarán disponibles para reasignación</li>
+                    <li>Se notificará a todos los miembros de RRHH y Tecnología</li>
+                    <li>Se generará un ticket automático de IT para retiro de equipos</li>
+                    {offboardReason === "Renuncia" && offboardAssetSummary && offboardAssetSummary.totalCount > 0 && (
+                      <li className="font-medium">Se mostrará al empleado un aviso de devolución de activos</li>
+                    )}
+                    {offboardReason !== "Renuncia" && (
+                      <li>No se notificará al empleado (desvinculación directa)</li>
+                    )}
                     <li>El empleado aparecerá en la sección "Ex-Empleados"</li>
                   </ul>
                 </div>
@@ -610,6 +736,15 @@ const DepartmentGrid = () => {
           </div>
         );
       })()}
+
+      {/* Asset Return Overlay — shown only for resignations */}
+      {showAssetReturnOverlay && (
+        <AssetReturnOverlay
+          userName={showAssetReturnOverlay.userName}
+          assets={showAssetReturnOverlay.assets.assets}
+          onClose={() => setShowAssetReturnOverlay(null)}
+        />
+      )}
     </section>
   );
 };

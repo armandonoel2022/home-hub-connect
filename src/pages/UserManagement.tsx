@@ -1,14 +1,17 @@
 import { useState, useRef } from "react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNotifications } from "@/contexts/NotificationContext";
 import { useChatContextSafe } from "@/contexts/ChatContext";
 import { DEPARTMENTS } from "@/lib/types";
 import type { IntranetUser } from "@/lib/types";
+import { generateOnboardingTicketDescription } from "@/lib/assetLinking";
 import { Plus, X, Search, Pencil, Trash2, User, Shield, Mail, Building2, Phone, Upload, Image, KeyRound, Cake } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import RegistrationRequests from "@/components/RegistrationRequests";
 import BirthdayOverlay from "@/components/BirthdayOverlay";
 import ExportMenu from "@/components/ExportMenu";
+import { toast } from "@/hooks/use-toast";
 
 const emptyForm = (): Partial<IntranetUser> => ({
   fullName: "",
@@ -31,6 +34,7 @@ const emptyForm = (): Partial<IntranetUser> => ({
 
 const UserManagementPage = () => {
   const { user, allUsers, activeUsers, inactiveUsers, addUser, updateUser, deleteUser, resetUserPassword } = useAuth();
+  const { addNotification } = useNotifications();
   const chatCtx = useChatContextSafe();
   const [resetConfirm, setResetConfirm] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -125,6 +129,74 @@ const UserManagementPage = () => {
         fleetPhone: form.fleetPhone || "",
       };
       addUser(newUser);
+
+      // Auto-create IT onboarding ticket
+      const reportsToUser = allUsers.find((u) => u.id === newUser.reportsTo);
+      const reportsToName = reportsToUser?.fullName || "No asignado";
+      const ticketDescription = generateOnboardingTicketDescription(
+        newUser.fullName, newUser.department, newUser.position, reportsToName
+      );
+      const now = new Date();
+      const existingTickets = JSON.parse(localStorage.getItem("safeone_tickets") || "[]");
+      const onboardTicket = {
+        id: `TK-${String(Date.now()).slice(-6)}`,
+        title: `Nueva Contratación: ${newUser.fullName} — Preparar equipos y accesos`,
+        description: ticketDescription,
+        category: "Asignación de Equipos (Nuevos)",
+        priority: "Alta",
+        status: "Abierto",
+        createdBy: user?.fullName || "Sistema",
+        createdById: user?.id,
+        assignedTo: "Tecnología y Monitoreo",
+        assignedToId: "USR-002",
+        department: "Tecnología y Monitoreo",
+        createdAt: now.toISOString(),
+        updatedAt: now.toISOString(),
+        slaHours: 8,
+        slaDeadline: new Date(now.getTime() + 8 * 60 * 60 * 1000).toISOString(),
+        attachments: [],
+        comments: [],
+      };
+      existingTickets.push(onboardTicket);
+      localStorage.setItem("safeone_tickets", JSON.stringify(existingTickets));
+
+      // Notify IT
+      addNotification({
+        type: "info",
+        title: "🟢 Nueva Contratación — Preparar Equipos",
+        message: `${newUser.fullName} ingresa a ${newUser.department} como ${newUser.position}. Preparar equipos y accesos. Supervisor: ${reportsToName}.`,
+        relatedId: newUser.id,
+        forUserId: "USR-002",
+        actionUrl: "/tickets",
+      });
+
+      // Notify all IT department members
+      const itMembers = allUsers.filter((u) => u.department === "Tecnología y Monitoreo" && u.id !== "USR-002" && u.employeeStatus !== "Inactivo");
+      itMembers.forEach((itUser) => {
+        addNotification({
+          type: "info",
+          title: "Nueva Contratación",
+          message: `${newUser.fullName} ingresa a ${newUser.department}. Ticket de preparación generado.`,
+          relatedId: newUser.id,
+          forUserId: itUser.id,
+          actionUrl: "/tickets",
+        });
+      });
+
+      // Notify HR
+      addNotification({
+        type: "hiring",
+        title: "Nuevo Colaborador Registrado",
+        message: `${newUser.fullName} ha sido registrado en ${newUser.department} como ${newUser.position}.`,
+        relatedId: newUser.id,
+        forUserId: "USR-006",
+        actionUrl: "/",
+      });
+
+      toast({
+        title: "✅ Usuario registrado",
+        description: `${newUser.fullName} fue registrado. Se generó ticket de IT para preparar equipos y accesos.`,
+      });
     }
     setShowForm(false);
     setForm(emptyForm());
