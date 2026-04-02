@@ -137,10 +137,25 @@ const DepartmentGrid = () => {
     }
   }, [apiMode, loadingFolders]);
 
+  // Calculate assets when offboarding modal opens
+  useEffect(() => {
+    if (showOffboarding) {
+      const targetUser = allUsers.find((u) => u.id === showOffboarding);
+      if (targetUser) {
+        const summary = getUserAssignedAssets(targetUser.fullName, targetUser.id, equipment, phones, vehicles, armedPersonnel);
+        setOffboardAssetSummary(summary);
+      }
+    } else {
+      setOffboardAssetSummary(null);
+    }
+  }, [showOffboarding, allUsers, equipment, phones, vehicles, armedPersonnel]);
+
   const handleOffboard = () => {
     if (!showOffboarding) return;
     const targetUser = allUsers.find((u) => u.id === showOffboarding);
     if (!targetUser) return;
+
+    const assetSummary = offboardAssetSummary || getUserAssignedAssets(targetUser.fullName, targetUser.id, equipment, phones, vehicles, armedPersonnel);
 
     offboardUser(showOffboarding, offboardReason, offboardNotes);
 
@@ -148,20 +163,82 @@ const DepartmentGrid = () => {
     addNotification({
       type: "info",
       title: "Baja de Personal",
-      message: `${targetUser.fullName} (${targetUser.department}) ha sido dado de baja. Motivo: ${offboardReason}`,
+      message: `${targetUser.fullName} (${targetUser.department}) ha sido dado de baja. Motivo: ${offboardReason}. ${assetSummary.totalCount > 0 ? `Tiene ${assetSummary.totalCount} activo(s) asignado(s) pendientes de devolución.` : "No tiene activos asignados."}`,
       relatedId: targetUser.id,
       forUserId: "USR-006", // Dilia - RRHH
       actionUrl: "/",
     });
 
-    // Notify IT
+    // Notify IT with asset details
     addNotification({
       type: "info",
-      title: "Retiro de Equipos - Baja de Personal",
-      message: `${targetUser.fullName} (${targetUser.department}) ha sido dado de baja. Verificar y retirar equipos asignados.`,
+      title: "🔴 Retiro de Equipos - Baja de Personal",
+      message: `${targetUser.fullName} (${targetUser.department}) ha sido dado de baja (${offboardReason}). ${assetSummary.totalCount > 0 ? `URGENTE: Tiene ${assetSummary.totalCount} activo(s) asignado(s) que deben ser recuperados.` : "No tiene activos asignados."}`,
       relatedId: targetUser.id,
       forUserId: "USR-002", // Armando - IT
       actionUrl: "/inventario",
+    });
+
+    // Notify all IT department members
+    const itMembers = allUsers.filter((u) => u.department === "Tecnología y Monitoreo" && u.id !== "USR-002" && u.employeeStatus !== "Inactivo");
+    itMembers.forEach((itUser) => {
+      addNotification({
+        type: "info",
+        title: "Retiro de Equipos - Baja de Personal",
+        message: `${targetUser.fullName} ha sido desvinculado. ${assetSummary.totalCount > 0 ? `Tiene ${assetSummary.totalCount} activo(s) por recuperar.` : ""}`,
+        relatedId: targetUser.id,
+        forUserId: itUser.id,
+        actionUrl: "/inventario",
+      });
+    });
+
+    // Notify all HR department members
+    const hrMembers = allUsers.filter((u) => u.department === "Recursos Humanos" && u.id !== "USR-006" && u.employeeStatus !== "Inactivo");
+    hrMembers.forEach((hrUser) => {
+      addNotification({
+        type: "info",
+        title: "Baja de Personal",
+        message: `${targetUser.fullName} (${targetUser.department}) ha sido dado de baja. Motivo: ${offboardReason}.`,
+        relatedId: targetUser.id,
+        forUserId: hrUser.id,
+        actionUrl: "/",
+      });
+    });
+
+    // Auto-create IT ticket for offboarding
+    const ticketDescription = generateOffboardingTicketDescription(targetUser.fullName, targetUser.department, offboardReason, assetSummary);
+    const now = new Date();
+    const existingTickets = JSON.parse(localStorage.getItem("safeone_tickets") || "[]");
+    const offboardTicket = {
+      id: `TK-${String(Date.now()).slice(-6)}`,
+      title: `Desvinculación: ${targetUser.fullName} — Retiro de equipos y accesos`,
+      description: ticketDescription,
+      category: "Movimientos de Equipos",
+      priority: offboardReason === "Despido" ? "Crítica" : "Alta",
+      status: "Abierto",
+      createdBy: user?.fullName || "Sistema",
+      createdById: user?.id,
+      assignedTo: "Tecnología y Monitoreo",
+      assignedToId: "USR-002",
+      department: "Tecnología y Monitoreo",
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      slaHours: offboardReason === "Despido" ? 2 : 8,
+      slaDeadline: new Date(now.getTime() + (offboardReason === "Despido" ? 2 : 8) * 60 * 60 * 1000).toISOString(),
+      attachments: [],
+      comments: [],
+    };
+    existingTickets.push(offboardTicket);
+    localStorage.setItem("safeone_tickets", JSON.stringify(existingTickets));
+
+    // If resignation, show asset return overlay to the person (only if they have assets)
+    if (offboardReason === "Renuncia" && assetSummary.totalCount > 0) {
+      setShowAssetReturnOverlay({ userName: targetUser.fullName, assets: assetSummary });
+    }
+
+    toast({
+      title: "✅ Baja procesada",
+      description: `${targetUser.fullName} ha sido dado de baja. Se generó ticket de IT automáticamente.${assetSummary.totalCount > 0 ? ` ${assetSummary.totalCount} activo(s) pendientes de devolución.` : ""}`,
     });
 
     setShowOffboarding(null);
