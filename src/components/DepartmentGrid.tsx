@@ -645,7 +645,7 @@ const DepartmentGrid = () => {
                   <X className="h-5 w-5 text-muted-foreground" />
                 </button>
               </div>
-              <div className="p-5 space-y-4">
+              <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
                 <div className="flex items-center gap-3 bg-muted rounded-lg p-3">
                   <div className="w-10 h-10 rounded-full bg-background flex items-center justify-center overflow-hidden shrink-0">
                     {target.photoUrl ? <img src={target.photoUrl} alt="" className="w-full h-full object-cover" /> : <User className="h-5 w-5 text-muted-foreground" />}
@@ -655,6 +655,38 @@ const DepartmentGrid = () => {
                     <p className="text-xs text-muted-foreground">{target.position} — {target.department}</p>
                   </div>
                 </div>
+
+                {/* Assets assigned to this user */}
+                {offboardAssetSummary && offboardAssetSummary.totalCount > 0 && (
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-destructive" />
+                      <p className="text-sm font-semibold text-destructive">
+                        {offboardAssetSummary.totalCount} activo(s) asignado(s)
+                      </p>
+                    </div>
+                    <div className="space-y-1.5">
+                      {offboardAssetSummary.assets.map((asset) => (
+                        <div key={asset.id} className="flex items-center gap-2 text-xs bg-background/50 rounded-lg px-2.5 py-1.5">
+                          <Package className="h-3 w-3 text-muted-foreground shrink-0" />
+                          <span className="font-medium text-card-foreground">[{asset.typeLabel}]</span>
+                          <span className="text-card-foreground">{asset.description}</span>
+                          <span className="text-muted-foreground ml-auto font-mono">{asset.id}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Se generará un ticket automático para la recuperación de estos equipos.
+                    </p>
+                  </div>
+                )}
+                {offboardAssetSummary && offboardAssetSummary.totalCount === 0 && (
+                  <div className="rounded-lg border border-border bg-muted/30 p-3 flex items-center gap-2">
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                    <p className="text-xs text-muted-foreground">No se encontraron activos asignados a este usuario.</p>
+                  </div>
+                )}
+
                 <div>
                   <label className="text-sm font-medium text-card-foreground block mb-1.5">Motivo *</label>
                   <select
@@ -680,9 +712,14 @@ const DepartmentGrid = () => {
                 <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-3 text-xs text-amber-700 dark:text-amber-400">
                   <p className="font-semibold mb-1">Al dar de baja:</p>
                   <ul className="list-disc pl-4 space-y-0.5">
-                    <li>Se notificará a RRHH y Tecnología</li>
-                    <li>IT verificará equipos asignados para retiro</li>
-                    <li>Equipos asignados quedarán disponibles para reasignación</li>
+                    <li>Se notificará a todos los miembros de RRHH y Tecnología</li>
+                    <li>Se generará un ticket automático de IT para retiro de equipos</li>
+                    {offboardReason === "Renuncia" && offboardAssetSummary && offboardAssetSummary.totalCount > 0 && (
+                      <li className="font-medium">Se mostrará al empleado un aviso de devolución de activos</li>
+                    )}
+                    {offboardReason !== "Renuncia" && (
+                      <li>No se notificará al empleado (desvinculación directa)</li>
+                    )}
                     <li>El empleado aparecerá en la sección "Ex-Empleados"</li>
                   </ul>
                 </div>
