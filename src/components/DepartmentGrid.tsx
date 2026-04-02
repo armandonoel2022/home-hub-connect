@@ -2,6 +2,10 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
+import { useEquipment, usePhones, useVehicles, useArmedPersonnel } from "@/hooks/useApiHooks";
+import { getUserAssignedAssets, generateOffboardingTicketDescription } from "@/lib/assetLinking";
+import type { UserAssetSummary } from "@/lib/assetLinking";
+import AssetReturnOverlay from "@/components/AssetReturnOverlay";
 import { cn } from "@/lib/utils";
 import { isApiConfigured, departmentFoldersApi } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
@@ -35,6 +39,8 @@ import {
   UserX,
   Clock,
   RotateCcw,
+  Package,
+  AlertTriangle,
 } from "lucide-react";
 
 interface DeptFolder {
