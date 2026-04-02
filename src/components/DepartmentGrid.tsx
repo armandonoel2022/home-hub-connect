@@ -90,6 +90,10 @@ const DEPT_MULTI_ROUTES: Record<string, { label: string; route: string; icon: an
 const DepartmentGrid = () => {
   const { user, allUsers, activeUsers, inactiveUsers, offboardUser, reactivateUser } = useAuth();
   const { addNotification } = useNotifications();
+  const { data: equipment } = useEquipment();
+  const { data: phones } = usePhones();
+  const { data: vehicles } = useVehicles();
+  const { data: armedPersonnel } = useArmedPersonnel();
   const navigate = useNavigate();
   const apiMode = isApiConfigured();
   const [showLeader, setShowLeader] = useState<DepartmentMeta | null>(null);
@@ -104,6 +108,8 @@ const DepartmentGrid = () => {
   const [newFolderName, setNewFolderName] = useState("");
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [showDeptMenu, setShowDeptMenu] = useState<string | null>(null);
+  const [offboardAssetSummary, setOffboardAssetSummary] = useState<UserAssetSummary | null>(null);
+  const [showAssetReturnOverlay, setShowAssetReturnOverlay] = useState<{ userName: string; assets: UserAssetSummary } | null>(null);
 
   // Check if user belongs to a department
   const userBelongsToDept = useCallback((deptName: string) => {
