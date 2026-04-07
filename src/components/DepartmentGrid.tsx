@@ -80,6 +80,7 @@ const DEPT_MULTI_ROUTES: Record<string, { label: string; route: string; icon: an
   "Tecnología y Monitoreo": [
     { label: "Tecnología", route: "/tickets", icon: Settings },
     { label: "Monitoreo", route: "/monitoreo", icon: Monitor },
+    { label: "Clientes OSM", route: "/seguimiento-clientes", icon: Users },
   ],
   "Operaciones": [
     { label: "Personal Armado", route: "/operaciones", icon: Shield },
