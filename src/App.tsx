@@ -43,6 +43,7 @@ import DepartmentProcesses from "./pages/DepartmentProcesses";
 import AuditLog from "./pages/AuditLog";
 import Reports from "./pages/Reports";
 import TechTasks from "./pages/TechTasks";
+import ClientTracking from "./pages/ClientTracking";
 import NotFound from "./pages/NotFound";
 
 
@@ -114,6 +115,7 @@ function ProtectedRoutes() {
         <Route path="/auditoria" element={<AuditLog />} />
         <Route path="/reportes" element={<Reports />} />
         <Route path="/tech-tasks" element={<TechTasks />} />
+        <Route path="/seguimiento-clientes" element={<ClientTracking />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </>
