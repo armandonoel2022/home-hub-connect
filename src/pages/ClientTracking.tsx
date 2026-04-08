@@ -106,7 +106,7 @@ const ClientTracking = () => {
 
   const userEmail = user?.email || "";
   const isCSUser = userEmail.toLowerCase() === "pgonzalez@safeone.com.do" || userEmail.toLowerCase() === CS_RECIPIENT.email.toLowerCase();
-  const canEdit = canEditIncident(userEmail) || user?.role === "admin";
+  const canEdit = canEditIncident(userEmail) || (user as any)?.role === "admin";
 
   const refresh = () => { setClients(getOSMClients()); setIncidents(getIncidents()); setCsRequests(getCSRequests()); };
 
@@ -712,7 +712,7 @@ const ClientTracking = () => {
                           {Object.entries(report.daily.byPriority).map(([k, v]) => (
                             <div key={k} className="flex items-center justify-between">
                               <Badge className={`${INC_PRIORITY_COLORS[k as IncidentPriority]} text-xs`}>{k}</Badge>
-                              <span className="text-sm font-medium text-foreground">{v}</span>
+                              <span className="text-sm font-medium text-foreground">{v as number}</span>
                             </div>
                           ))}
                         </div>
@@ -722,10 +722,10 @@ const ClientTracking = () => {
                       <CardHeader><CardTitle className="text-sm">Por Estado</CardTitle></CardHeader>
                       <CardContent>
                         <div className="space-y-2">
-                          {Object.entries(report.daily.byStatus).filter(([, v]) => v > 0).map(([k, v]) => (
+                          {Object.entries(report.daily.byStatus).filter(([, v]) => (v as number) > 0).map(([k, v]) => (
                             <div key={k} className="flex items-center justify-between">
                               <span className="text-xs text-muted-foreground">{INC_STATUS_LABELS[k as IncidentStatus]}</span>
-                              <span className="text-sm font-medium text-foreground">{v}</span>
+                              <span className="text-sm font-medium text-foreground">{v as number}</span>
                             </div>
                           ))}
                         </div>
