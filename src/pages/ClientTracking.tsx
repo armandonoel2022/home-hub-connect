@@ -830,7 +830,6 @@ const ClientTracking = () => {
         isCSUser={isCSUser}
         canManage={canEdit}
       />
-      />
     </AppLayout>
   );
 };
