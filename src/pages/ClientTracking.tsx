@@ -766,7 +766,28 @@ const ClientTracking = () => {
             {/* ── CS REQUESTS (for Perla) ── */}
             {(isCSUser || canTestCS) && (
               <TabsContent value="cs" className="space-y-4">
-                <h2 className="text-lg font-semibold text-foreground flex items-center gap-2"><Phone className="h-5 w-5 text-primary" /> Solicitudes de Contacto con Clientes</h2>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-foreground flex items-center gap-2"><Phone className="h-5 w-5 text-primary" /> Solicitudes de Contacto con Clientes</h2>
+                  {canTestCS && !isCSUser && (
+                    <Button variant="outline" size="sm" className="gap-2" onClick={() => {
+                      const demoReq: CSRequestType = {
+                        id: "demo-" + Date.now(),
+                        incidentId: "demo",
+                        clientName: "FARMAMED (Demo)",
+                        accountCode: "8003",
+                        message: "Contactar al cliente para verificar el estado del sensor. Necesita visita técnica.",
+                        requestedBy: user?.fullName || "Sistema",
+                        requestedAt: new Date().toISOString(),
+                        completed: false,
+                        broadcastSent: false,
+                      };
+                      setSelectedCSRequest(demoReq);
+                      setCsOverlayOpen(true);
+                    }}>
+                      <Eye className="h-4 w-4" /> Probar Overlay CS
+                    </Button>
+                  )}
+                </div>
                 {csRequests.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No hay solicitudes pendientes.</p>}
                 {csRequests.map(req => (
                   <Card key={req.id} className={`border-border ${!req.completed ? "bg-amber-500/5 border-amber-500/20" : "bg-card"}`}>
