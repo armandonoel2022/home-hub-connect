@@ -106,6 +106,7 @@ const ClientTracking = () => {
 
   const userEmail = user?.email || "";
   const isCSUser = userEmail.toLowerCase() === "pgonzalez@safeone.com.do" || userEmail.toLowerCase() === CS_RECIPIENT.email.toLowerCase();
+  const canTestCS = canEdit; // Allow editors (monitoreo, anoel, lovalle) to also view/test CS tab
   const canEdit = canEditIncident(userEmail) || (user as any)?.role === "admin";
 
   const refresh = () => { setClients(getOSMClients()); setIncidents(getIncidents()); setCsRequests(getCSRequests()); };
