@@ -828,6 +828,8 @@ const ClientTracking = () => {
         onClose={() => setCsOverlayOpen(false)}
         onComplete={handleCSComplete}
         isCSUser={isCSUser}
+        canManage={canEdit}
+      />
       />
     </AppLayout>
   );
