@@ -107,6 +107,7 @@ const ClientTracking = () => {
   const userEmail = user?.email || "";
   const isCSUser = userEmail.toLowerCase() === "pgonzalez@safeone.com.do" || userEmail.toLowerCase() === CS_RECIPIENT.email.toLowerCase();
   const canEdit = canEditIncident(userEmail) || (user as any)?.role === "admin";
+  const canTestCS = canEdit; // Allow editors (monitoreo, anoel, lovalle) to also view/test CS tab
 
   const refresh = () => { setClients(getOSMClients()); setIncidents(getIncidents()); setCsRequests(getCSRequests()); };
 
@@ -246,7 +247,7 @@ const ClientTracking = () => {
               <TabsTrigger value="incidents" className="gap-1.5 text-xs"><AlertTriangle className="h-3.5 w-3.5" /> Incidencias</TabsTrigger>
               <TabsTrigger value="billing" className="gap-1.5 text-xs"><DollarSign className="h-3.5 w-3.5" /> Facturación</TabsTrigger>
               <TabsTrigger value="reports" className="gap-1.5 text-xs"><FileText className="h-3.5 w-3.5" /> Reportes</TabsTrigger>
-              {isCSUser && <TabsTrigger value="cs" className="gap-1.5 text-xs"><Phone className="h-3.5 w-3.5" /> Mis Solicitudes</TabsTrigger>}
+              {(isCSUser || canTestCS) && <TabsTrigger value="cs" className="gap-1.5 text-xs"><Phone className="h-3.5 w-3.5" /> {isCSUser ? "Mis Solicitudes" : "Solicitudes CS"}</TabsTrigger>}
             </TabsList>
 
             {/* ── DASHBOARD ── */}
@@ -763,7 +764,7 @@ const ClientTracking = () => {
             </TabsContent>
 
             {/* ── CS REQUESTS (for Perla) ── */}
-            {isCSUser && (
+            {(isCSUser || canTestCS) && (
               <TabsContent value="cs" className="space-y-4">
                 <h2 className="text-lg font-semibold text-foreground flex items-center gap-2"><Phone className="h-5 w-5 text-primary" /> Solicitudes de Contacto con Clientes</h2>
                 {csRequests.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No hay solicitudes pendientes.</p>}
