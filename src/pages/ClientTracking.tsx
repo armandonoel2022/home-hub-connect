@@ -635,15 +635,15 @@ const ClientTracking = () => {
                 <CardHeader><CardTitle className="text-sm flex items-center gap-2"><TrendingUp className="h-4 w-4 text-primary" /> Facturación vs Monitoreo</CardTitle></CardHeader>
                 <CardContent>
                   <div className="grid md:grid-cols-3 gap-4 mb-6">
-                    <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-center">
+                    <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-center cursor-pointer hover:ring-2 hover:ring-emerald-500/40 transition-all" onClick={() => { setBillingFilter("con"); setActiveTab("clients"); }}>
                       <p className="text-3xl font-bold text-emerald-400">{stats.conFacturacion}</p>
                       <p className="text-xs text-muted-foreground">Con facturación CxC</p>
                     </div>
-                    <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-center">
+                    <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-center cursor-pointer hover:ring-2 hover:ring-red-500/40 transition-all" onClick={() => { setBillingFilter("sin"); setActiveTab("clients"); }}>
                       <p className="text-3xl font-bold text-red-400">{stats.sinFacturacion}</p>
                       <p className="text-xs text-muted-foreground">Sin facturación CxC</p>
                     </div>
-                    <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20 text-center">
+                    <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20 text-center cursor-pointer hover:ring-2 hover:ring-amber-500/40 transition-all" onClick={() => { setStatusFilter("Activo"); setBillingFilter("sin"); setActiveTab("clients"); }}>
                       <p className="text-3xl font-bold text-amber-400">{clients.filter(c => c.monitoringStatus === "Activo" && !c.hasBilling).length}</p>
                       <p className="text-xs text-muted-foreground">Activos sin factura (riesgo)</p>
                     </div>
