@@ -57,6 +57,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const lastPollRef = useRef<string>(new Date().toISOString());
   const pollErrorCount = useRef(0);
   const activeChatRef = useRef<Chat | null>(null);
+  const sendingRef = useRef(false);
 
   // Keep ref in sync so poll callback sees current active chat
   const setActiveChat = useCallback((chat: Chat | null) => {
@@ -291,7 +292,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const sendMessage = useCallback(
     async (content: string, type: ChatMessage["type"] = "text", fileName?: string, fileData?: string) => {
-      if (!user || !activeChat) return;
+      if (!user || !activeChat || sendingRef.current) return;
+      sendingRef.current = true;
+      try {
       const encrypted = type === "text" ? await encryptMessage(content) : content;
 
       if (apiMode) {
@@ -304,7 +307,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             fileName,
             fileData,
           });
-          setAllMessages(prev => [...prev, msg]);
+          setAllMessages(prev => {
+            if (prev.some(m => m.id === msg.id)) return prev;
+            return [...prev, msg];
+          });
           const preview = type === "text" ? content.slice(0, 50) : type === "buzz" ? "🔔 ¡Zumbido!" : `📎 ${fileName || "Archivo"}`;
           setChats(prev =>
             prev.map(c => c.id === activeChat.id ? { ...c, lastMessage: preview, lastMessageTime: msg.timestamp } : c)
@@ -336,7 +342,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         prev.map((c) =>
           c.id === activeChat.id ? { ...c, lastMessage: preview, lastMessageTime: msg.timestamp } : c
         )
-      );
+       );
+      } finally {
+        sendingRef.current = false;
+      }
     },
     [user, activeChat, apiMode]
   );
