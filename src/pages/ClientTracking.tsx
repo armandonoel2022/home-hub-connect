@@ -101,8 +101,8 @@ const ClientTracking = () => {
   const [selectedCSRequest, setSelectedCSRequest] = useState<CSRequestType | null>(null);
   const [csMessage, setCsMessage] = useState("");
 
-  // Reports
   const [reportType, setReportType] = useState<"diario" | "semanal">("diario");
+  const [activeTab, setActiveTab] = useState("dashboard");
 
   const userEmail = user?.email || "";
   const isCSUser = userEmail.toLowerCase() === "pgonzalez@safeone.com.do" || userEmail.toLowerCase() === CS_RECIPIENT.email.toLowerCase();
@@ -235,12 +235,12 @@ const ClientTracking = () => {
           <div className="flex items-center gap-3 mb-6">
             <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="shrink-0"><ArrowLeft className="h-5 w-5" /></Button>
             <div>
-              <h1 className="text-2xl font-heading font-bold text-foreground">Seguimiento Clientes OSM</h1>
+              <h1 className="text-2xl font-heading font-bold text-foreground">Seguimiento Clientes Monitoreo</h1>
               <p className="text-sm text-muted-foreground">Control de servicios, incidencias y facturación CxC</p>
             </div>
           </div>
 
-          <Tabs defaultValue="dashboard" className="space-y-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="bg-card border border-border flex-wrap h-auto gap-1 p-1">
               <TabsTrigger value="dashboard" className="gap-1.5 text-xs"><BarChart3 className="h-3.5 w-3.5" /> Dashboard</TabsTrigger>
               <TabsTrigger value="clients" className="gap-1.5 text-xs"><Activity className="h-3.5 w-3.5" /> Clientes</TabsTrigger>
@@ -294,12 +294,17 @@ const ClientTracking = () => {
                   <CardHeader><CardTitle className="text-sm">Distribución por Estado</CardTitle></CardHeader>
                   <CardContent>
                     <ResponsiveContainer width="100%" height={280}>
-                      <BarChart data={stats.byStatus}>
+                      <BarChart data={stats.byStatus} style={{ cursor: "pointer" }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis dataKey="name" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} angle={-35} textAnchor="end" height={70} />
                         <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
                         <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--foreground))" }} />
-                        <Bar dataKey="count" name="Clientes" radius={[4, 4, 0, 0]}>
+                        <Bar dataKey="count" name="Clientes" radius={[4, 4, 0, 0]} onClick={(data: any) => {
+                          if (data && data.name) {
+                            setStatusFilter(data.name);
+                            setActiveTab("clients");
+                          }
+                        }}>
                           {stats.byStatus.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                         </Bar>
                       </BarChart>
@@ -630,15 +635,15 @@ const ClientTracking = () => {
                 <CardHeader><CardTitle className="text-sm flex items-center gap-2"><TrendingUp className="h-4 w-4 text-primary" /> Facturación vs Monitoreo</CardTitle></CardHeader>
                 <CardContent>
                   <div className="grid md:grid-cols-3 gap-4 mb-6">
-                    <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-center">
+                    <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-center cursor-pointer hover:ring-2 hover:ring-emerald-500/40 transition-all" onClick={() => { setBillingFilter("con"); setActiveTab("clients"); }}>
                       <p className="text-3xl font-bold text-emerald-400">{stats.conFacturacion}</p>
                       <p className="text-xs text-muted-foreground">Con facturación CxC</p>
                     </div>
-                    <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-center">
+                    <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-center cursor-pointer hover:ring-2 hover:ring-red-500/40 transition-all" onClick={() => { setBillingFilter("sin"); setActiveTab("clients"); }}>
                       <p className="text-3xl font-bold text-red-400">{stats.sinFacturacion}</p>
                       <p className="text-xs text-muted-foreground">Sin facturación CxC</p>
                     </div>
-                    <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20 text-center">
+                    <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20 text-center cursor-pointer hover:ring-2 hover:ring-amber-500/40 transition-all" onClick={() => { setStatusFilter("Activo"); setBillingFilter("sin"); setActiveTab("clients"); }}>
                       <p className="text-3xl font-bold text-amber-400">{clients.filter(c => c.monitoringStatus === "Activo" && !c.hasBilling).length}</p>
                       <p className="text-xs text-muted-foreground">Activos sin factura (riesgo)</p>
                     </div>
@@ -646,8 +651,11 @@ const ClientTracking = () => {
                   <h4 className="text-sm font-medium text-foreground mb-3">Clientes sin facturación</h4>
                   <div className="space-y-2 max-h-[400px] overflow-y-auto">
                     {clients.filter(c => !c.hasBilling).map(c => (
-                      <div key={c.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border">
-                        <div className="flex-1"><p className="text-sm font-medium text-foreground">{c.businessName}</p><p className="text-xs text-muted-foreground">{c.accountCode ? `#${c.accountCode}` : "Sin código"}</p></div>
+                      <div key={c.id} className={`flex items-center justify-between p-3 rounded-lg border border-border ${c.monitoringStatus === "Activo" ? "bg-amber-500/5 border-amber-500/30" : "bg-muted/30"}`}>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-foreground">{c.businessName}</p>
+                          <p className="text-xs text-muted-foreground">{c.accountCode ? `#${c.accountCode}` : "Sin código"}{c.monitoringStatus === "Activo" ? " — ⚠️ Activo sin factura" : ""}</p>
+                        </div>
                         <Badge variant="outline" className={STATUS_COLORS[c.monitoringStatus]}>{c.monitoringStatus}</Badge>
                       </div>
                     ))}
