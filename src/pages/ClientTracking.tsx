@@ -651,8 +651,11 @@ const ClientTracking = () => {
                   <h4 className="text-sm font-medium text-foreground mb-3">Clientes sin facturación</h4>
                   <div className="space-y-2 max-h-[400px] overflow-y-auto">
                     {clients.filter(c => !c.hasBilling).map(c => (
-                      <div key={c.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border">
-                        <div className="flex-1"><p className="text-sm font-medium text-foreground">{c.businessName}</p><p className="text-xs text-muted-foreground">{c.accountCode ? `#${c.accountCode}` : "Sin código"}</p></div>
+                      <div key={c.id} className={`flex items-center justify-between p-3 rounded-lg border border-border ${c.monitoringStatus === "Activo" ? "bg-amber-500/5 border-amber-500/30" : "bg-muted/30"}`}>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-foreground">{c.businessName}</p>
+                          <p className="text-xs text-muted-foreground">{c.accountCode ? `#${c.accountCode}` : "Sin código"}{c.monitoringStatus === "Activo" ? " — ⚠️ Activo sin factura" : ""}</p>
+                        </div>
                         <Badge variant="outline" className={STATUS_COLORS[c.monitoringStatus]}>{c.monitoringStatus}</Badge>
                       </div>
                     ))}
