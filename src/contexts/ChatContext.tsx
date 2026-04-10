@@ -342,7 +342,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         prev.map((c) =>
           c.id === activeChat.id ? { ...c, lastMessage: preview, lastMessageTime: msg.timestamp } : c
         )
-      );
+       );
+      } finally {
+        sendingRef.current = false;
+      }
     },
     [user, activeChat, apiMode]
   );
