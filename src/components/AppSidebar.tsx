@@ -55,7 +55,7 @@ const navItems = [
   { title: "Wiki", url: "/wiki", icon: BookMarked },
   { title: "Encuestas", url: "/encuestas", icon: ClipboardList },
   { title: "Gastos Menores", url: "/gastos-menores", icon: Wallet },
-  { title: "Clientes OSM", url: "/seguimiento-clientes", icon: Radar },
+  { title: "Seguimiento Clientes Monitoreo", url: "/seguimiento-clientes", icon: Radar },
 ];
 
 const adminItems = [

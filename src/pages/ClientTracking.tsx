@@ -235,7 +235,7 @@ const ClientTracking = () => {
           <div className="flex items-center gap-3 mb-6">
             <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="shrink-0"><ArrowLeft className="h-5 w-5" /></Button>
             <div>
-              <h1 className="text-2xl font-heading font-bold text-foreground">Seguimiento Clientes OSM</h1>
+              <h1 className="text-2xl font-heading font-bold text-foreground">Seguimiento Clientes Monitoreo</h1>
               <p className="text-sm text-muted-foreground">Control de servicios, incidencias y facturación CxC</p>
             </div>
           </div>

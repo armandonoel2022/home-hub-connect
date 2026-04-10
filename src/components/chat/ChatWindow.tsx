@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useChatContext, useChatContextSafe } from "@/contexts/ChatContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { decryptMessage } from "@/lib/chatCrypto";
@@ -660,8 +660,21 @@ const ChatWindow = () => {
     );
   }
 
+  // Close chat when clicking outside
+  const chatRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (chatRef.current && !chatRef.current.contains(e.target as Node)) {
+        setIsChatOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [setIsChatOpen]);
+
   return (
     <div
+      ref={chatRef}
       className="fixed bottom-4 right-4 z-50 w-[380px] h-[520px] rounded-2xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-5"
       style={{ boxShadow: "0 12px 40px -8px hsla(220, 15%, 18%, 0.25)" }}
     >
