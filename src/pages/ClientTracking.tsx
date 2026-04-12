@@ -667,6 +667,85 @@ const ClientTracking = () => {
                 </CardContent>
               </Card>
 
+              {/* ── RECONCILIATION: Name mismatches ── */}
+              {(() => {
+                const mismatched = clients.filter(c => c.hasBilling && c.billingClient && c.businessName.trim().toLowerCase() !== c.billingClient.trim().toLowerCase());
+                return mismatched.length > 0 ? (
+                  <Card className="bg-card border-amber-500/30 border">
+                    <CardHeader>
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-amber-400" /> Incongruencias de Nombres ({mismatched.length})
+                      </CardTitle>
+                      <p className="text-xs text-muted-foreground">Clientes cuyo nombre en Monitoreo no coincide con el nombre en CxC. Edite para homogeneizar.</p>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-amber-500/5">
+                              <TableHead className="text-xs">Código</TableHead>
+                              <TableHead className="text-xs">Nombre Monitoreo</TableHead>
+                              <TableHead className="text-xs">Nombre CxC</TableHead>
+                              <TableHead className="text-xs">Acciones</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {mismatched.slice(0, 60).map(c => {
+                              const isEditingThis = editing === `recon-${c.id}`;
+                              return (
+                                <TableRow key={c.id} className="border-b border-border">
+                                  <TableCell className="text-xs font-mono">{c.accountCode || "—"}</TableCell>
+                                  <TableCell>
+                                    {isEditingThis ? (
+                                      <Input className="h-7 text-xs" value={editData.businessName ?? c.businessName} onChange={(e) => setEditData({ ...editData, businessName: e.target.value })} />
+                                    ) : (
+                                      <span className="text-sm font-medium text-foreground">{c.businessName}</span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    {isEditingThis ? (
+                                      <Input className="h-7 text-xs" value={editData.billingClient ?? c.billingClient} onChange={(e) => setEditData({ ...editData, billingClient: e.target.value })} />
+                                    ) : (
+                                      <span className="text-sm text-foreground">{c.billingClient}</span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    {isEditingThis ? (
+                                      <div className="flex gap-1">
+                                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => {
+                                          const updated = { ...editData, lastUpdated: new Date().toISOString().slice(0, 10), updatedBy: user?.fullName };
+                                          updateOSMClient(c.id, updated);
+                                          setEditing(null); setEditData({}); refresh();
+                                          toast.success("Nombres actualizados");
+                                        }}><Save className="h-3.5 w-3.5 text-emerald-400" /></Button>
+                                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditing(null); setEditData({}); }}><X className="h-3.5 w-3.5" /></Button>
+                                      </div>
+                                    ) : canEdit ? (
+                                      <div className="flex gap-1">
+                                        <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => { setEditing(`recon-${c.id}`); setEditData({}); }}>
+                                          <Edit2 className="h-3 w-3" /> Editar
+                                        </Button>
+                                        <Button size="sm" variant="ghost" className="h-7 text-xs gap-1" title="Usar nombre CxC para ambos" onClick={() => {
+                                          updateOSMClient(c.id, { businessName: c.billingClient!, lastUpdated: new Date().toISOString().slice(0, 10), updatedBy: user?.fullName });
+                                          refresh();
+                                          toast.success(`Nombre unificado a "${c.billingClient}"`);
+                                        }}>
+                                          <CheckCircle2 className="h-3 w-3 text-emerald-400" /> Usar CxC
+                                        </Button>
+                                      </div>
+                                    ) : null}
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : null;
+              })()}
+
               <Card className="bg-card border-border">
                 <CardHeader><CardTitle className="text-sm">Detalle Facturación</CardTitle></CardHeader>
                 <CardContent>
