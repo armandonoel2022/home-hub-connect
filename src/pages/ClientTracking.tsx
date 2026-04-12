@@ -444,7 +444,11 @@ const ClientTracking = () => {
                                 </Select>
                               ) : <Badge variant={client.resolutionStatus === "Resuelto" ? "default" : "secondary"} className="text-xs">{client.resolutionStatus}</Badge>}
                             </TableCell>
-                            <TableCell>{client.hasBilling ? <span className="text-xs text-emerald-400">✓</span> : <span className="text-xs text-red-400">✗</span>}</TableCell>
+                            <TableCell>
+                              {isEditing ? (
+                                <Switch checked={editData.hasBilling ?? client.hasBilling} onCheckedChange={(v) => setEditData({ ...editData, hasBilling: v })} />
+                              ) : client.hasBilling ? <span className="text-xs text-emerald-400">✓ CxC</span> : <span className="text-xs text-red-400">✗ Sin CxC</span>}
+                            </TableCell>
                             <TableCell className="text-xs text-muted-foreground max-w-[250px]">{isEditing ? <Textarea value={editData.notes ?? client.notes} onChange={(e) => setEditData({ ...editData, notes: e.target.value })} rows={2} className="text-xs" /> : <span className="line-clamp-2">{client.notes || "—"}</span>}</TableCell>
                             <TableCell>
                               <div className="flex gap-1">
