@@ -73,7 +73,7 @@ const departmentsMeta: DepartmentMeta[] = [
 
 const DEPT_ROUTES: Record<string, string> = {
   "Recursos Humanos": "/rrhh/formularios",
-  "Administración": "/admin/formularios",
+  "Administración": "/admin/hub",
 };
 
 const DEPT_MULTI_ROUTES: Record<string, { label: string; route: string; icon: any }[]> = {
