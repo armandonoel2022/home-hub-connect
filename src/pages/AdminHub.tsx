@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import FixedAssetsManager from "@/components/admin/FixedAssetsManager";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import Navbar from "@/components/Navbar";
@@ -41,6 +42,7 @@ const AdminHub = () => {
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedProcess, setSelectedProcess] = useState<AdminProcess | null>(null);
+  const [showFixedAssets, setShowFixedAssets] = useState(false);
   const [checklistState, setChecklistState] = useState<ChecklistState>(getChecklistState);
   const [activities, setActivities] = useState<AdminActivityEntry[]>(getAdminActivities);
   const [newNote, setNewNote] = useState("");
@@ -106,6 +108,24 @@ const AdminHub = () => {
 
   const processActivities = (processId: string) =>
     activities.filter(a => a.processId === processId);
+
+  // ── Fixed Assets view ──
+  if (showFixedAssets) {
+    return (
+      <AppLayout>
+        <Navbar />
+        <main className="flex-1 bg-background min-h-screen">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+            <Button variant="ghost" onClick={() => setShowFixedAssets(false)} className="mb-4 gap-2">
+              <ArrowLeft className="h-4 w-4" /> Volver al Hub
+            </Button>
+            <FixedAssetsManager onBack={() => setShowFixedAssets(false)} />
+          </div>
+        </main>
+        <Footer />
+      </AppLayout>
+    );
+  }
 
   // ── Process detail view ──
   if (selectedProcess) {
@@ -276,7 +296,13 @@ const AdminHub = () => {
                 return (
                   <button
                     key={proc.id}
-                    onClick={() => setSelectedProcess(proc)}
+                    onClick={() => {
+                      if (proc.name === "Gestión de activos fijos") {
+                        setShowFixedAssets(true);
+                      } else {
+                        setSelectedProcess(proc);
+                      }
+                    }}
                     className="border rounded-xl p-4 bg-card text-left hover:border-primary/50 hover:shadow-md transition-all group"
                   >
                     <div className="flex items-start justify-between mb-3">
@@ -377,7 +403,13 @@ const AdminHub = () => {
                     return (
                       <button
                         key={proc.id}
-                        onClick={() => { setSelectedProcess(proc); setSearchTerm(""); }}
+                        onClick={() => {
+                          if (proc.name === "Gestión de activos fijos") {
+                            setShowFixedAssets(true); setSearchTerm("");
+                          } else {
+                            setSelectedProcess(proc); setSearchTerm("");
+                          }
+                        }}
                         className="border rounded-lg p-3 bg-card text-left hover:border-primary/50 transition-all"
                       >
                         <p className="font-medium text-sm">{proc.name}</p>
