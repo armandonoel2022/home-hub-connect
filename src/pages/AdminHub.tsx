@@ -296,7 +296,13 @@ const AdminHub = () => {
                 return (
                   <button
                     key={proc.id}
-                    onClick={() => setSelectedProcess(proc)}
+                    onClick={() => {
+                      if (proc.name === "Gestión de activos fijos") {
+                        setShowFixedAssets(true);
+                      } else {
+                        setSelectedProcess(proc);
+                      }
+                    }}
                     className="border rounded-xl p-4 bg-card text-left hover:border-primary/50 hover:shadow-md transition-all group"
                   >
                     <div className="flex items-start justify-between mb-3">
