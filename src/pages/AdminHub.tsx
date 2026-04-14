@@ -403,7 +403,13 @@ const AdminHub = () => {
                     return (
                       <button
                         key={proc.id}
-                        onClick={() => { setSelectedProcess(proc); setSearchTerm(""); }}
+                        onClick={() => {
+                          if (proc.name === "Gestión de activos fijos") {
+                            setShowFixedAssets(true); setSearchTerm("");
+                          } else {
+                            setSelectedProcess(proc); setSearchTerm("");
+                          }
+                        }}
                         className="border rounded-lg p-3 bg-card text-left hover:border-primary/50 transition-all"
                       >
                         <p className="font-medium text-sm">{proc.name}</p>
