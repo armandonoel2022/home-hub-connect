@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import FixedAssetsManager from "@/components/admin/FixedAssetsManager";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import Navbar from "@/components/Navbar";
@@ -41,6 +42,7 @@ const AdminHub = () => {
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedProcess, setSelectedProcess] = useState<AdminProcess | null>(null);
+  const [showFixedAssets, setShowFixedAssets] = useState(false);
   const [checklistState, setChecklistState] = useState<ChecklistState>(getChecklistState);
   const [activities, setActivities] = useState<AdminActivityEntry[]>(getAdminActivities);
   const [newNote, setNewNote] = useState("");
