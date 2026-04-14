@@ -109,6 +109,24 @@ const AdminHub = () => {
   const processActivities = (processId: string) =>
     activities.filter(a => a.processId === processId);
 
+  // ── Fixed Assets view ──
+  if (showFixedAssets) {
+    return (
+      <AppLayout>
+        <Navbar />
+        <main className="flex-1 bg-background min-h-screen">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+            <Button variant="ghost" onClick={() => setShowFixedAssets(false)} className="mb-4 gap-2">
+              <ArrowLeft className="h-4 w-4" /> Volver al Hub
+            </Button>
+            <FixedAssetsManager onBack={() => setShowFixedAssets(false)} />
+          </div>
+        </main>
+        <Footer />
+      </AppLayout>
+    );
+  }
+
   // ── Process detail view ──
   if (selectedProcess) {
     const proc = selectedProcess;
