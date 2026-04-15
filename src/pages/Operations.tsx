@@ -683,6 +683,7 @@ const OperationsPage = () => {
                     <th className="px-3 py-2.5 font-semibold text-card-foreground text-xs">Tipo</th>
                     <th className="px-3 py-2.5 font-semibold text-card-foreground text-xs">Cáps.</th>
                     <th className="px-3 py-2.5 font-semibold text-card-foreground text-xs">Estado Arma</th>
+                    <th className="px-3 py-2.5 font-semibold text-card-foreground text-xs">Activo Fijo</th>
                     <th className="px-3 py-2.5 font-semibold text-card-foreground text-xs">Ubic.</th>
                     <th className="px-3 py-2.5 font-semibold text-card-foreground text-xs"></th>
                   </tr>
@@ -690,6 +691,7 @@ const OperationsPage = () => {
                 <tbody className="divide-y divide-border">
                   {filtered.map((p) => {
                     const hasCoords = !!parseCoords(p.coordinates);
+                    const linkedAsset = weaponAssetMap.get(p.id);
                     return (
                       <tr key={p.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => setSelected(p)}>
                         <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{p.employeeCode || "—"}</td>
