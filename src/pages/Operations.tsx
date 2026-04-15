@@ -844,6 +844,60 @@ const OperationsPage = () => {
                   ))}
                 </div>
 
+                {/* Linked Fixed Asset */}
+                {(() => {
+                  const la = weaponAssetMap.get(selected.id);
+                  if (!la) return selected.weaponSerial && selected.weaponSerial !== "No visible" && selected.weaponSerial !== "Borrosos" ? (
+                    <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                      <h3 className="text-sm font-semibold text-amber-800 mb-1 flex items-center gap-1.5">
+                        <Package className="h-4 w-4" /> Activo Fijo
+                      </h3>
+                      <p className="text-xs text-amber-600">Esta arma (serial: {selected.weaponSerial}) no está vinculada a ningún registro de Activo Fijo.</p>
+                    </div>
+                  ) : null;
+                  return (
+                    <div className="mt-4 bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                      <h3 className="text-sm font-semibold text-emerald-800 mb-2 flex items-center gap-1.5">
+                        <Package className="h-4 w-4" /> Activo Fijo Vinculado
+                      </h3>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="bg-white/70 rounded p-2">
+                          <span className="text-emerald-600 block">Código Activo</span>
+                          <span className="font-bold text-emerald-900 font-mono">{la.assetId}</span>
+                        </div>
+                        <div className="bg-white/70 rounded p-2">
+                          <span className="text-emerald-600 block">Código Original</span>
+                          <span className="font-medium text-emerald-900">{la.codigoOriginal || "—"}</span>
+                        </div>
+                        <div className="col-span-2 bg-white/70 rounded p-2">
+                          <span className="text-emerald-600 block">Descripción</span>
+                          <span className="font-medium text-emerald-900">{la.descripcion}</span>
+                        </div>
+                        <div className="bg-white/70 rounded p-2">
+                          <span className="text-emerald-600 block">Estado Inventario</span>
+                          <span className="font-medium text-emerald-900 capitalize">{la.estado.replace(/_/g, " ")}</span>
+                        </div>
+                        <div className="bg-white/70 rounded p-2">
+                          <span className="text-emerald-600 block">Condición</span>
+                          <span className="font-medium text-emerald-900 capitalize">{la.condicion.replace(/_/g, " ")}</span>
+                        </div>
+                        {la.fechaAdquisicion && (
+                          <div className="bg-white/70 rounded p-2">
+                            <span className="text-emerald-600 block">Fecha Adquisición</span>
+                            <span className="font-medium text-emerald-900">{la.fechaAdquisicion}</span>
+                          </div>
+                        )}
+                        {la.ubicacion && (
+                          <div className="bg-white/70 rounded p-2">
+                            <span className="text-emerald-600 block">Ubicación Registrada</span>
+                            <span className="font-medium text-emerald-900">{la.ubicacion}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Transfer History */}
                 {selected.transferHistory && selected.transferHistory.length > 0 && (
                   <div className="mt-4">
