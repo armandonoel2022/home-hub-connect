@@ -3,8 +3,10 @@ import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useArmedPersonnel } from "@/hooks/useApiHooks";
 import type { ArmedPersonnel, PersonnelTransfer, ShiftType } from "@/lib/types";
-import { Search, Plus, User, MapPin, X, Phone, Upload, Image, Lock, Trash2, Pencil, Map, List, AlertTriangle, BarChart3, ArrowRightLeft, History, Shield, ChevronDown, ChevronRight, Clock } from "lucide-react";
+import { Search, Plus, User, MapPin, X, Phone, Upload, Image, Lock, Trash2, Pencil, Map, List, AlertTriangle, BarChart3, ArrowRightLeft, History, Shield, ChevronDown, ChevronRight, Clock, Package } from "lucide-react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { loadFixedAssets, type FixedAsset } from "@/lib/fixedAssetsData";
+import { buildWeaponAssetMap, getLinkingStats, type LinkedWeaponAsset } from "@/lib/weaponAssetLinking";
 
 
 const statusColors: Record<string, string> = {
@@ -397,6 +399,22 @@ const OperationsPage = () => {
     } catch { return []; }
   });
 
+  // Fixed assets linking
+  const [fixedAssets, setFixedAssets] = useState<FixedAsset[]>([]);
+  useEffect(() => {
+    loadFixedAssets().then(setFixedAssets);
+  }, []);
+
+  const weaponAssetMap = useMemo(
+    () => buildWeaponAssetMap(personnel, fixedAssets),
+    [personnel, fixedAssets]
+  );
+
+  const linkStats = useMemo(
+    () => getLinkingStats(personnel, weaponAssetMap),
+    [personnel, weaponAssetMap]
+  );
+
   const saveDeletedLog = (log: ArmedPersonnel[]) => {
     setDeletedLog(log);
     localStorage.setItem("safeone_personnel_deleted", JSON.stringify(log));
@@ -618,6 +636,30 @@ const OperationsPage = () => {
         {/* DASHBOARD VIEW */}
         {viewMode === "dashboard" && (
           <div className="px-6 py-4">
+            {/* Linking Stats Banner */}
+            <div className="mb-4 bg-card rounded-xl border border-border p-4">
+              <h3 className="text-sm font-semibold text-card-foreground mb-3 flex items-center gap-2">
+                <Package className="h-4 w-4" /> Vinculación Armas — Activo Fijo
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-muted rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-card-foreground">{linkStats.withWeapon}</p>
+                  <p className="text-xs text-muted-foreground">Con arma asignada</p>
+                </div>
+                <div className="bg-emerald-50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-emerald-700">{linkStats.linked}</p>
+                  <p className="text-xs text-emerald-600">Vinculadas a Activo Fijo</p>
+                </div>
+                <div className="bg-amber-50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-amber-700">{linkStats.unlinked}</p>
+                  <p className="text-xs text-amber-600">Sin vincular</p>
+                </div>
+                <div className="bg-muted rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-card-foreground">{linkStats.linkPercentage}%</p>
+                  <p className="text-xs text-muted-foreground">Cobertura</p>
+                </div>
+              </div>
+            </div>
             <PersonnelDashboard personnel={personnel} />
           </div>
         )}
@@ -665,6 +707,7 @@ const OperationsPage = () => {
                     <th className="px-3 py-2.5 font-semibold text-card-foreground text-xs">Tipo</th>
                     <th className="px-3 py-2.5 font-semibold text-card-foreground text-xs">Cáps.</th>
                     <th className="px-3 py-2.5 font-semibold text-card-foreground text-xs">Estado Arma</th>
+                    <th className="px-3 py-2.5 font-semibold text-card-foreground text-xs">Activo Fijo</th>
                     <th className="px-3 py-2.5 font-semibold text-card-foreground text-xs">Ubic.</th>
                     <th className="px-3 py-2.5 font-semibold text-card-foreground text-xs"></th>
                   </tr>
@@ -672,6 +715,7 @@ const OperationsPage = () => {
                 <tbody className="divide-y divide-border">
                   {filtered.map((p) => {
                     const hasCoords = !!parseCoords(p.coordinates);
+                    const linkedAsset = weaponAssetMap.get(p.id);
                     return (
                       <tr key={p.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => setSelected(p)}>
                         <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{p.employeeCode || "—"}</td>
@@ -693,6 +737,17 @@ const OperationsPage = () => {
                           <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${conditionColors[p.weaponCondition] || "bg-gray-100 text-gray-500"}`}>
                             {p.weaponCondition || "—"}
                           </span>
+                        </td>
+                        <td className="px-3 py-2">
+                          {linkedAsset ? (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-emerald-50 text-emerald-700 font-mono" title={linkedAsset.descripcion}>
+                              {linkedAsset.assetId}
+                            </span>
+                          ) : p.weaponSerial && p.weaponSerial !== "No visible" && p.weaponSerial !== "Borrosos" ? (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-amber-50 text-amber-600" title="Sin vincular en Activo Fijo">
+                              No vinculado
+                            </span>
+                          ) : <span className="text-muted-foreground text-xs">—</span>}
                         </td>
                         <td className="px-3 py-2 text-center">
                           {hasCoords ? (
@@ -812,6 +867,60 @@ const OperationsPage = () => {
                     </div>
                   ))}
                 </div>
+
+                {/* Linked Fixed Asset */}
+                {(() => {
+                  const la = weaponAssetMap.get(selected.id);
+                  if (!la) return selected.weaponSerial && selected.weaponSerial !== "No visible" && selected.weaponSerial !== "Borrosos" ? (
+                    <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                      <h3 className="text-sm font-semibold text-amber-800 mb-1 flex items-center gap-1.5">
+                        <Package className="h-4 w-4" /> Activo Fijo
+                      </h3>
+                      <p className="text-xs text-amber-600">Esta arma (serial: {selected.weaponSerial}) no está vinculada a ningún registro de Activo Fijo.</p>
+                    </div>
+                  ) : null;
+                  return (
+                    <div className="mt-4 bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                      <h3 className="text-sm font-semibold text-emerald-800 mb-2 flex items-center gap-1.5">
+                        <Package className="h-4 w-4" /> Activo Fijo Vinculado
+                      </h3>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="bg-white/70 rounded p-2">
+                          <span className="text-emerald-600 block">Código Activo</span>
+                          <span className="font-bold text-emerald-900 font-mono">{la.assetId}</span>
+                        </div>
+                        <div className="bg-white/70 rounded p-2">
+                          <span className="text-emerald-600 block">Código Original</span>
+                          <span className="font-medium text-emerald-900">{la.codigoOriginal || "—"}</span>
+                        </div>
+                        <div className="col-span-2 bg-white/70 rounded p-2">
+                          <span className="text-emerald-600 block">Descripción</span>
+                          <span className="font-medium text-emerald-900">{la.descripcion}</span>
+                        </div>
+                        <div className="bg-white/70 rounded p-2">
+                          <span className="text-emerald-600 block">Estado Inventario</span>
+                          <span className="font-medium text-emerald-900 capitalize">{la.estado.replace(/_/g, " ")}</span>
+                        </div>
+                        <div className="bg-white/70 rounded p-2">
+                          <span className="text-emerald-600 block">Condición</span>
+                          <span className="font-medium text-emerald-900 capitalize">{la.condicion.replace(/_/g, " ")}</span>
+                        </div>
+                        {la.fechaAdquisicion && (
+                          <div className="bg-white/70 rounded p-2">
+                            <span className="text-emerald-600 block">Fecha Adquisición</span>
+                            <span className="font-medium text-emerald-900">{la.fechaAdquisicion}</span>
+                          </div>
+                        )}
+                        {la.ubicacion && (
+                          <div className="bg-white/70 rounded p-2">
+                            <span className="text-emerald-600 block">Ubicación Registrada</span>
+                            <span className="font-medium text-emerald-900">{la.ubicacion}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Transfer History */}
                 {selected.transferHistory && selected.transferHistory.length > 0 && (
