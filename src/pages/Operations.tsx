@@ -714,6 +714,17 @@ const OperationsPage = () => {
                             {p.weaponCondition || "—"}
                           </span>
                         </td>
+                        <td className="px-3 py-2">
+                          {linkedAsset ? (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-emerald-50 text-emerald-700 font-mono" title={linkedAsset.descripcion}>
+                              {linkedAsset.assetId}
+                            </span>
+                          ) : p.weaponSerial && p.weaponSerial !== "No visible" && p.weaponSerial !== "Borrosos" ? (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-amber-50 text-amber-600" title="Sin vincular en Activo Fijo">
+                              No vinculado
+                            </span>
+                          ) : <span className="text-muted-foreground text-xs">—</span>}
+                        </td>
                         <td className="px-3 py-2 text-center">
                           {hasCoords ? (
                             <a href={`https://www.google.com/maps?q=${p.coordinates}`} target="_blank" rel="noopener" onClick={e => e.stopPropagation()} className="text-blue-600 hover:text-blue-800" title="Ver en Google Maps">
