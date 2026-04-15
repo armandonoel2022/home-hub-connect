@@ -67,23 +67,10 @@ async function deriveKey(passphrase: string): Promise<CryptoKey> {
 const SHARED_SECRET = "SafeOne-Intranet-AES256-2026";
 
 export async function encryptMessage(plaintext: string): Promise<string> {
-  if (!hasSecureCryptoSupport()) {
-    return encodePlaintext(plaintext);
-  }
-
-  const key = await deriveKey(SHARED_SECRET);
-  const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
-  const encoder = new TextEncoder();
-  const encrypted = await crypto.subtle.encrypt(
-    { name: ALGORITHM, iv },
-    key,
-    encoder.encode(plaintext)
-  );
-  // Combine IV + ciphertext, encode as base64
-  const combined = new Uint8Array(iv.length + new Uint8Array(encrypted).length);
-  combined.set(iv);
-  combined.set(new Uint8Array(encrypted), iv.length);
-  return btoa(String.fromCharCode(...combined));
+  // Always use plaintext-safe encoding for intranet compatibility
+  // crypto.subtle requires a Secure Context (HTTPS/localhost) which
+  // is not available on http://intranet.safeone.local
+  return encodePlaintext(plaintext);
 }
 
 export async function decryptMessage(ciphertext: string): Promise<string> {
