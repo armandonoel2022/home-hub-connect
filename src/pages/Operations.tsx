@@ -636,6 +636,30 @@ const OperationsPage = () => {
         {/* DASHBOARD VIEW */}
         {viewMode === "dashboard" && (
           <div className="px-6 py-4">
+            {/* Linking Stats Banner */}
+            <div className="mb-4 bg-card rounded-xl border border-border p-4">
+              <h3 className="text-sm font-semibold text-card-foreground mb-3 flex items-center gap-2">
+                <Package className="h-4 w-4" /> Vinculación Armas — Activo Fijo
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-muted rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-card-foreground">{linkStats.withWeapon}</p>
+                  <p className="text-xs text-muted-foreground">Con arma asignada</p>
+                </div>
+                <div className="bg-emerald-50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-emerald-700">{linkStats.linked}</p>
+                  <p className="text-xs text-emerald-600">Vinculadas a Activo Fijo</p>
+                </div>
+                <div className="bg-amber-50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-amber-700">{linkStats.unlinked}</p>
+                  <p className="text-xs text-amber-600">Sin vincular</p>
+                </div>
+                <div className="bg-muted rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-card-foreground">{linkStats.linkPercentage}%</p>
+                  <p className="text-xs text-muted-foreground">Cobertura</p>
+                </div>
+              </div>
+            </div>
             <PersonnelDashboard personnel={personnel} />
           </div>
         )}
