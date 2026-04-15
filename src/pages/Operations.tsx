@@ -399,6 +399,22 @@ const OperationsPage = () => {
     } catch { return []; }
   });
 
+  // Fixed assets linking
+  const [fixedAssets, setFixedAssets] = useState<FixedAsset[]>([]);
+  useEffect(() => {
+    loadFixedAssets().then(setFixedAssets);
+  }, []);
+
+  const weaponAssetMap = useMemo(
+    () => buildWeaponAssetMap(personnel, fixedAssets),
+    [personnel, fixedAssets]
+  );
+
+  const linkStats = useMemo(
+    () => getLinkingStats(personnel, weaponAssetMap),
+    [personnel, weaponAssetMap]
+  );
+
   const saveDeletedLog = (log: ArmedPersonnel[]) => {
     setDeletedLog(log);
     localStorage.setItem("safeone_personnel_deleted", JSON.stringify(log));
