@@ -478,6 +478,18 @@ export default function FixedAssetsManager({ onBack }: Props) {
               {ESTADOS.map(e => <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>)}
             </SelectContent>
           </Select>
+          <Select value={filterCondicion} onValueChange={setFilterCondicion}>
+            <SelectTrigger className="w-[140px]"><SelectValue placeholder="Condición" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              {CONDICIONES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          {(filterType !== "all" || filterEstado !== "all" || filterCondicion !== "all" || filterUbicacion !== "all") && (
+            <Button variant="ghost" size="sm" onClick={() => { setFilterType("all"); setFilterEstado("all"); setFilterCondicion("all"); setFilterUbicacion("all"); }} className="text-xs text-muted-foreground">
+              Limpiar filtros
+            </Button>
+          )}
         </div>
 
         <p className="text-xs text-muted-foreground mb-2">{filtered.length} activos encontrados</p>
