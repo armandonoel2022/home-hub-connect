@@ -592,7 +592,7 @@ export default function FixedAssetsManager({ onBack }: Props) {
               const count = stats.byEstado[e.value] || 0;
               const pct = stats.total > 0 ? (count / stats.total) * 100 : 0;
               return (
-                <button key={e.value} className="flex items-center gap-2 w-full hover:bg-muted/50 rounded-md px-1 py-0.5 transition-colors" onClick={() => { setFilterType("all"); setFilterEstado(e.value); setFilterUbicacion("all"); setSearchTerm(""); setView("list"); }}>
+                <button key={e.value} className="flex items-center gap-2 w-full hover:bg-muted/50 rounded-md px-1 py-0.5 transition-colors" onClick={() => { setFilterType("all"); setFilterEstado(e.value); setFilterCondicion("all"); setFilterUbicacion("all"); setSearchTerm(""); setView("list"); }}>
                   <span className="text-xs w-24 text-muted-foreground text-left">{e.label}</span>
                   <div className="flex-1 h-2 rounded-full bg-muted">
                     <div className="h-2 rounded-full" style={{ width: `${pct}%`, background: e.color }} />
@@ -610,7 +610,7 @@ export default function FixedAssetsManager({ onBack }: Props) {
               const count = stats.byCondicion[c.value] || 0;
               const pct = stats.total > 0 ? (count / stats.total) * 100 : 0;
               return (
-                <button key={c.value} className="flex items-center gap-2 w-full hover:bg-muted/50 rounded-md px-1 py-0.5 transition-colors" onClick={() => { setFilterType("all"); setFilterEstado(c.value); setFilterUbicacion("all"); setSearchTerm(""); setView("list"); }}>
+                <button key={c.value} className="flex items-center gap-2 w-full hover:bg-muted/50 rounded-md px-1 py-0.5 transition-colors" onClick={() => { setFilterType("all"); setFilterEstado("all"); setFilterCondicion(c.value); setFilterUbicacion("all"); setSearchTerm(""); setView("list"); }}>
                   <span className="text-xs w-24 text-muted-foreground text-left">{c.label}</span>
                   <div className="flex-1 h-2 rounded-full bg-muted">
                     <div className="h-2 rounded-full" style={{ width: `${pct}%`, background: c.color }} />
