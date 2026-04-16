@@ -70,7 +70,7 @@ function PersonnelMap({ personnel, onTransfer }: { personnel: ArmedPersonnel[]; 
 }
 
 // ─── Dashboard Component ───
-function PersonnelDashboard({ personnel }: { personnel: ArmedPersonnel[] }) {
+function PersonnelDashboard({ personnel, onFilter }: { personnel: ArmedPersonnel[]; onFilter?: (filters: { province?: string; condition?: string; search?: string }) => void }) {
   const byProvince = useMemo(() => {
     const map: Record<string, number> = {};
     personnel.forEach(p => { map[p.province || "Sin provincia"] = (map[p.province || "Sin provincia"] || 0) + 1; });
@@ -128,17 +128,17 @@ function PersonnelDashboard({ personnel }: { personnel: ArmedPersonnel[] }) {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
-          { label: "Total Personal", value: personnel.length, color: "bg-card border-border" },
-          { label: "Buen Estado", value: goodCond, color: "bg-emerald-50 border-emerald-200 text-emerald-700" },
-          { label: "Mantenimiento", value: needsMaint, color: "bg-amber-50 border-amber-200 text-amber-700" },
-          { label: "Con Ubicación", value: withCoords, color: "bg-blue-50 border-blue-200 text-blue-700" },
-          { label: "Cápsulas Total", value: totalAmmo, color: "bg-purple-50 border-purple-200 text-purple-700" },
-          { label: "Puestos Vacíos", value: unfilledPosts.length, color: unfilledPosts.length > 0 ? "bg-red-50 border-red-200 text-red-700" : "bg-card border-border" },
+          { label: "Total Personal", value: personnel.length, color: "bg-card border-border", onClick: () => onFilter?.({}) },
+          { label: "Buen Estado", value: goodCond, color: "bg-emerald-50 border-emerald-200 text-emerald-700", onClick: () => onFilter?.({ condition: "En buenas condiciones" }) },
+          { label: "Mantenimiento", value: needsMaint, color: "bg-amber-50 border-amber-200 text-amber-700", onClick: () => onFilter?.({ condition: "Falta de mantenimiento" }) },
+          { label: "Con Ubicación", value: withCoords, color: "bg-blue-50 border-blue-200 text-blue-700", onClick: () => onFilter?.({}) },
+          { label: "Cápsulas Total", value: totalAmmo, color: "bg-purple-50 border-purple-200 text-purple-700", onClick: () => onFilter?.({}) },
+          { label: "Puestos Vacíos", value: unfilledPosts.length, color: unfilledPosts.length > 0 ? "bg-red-50 border-red-200 text-red-700" : "bg-card border-border", onClick: () => onFilter?.({}) },
         ].map(kpi => (
-          <div key={kpi.label} className={`border rounded-xl p-3 text-center ${kpi.color}`}>
+          <button key={kpi.label} onClick={kpi.onClick} className={`border rounded-xl p-3 text-center cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all ${kpi.color}`}>
             <p className="text-2xl font-bold">{kpi.value}</p>
             <p className="text-xs">{kpi.label}</p>
-          </div>
+          </button>
         ))}
       </div>
 
@@ -149,8 +149,8 @@ function PersonnelDashboard({ personnel }: { personnel: ArmedPersonnel[] }) {
           <h3 className="font-heading font-semibold text-sm text-card-foreground mb-3">Estado de Armas</h3>
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
-              <Pie data={byCondition} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label labelLine={false} fontSize={10}>
-                {byCondition.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+              <Pie data={byCondition} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label labelLine={false} fontSize={10} className="cursor-pointer" onClick={(entry: any) => onFilter?.({ condition: entry.name })}>
+                {byCondition.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} className="cursor-pointer" />)}
               </Pie>
               <Tooltip />
             </PieChart>
@@ -180,7 +180,7 @@ function PersonnelDashboard({ personnel }: { personnel: ArmedPersonnel[] }) {
               <XAxis type="number" fontSize={10} />
               <YAxis type="category" dataKey="name" width={140} fontSize={10} />
               <Tooltip />
-              <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} className="cursor-pointer" onClick={(entry: any) => onFilter?.({ province: entry.name })} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -193,7 +193,7 @@ function PersonnelDashboard({ personnel }: { personnel: ArmedPersonnel[] }) {
               <XAxis type="number" fontSize={10} />
               <YAxis type="category" dataKey="name" width={160} fontSize={10} />
               <Tooltip />
-              <Bar dataKey="value" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="value" fill="#8b5cf6" radius={[0, 4, 4, 0]} className="cursor-pointer" onClick={(entry: any) => onFilter?.({ search: entry.name })} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -204,11 +204,11 @@ function PersonnelDashboard({ personnel }: { personnel: ArmedPersonnel[] }) {
         <h3 className="font-heading font-semibold text-sm text-card-foreground mb-3">Tipos de Arma</h3>
         <div className="flex flex-wrap gap-3">
           {byWeaponType.map((wt, i) => (
-            <div key={wt.name} className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2">
+            <button key={wt.name} onClick={() => onFilter?.({ search: wt.name })} className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2 hover:bg-muted/80 hover:shadow-sm transition-all cursor-pointer">
               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
               <span className="text-sm font-medium text-card-foreground">{wt.name}</span>
               <span className="text-sm font-bold text-foreground">{wt.value}</span>
-            </div>
+            </button>
           ))}
         </div>
       </div>
@@ -660,7 +660,15 @@ const OperationsPage = () => {
                 </div>
               </div>
             </div>
-            <PersonnelDashboard personnel={personnel} />
+            <PersonnelDashboard personnel={personnel} onFilter={(filters) => {
+              if (filters.province) setFilterProvince(filters.province);
+              else setFilterProvince("");
+              if (filters.condition) setFilterCondition(filters.condition);
+              else setFilterCondition("");
+              if (filters.search) setSearch(filters.search);
+              else setSearch("");
+              setViewMode("list");
+            }} />
           </div>
         )}
 
