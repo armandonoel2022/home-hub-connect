@@ -555,10 +555,10 @@ export default function FixedAssetsManager({ onBack }: Props) {
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        <StatCard label="Total Activos" value={stats.total} color="hsl(220 70% 50%)" />
-        <StatCard label="Funcionando" value={stats.byCondicion["funcionando"] || 0} color="hsl(142 70% 45%)" />
-        <StatCard label="Averiados" value={(stats.byCondicion["averiado"] || 0) + (stats.byCondicion["en_reparacion"] || 0)} color="hsl(0 70% 50%)" />
-        <StatCard label="Valor Total" value={`RD$ ${(stats.totalCosto / 1000).toFixed(0)}K`} color="hsl(42 100% 50%)" />
+        <StatCard label="Total Activos" value={stats.total} color="hsl(220 70% 50%)" onClick={() => { setFilterType("all"); setFilterEstado("all"); setFilterUbicacion("all"); setView("list"); }} />
+        <StatCard label="Funcionando" value={stats.byCondicion["funcionando"] || 0} color="hsl(142 70% 45%)" onClick={() => { setFilterType("all"); setFilterEstado("all"); setFilterUbicacion("all"); setSearchTerm(""); setView("list"); setTimeout(() => setFilterEstado("funcionando"), 0); }} />
+        <StatCard label="Averiados" value={(stats.byCondicion["averiado"] || 0) + (stats.byCondicion["en_reparacion"] || 0)} color="hsl(0 70% 50%)" onClick={() => { setFilterType("all"); setFilterEstado("all"); setFilterUbicacion("all"); setSearchTerm(""); setView("list"); setTimeout(() => setFilterEstado("averiado"), 0); }} />
+        <StatCard label="Valor Total" value={`RD$ ${(stats.totalCosto / 1000).toFixed(0)}K`} color="hsl(42 100% 50%)" onClick={() => { setFilterType("all"); setFilterEstado("all"); setFilterUbicacion("all"); setView("list"); }} />
       </div>
 
       {/* Type breakdown */}
@@ -590,13 +590,13 @@ export default function FixedAssetsManager({ onBack }: Props) {
               const count = stats.byEstado[e.value] || 0;
               const pct = stats.total > 0 ? (count / stats.total) * 100 : 0;
               return (
-                <div key={e.value} className="flex items-center gap-2">
-                  <span className="text-xs w-24 text-muted-foreground">{e.label}</span>
+                <button key={e.value} className="flex items-center gap-2 w-full hover:bg-muted/50 rounded-md px-1 py-0.5 transition-colors" onClick={() => { setFilterType("all"); setFilterEstado(e.value); setFilterUbicacion("all"); setSearchTerm(""); setView("list"); }}>
+                  <span className="text-xs w-24 text-muted-foreground text-left">{e.label}</span>
                   <div className="flex-1 h-2 rounded-full bg-muted">
                     <div className="h-2 rounded-full" style={{ width: `${pct}%`, background: e.color }} />
                   </div>
                   <span className="text-xs font-semibold w-8 text-right">{count}</span>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -608,13 +608,13 @@ export default function FixedAssetsManager({ onBack }: Props) {
               const count = stats.byCondicion[c.value] || 0;
               const pct = stats.total > 0 ? (count / stats.total) * 100 : 0;
               return (
-                <div key={c.value} className="flex items-center gap-2">
-                  <span className="text-xs w-24 text-muted-foreground">{c.label}</span>
+                <button key={c.value} className="flex items-center gap-2 w-full hover:bg-muted/50 rounded-md px-1 py-0.5 transition-colors" onClick={() => { setFilterType("all"); setFilterEstado(c.value); setFilterUbicacion("all"); setSearchTerm(""); setView("list"); }}>
+                  <span className="text-xs w-24 text-muted-foreground text-left">{c.label}</span>
                   <div className="flex-1 h-2 rounded-full bg-muted">
                     <div className="h-2 rounded-full" style={{ width: `${pct}%`, background: c.color }} />
                   </div>
                   <span className="text-xs font-semibold w-8 text-right">{count}</span>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -639,12 +639,12 @@ export default function FixedAssetsManager({ onBack }: Props) {
 }
 
 // ── Helper components ──
-function StatCard({ label, value, color }: { label: string; value: number | string; color: string }) {
+function StatCard({ label, value, color, onClick }: { label: string; value: number | string; color: string; onClick?: () => void }) {
   return (
-    <div className="border rounded-xl p-3 bg-card">
+    <button onClick={onClick} className="border rounded-xl p-3 bg-card text-left hover:border-primary/50 hover:shadow-md transition-all cursor-pointer">
       <p className="text-[11px] text-muted-foreground">{label}</p>
       <p className="text-xl font-bold" style={{ color }}>{value}</p>
-    </div>
+    </button>
   );
 }
 
