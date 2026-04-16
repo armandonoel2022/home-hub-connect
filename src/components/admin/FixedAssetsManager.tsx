@@ -557,10 +557,10 @@ export default function FixedAssetsManager({ onBack }: Props) {
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        <StatCard label="Total Activos" value={stats.total} color="hsl(220 70% 50%)" onClick={() => { setFilterType("all"); setFilterEstado("all"); setFilterUbicacion("all"); setView("list"); }} />
-        <StatCard label="Funcionando" value={stats.byCondicion["funcionando"] || 0} color="hsl(142 70% 45%)" onClick={() => { setFilterType("all"); setFilterEstado("all"); setFilterUbicacion("all"); setSearchTerm(""); setView("list"); setTimeout(() => setFilterEstado("funcionando"), 0); }} />
-        <StatCard label="Averiados" value={(stats.byCondicion["averiado"] || 0) + (stats.byCondicion["en_reparacion"] || 0)} color="hsl(0 70% 50%)" onClick={() => { setFilterType("all"); setFilterEstado("all"); setFilterUbicacion("all"); setSearchTerm(""); setView("list"); setTimeout(() => setFilterEstado("averiado"), 0); }} />
-        <StatCard label="Valor Total" value={`RD$ ${(stats.totalCosto / 1000).toFixed(0)}K`} color="hsl(42 100% 50%)" onClick={() => { setFilterType("all"); setFilterEstado("all"); setFilterUbicacion("all"); setView("list"); }} />
+        <StatCard label="Total Activos" value={stats.total} color="hsl(220 70% 50%)" onClick={() => { setFilterType("all"); setFilterEstado("all"); setFilterCondicion("all"); setFilterUbicacion("all"); setSearchTerm(""); setView("list"); }} />
+        <StatCard label="Funcionando" value={stats.byCondicion["funcionando"] || 0} color="hsl(142 70% 45%)" onClick={() => { setFilterType("all"); setFilterEstado("all"); setFilterCondicion("funcionando"); setFilterUbicacion("all"); setSearchTerm(""); setView("list"); }} />
+        <StatCard label="Averiados" value={(stats.byCondicion["averiado"] || 0) + (stats.byCondicion["en_reparacion"] || 0)} color="hsl(0 70% 50%)" onClick={() => { setFilterType("all"); setFilterEstado("all"); setFilterCondicion("averiado"); setFilterUbicacion("all"); setSearchTerm(""); setView("list"); }} />
+        <StatCard label="Valor Total" value={`RD$ ${(stats.totalCosto / 1000).toFixed(0)}K`} color="hsl(42 100% 50%)" onClick={() => { setFilterType("all"); setFilterEstado("all"); setFilterCondicion("all"); setFilterUbicacion("all"); setSearchTerm(""); setView("list"); }} />
       </div>
 
       {/* Type breakdown */}
