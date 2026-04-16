@@ -660,7 +660,15 @@ const OperationsPage = () => {
                 </div>
               </div>
             </div>
-            <PersonnelDashboard personnel={personnel} />
+            <PersonnelDashboard personnel={personnel} onFilter={(filters) => {
+              if (filters.province) setFilterProvince(filters.province);
+              else setFilterProvince("");
+              if (filters.condition) setFilterCondition(filters.condition);
+              else setFilterCondition("");
+              if (filters.search) setSearch(filters.search);
+              else setSearch("");
+              setViewMode("list");
+            }} />
           </div>
         )}
 
