@@ -84,6 +84,7 @@ export default function FixedAssetsManager({ onBack }: Props) {
     let list = [...assets];
     if (filterType !== "all") list = list.filter(a => a.tipo === filterType);
     if (filterEstado !== "all") list = list.filter(a => a.estado === filterEstado);
+    if (filterCondicion !== "all") list = list.filter(a => a.condicion === filterCondicion);
     if (filterUbicacion !== "all") list = list.filter(a => a.ubicacion === filterUbicacion);
     if (searchTerm.trim()) {
       const t = searchTerm.toLowerCase();
