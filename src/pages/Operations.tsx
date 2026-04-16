@@ -180,7 +180,7 @@ function PersonnelDashboard({ personnel, onFilter }: { personnel: ArmedPersonnel
               <XAxis type="number" fontSize={10} />
               <YAxis type="category" dataKey="name" width={140} fontSize={10} />
               <Tooltip />
-              <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} className="cursor-pointer" onClick={(entry: any) => onFilter?.({ province: entry.name })} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -193,7 +193,7 @@ function PersonnelDashboard({ personnel, onFilter }: { personnel: ArmedPersonnel
               <XAxis type="number" fontSize={10} />
               <YAxis type="category" dataKey="name" width={160} fontSize={10} />
               <Tooltip />
-              <Bar dataKey="value" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="value" fill="#8b5cf6" radius={[0, 4, 4, 0]} className="cursor-pointer" onClick={(entry: any) => onFilter?.({ search: entry.name })} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -204,11 +204,11 @@ function PersonnelDashboard({ personnel, onFilter }: { personnel: ArmedPersonnel
         <h3 className="font-heading font-semibold text-sm text-card-foreground mb-3">Tipos de Arma</h3>
         <div className="flex flex-wrap gap-3">
           {byWeaponType.map((wt, i) => (
-            <div key={wt.name} className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2">
+            <button key={wt.name} onClick={() => onFilter?.({ search: wt.name })} className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2 hover:bg-muted/80 hover:shadow-sm transition-all cursor-pointer">
               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
               <span className="text-sm font-medium text-card-foreground">{wt.name}</span>
               <span className="text-sm font-bold text-foreground">{wt.value}</span>
-            </div>
+            </button>
           ))}
         </div>
       </div>
