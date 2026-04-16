@@ -149,8 +149,8 @@ function PersonnelDashboard({ personnel, onFilter }: { personnel: ArmedPersonnel
           <h3 className="font-heading font-semibold text-sm text-card-foreground mb-3">Estado de Armas</h3>
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
-              <Pie data={byCondition} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label labelLine={false} fontSize={10}>
-                {byCondition.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+              <Pie data={byCondition} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label labelLine={false} fontSize={10} className="cursor-pointer" onClick={(entry: any) => onFilter?.({ condition: entry.name })}>
+                {byCondition.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} className="cursor-pointer" />)}
               </Pie>
               <Tooltip />
             </PieChart>
