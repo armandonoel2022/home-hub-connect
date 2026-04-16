@@ -46,6 +46,7 @@ export default function FixedAssetsManager({ onBack }: Props) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterEstado, setFilterEstado] = useState<string>("all");
+  const [filterCondicion, setFilterCondicion] = useState<string>("all");
   const [filterUbicacion, setFilterUbicacion] = useState<string>("all");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
@@ -83,6 +84,7 @@ export default function FixedAssetsManager({ onBack }: Props) {
     let list = [...assets];
     if (filterType !== "all") list = list.filter(a => a.tipo === filterType);
     if (filterEstado !== "all") list = list.filter(a => a.estado === filterEstado);
+    if (filterCondicion !== "all") list = list.filter(a => a.condicion === filterCondicion);
     if (filterUbicacion !== "all") list = list.filter(a => a.ubicacion === filterUbicacion);
     if (searchTerm.trim()) {
       const t = searchTerm.toLowerCase();
@@ -95,7 +97,7 @@ export default function FixedAssetsManager({ onBack }: Props) {
       );
     }
     return list;
-  }, [assets, filterType, filterEstado, filterUbicacion, searchTerm]);
+  }, [assets, filterType, filterEstado, filterCondicion, filterUbicacion, searchTerm]);
 
   // ── CRUD handlers ──
   const handleSaveAsset = () => {
@@ -476,6 +478,18 @@ export default function FixedAssetsManager({ onBack }: Props) {
               {ESTADOS.map(e => <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>)}
             </SelectContent>
           </Select>
+          <Select value={filterCondicion} onValueChange={setFilterCondicion}>
+            <SelectTrigger className="w-[140px]"><SelectValue placeholder="Condición" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              {CONDICIONES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          {(filterType !== "all" || filterEstado !== "all" || filterCondicion !== "all" || filterUbicacion !== "all") && (
+            <Button variant="ghost" size="sm" onClick={() => { setFilterType("all"); setFilterEstado("all"); setFilterCondicion("all"); setFilterUbicacion("all"); }} className="text-xs text-muted-foreground">
+              Limpiar filtros
+            </Button>
+          )}
         </div>
 
         <p className="text-xs text-muted-foreground mb-2">{filtered.length} activos encontrados</p>
@@ -555,10 +569,10 @@ export default function FixedAssetsManager({ onBack }: Props) {
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        <StatCard label="Total Activos" value={stats.total} color="hsl(220 70% 50%)" />
-        <StatCard label="Funcionando" value={stats.byCondicion["funcionando"] || 0} color="hsl(142 70% 45%)" />
-        <StatCard label="Averiados" value={(stats.byCondicion["averiado"] || 0) + (stats.byCondicion["en_reparacion"] || 0)} color="hsl(0 70% 50%)" />
-        <StatCard label="Valor Total" value={`RD$ ${(stats.totalCosto / 1000).toFixed(0)}K`} color="hsl(42 100% 50%)" />
+        <StatCard label="Total Activos" value={stats.total} color="hsl(220 70% 50%)" onClick={() => { setFilterType("all"); setFilterEstado("all"); setFilterCondicion("all"); setFilterUbicacion("all"); setSearchTerm(""); setView("list"); }} />
+        <StatCard label="Funcionando" value={stats.byCondicion["funcionando"] || 0} color="hsl(142 70% 45%)" onClick={() => { setFilterType("all"); setFilterEstado("all"); setFilterCondicion("funcionando"); setFilterUbicacion("all"); setSearchTerm(""); setView("list"); }} />
+        <StatCard label="Averiados" value={(stats.byCondicion["averiado"] || 0) + (stats.byCondicion["en_reparacion"] || 0)} color="hsl(0 70% 50%)" onClick={() => { setFilterType("all"); setFilterEstado("all"); setFilterCondicion("averiado"); setFilterUbicacion("all"); setSearchTerm(""); setView("list"); }} />
+        <StatCard label="Valor Total" value={`RD$ ${(stats.totalCosto / 1000).toFixed(0)}K`} color="hsl(42 100% 50%)" onClick={() => { setFilterType("all"); setFilterEstado("all"); setFilterCondicion("all"); setFilterUbicacion("all"); setSearchTerm(""); setView("list"); }} />
       </div>
 
       {/* Type breakdown */}
@@ -571,7 +585,7 @@ export default function FixedAssetsManager({ onBack }: Props) {
             <button
               key={code}
               className="flex items-center gap-2 p-2 rounded-lg border hover:border-primary/50 hover:bg-muted/50 transition-all text-left"
-              onClick={() => { setFilterType(code); setView("list"); }}
+              onClick={() => { setFilterType(code); setFilterEstado("all"); setFilterCondicion("all"); setFilterUbicacion("all"); setSearchTerm(""); setView("list"); }}
             >
               <span className="text-xs font-mono font-bold text-primary">{code}</span>
               <span className="text-xs truncate flex-1">{getAssetTypeLabel(code)}</span>
@@ -590,13 +604,13 @@ export default function FixedAssetsManager({ onBack }: Props) {
               const count = stats.byEstado[e.value] || 0;
               const pct = stats.total > 0 ? (count / stats.total) * 100 : 0;
               return (
-                <div key={e.value} className="flex items-center gap-2">
-                  <span className="text-xs w-24 text-muted-foreground">{e.label}</span>
+                <button key={e.value} className="flex items-center gap-2 w-full hover:bg-muted/50 rounded-md px-1 py-0.5 transition-colors" onClick={() => { setFilterType("all"); setFilterEstado(e.value); setFilterCondicion("all"); setFilterUbicacion("all"); setSearchTerm(""); setView("list"); }}>
+                  <span className="text-xs w-24 text-muted-foreground text-left">{e.label}</span>
                   <div className="flex-1 h-2 rounded-full bg-muted">
                     <div className="h-2 rounded-full" style={{ width: `${pct}%`, background: e.color }} />
                   </div>
                   <span className="text-xs font-semibold w-8 text-right">{count}</span>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -608,13 +622,13 @@ export default function FixedAssetsManager({ onBack }: Props) {
               const count = stats.byCondicion[c.value] || 0;
               const pct = stats.total > 0 ? (count / stats.total) * 100 : 0;
               return (
-                <div key={c.value} className="flex items-center gap-2">
-                  <span className="text-xs w-24 text-muted-foreground">{c.label}</span>
+                <button key={c.value} className="flex items-center gap-2 w-full hover:bg-muted/50 rounded-md px-1 py-0.5 transition-colors" onClick={() => { setFilterType("all"); setFilterEstado("all"); setFilterCondicion(c.value); setFilterUbicacion("all"); setSearchTerm(""); setView("list"); }}>
+                  <span className="text-xs w-24 text-muted-foreground text-left">{c.label}</span>
                   <div className="flex-1 h-2 rounded-full bg-muted">
                     <div className="h-2 rounded-full" style={{ width: `${pct}%`, background: c.color }} />
                   </div>
                   <span className="text-xs font-semibold w-8 text-right">{count}</span>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -639,12 +653,12 @@ export default function FixedAssetsManager({ onBack }: Props) {
 }
 
 // ── Helper components ──
-function StatCard({ label, value, color }: { label: string; value: number | string; color: string }) {
+function StatCard({ label, value, color, onClick }: { label: string; value: number | string; color: string; onClick?: () => void }) {
   return (
-    <div className="border rounded-xl p-3 bg-card">
+    <button onClick={onClick} className="border rounded-xl p-3 bg-card text-left hover:border-primary/50 hover:shadow-md transition-all cursor-pointer">
       <p className="text-[11px] text-muted-foreground">{label}</p>
       <p className="text-xl font-bold" style={{ color }}>{value}</p>
-    </div>
+    </button>
   );
 }
 
