@@ -46,6 +46,7 @@ export default function FixedAssetsManager({ onBack }: Props) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterEstado, setFilterEstado] = useState<string>("all");
+  const [filterCondicion, setFilterCondicion] = useState<string>("all");
   const [filterUbicacion, setFilterUbicacion] = useState<string>("all");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
