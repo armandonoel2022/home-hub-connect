@@ -128,17 +128,17 @@ function PersonnelDashboard({ personnel, onFilter }: { personnel: ArmedPersonnel
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
-          { label: "Total Personal", value: personnel.length, color: "bg-card border-border" },
-          { label: "Buen Estado", value: goodCond, color: "bg-emerald-50 border-emerald-200 text-emerald-700" },
-          { label: "Mantenimiento", value: needsMaint, color: "bg-amber-50 border-amber-200 text-amber-700" },
-          { label: "Con Ubicación", value: withCoords, color: "bg-blue-50 border-blue-200 text-blue-700" },
-          { label: "Cápsulas Total", value: totalAmmo, color: "bg-purple-50 border-purple-200 text-purple-700" },
-          { label: "Puestos Vacíos", value: unfilledPosts.length, color: unfilledPosts.length > 0 ? "bg-red-50 border-red-200 text-red-700" : "bg-card border-border" },
+          { label: "Total Personal", value: personnel.length, color: "bg-card border-border", onClick: () => onFilter?.({}) },
+          { label: "Buen Estado", value: goodCond, color: "bg-emerald-50 border-emerald-200 text-emerald-700", onClick: () => onFilter?.({ condition: "En buenas condiciones" }) },
+          { label: "Mantenimiento", value: needsMaint, color: "bg-amber-50 border-amber-200 text-amber-700", onClick: () => onFilter?.({ condition: "Falta de mantenimiento" }) },
+          { label: "Con Ubicación", value: withCoords, color: "bg-blue-50 border-blue-200 text-blue-700", onClick: () => onFilter?.({}) },
+          { label: "Cápsulas Total", value: totalAmmo, color: "bg-purple-50 border-purple-200 text-purple-700", onClick: () => onFilter?.({}) },
+          { label: "Puestos Vacíos", value: unfilledPosts.length, color: unfilledPosts.length > 0 ? "bg-red-50 border-red-200 text-red-700" : "bg-card border-border", onClick: () => onFilter?.({}) },
         ].map(kpi => (
-          <div key={kpi.label} className={`border rounded-xl p-3 text-center ${kpi.color}`}>
+          <button key={kpi.label} onClick={kpi.onClick} className={`border rounded-xl p-3 text-center cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all ${kpi.color}`}>
             <p className="text-2xl font-bold">{kpi.value}</p>
             <p className="text-xs">{kpi.label}</p>
-          </div>
+          </button>
         ))}
       </div>
 
