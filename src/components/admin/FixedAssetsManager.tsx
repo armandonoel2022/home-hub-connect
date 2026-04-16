@@ -97,7 +97,7 @@ export default function FixedAssetsManager({ onBack }: Props) {
       );
     }
     return list;
-  }, [assets, filterType, filterEstado, filterUbicacion, searchTerm]);
+  }, [assets, filterType, filterEstado, filterCondicion, filterUbicacion, searchTerm]);
 
   // ── CRUD handlers ──
   const handleSaveAsset = () => {
