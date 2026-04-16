@@ -585,7 +585,7 @@ export default function FixedAssetsManager({ onBack }: Props) {
             <button
               key={code}
               className="flex items-center gap-2 p-2 rounded-lg border hover:border-primary/50 hover:bg-muted/50 transition-all text-left"
-              onClick={() => { setFilterType(code); setView("list"); }}
+              onClick={() => { setFilterType(code); setFilterEstado("all"); setFilterCondicion("all"); setFilterUbicacion("all"); setSearchTerm(""); setView("list"); }}
             >
               <span className="text-xs font-mono font-bold text-primary">{code}</span>
               <span className="text-xs truncate flex-1">{getAssetTypeLabel(code)}</span>
