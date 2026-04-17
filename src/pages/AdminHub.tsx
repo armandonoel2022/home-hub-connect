@@ -377,6 +377,10 @@ const AdminHub = () => {
               <Receipt className="h-4 w-4" />
               Gastos Menores
             </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate("/admin/flotilla-mantenimiento")} className="gap-2">
+              <Wrench className="h-4 w-4" />
+              Flotilla — Mantenimiento
+            </Button>
           </div>
 
           {/* Search */}
