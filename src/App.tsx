@@ -45,6 +45,7 @@ import Reports from "./pages/Reports";
 import TechTasks from "./pages/TechTasks";
 import ClientTracking from "./pages/ClientTracking";
 import AdminHub from "./pages/AdminHub";
+import FleetMaintenance from "./pages/FleetMaintenance";
 import NotFound from "./pages/NotFound";
 
 
@@ -102,6 +103,7 @@ function ProtectedRoutes() {
         <Route path="/rrhh/formularios" element={<HRForms />} />
         <Route path="/admin/formularios" element={<AdminForms />} />
         <Route path="/admin/hub" element={<AdminHub />} />
+        <Route path="/admin/flotilla-mantenimiento" element={<FleetMaintenance />} />
         <Route path="/monitoreo" element={<MonitoringCenter />} />
         <Route path="/centro-operaciones" element={<OperationsCenter />} />
         <Route path="/basc" element={<BASC />} />
