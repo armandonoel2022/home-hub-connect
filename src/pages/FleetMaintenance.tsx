@@ -104,6 +104,33 @@ export default function FleetMaintenance() {
     return Object.entries(totals.byTaller).sort((a, b) => b[1] - a[1]).slice(0, 6);
   }, [totals]);
 
+  // ── Access gate (after all hooks) ──
+  if (!hasAccess) {
+    return (
+      <AppLayout>
+        <Navbar />
+        <main className="flex-1 bg-background min-h-screen">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
+            <Button variant="ghost" onClick={() => navigate("/")} className="mb-4 gap-2">
+              <ArrowLeft className="h-4 w-4" /> Volver
+            </Button>
+            <Card className="border-destructive/40">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-destructive">
+                  <ShieldAlert className="h-5 w-5" /> Acceso restringido
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground">
+                Este módulo es exclusivo para Administración (Chrisnel Fabián) y Gerencia General.
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+        <Footer />
+      </AppLayout>
+    );
+  }
+
   // ── Render ──
   return (
     <AppLayout>
