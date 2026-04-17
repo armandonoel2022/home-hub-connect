@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Receipt, Banknote, Calculator, ShoppingCart, Package, FolderOpen,
   ChevronRight, CheckCircle2, Clock, AlertCircle, ClipboardList, Plus,
-  FileText, Search, BarChart3, Trash2,
+  FileText, Search, BarChart3, Trash2, Wrench,
 } from "lucide-react";
 import {
   ADMIN_CATEGORIES, ADMIN_PROCESSES,
@@ -376,6 +376,10 @@ const AdminHub = () => {
             <Button variant="outline" size="sm" onClick={() => navigate("/gastos-menores")} className="gap-2">
               <Receipt className="h-4 w-4" />
               Gastos Menores
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate("/admin/flotilla-mantenimiento")} className="gap-2">
+              <Wrench className="h-4 w-4" />
+              Flotilla — Mantenimiento
             </Button>
           </div>
 
