@@ -43,7 +43,7 @@ import type { AppNotification } from "@/lib/types";
 import { useState, useCallback, useEffect } from "react";
 
 // ─── Helper: localStorage state manager for mock mode ───
-const SEED_VERSION = "v5"; // Bump this to force re-seed of mock data
+const SEED_VERSION = "v6-remit-matrix"; // Bump this to force re-seed of mock data (last bump: armed personnel updated with Remit Lopez matrix)
 
 function useLocalState<T>(key: string, initial: T[]) {
   const [data, setData] = useState<T[]>(() => {

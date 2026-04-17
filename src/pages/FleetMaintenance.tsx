@@ -393,8 +393,17 @@ export default function FleetMaintenance() {
             {/* ───────── ANNUAL COST MATRIX ───────── */}
             <TabsContent value="annual" className="mt-6">
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Costo de mantenimiento anual 2026</CardTitle>
+                <CardHeader className="flex flex-row items-start justify-between gap-4 flex-wrap">
+                  <div>
+                    <CardTitle className="text-base">Costo de mantenimiento anual {new Date().getFullYear()}</CardTitle>
+                    <p className="text-xs text-muted-foreground mt-1">Acumulado al {new Date().toLocaleDateString("es-DO")}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Total año en curso</p>
+                    <p className="text-2xl font-bold text-primary tabular-nums">
+                      {formatRD(annual.reduce((s, r) => s + r.total, 0))}
+                    </p>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
@@ -431,6 +440,25 @@ export default function FleetMaintenance() {
                             </TableCell>
                           </TableRow>
                         ))}
+                        {/* ─── Totals row ─── */}
+                        <TableRow className="bg-muted/60 border-t-2 border-primary/40 font-bold">
+                          <TableCell className="text-sm font-bold">TOTAL GENERAL {new Date().getFullYear()}</TableCell>
+                          <TableCell />
+                          {Object.keys(MONTH_LABELS).map((m) => {
+                            const monthTotal = annual.reduce(
+                              (s, r) => s + (r.monthly[m as keyof typeof r.monthly] || 0),
+                              0,
+                            );
+                            return (
+                              <TableCell key={m} className="text-right text-xs tabular-nums font-bold text-primary">
+                                {monthTotal ? monthTotal.toLocaleString("es-DO", { maximumFractionDigits: 0 }) : "—"}
+                              </TableCell>
+                            );
+                          })}
+                          <TableCell className="text-right text-sm font-bold text-primary tabular-nums">
+                            {formatRD(annual.reduce((s, r) => s + r.total, 0))}
+                          </TableCell>
+                        </TableRow>
                       </TableBody>
                     </Table>
                   </div>
