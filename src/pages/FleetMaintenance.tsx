@@ -431,6 +431,25 @@ export default function FleetMaintenance() {
                             </TableCell>
                           </TableRow>
                         ))}
+                        {/* ─── Totals row ─── */}
+                        <TableRow className="bg-muted/60 border-t-2 border-primary/40 font-bold">
+                          <TableCell className="text-sm font-bold">TOTAL GENERAL {new Date().getFullYear()}</TableCell>
+                          <TableCell />
+                          {Object.keys(MONTH_LABELS).map((m) => {
+                            const monthTotal = annual.reduce(
+                              (s, r) => s + (r.monthly[m as keyof typeof r.monthly] || 0),
+                              0,
+                            );
+                            return (
+                              <TableCell key={m} className="text-right text-xs tabular-nums font-bold text-primary">
+                                {monthTotal ? monthTotal.toLocaleString("es-DO", { maximumFractionDigits: 0 }) : "—"}
+                              </TableCell>
+                            );
+                          })}
+                          <TableCell className="text-right text-sm font-bold text-primary tabular-nums">
+                            {formatRD(annual.reduce((s, r) => s + r.total, 0))}
+                          </TableCell>
+                        </TableRow>
                       </TableBody>
                     </Table>
                   </div>
