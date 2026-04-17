@@ -393,8 +393,17 @@ export default function FleetMaintenance() {
             {/* ───────── ANNUAL COST MATRIX ───────── */}
             <TabsContent value="annual" className="mt-6">
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Costo de mantenimiento anual 2026</CardTitle>
+                <CardHeader className="flex flex-row items-start justify-between gap-4 flex-wrap">
+                  <div>
+                    <CardTitle className="text-base">Costo de mantenimiento anual {new Date().getFullYear()}</CardTitle>
+                    <p className="text-xs text-muted-foreground mt-1">Acumulado al {new Date().toLocaleDateString("es-DO")}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Total año en curso</p>
+                    <p className="text-2xl font-bold text-primary tabular-nums">
+                      {formatRD(annual.reduce((s, r) => s + r.total, 0))}
+                    </p>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
