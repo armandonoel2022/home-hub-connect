@@ -265,7 +265,7 @@ export default function FleetMaintenance() {
                             <span className="text-muted-foreground">{formatRD(value)}</span>
                           </div>
                           <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                            <div className="h-full bg-emerald-500 group-hover:opacity-80 transition-all" style={{ width: `${pct}%` }} />
+                            <div className="h-full bg-accent group-hover:opacity-80 transition-all" style={{ width: `${pct}%` }} />
                           </div>
                         </button>
                       );
