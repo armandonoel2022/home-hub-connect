@@ -348,6 +348,25 @@ export const processesApi = {
     apiFetch<any>(`/department-processes/${id}/checklist`, { method: "PUT", body: JSON.stringify({ checklist }) }),
 };
 
+// ─── Fleet Maintenance API ───
+export const fleetMaintenanceApi = {
+  getAll: () => apiFetch<any>("/fleet-maintenance"),
+  createEntry: (entry: any) =>
+    apiFetch<any>("/fleet-maintenance/maintenance", { method: "POST", body: JSON.stringify(entry) }),
+  updateEntry: (id: string, data: any) =>
+    apiFetch<any>(`/fleet-maintenance/maintenance/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteEntry: (id: string) =>
+    apiFetch<void>(`/fleet-maintenance/maintenance/${id}`, { method: "DELETE" }),
+  createUnit: (u: any) =>
+    apiFetch<any>("/fleet-maintenance/fleet", { method: "POST", body: JSON.stringify(u) }),
+  updateUnit: (placa: string, data: any) =>
+    apiFetch<any>(`/fleet-maintenance/fleet/${encodeURIComponent(placa)}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteUnit: (placa: string) =>
+    apiFetch<void>(`/fleet-maintenance/fleet/${encodeURIComponent(placa)}`, { method: "DELETE" }),
+  normalizeTalleres: () =>
+    apiFetch<{ changed: number }>("/fleet-maintenance/normalize-talleres", { method: "POST" }),
+};
+
 // ─── Audit Log API ───
 export const auditApi = {
   getAll: (filters?: Record<string, string>) => {
