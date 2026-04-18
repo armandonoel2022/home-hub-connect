@@ -367,20 +367,50 @@ const AdminHub = () => {
             </div>
           </div>
 
-          {/* Quick links */}
-          <div className="flex flex-wrap gap-2 mt-4 mb-6">
-            <Button variant="outline" size="sm" onClick={() => navigate("/admin/formularios")} className="gap-2">
-              <FileText className="h-4 w-4" />
-              Órdenes de Compra / Servicio
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate("/gastos-menores")} className="gap-2">
-              <Receipt className="h-4 w-4" />
-              Gastos Menores
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate("/admin/flotilla-mantenimiento")} className="gap-2">
-              <Wrench className="h-4 w-4" />
-              Flotilla — Mantenimiento
-            </Button>
+          {/* Accesos destacados */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 mb-6">
+            {[
+              {
+                label: "Órdenes de Compra / Servicio",
+                desc: "Generar OC y OS con numeración automática",
+                icon: FileText,
+                to: "/admin/formularios",
+                gradient: "from-primary/15 via-primary/5 to-transparent",
+                iconBg: "bg-primary/15 text-primary",
+              },
+              {
+                label: "Gastos Menores",
+                desc: "Caja chica y tarjetas corporativas",
+                icon: Receipt,
+                to: "/gastos-menores",
+                gradient: "from-accent/20 via-accent/5 to-transparent",
+                iconBg: "bg-accent/20 text-accent-foreground",
+              },
+              {
+                label: "Flotilla — Mantenimiento",
+                desc: "Reparaciones y gastos de la flotilla",
+                icon: Wrench,
+                to: "/admin/flotilla-mantenimiento",
+                gradient: "from-secondary/40 via-secondary/10 to-transparent",
+                iconBg: "bg-secondary text-secondary-foreground",
+              },
+            ].map(({ label, desc, icon: Icon, to, gradient, iconBg }) => (
+              <button
+                key={to}
+                onClick={() => navigate(to)}
+                className={`group relative overflow-hidden rounded-xl border bg-gradient-to-br ${gradient} p-4 text-left transition-all hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`shrink-0 h-11 w-11 rounded-lg ${iconBg} flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform`}>
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-sm text-foreground leading-tight">{label}</p>
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{desc}</p>
+                  </div>
+                </div>
+              </button>
+            ))}
           </div>
 
           {/* Search */}
