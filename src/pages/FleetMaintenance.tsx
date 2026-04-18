@@ -309,11 +309,11 @@ export default function FleetMaintenance() {
               <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2">
                 Control de gastos por unidad. Responsable: Chrisnel Fabián
                 {loading ? null : serverOnline ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600">
+                  <span className="inline-flex items-center gap-1 text-[11px] text-primary">
                     <Cloud className="h-3 w-3" /> Sincronizado con servidor
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 text-[11px] text-amber-600">
+                  <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
                     <CloudOff className="h-3 w-3" /> Modo local (sin servidor)
                   </span>
                 )}
