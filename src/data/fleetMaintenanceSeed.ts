@@ -941,7 +941,7 @@ export const FLEET_SEED: FleetSeed = {
       "asignacion": null,
       "fecha": "2025-11-12",
       "tipoMant": "Mantenimiento",
-      "taller": "Motoservic Campe",
+      "taller": "Moto Servic Campe",
       "kilometraje": null,
       "costo": 10631.8,
       "detalle": "Combio de bateria , aceite, Valvula, Piston, Banda de frenos"
