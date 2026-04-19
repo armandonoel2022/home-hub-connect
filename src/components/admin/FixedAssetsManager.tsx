@@ -155,13 +155,33 @@ export default function FixedAssetsManager({ onBack }: Props) {
     if (!content) return;
     const win = window.open("", "_blank");
     if (!win) return;
+    // Etiqueta Brother estándar 62 x 29 mm
     win.document.write(`
-      <html><head><title>Etiqueta Activo Fijo</title>
+      <html><head><title>Etiqueta ${selectedAsset?.id || ""}</title>
       <style>
-        body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
-        @media print { body { padding: 0; } }
+        @page { size: 62mm 29mm; margin: 0; }
+        html, body { margin: 0; padding: 0; }
+        body { font-family: Arial, Helvetica, sans-serif; color: #000; background: #fff; }
+        .label {
+          width: 62mm; height: 29mm;
+          box-sizing: border-box;
+          padding: 1.5mm 2mm;
+          display: flex; align-items: center; gap: 2mm;
+          overflow: hidden;
+        }
+        .label .qr { flex-shrink: 0; }
+        .label .qr svg { width: 24mm; height: 24mm; display: block; }
+        .label .info { flex: 1; min-width: 0; line-height: 1.15; }
+        .label .info .empresa { font-size: 6pt; font-weight: 700; letter-spacing: 0.2px; }
+        .label .info .id { font-size: 11pt; font-weight: 800; margin-top: 0.5mm; word-break: break-all; }
+        .label .info .serie { font-size: 7pt; margin-top: 0.5mm; word-break: break-all; }
+        .label .info .tipo { font-size: 6pt; color: #444; margin-top: 0.5mm; }
+        @media screen {
+          body { padding: 20px; background: #f3f3f3; }
+          .label { border: 1px dashed #999; background: #fff; margin: 0 auto; }
+        }
       </style></head>
-      <body>${content.innerHTML}</body></html>
+      <body><div class="label">${content.innerHTML}</div></body></html>
     `);
     win.document.close();
     setTimeout(() => { win.print(); win.close(); }, 400);
