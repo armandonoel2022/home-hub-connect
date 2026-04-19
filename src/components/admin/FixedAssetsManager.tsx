@@ -155,13 +155,33 @@ export default function FixedAssetsManager({ onBack }: Props) {
     if (!content) return;
     const win = window.open("", "_blank");
     if (!win) return;
+    // Etiqueta Brother estándar 62 x 29 mm
     win.document.write(`
-      <html><head><title>Etiqueta Activo Fijo</title>
+      <html><head><title>Etiqueta ${selectedAsset?.id || ""}</title>
       <style>
-        body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
-        @media print { body { padding: 0; } }
+        @page { size: 62mm 29mm; margin: 0; }
+        html, body { margin: 0; padding: 0; }
+        body { font-family: Arial, Helvetica, sans-serif; color: #000; background: #fff; }
+        .label {
+          width: 62mm; height: 29mm;
+          box-sizing: border-box;
+          padding: 1.5mm 2mm;
+          display: flex; align-items: center; gap: 2mm;
+          overflow: hidden;
+        }
+        .label .qr { flex-shrink: 0; }
+        .label .qr svg { width: 24mm; height: 24mm; display: block; }
+        .label .info { flex: 1; min-width: 0; line-height: 1.15; }
+        .label .info .empresa { font-size: 6pt; font-weight: 700; letter-spacing: 0.2px; }
+        .label .info .id { font-size: 11pt; font-weight: 800; margin-top: 0.5mm; word-break: break-all; }
+        .label .info .serie { font-size: 7pt; margin-top: 0.5mm; word-break: break-all; }
+        .label .info .tipo { font-size: 6pt; color: #444; margin-top: 0.5mm; }
+        @media screen {
+          body { padding: 20px; background: #f3f3f3; }
+          .label { border: 1px dashed #999; background: #fff; margin: 0 auto; }
+        }
       </style></head>
-      <body>${content.innerHTML}</body></html>
+      <body><div class="label">${content.innerHTML}</div></body></html>
     `);
     win.document.close();
     setTimeout(() => { win.print(); win.close(); }, 400);
@@ -187,19 +207,8 @@ export default function FixedAssetsManager({ onBack }: Props) {
   // ══════════════════════════════════════════
   if (view === "label" && selectedAsset) {
     const a = selectedAsset;
-    const qrData = JSON.stringify({
-      empresa: "SAFEONE SECURITY",
-      codigo: a.id,
-      tipo: getAssetTypeLabel(a.tipo),
-      marca: a.marca,
-      modelo: a.modelo,
-      serial: a.serial,
-      asignado: a.asignadoA,
-      ubicacion: a.ubicacion,
-      estado: a.estado,
-      condicion: a.condicion,
-      fecha: a.fechaAdquisicion,
-    });
+    // QR codifica SOLO el ID del activo para máxima compatibilidad con cualquier lector
+    const qrData = a.id;
 
     return (
       <div>
@@ -209,38 +218,57 @@ export default function FixedAssetsManager({ onBack }: Props) {
 
         <div className="flex justify-end mb-4">
           <Button onClick={handlePrintLabel} className="gap-2">
-            <Printer className="h-4 w-4" /> Imprimir Etiqueta
+            <Printer className="h-4 w-4" /> Imprimir Etiqueta (62×29 mm)
           </Button>
         </div>
 
-        <div ref={printRef} className="max-w-md mx-auto border-2 border-foreground rounded-lg p-4 bg-white text-black">
-          <div className="flex gap-4">
-            {/* Left: Logo placeholder */}
-            <div className="flex-shrink-0 w-16 h-16 bg-primary rounded-lg flex items-center justify-center">
-              <Shield className="h-8 w-8 text-primary-foreground" />
-            </div>
-            {/* Right: Data */}
-            <div className="flex-1 text-xs space-y-1">
-              <p className="font-bold text-sm">Propiedad de SafeOne Security Company</p>
-              <p><span className="font-semibold">Activo Fijo:</span> {a.id}</p>
-              <p><span className="font-semibold">Serie:</span> {a.serial || "N/A"}</p>
-            </div>
-          </div>
-          {/* QR */}
-          <div className="mt-3 flex justify-center">
-            <QRCodeSVG value={qrData} size={120} level="M" />
-          </div>
-          <p className="text-center text-[9px] mt-1 text-gray-500">
-            Escanear para ver información del activo
+        {/* Preview en pantalla con proporciones reales 62x29 mm escalado */}
+        <div className="mx-auto mb-4" style={{ width: "62mm" }}>
+          <p className="text-xs text-muted-foreground text-center mb-2">
+            Vista previa tamaño real (62 × 29 mm)
           </p>
+          <div
+            className="border-2 border-dashed border-muted-foreground bg-white text-black flex items-center gap-[2mm] overflow-hidden"
+            style={{ width: "62mm", height: "29mm", padding: "1.5mm 2mm", boxSizing: "border-box" }}
+          >
+            {/* Contenido replicado del printRef para visualización */}
+            <div className="flex-shrink-0">
+              <QRCodeSVG value={qrData} size={91} level="M" /> {/* 24mm ≈ 91px @ 96dpi */}
+            </div>
+            <div className="flex-1 min-w-0 leading-tight" style={{ fontFamily: "Arial, sans-serif" }}>
+              <div style={{ fontSize: "6pt", fontWeight: 700 }}>SAFEONE SECURITY COMPANY</div>
+              <div style={{ fontSize: "11pt", fontWeight: 800, marginTop: "0.5mm", wordBreak: "break-all" }}>{a.id}</div>
+              {a.serial && (
+                <div style={{ fontSize: "7pt", marginTop: "0.5mm", wordBreak: "break-all" }}>S/N: {a.serial}</div>
+              )}
+              <div style={{ fontSize: "6pt", color: "#444", marginTop: "0.5mm" }}>{getAssetTypeLabel(a.tipo)}</div>
+            </div>
+          </div>
         </div>
 
-        {/* QR Preview Info */}
+        {/* Contenido oculto que se inyecta a la ventana de impresión */}
+        <div ref={printRef} className="hidden">
+          <div className="qr">
+            <QRCodeSVG value={qrData} size={256} level="M" />
+          </div>
+          <div className="info">
+            <div className="empresa">SAFEONE SECURITY COMPANY</div>
+            <div className="id">{a.id}</div>
+            {a.serial && <div className="serie">S/N: {a.serial}</div>}
+            <div className="tipo">{getAssetTypeLabel(a.tipo)}</div>
+          </div>
+        </div>
+
+        {/* Info de qué codifica el QR */}
         <div className="max-w-md mx-auto mt-4 border rounded-lg p-4 bg-card">
-          <h3 className="font-semibold text-sm mb-2">Datos visibles al escanear:</h3>
+          <h3 className="font-semibold text-sm mb-2">Datos codificados en el QR:</h3>
+          <p className="text-xs text-muted-foreground mb-2">
+            El QR codifica únicamente el ID del activo para que cualquier lector estándar lo interprete sin depender de red ni servidor.
+          </p>
+          <code className="block text-sm bg-muted px-2 py-1 rounded font-mono">{qrData}</code>
+
+          <h3 className="font-semibold text-sm mt-4 mb-2">Datos de referencia (no escaneables):</h3>
           <div className="text-xs space-y-1 text-muted-foreground">
-            <p><strong>SAFEONE SECURITY</strong></p>
-            <p>{a.id}</p>
             <p>Tipo: {getAssetTypeLabel(a.tipo)}</p>
             <p>Marca: {a.marca || "—"}</p>
             <p>Modelo: {a.modelo || "—"}</p>
