@@ -10,8 +10,9 @@ import {
   ArrowLeft, Plus, Search, Trash2, Edit2, Eye, Printer, X,
   Package, Shield, Laptop, Monitor, Car, Radio, Phone,
   Camera, Wind, Zap, Calculator, Archive, Armchair,
-  BarChart3, Filter, Download, ChevronDown,
+  BarChart3, Filter, Download, ChevronDown, KeyRound,
 } from "lucide-react";
+import KeysManager from "./KeysManager";
 import {
   type FixedAsset, type AssetTypeCode,
   ASSET_TYPES, ESTADOS, CONDICIONES, UBICACIONES, DEPARTAMENTOS,
