@@ -176,6 +176,13 @@ export default function FixedAssetsManager({ onBack }: Props) {
   }
 
   // ══════════════════════════════════════════
+  //  KEYS VIEW (Control de Llaves)
+  // ══════════════════════════════════════════
+  if (view === "keys") {
+    return <KeysManager onBack={() => setView("dashboard")} />;
+  }
+
+  // ══════════════════════════════════════════
   //  LABEL VIEW
   // ══════════════════════════════════════════
   if (view === "label" && selectedAsset) {
