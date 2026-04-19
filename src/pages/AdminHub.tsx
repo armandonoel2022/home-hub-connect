@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import FixedAssetsManager from "@/components/admin/FixedAssetsManager";
+import KeysManager from "@/components/admin/KeysManager";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import Navbar from "@/components/Navbar";
@@ -43,6 +44,7 @@ const AdminHub = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedProcess, setSelectedProcess] = useState<AdminProcess | null>(null);
   const [showFixedAssets, setShowFixedAssets] = useState(false);
+  const [showKeys, setShowKeys] = useState(false);
   const [checklistState, setChecklistState] = useState<ChecklistState>(getChecklistState);
   const [activities, setActivities] = useState<AdminActivityEntry[]>(getAdminActivities);
   const [newNote, setNewNote] = useState("");
@@ -120,6 +122,21 @@ const AdminHub = () => {
               <ArrowLeft className="h-4 w-4" /> Volver al Hub
             </Button>
             <FixedAssetsManager onBack={() => setShowFixedAssets(false)} />
+          </div>
+        </main>
+        <Footer />
+      </AppLayout>
+    );
+  }
+
+  // ── Keys Control view ──
+  if (showKeys) {
+    return (
+      <AppLayout>
+        <Navbar />
+        <main className="flex-1 bg-background min-h-screen">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+            <KeysManager onBack={() => setShowKeys(false)} />
           </div>
         </main>
         <Footer />
@@ -299,6 +316,8 @@ const AdminHub = () => {
                     onClick={() => {
                       if (proc.name === "Gestión de activos fijos") {
                         setShowFixedAssets(true);
+                      } else if (proc.name === "Control de llaves") {
+                        setShowKeys(true);
                       } else {
                         setSelectedProcess(proc);
                       }

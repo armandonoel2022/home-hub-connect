@@ -566,9 +566,6 @@ export default function FixedAssetsManager({ onBack }: Props) {
           <p className="text-sm text-muted-foreground">Gestión integral del inventario de activos</p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" onClick={() => setView("keys")} className="gap-2">
-            <KeyRound className="h-4 w-4" /> Control de Llaves
-          </Button>
           <Button variant="outline" onClick={() => setView("list")} className="gap-2">
             <Search className="h-4 w-4" /> Ver Inventario
           </Button>
