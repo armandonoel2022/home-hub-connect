@@ -10,8 +10,9 @@ import {
   ArrowLeft, Plus, Search, Trash2, Edit2, Eye, Printer, X,
   Package, Shield, Laptop, Monitor, Car, Radio, Phone,
   Camera, Wind, Zap, Calculator, Archive, Armchair,
-  BarChart3, Filter, Download, ChevronDown,
+  BarChart3, Filter, Download, ChevronDown, KeyRound,
 } from "lucide-react";
+import KeysManager from "./KeysManager";
 import {
   type FixedAsset, type AssetTypeCode,
   ASSET_TYPES, ESTADOS, CONDICIONES, UBICACIONES, DEPARTAMENTOS,
@@ -40,7 +41,7 @@ export default function FixedAssetsManager({ onBack }: Props) {
   const { toast } = useToast();
   const [assets, setAssets] = useState<FixedAsset[]>([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<"dashboard" | "list" | "detail" | "form" | "label">("dashboard");
+  const [view, setView] = useState<"dashboard" | "list" | "detail" | "form" | "label" | "keys">("dashboard");
   const [selectedAsset, setSelectedAsset] = useState<FixedAsset | null>(null);
   const [editingAsset, setEditingAsset] = useState<Partial<FixedAsset> | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -172,6 +173,13 @@ export default function FixedAssetsManager({ onBack }: Props) {
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
+  }
+
+  // ══════════════════════════════════════════
+  //  KEYS VIEW (Control de Llaves)
+  // ══════════════════════════════════════════
+  if (view === "keys") {
+    return <KeysManager onBack={() => setView("dashboard")} />;
   }
 
   // ══════════════════════════════════════════
@@ -557,7 +565,10 @@ export default function FixedAssetsManager({ onBack }: Props) {
           <h2 className="text-xl font-bold text-foreground">Activos Fijos</h2>
           <p className="text-sm text-muted-foreground">Gestión integral del inventario de activos</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" onClick={() => setView("keys")} className="gap-2">
+            <KeyRound className="h-4 w-4" /> Control de Llaves
+          </Button>
           <Button variant="outline" onClick={() => setView("list")} className="gap-2">
             <Search className="h-4 w-4" /> Ver Inventario
           </Button>
