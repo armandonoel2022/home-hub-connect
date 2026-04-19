@@ -47,6 +47,7 @@ app.use('/api/kpis', require('./routes/kpis'));
 app.use('/api/department-processes', require('./routes/department-processes'));
 app.use('/api/audit-log', require('./routes/audit-log'));
 app.use('/api/fleet-maintenance', require('./routes/fleet-maintenance'));
+app.use('/api/keys', require('./routes/keys'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({
