@@ -65,13 +65,14 @@ const AdminHub = () => {
     setRefreshKey(k => k + 1);
   };
 
-  // ── Stats per category ──
+  // ── Stats per category (excluye módulos completos como Activos Fijos / Llaves) ──
   const categoryStats = useMemo(() => {
     const stats: Record<string, { total: number; completed: number; processes: number }> = {};
     ADMIN_CATEGORIES.forEach(cat => {
       const procs = ADMIN_PROCESSES.filter(p => p.category === cat.key);
       let total = 0, completed = 0;
       procs.forEach(proc => {
+        if (isFullModule(proc.name)) return; // no es checklist
         proc.checklist.forEach(item => {
           total++;
           if (checklistState[`${proc.id}_${item.id}`]?.completed) completed++;
