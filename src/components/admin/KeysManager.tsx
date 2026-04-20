@@ -669,9 +669,11 @@ function Field({ label, children, full }: { label: string; children: React.React
   );
 }
 
-function KpiCard({ title, icon, value, total, pct, tone }: {
+function KpiCard({ title, icon, value, total, pct, tone, active, onClick }: {
   title: string; icon: React.ReactNode; value: number; total: number; pct: number;
   tone: "emerald" | "blue" | "amber";
+  active?: boolean;
+  onClick?: () => void;
 }) {
   const colorByTone: Record<string, string> = {
     emerald: "hsl(142 70% 45%)",
@@ -680,13 +682,21 @@ function KpiCard({ title, icon, value, total, pct, tone }: {
   };
   const color = colorByTone[tone];
   return (
-    <div className="border rounded-xl p-4 bg-card">
+    <button
+      type="button"
+      onClick={onClick}
+      className={`text-left border rounded-xl p-4 bg-card transition-all hover:shadow-md hover:-translate-y-0.5 ${active ? "ring-2 shadow-md" : ""}`}
+      style={{ borderColor: active ? color : undefined, boxShadow: active ? `0 0 0 2px ${color}33` : undefined }}
+      title={active ? "Click para quitar filtro" : "Click para filtrar la lista"}
+    >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2 text-sm font-medium" style={{ color }}>{icon} {title}</div>
         <span className="text-2xl font-bold" style={{ color }}>{pct}%</span>
       </div>
       <Progress value={pct} className="h-2" />
-      <p className="text-xs text-muted-foreground mt-2">{value} de {total} llaves</p>
-    </div>
+      <p className="text-xs text-muted-foreground mt-2">
+        {value} de {total} llaves {active && <span className="ml-1 text-primary font-medium">· filtrando</span>}
+      </p>
+    </button>
   );
 }
