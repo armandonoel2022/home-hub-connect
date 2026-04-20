@@ -8,8 +8,55 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Plus, KeyRound, Search, Edit2, Trash2, History as HistoryIcon,
   ShieldCheck, UserCheck, Copy as CopyIcon, AlertTriangle, Link2, Eye,
-  FileText, Printer,
+  FileText, Printer, X,
 } from "lucide-react";
+
+// Mapa de colores identificadores (etiqueta visual SafeOne)
+const COLOR_MAP: Record<string, { bg: string; ring: string; text: string }> = {
+  azul:     { bg: "hsl(220 85% 55%)", ring: "hsl(220 85% 45%)", text: "#fff" },
+  amarillo: { bg: "hsl(48 100% 55%)", ring: "hsl(42 90% 45%)",  text: "#1a1a1a" },
+  rojo:     { bg: "hsl(0 80% 55%)",   ring: "hsl(0 80% 45%)",   text: "#fff" },
+  verde:    { bg: "hsl(142 65% 45%)", ring: "hsl(142 65% 35%)", text: "#fff" },
+  naranja:  { bg: "hsl(28 95% 55%)",  ring: "hsl(28 95% 45%)",  text: "#fff" },
+  blanco:   { bg: "hsl(0 0% 96%)",    ring: "hsl(0 0% 70%)",    text: "#1a1a1a" },
+  negro:    { bg: "hsl(0 0% 18%)",    ring: "hsl(0 0% 8%)",     text: "#fff" },
+  gris:     { bg: "hsl(0 0% 60%)",    ring: "hsl(0 0% 45%)",    text: "#fff" },
+  morado:   { bg: "hsl(270 60% 55%)", ring: "hsl(270 60% 45%)", text: "#fff" },
+  rosa:     { bg: "hsl(330 75% 65%)", ring: "hsl(330 75% 55%)", text: "#fff" },
+};
+
+function parseColors(raw?: string): { name: string; style: { bg: string; ring: string; text: string } }[] {
+  if (!raw) return [];
+  return raw
+    .split(/[\/,;]+| y /i)
+    .map(s => s.trim())
+    .filter(Boolean)
+    .map(name => {
+      const key = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const style = COLOR_MAP[key] || { bg: "hsl(var(--muted))", ring: "hsl(var(--border))", text: "hsl(var(--foreground))" };
+      return { name, style };
+    });
+}
+
+function ColorChips({ raw, size = "sm" }: { raw?: string; size?: "sm" | "md" }) {
+  const colors = parseColors(raw);
+  if (colors.length === 0) return null;
+  const dim = size === "sm" ? 14 : 20;
+  return (
+    <div className="inline-flex items-center gap-1" title={raw}>
+      {colors.map((c, i) => (
+        <span
+          key={i}
+          className="rounded-full border-2 shadow-sm"
+          style={{ width: dim, height: dim, background: c.style.bg, borderColor: c.style.ring }}
+        />
+      ))}
+      {size === "md" && (
+        <span className="ml-1 text-xs text-muted-foreground">{colors.map(c => c.name).join(" / ")}</span>
+      )}
+    </div>
+  );
+}
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -49,9 +96,11 @@ export default function KeysManager({ onBack }: Props) {
   const [filterEstado, setFilterEstado] = useState<string>("all");
   const [filterUbic, setFilterUbic] = useState<string>("all");
   const [showOnlyVencidas, setShowOnlyVencidas] = useState(false);
+  const [kpiFilter, setKpiFilter] = useState<null | "vigentes" | "asignadas" | "conCopia">(null);
 
   const [form, setForm] = useState<Partial<KeyRecord> | null>(null);
   const [historyOf, setHistoryOf] = useState<KeyRecord | null>(null);
+  const [detailOf, setDetailOf] = useState<KeyRecord | null>(null);
   const [newHist, setNewHist] = useState<{ accion: KeyHistorialAccion; persona: string; motivo: string }>({
     accion: "entrega", persona: "", motivo: "",
   });
@@ -72,6 +121,9 @@ export default function KeysManager({ onBack }: Props) {
     if (filterEstado !== "all") list = list.filter(k => k.estado === filterEstado);
     if (filterUbic !== "all") list = list.filter(k => k.ubicacion === filterUbic);
     if (showOnlyVencidas) list = list.filter(k => !isRevisionVigente(k));
+    if (kpiFilter === "vigentes")  list = list.filter(k => k.estado !== "retirada" && isRevisionVigente(k));
+    if (kpiFilter === "asignadas") list = list.filter(k => k.estado === "asignada" && k.responsable.trim());
+    if (kpiFilter === "conCopia")  list = list.filter(k => k.tieneCopia);
     if (search.trim()) {
       const t = search.toLowerCase();
       list = list.filter(k =>
@@ -84,7 +136,7 @@ export default function KeysManager({ onBack }: Props) {
       );
     }
     return list;
-  }, [keys, filterEstado, filterUbic, showOnlyVencidas, search]);
+  }, [keys, filterEstado, filterUbic, showOnlyVencidas, kpiFilter, search]);
 
   // ── Save form ──
   const handleSave = async () => {
@@ -248,33 +300,48 @@ export default function KeysManager({ onBack }: Props) {
         </p>
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+      {/* KPIs (clicables → filtran la lista) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
         <KpiCard
           title="Revisión vigente"
           icon={<ShieldCheck className="h-4 w-4" />}
-          value={kpis.vigentes}
-          total={kpis.total}
-          pct={kpis.pctVigentes}
+          value={kpis.vigentes} total={kpis.total} pct={kpis.pctVigentes}
           tone="emerald"
+          active={kpiFilter === "vigentes"}
+          onClick={() => setKpiFilter(kpiFilter === "vigentes" ? null : "vigentes")}
         />
         <KpiCard
           title="Con responsable asignado"
           icon={<UserCheck className="h-4 w-4" />}
-          value={kpis.asignadas}
-          total={kpis.total}
-          pct={kpis.pctAsignadas}
+          value={kpis.asignadas} total={kpis.total} pct={kpis.pctAsignadas}
           tone="blue"
+          active={kpiFilter === "asignadas"}
+          onClick={() => setKpiFilter(kpiFilter === "asignadas" ? null : "asignadas")}
         />
         <KpiCard
           title="Con copia registrada"
           icon={<CopyIcon className="h-4 w-4" />}
-          value={kpis.conCopia}
-          total={kpis.total}
-          pct={kpis.pctConCopia}
+          value={kpis.conCopia} total={kpis.total} pct={kpis.pctConCopia}
           tone="amber"
+          active={kpiFilter === "conCopia"}
+          onClick={() => setKpiFilter(kpiFilter === "conCopia" ? null : "conCopia")}
         />
       </div>
+
+      {kpiFilter && (
+        <div className="mb-4 flex items-center justify-between bg-primary/5 border border-primary/20 rounded-lg px-3 py-2">
+          <p className="text-xs text-foreground">
+            <span className="font-semibold">Filtro activo:</span>{" "}
+            {kpiFilter === "vigentes" && "Llaves con revisión vigente"}
+            {kpiFilter === "asignadas" && "Llaves con responsable asignado"}
+            {kpiFilter === "conCopia" && "Llaves con copia registrada"}
+            <span className="text-muted-foreground"> · {filtered.length} resultados</span>
+          </p>
+          <Button variant="ghost" size="sm" className="h-7 gap-1" onClick={() => setKpiFilter(null)}>
+            <X className="h-3 w-3" /> Quitar filtro
+          </Button>
+        </div>
+      )}
 
       {/* Filtros */}
       <div className="flex flex-wrap gap-2 mb-3">
@@ -315,6 +382,7 @@ export default function KeysManager({ onBack }: Props) {
             <thead className="bg-muted/50 sticky top-0">
               <tr>
                 <th className="text-left px-3 py-2 font-medium text-muted-foreground">Código</th>
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground w-[60px]">Color</th>
                 <th className="text-left px-3 py-2 font-medium text-muted-foreground">Descripción</th>
                 <th className="text-left px-3 py-2 font-medium text-muted-foreground hidden md:table-cell">Pertenece a</th>
                 <th className="text-left px-3 py-2 font-medium text-muted-foreground hidden lg:table-cell">Responsable</th>
@@ -325,21 +393,23 @@ export default function KeysManager({ onBack }: Props) {
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={7} className="text-center py-12 text-muted-foreground text-sm">
-                  No hay llaves registradas. Usa "Nueva Llave" para empezar.
+                <tr><td colSpan={8} className="text-center py-12 text-muted-foreground text-sm">
+                  No hay llaves que coincidan con el filtro.
                 </td></tr>
               )}
               {filtered.map(k => {
                 const est = ESTADOS_LLAVE.find(e => e.value === k.estado);
                 const vigente = isRevisionVigente(k);
                 return (
-                  <tr key={k.id} className="border-t hover:bg-muted/30">
+                  <tr
+                    key={k.id}
+                    className="border-t hover:bg-muted/40 cursor-pointer transition-colors"
+                    onClick={() => setDetailOf(k)}
+                  >
                     <td className="px-3 py-2 font-mono text-xs font-semibold text-primary">{k.code || k.id}</td>
+                    <td className="px-3 py-2"><ColorChips raw={k.colorIdentificador} /></td>
                     <td className="px-3 py-2 max-w-[220px]">
                       <div className="truncate">{k.descripcion}</div>
-                      {k.colorIdentificador && (
-                        <span className="inline-block text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground mt-0.5">🎨 {k.colorIdentificador}</span>
-                      )}
                     </td>
                     <td className="px-3 py-2 hidden md:table-cell text-xs text-muted-foreground">
                       <div className="flex flex-col">
@@ -379,8 +449,11 @@ export default function KeysManager({ onBack }: Props) {
                         )}
                       </div>
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
                       <div className="flex gap-1 justify-end">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDetailOf(k)} title="Ver detalle">
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setHistoryOf(k)} title="Historial">
                           <HistoryIcon className="h-3.5 w-3.5" />
                         </Button>
@@ -570,6 +643,15 @@ export default function KeysManager({ onBack }: Props) {
         </DialogContent>
       </Dialog>
 
+      {/* ── Detalle (reporte clicable + imprimible) ── */}
+      <KeyDetailDialog
+        keyRecord={detailOf}
+        linkedLabel={detailOf ? linkedLabel(detailOf) : ""}
+        onClose={() => setDetailOf(null)}
+        onEdit={() => { if (detailOf) { setForm(detailOf); setDetailOf(null); } }}
+        onAddHistory={() => { if (detailOf) { setHistoryOf(detailOf); setDetailOf(null); } }}
+      />
+
       {/* ── Delete confirm ── */}
       <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <DialogContent>
@@ -596,9 +678,11 @@ function Field({ label, children, full }: { label: string; children: React.React
   );
 }
 
-function KpiCard({ title, icon, value, total, pct, tone }: {
+function KpiCard({ title, icon, value, total, pct, tone, active, onClick }: {
   title: string; icon: React.ReactNode; value: number; total: number; pct: number;
   tone: "emerald" | "blue" | "amber";
+  active?: boolean;
+  onClick?: () => void;
 }) {
   const colorByTone: Record<string, string> = {
     emerald: "hsl(142 70% 45%)",
@@ -607,13 +691,225 @@ function KpiCard({ title, icon, value, total, pct, tone }: {
   };
   const color = colorByTone[tone];
   return (
-    <div className="border rounded-xl p-4 bg-card">
+    <button
+      type="button"
+      onClick={onClick}
+      className={`text-left border rounded-xl p-4 bg-card transition-all hover:shadow-md hover:-translate-y-0.5 ${active ? "ring-2 shadow-md" : ""}`}
+      style={{ borderColor: active ? color : undefined, boxShadow: active ? `0 0 0 2px ${color}33` : undefined }}
+      title={active ? "Click para quitar filtro" : "Click para filtrar la lista"}
+    >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2 text-sm font-medium" style={{ color }}>{icon} {title}</div>
         <span className="text-2xl font-bold" style={{ color }}>{pct}%</span>
       </div>
       <Progress value={pct} className="h-2" />
-      <p className="text-xs text-muted-foreground mt-2">{value} de {total} llaves</p>
+      <p className="text-xs text-muted-foreground mt-2">
+        {value} de {total} llaves {active && <span className="ml-1 text-primary font-medium">· filtrando</span>}
+      </p>
+    </button>
+  );
+}
+
+// ── Detalle de Llave (reporte clicable, expandible e imprimible) ──
+function KeyDetailDialog({ keyRecord, linkedLabel, onClose, onEdit, onAddHistory }: {
+  keyRecord: KeyRecord | null;
+  linkedLabel: string;
+  onClose: () => void;
+  onEdit: () => void;
+  onAddHistory: () => void;
+}) {
+  if (!keyRecord) {
+    return <Dialog open={false} onOpenChange={onClose}><DialogContent /></Dialog>;
+  }
+  const k = keyRecord;
+  const est = ESTADOS_LLAVE.find(e => e.value === k.estado);
+  const vigente = isRevisionVigente(k);
+  const colors = parseColors(k.colorIdentificador);
+  const hist = k.historial || [];
+
+  const printDetail = () => {
+    const today = new Date().toLocaleString("es-DO");
+    const win = window.open("", "_blank", "width=900,height=700");
+    if (!win) return;
+    const histRows = hist.map(h => `
+      <tr>
+        <td>${new Date(h.fecha).toLocaleString("es-DO")}</td>
+        <td>${ACCIONES_HISTORIAL.find(a => a.value === h.accion)?.label || h.accion}</td>
+        <td>${h.persona || ""}</td>
+        <td>${h.motivo || ""}</td>
+        <td>${h.registradoPor || ""}</td>
+      </tr>`).join("") || `<tr><td colspan="5" style="text-align:center;color:#888;padding:12px">Sin movimientos registrados</td></tr>`;
+
+    const colorChips = colors.map(c =>
+      `<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${c.style.bg};border:2px solid ${c.style.ring};margin-right:4px;vertical-align:middle"></span>${c.name}`
+    ).join(" &nbsp; ") || "—";
+
+    win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Ficha de Llave ${k.code || k.id}</title>
+      <style>
+        @page { size: A4; margin: 14mm; }
+        body { font-family: Arial, sans-serif; font-size: 10pt; color: #111; }
+        h1 { font-size: 14pt; margin: 0 0 4px; }
+        .sub { color: #555; font-size: 9pt; margin-bottom: 12px; }
+        .header { border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: flex-start; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 18px; margin-bottom: 14px; }
+        .row { border-bottom: 1px dotted #ccc; padding: 4px 0; }
+        .label { color: #666; font-size: 8.5pt; text-transform: uppercase; letter-spacing: .3px; }
+        .value { font-weight: 600; font-size: 10pt; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 9pt; font-weight: 700; }
+        .section-title { font-size: 11pt; font-weight: 700; margin: 14px 0 6px; padding-bottom: 4px; border-bottom: 1px solid #999; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #999; padding: 4px 6px; font-size: 9pt; vertical-align: top; }
+        th { background: #f0f0f0; }
+        .foot { margin-top: 18px; font-size: 8pt; color: #666; display:flex; justify-content: space-between; border-top:1px solid #ccc; padding-top:6px; }
+      </style></head><body>
+      <div class="header">
+        <div>
+          <h1>Ficha de Llave · ${k.code || k.id}</h1>
+          <div class="sub">${k.descripcion || ""}</div>
+        </div>
+        <div style="text-align:right;font-size:9pt">
+          <strong>SAFEONE</strong><br/>SECURITY COMPANY<br/>
+          <span style="color:#666">Impreso: ${today}</span>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="row"><div class="label">Estado</div><div class="value"><span class="badge" style="background:${est?.color}22;color:${est?.color}">${est?.label || "—"}</span> ${!vigente && k.estado !== "retirada" ? '<span style="color:#c00;font-size:9pt">· Revisión vencida</span>' : ""}</div></div>
+        <div class="row"><div class="label">Tipo de cerradura</div><div class="value">${k.tipoCerradura || "—"}</div></div>
+        <div class="row"><div class="label">Pertenece a</div><div class="value">${k.perteneceA || "—"}</div></div>
+        <div class="row"><div class="label">Activo / Vehículo vinculado</div><div class="value">${linkedLabel || "—"}</div></div>
+        <div class="row"><div class="label">Ubicación</div><div class="value">${k.ubicacion || "—"}</div></div>
+        <div class="row"><div class="label">Departamento</div><div class="value">${k.departamento || "—"}</div></div>
+        <div class="row"><div class="label">Responsable</div><div class="value">${k.responsable || "—"}</div></div>
+        <div class="row"><div class="label">Fecha de entrega</div><div class="value">${k.fechaEntrega || "—"}</div></div>
+        <div class="row"><div class="label">Última revisión</div><div class="value">${k.ultimaRevision || "Sin revisar"}</div></div>
+        <div class="row"><div class="label">Próxima revisión</div><div class="value">${nextRevisionDate(k) || "—"} (cada ${k.frecuenciaDias || 90} días)</div></div>
+        <div class="row"><div class="label">Identificador de color</div><div class="value">${colorChips}</div></div>
+        <div class="row"><div class="label">Copias</div><div class="value">${k.tieneCopia ? `Sí · ${k.cantidadCopias || 1} copia(s)${k.ubicacionCopia ? ` · ${k.ubicacionCopia}` : ""}` : "No"}</div></div>
+        <div class="row"><div class="label">Cantidad en caja</div><div class="value">${k.cantidadEnCaja ?? 0}</div></div>
+        <div class="row"><div class="label">Cantidad asignadas</div><div class="value">${k.cantidadAsignadas ?? 0}</div></div>
+      </div>
+
+      ${k.notas ? `<div class="section-title">Notas</div><div style="border:1px solid #ccc;padding:8px;border-radius:4px;background:#fafafa">${k.notas}</div>` : ""}
+
+      <div class="section-title">Historial de movimientos (${hist.length})</div>
+      <table>
+        <thead><tr><th style="width:18%">Fecha</th><th style="width:14%">Acción</th><th style="width:22%">Persona</th><th>Motivo</th><th style="width:18%">Registrado por</th></tr></thead>
+        <tbody>${histRows}</tbody>
+      </table>
+
+      <div class="foot">
+        <span>Procedimiento de referencia: <strong>PRO-G-03</strong> · Formulario: <strong>F-G-08</strong></span>
+        <span>SafeOne Security Company · Tel: 809 548 3100</span>
+      </div>
+      <script>window.onload=()=>{setTimeout(()=>window.print(),300);};</script>
+      </body></html>`);
+    win.document.close();
+  };
+
+  return (
+    <Dialog open={!!keyRecord} onOpenChange={onClose}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 flex-wrap">
+            <KeyRound className="h-5 w-5 text-primary" />
+            <span className="font-mono">{k.code || k.id}</span>
+            <span className="text-sm font-normal text-muted-foreground">· {k.descripcion}</span>
+          </DialogTitle>
+          <DialogDescription className="flex items-center gap-2 flex-wrap">
+            <Badge style={{ background: est?.color + "22", color: est?.color }}>{est?.label}</Badge>
+            {!vigente && k.estado !== "retirada" && (
+              <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" /> Revisión vencida</Badge>
+            )}
+            {colors.length > 0 && <ColorChips raw={k.colorIdentificador} size="md" />}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+          <DetailRow label="Tipo de cerradura" value={k.tipoCerradura} />
+          <DetailRow label="Pertenece a" value={k.perteneceA} />
+          <DetailRow label="Activo / Vehículo vinculado" value={linkedLabel} mono={!!k.linkedAssetId} />
+          <DetailRow label="Ubicación" value={k.ubicacion} />
+          <DetailRow label="Departamento" value={k.departamento} />
+          <DetailRow label="Responsable" value={k.responsable} />
+          <DetailRow label="Fecha de entrega" value={k.fechaEntrega} />
+          <DetailRow label="Última revisión" value={k.ultimaRevision || "Sin revisar"} />
+          <DetailRow label="Próxima revisión" value={`${nextRevisionDate(k) || "—"} · cada ${k.frecuenciaDias || 90} días`} />
+          <DetailRow label="Copias" value={k.tieneCopia ? `Sí · ${k.cantidadCopias || 1}${k.ubicacionCopia ? ` · ${k.ubicacionCopia}` : ""}` : "No"} />
+          <DetailRow label="Cantidad en caja" value={String(k.cantidadEnCaja ?? 0)} />
+          <DetailRow label="Cantidad asignadas" value={String(k.cantidadAsignadas ?? 0)} />
+        </div>
+
+        {k.notas && (
+          <div className="mt-3 border rounded-md p-3 bg-muted/30 text-sm">
+            <p className="text-xs font-medium text-muted-foreground mb-1">Notas</p>
+            <p className="whitespace-pre-wrap">{k.notas}</p>
+          </div>
+        )}
+
+        {/* Historial expandido (collapsible nativo) */}
+        <details className="mt-3 border rounded-md bg-card" open={hist.length > 0}>
+          <summary className="cursor-pointer px-3 py-2 font-medium text-sm flex items-center gap-2 hover:bg-muted/30 rounded-md">
+            <HistoryIcon className="h-4 w-4 text-primary" />
+            Historial de movimientos
+            <Badge variant="secondary" className="ml-1">{hist.length}</Badge>
+          </summary>
+          <div className="border-t">
+            {hist.length === 0 ? (
+              <p className="text-center text-xs text-muted-foreground py-6">Sin movimientos registrados</p>
+            ) : (
+              <table className="w-full text-xs">
+                <thead className="bg-muted/40">
+                  <tr>
+                    <th className="text-left px-2 py-1.5">Fecha</th>
+                    <th className="text-left px-2 py-1.5">Acción</th>
+                    <th className="text-left px-2 py-1.5">Persona</th>
+                    <th className="text-left px-2 py-1.5">Motivo</th>
+                    <th className="text-left px-2 py-1.5">Registrado por</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {hist.map(h => (
+                    <tr key={h.id} className="border-t">
+                      <td className="px-2 py-1.5 text-muted-foreground whitespace-nowrap">{new Date(h.fecha).toLocaleString("es-DO")}</td>
+                      <td className="px-2 py-1.5">
+                        <Badge variant="secondary" className="text-[10px]">
+                          {ACCIONES_HISTORIAL.find(a => a.value === h.accion)?.label}
+                        </Badge>
+                      </td>
+                      <td className="px-2 py-1.5">{h.persona}</td>
+                      <td className="px-2 py-1.5 text-muted-foreground">{h.motivo || "—"}</td>
+                      <td className="px-2 py-1.5 text-muted-foreground">{h.registradoPor || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </details>
+
+        <DialogFooter className="flex-wrap gap-2">
+          <Button variant="outline" onClick={onClose}>Cerrar</Button>
+          <Button variant="outline" onClick={onAddHistory} className="gap-2">
+            <HistoryIcon className="h-4 w-4" /> Agregar movimiento
+          </Button>
+          <Button variant="outline" onClick={onEdit} className="gap-2">
+            <Edit2 className="h-4 w-4" /> Editar
+          </Button>
+          <Button onClick={printDetail} className="gap-2">
+            <Printer className="h-4 w-4" /> Imprimir ficha
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DetailRow({ label, value, mono }: { label: string; value?: string; mono?: boolean }) {
+  return (
+    <div className="border-b border-dashed border-border pb-1.5">
+      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className={`text-sm ${mono ? "font-mono text-primary" : ""}`}>{value || "—"}</p>
     </div>
   );
 }

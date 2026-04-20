@@ -36,6 +36,14 @@ const CATEGORY_ICONS: Record<string, any> = {
   documentacion: FolderOpen,
 };
 
+// Procesos que NO son simples checklists: tienen su propio módulo de gestión.
+// Para ellos no mostramos "0/N pasos" ni los contamos en el progreso de la categoría.
+const FULL_MODULE_PROCESSES = new Set<string>([
+  "Gestión de activos fijos",
+  "Control de llaves",
+]);
+const isFullModule = (procName: string) => FULL_MODULE_PROCESSES.has(procName);
+
 const AdminHub = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -57,13 +65,14 @@ const AdminHub = () => {
     setRefreshKey(k => k + 1);
   };
 
-  // ── Stats per category ──
+  // ── Stats per category (excluye módulos completos como Activos Fijos / Llaves) ──
   const categoryStats = useMemo(() => {
     const stats: Record<string, { total: number; completed: number; processes: number }> = {};
     ADMIN_CATEGORIES.forEach(cat => {
       const procs = ADMIN_PROCESSES.filter(p => p.category === cat.key);
       let total = 0, completed = 0;
       procs.forEach(proc => {
+        if (isFullModule(proc.name)) return; // no es checklist
         proc.checklist.forEach(item => {
           total++;
           if (checklistState[`${proc.id}_${item.id}`]?.completed) completed++;
@@ -310,6 +319,8 @@ const AdminHub = () => {
                   : 0;
                 const actCount = processActivities(proc.id).length;
 
+                const fullModule = isFullModule(proc.name);
+
                 return (
                   <button
                     key={proc.id}
@@ -331,32 +342,43 @@ const AdminHub = () => {
                       <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary shrink-0 mt-0.5" />
                     </div>
 
-                    {/* Mini progress */}
-                    <div className="w-full h-1.5 rounded-full bg-muted mb-2">
-                      <div
-                        className="h-1.5 rounded-full transition-all"
-                        style={{
-                          width: `${progress}%`,
-                          background: progress === 100 ? "hsl(142 70% 45%)" : cat.color,
-                        }}
-                      />
-                    </div>
+                    {fullModule ? (
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                          <Package className="h-3 w-3" /> Módulo completo
+                        </span>
+                        <span className="text-muted-foreground group-hover:text-primary">Abrir →</span>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Mini progress (solo procesos con checklist real) */}
+                        <div className="w-full h-1.5 rounded-full bg-muted mb-2">
+                          <div
+                            className="h-1.5 rounded-full transition-all"
+                            style={{
+                              width: `${progress}%`,
+                              background: progress === 100 ? "hsl(142 70% 45%)" : cat.color,
+                            }}
+                          />
+                        </div>
 
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        {progress === 100 ? (
-                          <CheckCircle2 className="h-3 w-3 text-green-500" />
-                        ) : progress > 0 ? (
-                          <Clock className="h-3 w-3 text-yellow-500" />
-                        ) : (
-                          <AlertCircle className="h-3 w-3 text-muted-foreground" />
-                        )}
-                        {completedCount}/{proc.checklist.length} pasos
-                      </span>
-                      {actCount > 0 && (
-                        <span>{actCount} actividad{actCount !== 1 ? "es" : ""}</span>
-                      )}
-                    </div>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            {progress === 100 ? (
+                              <CheckCircle2 className="h-3 w-3 text-green-500" />
+                            ) : progress > 0 ? (
+                              <Clock className="h-3 w-3 text-yellow-500" />
+                            ) : (
+                              <AlertCircle className="h-3 w-3 text-muted-foreground" />
+                            )}
+                            {completedCount}/{proc.checklist.length} pasos
+                          </span>
+                          {actCount > 0 && (
+                            <span>{actCount} actividad{actCount !== 1 ? "es" : ""}</span>
+                          )}
+                        </div>
+                      </>
+                    )}
                   </button>
                 );
               })}
