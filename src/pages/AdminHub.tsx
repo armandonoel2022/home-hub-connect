@@ -36,6 +36,14 @@ const CATEGORY_ICONS: Record<string, any> = {
   documentacion: FolderOpen,
 };
 
+// Procesos que NO son simples checklists: tienen su propio módulo de gestión.
+// Para ellos no mostramos "0/N pasos" ni los contamos en el progreso de la categoría.
+const FULL_MODULE_PROCESSES = new Set<string>([
+  "Gestión de activos fijos",
+  "Control de llaves",
+]);
+const isFullModule = (procName: string) => FULL_MODULE_PROCESSES.has(procName);
+
 const AdminHub = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
