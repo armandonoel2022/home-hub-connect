@@ -382,6 +382,7 @@ export default function KeysManager({ onBack }: Props) {
             <thead className="bg-muted/50 sticky top-0">
               <tr>
                 <th className="text-left px-3 py-2 font-medium text-muted-foreground">Código</th>
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground w-[60px]">Color</th>
                 <th className="text-left px-3 py-2 font-medium text-muted-foreground">Descripción</th>
                 <th className="text-left px-3 py-2 font-medium text-muted-foreground hidden md:table-cell">Pertenece a</th>
                 <th className="text-left px-3 py-2 font-medium text-muted-foreground hidden lg:table-cell">Responsable</th>
@@ -392,21 +393,23 @@ export default function KeysManager({ onBack }: Props) {
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={7} className="text-center py-12 text-muted-foreground text-sm">
-                  No hay llaves registradas. Usa "Nueva Llave" para empezar.
+                <tr><td colSpan={8} className="text-center py-12 text-muted-foreground text-sm">
+                  No hay llaves que coincidan con el filtro.
                 </td></tr>
               )}
               {filtered.map(k => {
                 const est = ESTADOS_LLAVE.find(e => e.value === k.estado);
                 const vigente = isRevisionVigente(k);
                 return (
-                  <tr key={k.id} className="border-t hover:bg-muted/30">
+                  <tr
+                    key={k.id}
+                    className="border-t hover:bg-muted/40 cursor-pointer transition-colors"
+                    onClick={() => setDetailOf(k)}
+                  >
                     <td className="px-3 py-2 font-mono text-xs font-semibold text-primary">{k.code || k.id}</td>
+                    <td className="px-3 py-2"><ColorChips raw={k.colorIdentificador} /></td>
                     <td className="px-3 py-2 max-w-[220px]">
                       <div className="truncate">{k.descripcion}</div>
-                      {k.colorIdentificador && (
-                        <span className="inline-block text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground mt-0.5">🎨 {k.colorIdentificador}</span>
-                      )}
                     </td>
                     <td className="px-3 py-2 hidden md:table-cell text-xs text-muted-foreground">
                       <div className="flex flex-col">
@@ -446,8 +449,11 @@ export default function KeysManager({ onBack }: Props) {
                         )}
                       </div>
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
                       <div className="flex gap-1 justify-end">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDetailOf(k)} title="Ver detalle">
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setHistoryOf(k)} title="Historial">
                           <HistoryIcon className="h-3.5 w-3.5" />
                         </Button>
