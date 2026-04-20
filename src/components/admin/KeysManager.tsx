@@ -486,6 +486,15 @@ export default function KeysManager({ onBack }: Props) {
                   </div>
                 )}
               </div>
+              <Field label="Cantidad en caja de llaves">
+                <Input type="number" min={0} value={form.cantidadEnCaja ?? 0} onChange={e => setForm({ ...form, cantidadEnCaja: parseInt(e.target.value) || 0 })} />
+              </Field>
+              <Field label="Cantidad asignadas">
+                <Input type="number" min={0} value={form.cantidadAsignadas ?? 0} onChange={e => setForm({ ...form, cantidadAsignadas: parseInt(e.target.value) || 0 })} />
+              </Field>
+              <Field label="Color identificador" full>
+                <Input value={form.colorIdentificador || ""} onChange={e => setForm({ ...form, colorIdentificador: e.target.value })} placeholder="Ej: Azul, Amarillo, Verde/Rojo" />
+              </Field>
               <Field label="Notas" full>
                 <Textarea rows={2} value={form.notas || ""} onChange={e => setForm({ ...form, notas: e.target.value })} />
               </Field>
