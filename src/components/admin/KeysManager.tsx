@@ -121,6 +121,9 @@ export default function KeysManager({ onBack }: Props) {
     if (filterEstado !== "all") list = list.filter(k => k.estado === filterEstado);
     if (filterUbic !== "all") list = list.filter(k => k.ubicacion === filterUbic);
     if (showOnlyVencidas) list = list.filter(k => !isRevisionVigente(k));
+    if (kpiFilter === "vigentes")  list = list.filter(k => k.estado !== "retirada" && isRevisionVigente(k));
+    if (kpiFilter === "asignadas") list = list.filter(k => k.estado === "asignada" && k.responsable.trim());
+    if (kpiFilter === "conCopia")  list = list.filter(k => k.tieneCopia);
     if (search.trim()) {
       const t = search.toLowerCase();
       list = list.filter(k =>
@@ -133,7 +136,7 @@ export default function KeysManager({ onBack }: Props) {
       );
     }
     return list;
-  }, [keys, filterEstado, filterUbic, showOnlyVencidas, search]);
+  }, [keys, filterEstado, filterUbic, showOnlyVencidas, kpiFilter, search]);
 
   // ── Save form ──
   const handleSave = async () => {
