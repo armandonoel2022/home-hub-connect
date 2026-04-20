@@ -709,3 +709,207 @@ function KpiCard({ title, icon, value, total, pct, tone, active, onClick }: {
     </button>
   );
 }
+
+// ── Detalle de Llave (reporte clicable, expandible e imprimible) ──
+function KeyDetailDialog({ keyRecord, linkedLabel, onClose, onEdit, onAddHistory }: {
+  keyRecord: KeyRecord | null;
+  linkedLabel: string;
+  onClose: () => void;
+  onEdit: () => void;
+  onAddHistory: () => void;
+}) {
+  if (!keyRecord) {
+    return <Dialog open={false} onOpenChange={onClose}><DialogContent /></Dialog>;
+  }
+  const k = keyRecord;
+  const est = ESTADOS_LLAVE.find(e => e.value === k.estado);
+  const vigente = isRevisionVigente(k);
+  const colors = parseColors(k.colorIdentificador);
+  const hist = k.historial || [];
+
+  const printDetail = () => {
+    const today = new Date().toLocaleString("es-DO");
+    const win = window.open("", "_blank", "width=900,height=700");
+    if (!win) return;
+    const histRows = hist.map(h => `
+      <tr>
+        <td>${new Date(h.fecha).toLocaleString("es-DO")}</td>
+        <td>${ACCIONES_HISTORIAL.find(a => a.value === h.accion)?.label || h.accion}</td>
+        <td>${h.persona || ""}</td>
+        <td>${h.motivo || ""}</td>
+        <td>${h.registradoPor || ""}</td>
+      </tr>`).join("") || `<tr><td colspan="5" style="text-align:center;color:#888;padding:12px">Sin movimientos registrados</td></tr>`;
+
+    const colorChips = colors.map(c =>
+      `<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${c.style.bg};border:2px solid ${c.style.ring};margin-right:4px;vertical-align:middle"></span>${c.name}`
+    ).join(" &nbsp; ") || "—";
+
+    win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Ficha de Llave ${k.code || k.id}</title>
+      <style>
+        @page { size: A4; margin: 14mm; }
+        body { font-family: Arial, sans-serif; font-size: 10pt; color: #111; }
+        h1 { font-size: 14pt; margin: 0 0 4px; }
+        .sub { color: #555; font-size: 9pt; margin-bottom: 12px; }
+        .header { border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: flex-start; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 18px; margin-bottom: 14px; }
+        .row { border-bottom: 1px dotted #ccc; padding: 4px 0; }
+        .label { color: #666; font-size: 8.5pt; text-transform: uppercase; letter-spacing: .3px; }
+        .value { font-weight: 600; font-size: 10pt; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 9pt; font-weight: 700; }
+        .section-title { font-size: 11pt; font-weight: 700; margin: 14px 0 6px; padding-bottom: 4px; border-bottom: 1px solid #999; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #999; padding: 4px 6px; font-size: 9pt; vertical-align: top; }
+        th { background: #f0f0f0; }
+        .foot { margin-top: 18px; font-size: 8pt; color: #666; display:flex; justify-content: space-between; border-top:1px solid #ccc; padding-top:6px; }
+      </style></head><body>
+      <div class="header">
+        <div>
+          <h1>Ficha de Llave · ${k.code || k.id}</h1>
+          <div class="sub">${k.descripcion || ""}</div>
+        </div>
+        <div style="text-align:right;font-size:9pt">
+          <strong>SAFEONE</strong><br/>SECURITY COMPANY<br/>
+          <span style="color:#666">Impreso: ${today}</span>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="row"><div class="label">Estado</div><div class="value"><span class="badge" style="background:${est?.color}22;color:${est?.color}">${est?.label || "—"}</span> ${!vigente && k.estado !== "retirada" ? '<span style="color:#c00;font-size:9pt">· Revisión vencida</span>' : ""}</div></div>
+        <div class="row"><div class="label">Tipo de cerradura</div><div class="value">${k.tipoCerradura || "—"}</div></div>
+        <div class="row"><div class="label">Pertenece a</div><div class="value">${k.perteneceA || "—"}</div></div>
+        <div class="row"><div class="label">Activo / Vehículo vinculado</div><div class="value">${linkedLabel || "—"}</div></div>
+        <div class="row"><div class="label">Ubicación</div><div class="value">${k.ubicacion || "—"}</div></div>
+        <div class="row"><div class="label">Departamento</div><div class="value">${k.departamento || "—"}</div></div>
+        <div class="row"><div class="label">Responsable</div><div class="value">${k.responsable || "—"}</div></div>
+        <div class="row"><div class="label">Fecha de entrega</div><div class="value">${k.fechaEntrega || "—"}</div></div>
+        <div class="row"><div class="label">Última revisión</div><div class="value">${k.ultimaRevision || "Sin revisar"}</div></div>
+        <div class="row"><div class="label">Próxima revisión</div><div class="value">${nextRevisionDate(k) || "—"} (cada ${k.frecuenciaDias || 90} días)</div></div>
+        <div class="row"><div class="label">Identificador de color</div><div class="value">${colorChips}</div></div>
+        <div class="row"><div class="label">Copias</div><div class="value">${k.tieneCopia ? `Sí · ${k.cantidadCopias || 1} copia(s)${k.ubicacionCopia ? ` · ${k.ubicacionCopia}` : ""}` : "No"}</div></div>
+        <div class="row"><div class="label">Cantidad en caja</div><div class="value">${k.cantidadEnCaja ?? 0}</div></div>
+        <div class="row"><div class="label">Cantidad asignadas</div><div class="value">${k.cantidadAsignadas ?? 0}</div></div>
+      </div>
+
+      ${k.notas ? `<div class="section-title">Notas</div><div style="border:1px solid #ccc;padding:8px;border-radius:4px;background:#fafafa">${k.notas}</div>` : ""}
+
+      <div class="section-title">Historial de movimientos (${hist.length})</div>
+      <table>
+        <thead><tr><th style="width:18%">Fecha</th><th style="width:14%">Acción</th><th style="width:22%">Persona</th><th>Motivo</th><th style="width:18%">Registrado por</th></tr></thead>
+        <tbody>${histRows}</tbody>
+      </table>
+
+      <div class="foot">
+        <span>Procedimiento de referencia: <strong>PRO-G-03</strong> · Formulario: <strong>F-G-08</strong></span>
+        <span>SafeOne Security Company · Tel: 809 548 3100</span>
+      </div>
+      <script>window.onload=()=>{setTimeout(()=>window.print(),300);};</script>
+      </body></html>`);
+    win.document.close();
+  };
+
+  return (
+    <Dialog open={!!keyRecord} onOpenChange={onClose}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 flex-wrap">
+            <KeyRound className="h-5 w-5 text-primary" />
+            <span className="font-mono">{k.code || k.id}</span>
+            <span className="text-sm font-normal text-muted-foreground">· {k.descripcion}</span>
+          </DialogTitle>
+          <DialogDescription className="flex items-center gap-2 flex-wrap">
+            <Badge style={{ background: est?.color + "22", color: est?.color }}>{est?.label}</Badge>
+            {!vigente && k.estado !== "retirada" && (
+              <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" /> Revisión vencida</Badge>
+            )}
+            {colors.length > 0 && <ColorChips raw={k.colorIdentificador} size="md" />}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+          <DetailRow label="Tipo de cerradura" value={k.tipoCerradura} />
+          <DetailRow label="Pertenece a" value={k.perteneceA} />
+          <DetailRow label="Activo / Vehículo vinculado" value={linkedLabel} mono={!!k.linkedAssetId} />
+          <DetailRow label="Ubicación" value={k.ubicacion} />
+          <DetailRow label="Departamento" value={k.departamento} />
+          <DetailRow label="Responsable" value={k.responsable} />
+          <DetailRow label="Fecha de entrega" value={k.fechaEntrega} />
+          <DetailRow label="Última revisión" value={k.ultimaRevision || "Sin revisar"} />
+          <DetailRow label="Próxima revisión" value={`${nextRevisionDate(k) || "—"} · cada ${k.frecuenciaDias || 90} días`} />
+          <DetailRow label="Copias" value={k.tieneCopia ? `Sí · ${k.cantidadCopias || 1}${k.ubicacionCopia ? ` · ${k.ubicacionCopia}` : ""}` : "No"} />
+          <DetailRow label="Cantidad en caja" value={String(k.cantidadEnCaja ?? 0)} />
+          <DetailRow label="Cantidad asignadas" value={String(k.cantidadAsignadas ?? 0)} />
+        </div>
+
+        {k.notas && (
+          <div className="mt-3 border rounded-md p-3 bg-muted/30 text-sm">
+            <p className="text-xs font-medium text-muted-foreground mb-1">Notas</p>
+            <p className="whitespace-pre-wrap">{k.notas}</p>
+          </div>
+        )}
+
+        {/* Historial expandido (collapsible nativo) */}
+        <details className="mt-3 border rounded-md bg-card" open={hist.length > 0}>
+          <summary className="cursor-pointer px-3 py-2 font-medium text-sm flex items-center gap-2 hover:bg-muted/30 rounded-md">
+            <HistoryIcon className="h-4 w-4 text-primary" />
+            Historial de movimientos
+            <Badge variant="secondary" className="ml-1">{hist.length}</Badge>
+          </summary>
+          <div className="border-t">
+            {hist.length === 0 ? (
+              <p className="text-center text-xs text-muted-foreground py-6">Sin movimientos registrados</p>
+            ) : (
+              <table className="w-full text-xs">
+                <thead className="bg-muted/40">
+                  <tr>
+                    <th className="text-left px-2 py-1.5">Fecha</th>
+                    <th className="text-left px-2 py-1.5">Acción</th>
+                    <th className="text-left px-2 py-1.5">Persona</th>
+                    <th className="text-left px-2 py-1.5">Motivo</th>
+                    <th className="text-left px-2 py-1.5">Registrado por</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {hist.map(h => (
+                    <tr key={h.id} className="border-t">
+                      <td className="px-2 py-1.5 text-muted-foreground whitespace-nowrap">{new Date(h.fecha).toLocaleString("es-DO")}</td>
+                      <td className="px-2 py-1.5">
+                        <Badge variant="secondary" className="text-[10px]">
+                          {ACCIONES_HISTORIAL.find(a => a.value === h.accion)?.label}
+                        </Badge>
+                      </td>
+                      <td className="px-2 py-1.5">{h.persona}</td>
+                      <td className="px-2 py-1.5 text-muted-foreground">{h.motivo || "—"}</td>
+                      <td className="px-2 py-1.5 text-muted-foreground">{h.registradoPor || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </details>
+
+        <DialogFooter className="flex-wrap gap-2">
+          <Button variant="outline" onClick={onClose}>Cerrar</Button>
+          <Button variant="outline" onClick={onAddHistory} className="gap-2">
+            <HistoryIcon className="h-4 w-4" /> Agregar movimiento
+          </Button>
+          <Button variant="outline" onClick={onEdit} className="gap-2">
+            <Edit2 className="h-4 w-4" /> Editar
+          </Button>
+          <Button onClick={printDetail} className="gap-2">
+            <Printer className="h-4 w-4" /> Imprimir ficha
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DetailRow({ label, value, mono }: { label: string; value?: string; mono?: boolean }) {
+  return (
+    <div className="border-b border-dashed border-border pb-1.5">
+      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className={`text-sm ${mono ? "font-mono text-primary" : ""}`}>{value || "—"}</p>
+    </div>
+  );
+}
