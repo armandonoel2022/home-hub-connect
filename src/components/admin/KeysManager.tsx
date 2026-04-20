@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Plus, KeyRound, Search, Edit2, Trash2, History as HistoryIcon,
   ShieldCheck, UserCheck, Copy as CopyIcon, AlertTriangle, Link2, Eye,
+  FileText, Printer,
 } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -150,6 +151,67 @@ export default function KeysManager({ onBack }: Props) {
     return k.linkedAssetId; // vehicle plate
   };
 
+  const openProcedimiento = () => {
+    window.open("/docs/PRO-G-03_Procedimiento_Control_de_Llaves.docx", "_blank");
+  };
+
+  const printFG08 = () => {
+    const rows = filtered;
+    const today = new Date().toLocaleDateString("es-DO");
+    const win = window.open("", "_blank", "width=900,height=700");
+    if (!win) return;
+    const body = rows.map(k => `
+      <tr>
+        <td>${k.code || k.id}</td>
+        <td>${k.responsable || ""}</td>
+        <td>${k.fechaEntrega || ""}</td>
+        <td>${k.perteneceA || k.descripcion || ""}</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>`).join("");
+    win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>F-G-08 Asignación y Devolución de Llaves</title>
+      <style>
+        @page { size: A4 landscape; margin: 12mm; }
+        body { font-family: Arial, sans-serif; font-size: 10pt; color: #111; }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; border: 1px solid #000; padding: 8px; margin-bottom: 4px; }
+        .header .left { font-size: 9pt; }
+        .header .title { text-align: center; flex: 1; font-weight: 800; font-size: 11pt; line-height: 1.3; }
+        .meta { display:flex; justify-content: space-between; font-size:9pt; margin: 6px 2px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #000; padding: 4px 6px; vertical-align: top; }
+        th { background: #f0f0f0; font-size: 9pt; }
+        td { height: 22px; }
+        .foot { margin-top: 12px; font-size: 8pt; color: #555; display:flex; justify-content: space-between; }
+      </style></head><body>
+      <div class="header">
+        <div class="left">SAFEONE<br/>SECURITY COMPANY</div>
+        <div class="title">FORMULARIO: F-G-08<br/>FORMULARIO ASIGNACIÓN Y DEVOLUCIÓN DE LLAVES,<br/>TOKENS, TARJETAS Y CONTROL DE ACCESO</div>
+        <div class="left" style="text-align:right">Fecha impresión:<br/><strong>${today}</strong></div>
+      </div>
+      <div class="meta"><span>Total de registros: <strong>${rows.length}</strong></span><span>Procedimiento de referencia: <strong>PRO-G-03</strong></span></div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:7%">No. Llave</th>
+            <th style="width:18%">NOMBRE (Firma de persona que se le asigna la llave)</th>
+            <th style="width:9%">Fecha</th>
+            <th style="width:20%">Área o lugar</th>
+            <th style="width:13%">Despachado por</th>
+            <th style="width:13%">Devuelta por</th>
+            <th style="width:9%">Fecha</th>
+            <th style="width:11%">Recibe</th>
+          </tr>
+        </thead>
+        <tbody>${body}</tbody>
+      </table>
+      <div class="foot"><span>F-G-08 · Rev. 1.5 · 13/03/2026</span><span>SafeOne Security Company · Tel: 809 548 3100</span></div>
+      <script>window.onload=()=>{setTimeout(()=>window.print(),300);};</script>
+      </body></html>`);
+    win.document.close();
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -160,20 +222,30 @@ export default function KeysManager({ onBack }: Props) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <Button variant="ghost" onClick={onBack} className="gap-2">
           <ArrowLeft className="h-4 w-4" /> Volver
         </Button>
-        <Button onClick={() => setForm({ ...EMPTY_FORM })} className="gap-2">
-          <Plus className="h-4 w-4" /> Nueva Llave
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={openProcedimiento} className="gap-2" title="Procedimiento PRO-G-03">
+            <FileText className="h-4 w-4" /> Procedimiento PRO-G-03
+          </Button>
+          <Button variant="outline" size="sm" onClick={printFG08} className="gap-2" title="Formulario F-G-08 Asignación y Devolución de Llaves">
+            <Printer className="h-4 w-4" /> Imprimir F-G-08
+          </Button>
+          <Button onClick={() => setForm({ ...EMPTY_FORM })} className="gap-2">
+            <Plus className="h-4 w-4" /> Nueva Llave
+          </Button>
+        </div>
       </div>
 
       <div className="mb-6">
         <h2 className="text-xl font-bold flex items-center gap-2">
           <KeyRound className="h-5 w-5 text-primary" /> Control de Llaves
         </h2>
-        <p className="text-sm text-muted-foreground">Registro, asignación y revisión periódica de llaves físicas y dispositivos de acceso</p>
+        <p className="text-sm text-muted-foreground">
+          Inventario oficial · Procedimiento <strong>PRO-G-03</strong> · Formulario <strong>F-G-08</strong> Asignación y Devolución de Llaves
+        </p>
       </div>
 
       {/* KPIs */}
@@ -263,7 +335,12 @@ export default function KeysManager({ onBack }: Props) {
                 return (
                   <tr key={k.id} className="border-t hover:bg-muted/30">
                     <td className="px-3 py-2 font-mono text-xs font-semibold text-primary">{k.code || k.id}</td>
-                    <td className="px-3 py-2 max-w-[220px] truncate">{k.descripcion}</td>
+                    <td className="px-3 py-2 max-w-[220px]">
+                      <div className="truncate">{k.descripcion}</div>
+                      {k.colorIdentificador && (
+                        <span className="inline-block text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground mt-0.5">🎨 {k.colorIdentificador}</span>
+                      )}
+                    </td>
                     <td className="px-3 py-2 hidden md:table-cell text-xs text-muted-foreground">
                       <div className="flex flex-col">
                         <span>{k.perteneceA || "—"}</span>
@@ -414,6 +491,15 @@ export default function KeysManager({ onBack }: Props) {
                   </div>
                 )}
               </div>
+              <Field label="Cantidad en caja de llaves">
+                <Input type="number" min={0} value={form.cantidadEnCaja ?? 0} onChange={e => setForm({ ...form, cantidadEnCaja: parseInt(e.target.value) || 0 })} />
+              </Field>
+              <Field label="Cantidad asignadas">
+                <Input type="number" min={0} value={form.cantidadAsignadas ?? 0} onChange={e => setForm({ ...form, cantidadAsignadas: parseInt(e.target.value) || 0 })} />
+              </Field>
+              <Field label="Color identificador" full>
+                <Input value={form.colorIdentificador || ""} onChange={e => setForm({ ...form, colorIdentificador: e.target.value })} placeholder="Ej: Azul, Amarillo, Verde/Rojo" />
+              </Field>
               <Field label="Notas" full>
                 <Textarea rows={2} value={form.notas || ""} onChange={e => setForm({ ...form, notas: e.target.value })} />
               </Field>
