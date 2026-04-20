@@ -8,8 +8,55 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Plus, KeyRound, Search, Edit2, Trash2, History as HistoryIcon,
   ShieldCheck, UserCheck, Copy as CopyIcon, AlertTriangle, Link2, Eye,
-  FileText, Printer,
+  FileText, Printer, X,
 } from "lucide-react";
+
+// Mapa de colores identificadores (etiqueta visual SafeOne)
+const COLOR_MAP: Record<string, { bg: string; ring: string; text: string }> = {
+  azul:     { bg: "hsl(220 85% 55%)", ring: "hsl(220 85% 45%)", text: "#fff" },
+  amarillo: { bg: "hsl(48 100% 55%)", ring: "hsl(42 90% 45%)",  text: "#1a1a1a" },
+  rojo:     { bg: "hsl(0 80% 55%)",   ring: "hsl(0 80% 45%)",   text: "#fff" },
+  verde:    { bg: "hsl(142 65% 45%)", ring: "hsl(142 65% 35%)", text: "#fff" },
+  naranja:  { bg: "hsl(28 95% 55%)",  ring: "hsl(28 95% 45%)",  text: "#fff" },
+  blanco:   { bg: "hsl(0 0% 96%)",    ring: "hsl(0 0% 70%)",    text: "#1a1a1a" },
+  negro:    { bg: "hsl(0 0% 18%)",    ring: "hsl(0 0% 8%)",     text: "#fff" },
+  gris:     { bg: "hsl(0 0% 60%)",    ring: "hsl(0 0% 45%)",    text: "#fff" },
+  morado:   { bg: "hsl(270 60% 55%)", ring: "hsl(270 60% 45%)", text: "#fff" },
+  rosa:     { bg: "hsl(330 75% 65%)", ring: "hsl(330 75% 55%)", text: "#fff" },
+};
+
+function parseColors(raw?: string): { name: string; style: { bg: string; ring: string; text: string } }[] {
+  if (!raw) return [];
+  return raw
+    .split(/[\/,;]+| y /i)
+    .map(s => s.trim())
+    .filter(Boolean)
+    .map(name => {
+      const key = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const style = COLOR_MAP[key] || { bg: "hsl(var(--muted))", ring: "hsl(var(--border))", text: "hsl(var(--foreground))" };
+      return { name, style };
+    });
+}
+
+function ColorChips({ raw, size = "sm" }: { raw?: string; size?: "sm" | "md" }) {
+  const colors = parseColors(raw);
+  if (colors.length === 0) return null;
+  const dim = size === "sm" ? 14 : 20;
+  return (
+    <div className="inline-flex items-center gap-1" title={raw}>
+      {colors.map((c, i) => (
+        <span
+          key={i}
+          className="rounded-full border-2 shadow-sm"
+          style={{ width: dim, height: dim, background: c.style.bg, borderColor: c.style.ring }}
+        />
+      ))}
+      {size === "md" && (
+        <span className="ml-1 text-xs text-muted-foreground">{colors.map(c => c.name).join(" / ")}</span>
+      )}
+    </div>
+  );
+}
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
