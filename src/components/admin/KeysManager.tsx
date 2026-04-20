@@ -335,7 +335,12 @@ export default function KeysManager({ onBack }: Props) {
                 return (
                   <tr key={k.id} className="border-t hover:bg-muted/30">
                     <td className="px-3 py-2 font-mono text-xs font-semibold text-primary">{k.code || k.id}</td>
-                    <td className="px-3 py-2 max-w-[220px] truncate">{k.descripcion}</td>
+                    <td className="px-3 py-2 max-w-[220px]">
+                      <div className="truncate">{k.descripcion}</div>
+                      {k.colorIdentificador && (
+                        <span className="inline-block text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground mt-0.5">🎨 {k.colorIdentificador}</span>
+                      )}
+                    </td>
                     <td className="px-3 py-2 hidden md:table-cell text-xs text-muted-foreground">
                       <div className="flex flex-col">
                         <span>{k.perteneceA || "—"}</span>
