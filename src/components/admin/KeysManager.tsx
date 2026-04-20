@@ -300,33 +300,48 @@ export default function KeysManager({ onBack }: Props) {
         </p>
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+      {/* KPIs (clicables → filtran la lista) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
         <KpiCard
           title="Revisión vigente"
           icon={<ShieldCheck className="h-4 w-4" />}
-          value={kpis.vigentes}
-          total={kpis.total}
-          pct={kpis.pctVigentes}
+          value={kpis.vigentes} total={kpis.total} pct={kpis.pctVigentes}
           tone="emerald"
+          active={kpiFilter === "vigentes"}
+          onClick={() => setKpiFilter(kpiFilter === "vigentes" ? null : "vigentes")}
         />
         <KpiCard
           title="Con responsable asignado"
           icon={<UserCheck className="h-4 w-4" />}
-          value={kpis.asignadas}
-          total={kpis.total}
-          pct={kpis.pctAsignadas}
+          value={kpis.asignadas} total={kpis.total} pct={kpis.pctAsignadas}
           tone="blue"
+          active={kpiFilter === "asignadas"}
+          onClick={() => setKpiFilter(kpiFilter === "asignadas" ? null : "asignadas")}
         />
         <KpiCard
           title="Con copia registrada"
           icon={<CopyIcon className="h-4 w-4" />}
-          value={kpis.conCopia}
-          total={kpis.total}
-          pct={kpis.pctConCopia}
+          value={kpis.conCopia} total={kpis.total} pct={kpis.pctConCopia}
           tone="amber"
+          active={kpiFilter === "conCopia"}
+          onClick={() => setKpiFilter(kpiFilter === "conCopia" ? null : "conCopia")}
         />
       </div>
+
+      {kpiFilter && (
+        <div className="mb-4 flex items-center justify-between bg-primary/5 border border-primary/20 rounded-lg px-3 py-2">
+          <p className="text-xs text-foreground">
+            <span className="font-semibold">Filtro activo:</span>{" "}
+            {kpiFilter === "vigentes" && "Llaves con revisión vigente"}
+            {kpiFilter === "asignadas" && "Llaves con responsable asignado"}
+            {kpiFilter === "conCopia" && "Llaves con copia registrada"}
+            <span className="text-muted-foreground"> · {filtered.length} resultados</span>
+          </p>
+          <Button variant="ghost" size="sm" className="h-7 gap-1" onClick={() => setKpiFilter(null)}>
+            <X className="h-3 w-3" /> Quitar filtro
+          </Button>
+        </div>
+      )}
 
       {/* Filtros */}
       <div className="flex flex-wrap gap-2 mb-3">
