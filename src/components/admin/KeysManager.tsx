@@ -161,20 +161,30 @@ export default function KeysManager({ onBack }: Props) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <Button variant="ghost" onClick={onBack} className="gap-2">
           <ArrowLeft className="h-4 w-4" /> Volver
         </Button>
-        <Button onClick={() => setForm({ ...EMPTY_FORM })} className="gap-2">
-          <Plus className="h-4 w-4" /> Nueva Llave
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={openProcedimiento} className="gap-2" title="Procedimiento PRO-G-03">
+            <FileText className="h-4 w-4" /> Procedimiento PRO-G-03
+          </Button>
+          <Button variant="outline" size="sm" onClick={printFG08} className="gap-2" title="Formulario F-G-08 Asignación y Devolución de Llaves">
+            <Printer className="h-4 w-4" /> Imprimir F-G-08
+          </Button>
+          <Button onClick={() => setForm({ ...EMPTY_FORM })} className="gap-2">
+            <Plus className="h-4 w-4" /> Nueva Llave
+          </Button>
+        </div>
       </div>
 
       <div className="mb-6">
         <h2 className="text-xl font-bold flex items-center gap-2">
           <KeyRound className="h-5 w-5 text-primary" /> Control de Llaves
         </h2>
-        <p className="text-sm text-muted-foreground">Registro, asignación y revisión periódica de llaves físicas y dispositivos de acceso</p>
+        <p className="text-sm text-muted-foreground">
+          Inventario oficial · Procedimiento <strong>PRO-G-03</strong> · Formulario <strong>F-G-08</strong> Asignación y Devolución de Llaves
+        </p>
       </div>
 
       {/* KPIs */}
