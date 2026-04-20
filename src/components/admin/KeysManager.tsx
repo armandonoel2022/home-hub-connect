@@ -151,7 +151,68 @@ export default function KeysManager({ onBack }: Props) {
     return k.linkedAssetId; // vehicle plate
   };
 
-  if (loading) {
+  const openProcedimiento = () => {
+    window.open("/docs/PRO-G-03_Procedimiento_Control_de_Llaves.docx", "_blank");
+  };
+
+  const printFG08 = () => {
+    const rows = filtered;
+    const today = new Date().toLocaleDateString("es-DO");
+    const win = window.open("", "_blank", "width=900,height=700");
+    if (!win) return;
+    const body = rows.map(k => `
+      <tr>
+        <td>${k.code || k.id}</td>
+        <td>${k.responsable || ""}</td>
+        <td>${k.fechaEntrega || ""}</td>
+        <td>${k.perteneceA || k.descripcion || ""}</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>`).join("");
+    win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>F-G-08 Asignación y Devolución de Llaves</title>
+      <style>
+        @page { size: A4 landscape; margin: 12mm; }
+        body { font-family: Arial, sans-serif; font-size: 10pt; color: #111; }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; border: 1px solid #000; padding: 8px; margin-bottom: 4px; }
+        .header .left { font-size: 9pt; }
+        .header .title { text-align: center; flex: 1; font-weight: 800; font-size: 11pt; line-height: 1.3; }
+        .meta { display:flex; justify-content: space-between; font-size:9pt; margin: 6px 2px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #000; padding: 4px 6px; vertical-align: top; }
+        th { background: #f0f0f0; font-size: 9pt; }
+        td { height: 22px; }
+        .foot { margin-top: 12px; font-size: 8pt; color: #555; display:flex; justify-content: space-between; }
+      </style></head><body>
+      <div class="header">
+        <div class="left">SAFEONE<br/>SECURITY COMPANY</div>
+        <div class="title">FORMULARIO: F-G-08<br/>FORMULARIO ASIGNACIÓN Y DEVOLUCIÓN DE LLAVES,<br/>TOKENS, TARJETAS Y CONTROL DE ACCESO</div>
+        <div class="left" style="text-align:right">Fecha impresión:<br/><strong>${today}</strong></div>
+      </div>
+      <div class="meta"><span>Total de registros: <strong>${rows.length}</strong></span><span>Procedimiento de referencia: <strong>PRO-G-03</strong></span></div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:7%">No. Llave</th>
+            <th style="width:18%">NOMBRE (Firma de persona que se le asigna la llave)</th>
+            <th style="width:9%">Fecha</th>
+            <th style="width:20%">Área o lugar</th>
+            <th style="width:13%">Despachado por</th>
+            <th style="width:13%">Devuelta por</th>
+            <th style="width:9%">Fecha</th>
+            <th style="width:11%">Recibe</th>
+          </tr>
+        </thead>
+        <tbody>${body}</tbody>
+      </table>
+      <div class="foot"><span>F-G-08 · Rev. 1.5 · 13/03/2026</span><span>SafeOne Security Company · Tel: 809 548 3100</span></div>
+      <script>window.onload=()=>{setTimeout(()=>window.print(),300);};</script>
+      </body></html>`);
+    win.document.close();
+  };
+
+
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
