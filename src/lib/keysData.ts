@@ -36,6 +36,10 @@ export interface KeyRecord {
   proximaRevision: string;
   frecuenciaDias: number;
   notas: string;
+  // Inventario físico (formato F-G-08 / Inventario SafeOne)
+  cantidadEnCaja?: number;
+  cantidadAsignadas?: number;
+  colorIdentificador?: string; // Azul, Amarillo, Rojo, Verde, etc.
   historial: KeyHistorial[];
   createdAt?: string;
   updatedAt?: string;
@@ -87,18 +91,47 @@ async function checkServer(): Promise<boolean> {
   return serverAvailable;
 }
 
+// ── Seed (inventario oficial SafeOne) ──
+const SEED_FLAG = "safeone_keys_seed_v1_loaded";
+async function fetchSeed(): Promise<KeyRecord[]> {
+  try {
+    const r = await fetch("/data/keys_seed.json");
+    if (!r.ok) return [];
+    return await r.json();
+  } catch { return []; }
+}
+
 // ── API ──
 export async function loadKeys(): Promise<KeyRecord[]> {
   if (await checkServer()) {
     try {
-      const data = await apiFetch<KeyRecord[]>("/keys");
+      let data = await apiFetch<KeyRecord[]>("/keys");
+      // Auto-seed servidor vacío
+      if ((!data || data.length === 0) && !localStorage.getItem(SEED_FLAG)) {
+        const seed = await fetchSeed();
+        for (const s of seed) {
+          try { await apiFetch<KeyRecord>("/keys", { method: "POST", body: JSON.stringify(s) }); } catch {}
+        }
+        localStorage.setItem(SEED_FLAG, "1");
+        data = await apiFetch<KeyRecord[]>("/keys");
+      }
       saveLocal(data);
       return data;
     } catch {
       return loadLocal();
     }
   }
-  return loadLocal();
+  // Local fallback
+  let local = loadLocal();
+  if (local.length === 0 && !localStorage.getItem(SEED_FLAG)) {
+    const seed = await fetchSeed();
+    if (seed.length) {
+      saveLocal(seed);
+      localStorage.setItem(SEED_FLAG, "1");
+      local = seed;
+    }
+  }
+  return local;
 }
 
 export async function createKey(input: Partial<KeyRecord>): Promise<KeyRecord> {
