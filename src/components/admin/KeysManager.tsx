@@ -96,9 +96,11 @@ export default function KeysManager({ onBack }: Props) {
   const [filterEstado, setFilterEstado] = useState<string>("all");
   const [filterUbic, setFilterUbic] = useState<string>("all");
   const [showOnlyVencidas, setShowOnlyVencidas] = useState(false);
+  const [kpiFilter, setKpiFilter] = useState<null | "vigentes" | "asignadas" | "conCopia">(null);
 
   const [form, setForm] = useState<Partial<KeyRecord> | null>(null);
   const [historyOf, setHistoryOf] = useState<KeyRecord | null>(null);
+  const [detailOf, setDetailOf] = useState<KeyRecord | null>(null);
   const [newHist, setNewHist] = useState<{ accion: KeyHistorialAccion; persona: string; motivo: string }>({
     accion: "entrega", persona: "", motivo: "",
   });
