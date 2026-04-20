@@ -643,6 +643,15 @@ export default function KeysManager({ onBack }: Props) {
         </DialogContent>
       </Dialog>
 
+      {/* ── Detalle (reporte clicable + imprimible) ── */}
+      <KeyDetailDialog
+        keyRecord={detailOf}
+        linkedLabel={detailOf ? linkedLabel(detailOf) : ""}
+        onClose={() => setDetailOf(null)}
+        onEdit={() => { if (detailOf) { setForm(detailOf); setDetailOf(null); } }}
+        onAddHistory={() => { if (detailOf) { setHistoryOf(detailOf); setDetailOf(null); } }}
+      />
+
       {/* ── Delete confirm ── */}
       <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <DialogContent>
