@@ -10,12 +10,49 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
-import { Plus, DollarSign, CreditCard, Wallet, CheckCircle, Clock, XCircle, FileText, TrendingUp, CalendarIcon, Upload, Eye, Ban, Pencil, Link2, AlertTriangle } from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from "recharts";
+import {
+  Plus,
+  DollarSign,
+  CreditCard,
+  Wallet,
+  CheckCircle,
+  Clock,
+  XCircle,
+  FileText,
+  TrendingUp,
+  CalendarIcon,
+  Upload,
+  Eye,
+  Ban,
+  Pencil,
+  Link2,
+  AlertTriangle,
+} from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -31,14 +68,9 @@ const APPROVER_TECH = { id: "USR-110", name: "Samuel A. Pérez" };
 const APPROVER_DEFAULT = { id: "USR-101", name: "Chrisnel Fabian" };
 
 // Permisos extendidos por correo (acceso completo de gestión a finanzas)
-const FINANCE_EMAILS = [
-  "cfabian@safeone.com.do",
-  "cxc@safeone.com.do",
-  "contabilidad@safeone.com.do",
-];
+const FINANCE_EMAILS = ["cfabian@safeone.com.do", "cxc@safeone.com.do", "contabilidad@safeone.com.do"];
 
-const getApprover = (category: string) =>
-  TECH_CATEGORIES.includes(category) ? APPROVER_TECH : APPROVER_DEFAULT;
+const getApprover = (category: string) => (TECH_CATEGORIES.includes(category) ? APPROVER_TECH : APPROVER_DEFAULT);
 
 // Categorías: las originales + las del Excel real (Caja Chica)
 const EXPENSE_CATEGORIES = [
@@ -74,19 +106,29 @@ const PIE_COLORS = [
 // ── localStorage fallback (cuando no hay backend) ──
 const LS_KEY = "safeone_minor_purchases";
 function loadLocal(): MinorPurchase[] {
-  try { return JSON.parse(localStorage.getItem(LS_KEY) || "[]"); } catch { return []; }
+  try {
+    return JSON.parse(localStorage.getItem(LS_KEY) || "[]");
+  } catch {
+    return [];
+  }
 }
 function saveLocal(items: MinorPurchase[]) {
   localStorage.setItem(LS_KEY, JSON.stringify(items));
 }
 
 // ── Cargar OS/OC existentes desde AdminForms ──
-interface AdminRequestLite { orderNumber: string; formType: "orden-compra" | "orden-servicio"; status: string }
+interface AdminRequestLite {
+  orderNumber: string;
+  formType: "orden-compra" | "orden-servicio";
+  status: string;
+}
 function loadAdminOrders(): AdminRequestLite[] {
   try {
     const arr = JSON.parse(localStorage.getItem("safeone_admin_requests") || "[]");
     return Array.isArray(arr) ? arr : [];
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 const todayISO = () => format(new Date(), "yyyy-MM-dd");
@@ -94,7 +136,7 @@ const todayISO = () => format(new Date(), "yyyy-MM-dd");
 const MinorPurchases = () => {
   const { user, allUsers } = useAuth();
   const apiMode = isApiConfigured();
-  const [purchases, setPurchases] = useState<MinorPurchase[]>(() => apiMode ? [] : loadLocal());
+  const [purchases, setPurchases] = useState<MinorPurchase[]>(() => (apiMode ? [] : loadLocal()));
   const [loading, setLoading] = useState(apiMode);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -139,13 +181,18 @@ const MinorPurchases = () => {
     const u = allUsers.find((x) => x.id === userId);
     return u?.isDepartmentLeader === true;
   };
-  const canApprove = !!user && (AUTO_APPROVE_IDS.includes(user.id) || user.isDepartmentLeader || user.isAdmin || isFinance);
+  const canApprove =
+    !!user && (AUTO_APPROVE_IDS.includes(user.id) || user.isDepartmentLeader || user.isAdmin || isFinance);
   const canManage = isFinance || !!user?.isAdmin; // editar gastos pasados, ver dashboard completo
 
   // ── Cargar datos ──
   useEffect(() => {
-    if (!apiMode) { setLoading(false); return; }
-    minorPurchasesApi.getAll()
+    if (!apiMode) {
+      setLoading(false);
+      return;
+    }
+    minorPurchasesApi
+      .getAll()
       .then(setPurchases)
       .catch(() => toast({ title: "Error", description: "No se pudo cargar el listado.", variant: "destructive" }))
       .finally(() => setLoading(false));
@@ -156,15 +203,16 @@ const MinorPurchases = () => {
   const availableOrders = useMemo(() => {
     if (!form.linkedDocType) return [];
     const target = form.linkedDocType === "OC" ? "orden-compra" : "orden-servicio";
-    return adminOrders.filter(o => o.formType === target);
+    return adminOrders.filter((o) => o.formType === target);
   }, [form.linkedDocType, adminOrders]);
 
   // ── Total caja chica activa (no anulada) ──
   const cajaChicaActiveTotal = useMemo(
-    () => purchases
-      .filter(p => p.paymentMethod === "Caja Chica" && p.status !== "Anulado" && !p.voided)
-      .reduce((s, p) => s + p.amount, 0),
-    [purchases]
+    () =>
+      purchases
+        .filter((p) => p.paymentMethod === "Caja Chica" && p.status !== "Anulado" && !p.voided)
+        .reduce((s, p) => s + p.amount, 0),
+    [purchases],
   );
 
   // ── File handler ──
@@ -181,7 +229,7 @@ const MinorPurchases = () => {
     }
     setReceiptFile(file);
     const reader = new FileReader();
-    reader.onload = ev => setReceiptPreview(ev.target?.result as string);
+    reader.onload = (ev) => setReceiptPreview(ev.target?.result as string);
     reader.readAsDataURL(file);
   };
 
@@ -214,8 +262,19 @@ const MinorPurchases = () => {
   // ── Submit ──
   const handleSubmit = async () => {
     if (!user) return;
-    if (!form.description || !form.amount || !form.paymentMethod || !form.category || !form.expenseDate || !form.requestedFor.trim()) {
-      toast({ title: "Faltan campos", description: "Descripción, monto, método, categoría, fecha del gasto y solicitante son obligatorios.", variant: "destructive" });
+    if (
+      !form.description ||
+      !form.amount ||
+      !form.paymentMethod ||
+      !form.category ||
+      !form.expenseDate ||
+      !form.requestedFor.trim()
+    ) {
+      toast({
+        title: "Faltan campos",
+        description: "Descripción, monto, método, categoría, fecha del gasto y solicitante son obligatorios.",
+        variant: "destructive",
+      });
       return;
     }
     const amount = parseFloat(form.amount);
@@ -225,13 +284,17 @@ const MinorPurchases = () => {
     }
     // Validación fecha futura
     if (new Date(form.expenseDate) > new Date()) {
-      toast({ title: "Fecha inválida", description: "La fecha del gasto no puede ser futura.", variant: "destructive" });
+      toast({
+        title: "Fecha inválida",
+        description: "La fecha del gasto no puede ser futura.",
+        variant: "destructive",
+      });
       return;
     }
     // Validación límite Caja Chica
     if (form.paymentMethod === "Caja Chica") {
       const currentTotal = editingId
-        ? cajaChicaActiveTotal - (purchases.find(p => p.id === editingId)?.amount || 0)
+        ? cajaChicaActiveTotal - (purchases.find((p) => p.id === editingId)?.amount || 0)
         : cajaChicaActiveTotal;
       if (currentTotal + amount > CAJA_CHICA_LIMIT) {
         const disponible = Math.max(0, CAJA_CHICA_LIMIT - currentTotal);
@@ -261,7 +324,7 @@ const MinorPurchases = () => {
         if (apiMode) {
           updated = await minorPurchasesApi.update(editingId, updates);
         } else {
-          updated = { ...(purchases.find(p => p.id === editingId) as MinorPurchase), ...updates };
+          updated = { ...(purchases.find((p) => p.id === editingId) as MinorPurchase), ...updates };
         }
         // subir comprobante si se cambió
         if (receiptFile && receiptPreview && receiptPreview.startsWith("data:")) {
@@ -271,7 +334,7 @@ const MinorPurchases = () => {
             updated = { ...updated, receiptUrl: receiptPreview, receiptName: receiptFile.name };
           }
         }
-        const next = purchases.map(p => p.id === editingId ? updated : p);
+        const next = purchases.map((p) => (p.id === editingId ? updated : p));
         setPurchases(next);
         if (!apiMode) saveLocal(next);
         toast({ title: "Gasto actualizado" });
@@ -333,9 +396,14 @@ const MinorPurchases = () => {
       if (apiMode) {
         updated = await minorPurchasesApi.approve(id, { by: user.fullName });
       } else {
-        updated = { ...(purchases.find(p => p.id === id) as MinorPurchase), status: "Aprobado", approvedBy: user.fullName, approvedAt: new Date().toISOString() };
+        updated = {
+          ...(purchases.find((p) => p.id === id) as MinorPurchase),
+          status: "Aprobado",
+          approvedBy: user.fullName,
+          approvedAt: new Date().toISOString(),
+        };
       }
-      const next = purchases.map(p => p.id === id ? updated : p);
+      const next = purchases.map((p) => (p.id === id ? updated : p));
       setPurchases(next);
       if (!apiMode) saveLocal(next);
       toast({ title: "Aprobado" });
@@ -351,9 +419,9 @@ const MinorPurchases = () => {
       if (apiMode) {
         updated = await minorPurchasesApi.reject(id, { by: user.fullName });
       } else {
-        updated = { ...(purchases.find(p => p.id === id) as MinorPurchase), status: "Rechazado" };
+        updated = { ...(purchases.find((p) => p.id === id) as MinorPurchase), status: "Rechazado" };
       }
-      const next = purchases.map(p => p.id === id ? updated : p);
+      const next = purchases.map((p) => (p.id === id ? updated : p));
       setPurchases(next);
       if (!apiMode) saveLocal(next);
       toast({ title: "Rechazado", variant: "destructive" });
@@ -382,7 +450,7 @@ const MinorPurchases = () => {
           status: "Anulado",
         };
       }
-      const next = purchases.map(p => p.id === voidDialog.id ? updated : p);
+      const next = purchases.map((p) => (p.id === voidDialog.id ? updated : p));
       setPurchases(next);
       if (!apiMode) saveLocal(next);
       toast({ title: "Gasto anulado" });
@@ -394,10 +462,14 @@ const MinorPurchases = () => {
   };
 
   // ── Stats ──
-  const approvedActive = purchases.filter(p => p.status === "Aprobado" && !p.voided);
-  const pending = purchases.filter(p => p.status === "Pendiente");
-  const totalCajaChica = approvedActive.filter(p => p.paymentMethod === "Caja Chica").reduce((s, p) => s + p.amount, 0);
-  const totalTarjeta = approvedActive.filter(p => p.paymentMethod === "Tarjeta Corporativa").reduce((s, p) => s + p.amount, 0);
+  const approvedActive = purchases.filter((p) => p.status === "Aprobado" && !p.voided);
+  const pending = purchases.filter((p) => p.status === "Pendiente");
+  const totalCajaChica = approvedActive
+    .filter((p) => p.paymentMethod === "Caja Chica")
+    .reduce((s, p) => s + p.amount, 0);
+  const totalTarjeta = approvedActive
+    .filter((p) => p.paymentMethod === "Tarjeta Corporativa")
+    .reduce((s, p) => s + p.amount, 0);
   const totalGeneral = totalCajaChica + totalTarjeta;
   const efectivoEnCaja = Math.max(0, CAJA_CHICA_LIMIT - totalCajaChica);
 
@@ -407,19 +479,22 @@ const MinorPurchases = () => {
     let from: Date, to: Date;
     if (chartRange === "week") {
       to = now;
-      from = new Date(now); from.setDate(from.getDate() - 7);
+      from = new Date(now);
+      from.setDate(from.getDate() - 7);
     } else if (chartRange === "month") {
       to = now;
-      from = new Date(now); from.setMonth(from.getMonth() - 1);
+      from = new Date(now);
+      from.setMonth(from.getMonth() - 1);
     } else if (chartRange === "year") {
       to = now;
-      from = new Date(now); from.setFullYear(from.getFullYear() - 1);
+      from = new Date(now);
+      from.setFullYear(from.getFullYear() - 1);
     } else {
       from = customFrom ? new Date(customFrom) : new Date(0);
       to = customTo ? new Date(customTo + "T23:59:59") : now;
     }
     const map: Record<string, number> = {};
-    approvedActive.forEach(p => {
+    approvedActive.forEach((p) => {
       const d = new Date(p.expenseDate || p.requestedAt);
       if (d >= from && d <= to) {
         map[p.category] = (map[p.category] || 0) + p.amount;
@@ -433,7 +508,7 @@ const MinorPurchases = () => {
   // ── Año seleccionado para gráficos mensual / departamento ──
   const availableYears = useMemo(() => {
     const set = new Set<string>();
-    approvedActive.forEach(p => {
+    approvedActive.forEach((p) => {
       const d = new Date(p.expenseDate || p.requestedAt);
       set.add(String(d.getFullYear()));
     });
@@ -449,8 +524,12 @@ const MinorPurchases = () => {
         const d = new Date(p.expenseDate || p.requestedAt);
         return d.getMonth() === i && d.getFullYear().toString() === selectedYear;
       });
-      const cajaChica = monthPurchases.filter(p => p.paymentMethod === "Caja Chica").reduce((s, p) => s + p.amount, 0);
-      const tarjeta = monthPurchases.filter(p => p.paymentMethod === "Tarjeta Corporativa").reduce((s, p) => s + p.amount, 0);
+      const cajaChica = monthPurchases
+        .filter((p) => p.paymentMethod === "Caja Chica")
+        .reduce((s, p) => s + p.amount, 0);
+      const tarjeta = monthPurchases
+        .filter((p) => p.paymentMethod === "Tarjeta Corporativa")
+        .reduce((s, p) => s + p.amount, 0);
       return { name, "Caja Chica": cajaChica, "Tarjeta Corporativa": tarjeta };
     });
   }, [approvedActive, selectedYear]);
@@ -458,33 +537,61 @@ const MinorPurchases = () => {
   // ── Por departamento (año seleccionado) ──
   const deptData = useMemo(() => {
     const map: Record<string, number> = {};
-    approvedActive.forEach(p => {
+    approvedActive.forEach((p) => {
       const d = new Date(p.expenseDate || p.requestedAt);
       if (d.getFullYear().toString() !== selectedYear) return;
       map[p.department] = (map[p.department] || 0) + p.amount;
     });
-    return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+    return Object.entries(map)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
   }, [approvedActive, selectedYear]);
 
   // ── Historial filtrado ──
   const filteredHistory = useMemo(() => {
-    return purchases.filter(p => {
-      if (!showVoided && (p.voided || p.status === "Anulado")) return false;
-      const d = p.expenseDate || p.requestedAt.slice(0, 10);
-      if (filterFrom && d < filterFrom) return false;
-      if (filterTo && d > filterTo) return false;
-      if (filterCategory !== "__all" && p.category !== filterCategory) return false;
-      if (filterMethod !== "__all" && p.paymentMethod !== filterMethod) return false;
-      return true;
-    }).sort((a, b) => (b.expenseDate || b.requestedAt).localeCompare(a.expenseDate || a.requestedAt));
+    return purchases
+      .filter((p) => {
+        if (!showVoided && (p.voided || p.status === "Anulado")) return false;
+        const d = p.expenseDate || p.requestedAt.slice(0, 10);
+        if (filterFrom && d < filterFrom) return false;
+        if (filterTo && d > filterTo) return false;
+        if (filterCategory !== "__all" && p.category !== filterCategory) return false;
+        if (filterMethod !== "__all" && p.paymentMethod !== filterMethod) return false;
+        return true;
+      })
+      .sort((a, b) => (b.expenseDate || b.requestedAt).localeCompare(a.expenseDate || a.requestedAt));
   }, [purchases, filterFrom, filterTo, filterCategory, filterMethod, showVoided]);
 
   const statusBadge = (p: MinorPurchase) => {
-    if (p.voided || p.status === "Anulado") return <Badge variant="outline" className="text-muted-foreground border-dashed"><Ban className="h-3 w-3 mr-1" />Anulado</Badge>;
+    if (p.voided || p.status === "Anulado")
+      return (
+        <Badge variant="outline" className="text-muted-foreground border-dashed">
+          <Ban className="h-3 w-3 mr-1" />
+          Anulado
+        </Badge>
+      );
     switch (p.status) {
-      case "Aprobado": return <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-200"><CheckCircle className="h-3 w-3 mr-1" />Aprobado</Badge>;
-      case "Pendiente": return <Badge variant="outline" className="text-amber-600 border-amber-300"><Clock className="h-3 w-3 mr-1" />Pendiente</Badge>;
-      case "Rechazado": return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Rechazado</Badge>;
+      case "Aprobado":
+        return (
+          <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-200">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Aprobado
+          </Badge>
+        );
+      case "Pendiente":
+        return (
+          <Badge variant="outline" className="text-amber-600 border-amber-300">
+            <Clock className="h-3 w-3 mr-1" />
+            Pendiente
+          </Badge>
+        );
+      case "Rechazado":
+        return (
+          <Badge variant="destructive">
+            <XCircle className="h-3 w-3 mr-1" />
+            Rechazado
+          </Badge>
+        );
     }
   };
 
@@ -506,7 +613,13 @@ const MinorPurchases = () => {
               <h1 className="text-2xl font-heading font-bold text-foreground">Gastos Menores</h1>
               <p className="text-sm text-muted-foreground">Caja Chica y Tarjeta Corporativa</p>
             </div>
-            <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
+            <Dialog
+              open={dialogOpen}
+              onOpenChange={(o) => {
+                setDialogOpen(o);
+                if (!o) resetForm();
+              }}
+            >
               <DialogTrigger asChild>
                 <Button className="gap-2">
                   <Plus className="h-4 w-4" /> Nuevo Gasto
@@ -542,8 +655,13 @@ const MinorPurchases = () => {
                     </div>
                     <div>
                       <Label>Método de Pago *</Label>
-                      <Select value={form.paymentMethod} onValueChange={(v) => setForm({ ...form, paymentMethod: v as PaymentMethod })}>
-                        <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                      <Select
+                        value={form.paymentMethod}
+                        onValueChange={(v) => setForm({ ...form, paymentMethod: v as PaymentMethod })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar" />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Caja Chica">Caja Chica (límite RD$20K)</SelectItem>
                           <SelectItem value="Tarjeta Corporativa">Tarjeta Corporativa (sin límite)</SelectItem>
@@ -554,7 +672,13 @@ const MinorPurchases = () => {
                       <Label>Fecha del gasto *</Label>
                       <Popover>
                         <PopoverTrigger asChild>
-                          <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !form.expenseDate && "text-muted-foreground")}>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !form.expenseDate && "text-muted-foreground",
+                            )}
+                          >
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {form.expenseDate ? fmtDate(form.expenseDate) : "Seleccionar"}
                           </Button>
@@ -576,10 +700,14 @@ const MinorPurchases = () => {
                     <div>
                       <Label>Categoría *</Label>
                       <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
-                        <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar" />
+                        </SelectTrigger>
                         <SelectContent>
                           {EXPENSE_CATEGORIES.map((c) => (
-                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                            <SelectItem key={c} value={c}>
+                              {c}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -593,7 +721,9 @@ const MinorPurchases = () => {
                         placeholder="Persona que solicita el gasto"
                       />
                       <datalist id="personnel-list">
-                        {allUsers.map(u => <option key={u.id} value={u.fullName} />)}
+                        {allUsers.map((u) => (
+                          <option key={u.id} value={u.fullName} />
+                        ))}
                       </datalist>
                     </div>
                   </div>
@@ -604,8 +734,19 @@ const MinorPurchases = () => {
                       <Link2 className="h-4 w-4" /> Vincular a Orden (opcional)
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <Select value={form.linkedDocType || "__none"} onValueChange={(v) => setForm({ ...form, linkedDocType: (v === "__none" ? "" : v) as LinkedDocType, linkedDocNumber: "" })}>
-                        <SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger>
+                      <Select
+                        value={form.linkedDocType || "__none"}
+                        onValueChange={(v) =>
+                          setForm({
+                            ...form,
+                            linkedDocType: (v === "__none" ? "" : v) as LinkedDocType,
+                            linkedDocNumber: "",
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Tipo" />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="__none">Ninguno</SelectItem>
                           <SelectItem value="OC">Orden de Compra (OC)</SelectItem>
@@ -621,7 +762,11 @@ const MinorPurchases = () => {
                         />
                       )}
                       <datalist id="orders-list">
-                        {availableOrders.map(o => <option key={o.orderNumber} value={o.orderNumber}>{o.status}</option>)}
+                        {availableOrders.map((o) => (
+                          <option key={o.orderNumber} value={o.orderNumber}>
+                            {o.status}
+                          </option>
+                        ))}
                       </datalist>
                     </div>
                   </div>
@@ -641,15 +786,30 @@ const MinorPurchases = () => {
                       <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
                         <Upload className="h-4 w-4 mr-1" /> {receiptFile ? "Cambiar" : "Subir"}
                       </Button>
-                      {receiptFile && <span className="text-xs text-muted-foreground truncate">{receiptFile.name}</span>}
-                      {!receiptFile && receiptPreview && <span className="text-xs text-muted-foreground">Comprobante actual</span>}
+                      {receiptFile && (
+                        <span className="text-xs text-muted-foreground truncate">{receiptFile.name}</span>
+                      )}
+                      {!receiptFile && receiptPreview && (
+                        <span className="text-xs text-muted-foreground">Comprobante actual</span>
+                      )}
                     </div>
                     {receiptPreview && (
                       <div className="mt-2 border border-border rounded-lg p-2 bg-muted/30">
                         {receiptPreview.match(/\.pdf($|\?)/i) || receiptFile?.type === "application/pdf" ? (
-                          <a href={receiptPreview} target="_blank" rel="noreferrer" className="text-xs underline text-primary">Ver PDF</a>
+                          <a
+                            href={receiptPreview}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs underline text-primary"
+                          >
+                            Ver PDF
+                          </a>
                         ) : (
-                          <img src={receiptPreview} alt="Vista previa comprobante" className="max-h-40 mx-auto rounded" />
+                          <img
+                            src={receiptPreview}
+                            alt="Vista previa comprobante"
+                            className="max-h-40 mx-auto rounded"
+                          />
                         )}
                       </div>
                     )}
@@ -683,7 +843,9 @@ const MinorPurchases = () => {
             <Card>
               <CardContent className="pt-5">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="p-2 rounded-lg bg-primary/10 shrink-0"><DollarSign className="h-5 w-5 text-primary" /></div>
+                  <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+                    <DollarSign className="h-5 w-5 text-primary" />
+                  </div>
                   <div className="min-w-0">
                     <p className="text-xs text-muted-foreground">Total Gastos</p>
                     <p className="text-lg font-heading font-bold truncate">{fmt(totalGeneral)}</p>
@@ -694,7 +856,9 @@ const MinorPurchases = () => {
             <Card>
               <CardContent className="pt-5">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="p-2 rounded-lg bg-emerald-500/10 shrink-0"><Wallet className="h-5 w-5 text-emerald-600" /></div>
+                  <div className="p-2 rounded-lg bg-emerald-500/10 shrink-0">
+                    <Wallet className="h-5 w-5 text-emerald-600" />
+                  </div>
                   <div className="min-w-0">
                     <p className="text-xs text-muted-foreground">Caja Chica gastada</p>
                     <p className="text-lg font-heading font-bold truncate">{fmt(totalCajaChica)}</p>
@@ -705,10 +869,19 @@ const MinorPurchases = () => {
             <Card>
               <CardContent className="pt-5">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="p-2 rounded-lg bg-amber-500/10 shrink-0"><Wallet className="h-5 w-5 text-amber-600" /></div>
+                  <div className="p-2 rounded-lg bg-amber-500/10 shrink-0">
+                    <Wallet className="h-5 w-5 text-amber-600" />
+                  </div>
                   <div className="min-w-0">
                     <p className="text-xs text-muted-foreground">Efectivo en caja</p>
-                    <p className={cn("text-lg font-heading font-bold truncate", efectivoEnCaja < 2000 && "text-destructive")}>{fmt(efectivoEnCaja)}</p>
+                    <p
+                      className={cn(
+                        "text-lg font-heading font-bold truncate",
+                        efectivoEnCaja < 2000 && "text-destructive",
+                      )}
+                    >
+                      {fmt(efectivoEnCaja)}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -716,7 +889,9 @@ const MinorPurchases = () => {
             <Card>
               <CardContent className="pt-5">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="p-2 rounded-lg bg-blue-500/10 shrink-0"><CreditCard className="h-5 w-5 text-blue-600" /></div>
+                  <div className="p-2 rounded-lg bg-blue-500/10 shrink-0">
+                    <CreditCard className="h-5 w-5 text-blue-600" />
+                  </div>
                   <div className="min-w-0">
                     <p className="text-xs text-muted-foreground">Tarjeta Corp.</p>
                     <p className="text-lg font-heading font-bold truncate">{fmt(totalTarjeta)}</p>
@@ -727,7 +902,9 @@ const MinorPurchases = () => {
             <Card>
               <CardContent className="pt-5">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="p-2 rounded-lg bg-amber-500/10 shrink-0"><Clock className="h-5 w-5 text-amber-600" /></div>
+                  <div className="p-2 rounded-lg bg-amber-500/10 shrink-0">
+                    <Clock className="h-5 w-5 text-amber-600" />
+                  </div>
                   <div className="min-w-0">
                     <p className="text-xs text-muted-foreground">Pendientes</p>
                     <p className="text-lg font-heading font-bold">{pending.length}</p>
@@ -740,8 +917,14 @@ const MinorPurchases = () => {
           {/* Tabs */}
           <Tabs defaultValue="dashboard" className="space-y-4">
             <TabsList>
-              <TabsTrigger value="dashboard"><TrendingUp className="h-4 w-4 mr-1" />Dashboard</TabsTrigger>
-              <TabsTrigger value="history"><FileText className="h-4 w-4 mr-1" />Historial</TabsTrigger>
+              <TabsTrigger value="dashboard">
+                <TrendingUp className="h-4 w-4 mr-1" />
+                Dashboard
+              </TabsTrigger>
+              <TabsTrigger value="history">
+                <FileText className="h-4 w-4 mr-1" />
+                Historial
+              </TabsTrigger>
               {canApprove && (
                 <TabsTrigger value="approvals">
                   <CheckCircle className="h-4 w-4 mr-1" />
@@ -762,7 +945,9 @@ const MinorPurchases = () => {
                   <CardTitle className="text-base font-heading">Gastos por Categoría</CardTitle>
                   <div className="flex items-center gap-2 flex-wrap">
                     <Select value={chartRange} onValueChange={(v: any) => setChartRange(v)}>
-                      <SelectTrigger className="w-36 h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="w-36 h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="week">Última semana</SelectItem>
                         <SelectItem value="month">Último mes</SelectItem>
@@ -772,39 +957,51 @@ const MinorPurchases = () => {
                     </Select>
                     {chartRange === "custom" && (
                       <>
-                        <Input type="date" className="h-8 w-36 text-xs" value={customFrom} onChange={e => setCustomFrom(e.target.value)} />
-                        <Input type="date" className="h-8 w-36 text-xs" value={customTo} onChange={e => setCustomTo(e.target.value)} />
+                        <Input
+                          type="date"
+                          className="h-8 w-36 text-xs"
+                          value={customFrom}
+                          onChange={(e) => setCustomFrom(e.target.value)}
+                        />
+                        <Input
+                          type="date"
+                          className="h-8 w-36 text-xs"
+                          value={customTo}
+                          onChange={(e) => setCustomTo(e.target.value)}
+                        />
                       </>
                     )}
                   </div>
                 </CardHeader>
                 <CardContent>
                   {categoryChartData.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-12">Sin gastos en el período seleccionado.</p>
+                    <p className="text-sm text-muted-foreground text-center py-12">
+                      Sin gastos en el período seleccionado.
+                    </p>
                   ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={categoryChartData} layout="vertical" margin={{ left: 80 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                          <XAxis type="number" tick={{ fontSize: 11 }} />
-                          <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={140} />
-                          <Tooltip formatter={(v: number) => fmt(v)} />
-                          <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                            {categoryChartData.map((_, i) => (
-                              <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                      <ResponsiveContainer width="100%" height={300}>
+                    <div className="flex justify-center">
+                      <ResponsiveContainer width="100%" height={400}>
                         <PieChart>
-                          <Pie data={categoryChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                          <Pie
+                            data={categoryChartData}
+                            dataKey="value"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={130}
+                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          >
                             {categoryChartData.map((_, i) => (
                               <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                             ))}
                           </Pie>
                           <Tooltip formatter={(v: number) => fmt(v)} />
-                          <Legend wrapperStyle={{ fontSize: 11 }} />
+                          <Legend
+                            wrapperStyle={{ fontSize: 12 }}
+                            layout="horizontal"
+                            verticalAlign="bottom"
+                            align="center"
+                          />
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
@@ -816,9 +1013,15 @@ const MinorPurchases = () => {
               <div className="flex items-center justify-end gap-2">
                 <Label className="text-xs text-muted-foreground">Año:</Label>
                 <Select value={selectedYear} onValueChange={setSelectedYear}>
-                  <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-28 h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
-                    {availableYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+                    {availableYears.map((y) => (
+                      <SelectItem key={y} value={y}>
+                        {y}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -853,7 +1056,15 @@ const MinorPurchases = () => {
                     ) : (
                       <ResponsiveContainer width="100%" height={300}>
                         <PieChart>
-                          <Pie data={deptData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                          <Pie
+                            data={deptData}
+                            dataKey="value"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={100}
+                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          >
                             {deptData.map((_, i) => (
                               <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                             ))}
@@ -875,26 +1086,44 @@ const MinorPurchases = () => {
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
                     <div>
                       <Label className="text-xs">Desde</Label>
-                      <Input type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} className="h-8" />
+                      <Input
+                        type="date"
+                        value={filterFrom}
+                        onChange={(e) => setFilterFrom(e.target.value)}
+                        className="h-8"
+                      />
                     </div>
                     <div>
                       <Label className="text-xs">Hasta</Label>
-                      <Input type="date" value={filterTo} onChange={e => setFilterTo(e.target.value)} className="h-8" />
+                      <Input
+                        type="date"
+                        value={filterTo}
+                        onChange={(e) => setFilterTo(e.target.value)}
+                        className="h-8"
+                      />
                     </div>
                     <div>
                       <Label className="text-xs">Categoría</Label>
                       <Select value={filterCategory} onValueChange={setFilterCategory}>
-                        <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="h-8">
+                          <SelectValue />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="__all">Todas</SelectItem>
-                          {EXPENSE_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                          {EXPENSE_CATEGORIES.map((c) => (
+                            <SelectItem key={c} value={c}>
+                              {c}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
                       <Label className="text-xs">Método</Label>
                       <Select value={filterMethod} onValueChange={setFilterMethod}>
-                        <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="h-8">
+                          <SelectValue />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="__all">Todos</SelectItem>
                           <SelectItem value="Caja Chica">Caja Chica</SelectItem>
@@ -903,7 +1132,12 @@ const MinorPurchases = () => {
                       </Select>
                     </div>
                     <div className="flex items-end">
-                      <Button variant={showVoided ? "secondary" : "outline"} size="sm" className="w-full h-8" onClick={() => setShowVoided(v => !v)}>
+                      <Button
+                        variant={showVoided ? "secondary" : "outline"}
+                        size="sm"
+                        className="w-full h-8"
+                        onClick={() => setShowVoided((v) => !v)}
+                      >
                         {showVoided ? "Ocultar anulados" : "Mostrar anulados"}
                       </Button>
                     </div>
@@ -927,44 +1161,78 @@ const MinorPurchases = () => {
                       </TableHeader>
                       <TableBody>
                         {loading ? (
-                          <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-6">Cargando…</TableCell></TableRow>
-                        ) : filteredHistory.length === 0 ? (
-                          <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-6">Sin gastos.</TableCell></TableRow>
-                        ) : filteredHistory.map(p => (
-                          <TableRow key={p.id} className={cn(p.voided && "opacity-60")}>
-                            <TableCell className="font-mono text-xs">{p.id}</TableCell>
-                            <TableCell className="text-sm whitespace-nowrap">{fmtDate(p.expenseDate || p.requestedAt)}</TableCell>
-                            <TableCell className="text-sm max-w-[240px] truncate">{p.description}</TableCell>
-                            <TableCell className="text-sm">{p.requestedFor || p.requestedByName}</TableCell>
-                            <TableCell className="text-sm">{p.category}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className="text-xs">
-                                {p.paymentMethod === "Caja Chica" ? <Wallet className="h-3 w-3 mr-1" /> : <CreditCard className="h-3 w-3 mr-1" />}
-                                {p.paymentMethod}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-xs font-mono">{p.linkedDocNumber || "—"}</TableCell>
-                            <TableCell className="text-right font-semibold">{fmt(p.amount)}</TableCell>
-                            <TableCell>{statusBadge(p)}</TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center gap-1 justify-end">
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDetail(p)} title="Ver detalle">
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                                {canManage && !p.voided && (
-                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(p)} title="Editar">
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                )}
-                                {canManage && p.status === "Aprobado" && !p.voided && (
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setVoidDialog(p)} title="Anular">
-                                    <Ban className="h-4 w-4" />
-                                  </Button>
-                                )}
-                              </div>
+                          <TableRow>
+                            <TableCell colSpan={10} className="text-center text-muted-foreground py-6">
+                              Cargando…
                             </TableCell>
                           </TableRow>
-                        ))}
+                        ) : filteredHistory.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={10} className="text-center text-muted-foreground py-6">
+                              Sin gastos.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          filteredHistory.map((p) => (
+                            <TableRow key={p.id} className={cn(p.voided && "opacity-60")}>
+                              <TableCell className="font-mono text-xs">{p.id}</TableCell>
+                              <TableCell className="text-sm whitespace-nowrap">
+                                {fmtDate(p.expenseDate || p.requestedAt)}
+                              </TableCell>
+                              <TableCell className="text-sm max-w-[240px] truncate">{p.description}</TableCell>
+                              <TableCell className="text-sm">{p.requestedFor || p.requestedByName}</TableCell>
+                              <TableCell className="text-sm">{p.category}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="text-xs">
+                                  {p.paymentMethod === "Caja Chica" ? (
+                                    <Wallet className="h-3 w-3 mr-1" />
+                                  ) : (
+                                    <CreditCard className="h-3 w-3 mr-1" />
+                                  )}
+                                  {p.paymentMethod}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-xs font-mono">{p.linkedDocNumber || "—"}</TableCell>
+                              <TableCell className="text-right font-semibold">{fmt(p.amount)}</TableCell>
+                              <TableCell>{statusBadge(p)}</TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center gap-1 justify-end">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={() => setDetail(p)}
+                                    title="Ver detalle"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                  {canManage && !p.voided && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      onClick={() => openEdit(p)}
+                                      title="Editar"
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                  {canManage && p.status === "Aprobado" && !p.voided && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7 text-destructive"
+                                      onClick={() => setVoidDialog(p)}
+                                      title="Anular"
+                                    >
+                                      <Ban className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
                       </TableBody>
                     </Table>
                   </div>
@@ -985,7 +1253,10 @@ const MinorPurchases = () => {
                     ) : (
                       <div className="space-y-3">
                         {pending.map((p) => (
-                          <div key={p.id} className="flex items-center justify-between gap-3 p-4 border border-border rounded-lg flex-wrap">
+                          <div
+                            key={p.id}
+                            className="flex items-center justify-between gap-3 p-4 border border-border rounded-lg flex-wrap"
+                          >
                             <div className="space-y-1 min-w-0">
                               <p className="font-medium text-sm">{p.description}</p>
                               <p className="text-xs text-muted-foreground">
@@ -999,14 +1270,23 @@ const MinorPurchases = () => {
                             <div className="flex items-center gap-3">
                               <span className="font-heading font-bold">{fmt(p.amount)}</span>
                               {p.receiptUrl && (
-                                <Button size="sm" variant="outline" onClick={() => window.open(getFileUrl(p.receiptUrl), "_blank")}>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => window.open(getFileUrl(p.receiptUrl), "_blank")}
+                                >
                                   <Eye className="h-3 w-3 mr-1" /> Comprobante
                                 </Button>
                               )}
                               <Button size="sm" onClick={() => handleApprove(p.id)} className="gap-1">
                                 <CheckCircle className="h-3 w-3" /> Aprobar
                               </Button>
-                              <Button size="sm" variant="destructive" onClick={() => handleReject(p.id)} className="gap-1">
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleReject(p.id)}
+                                className="gap-1"
+                              >
                                 <XCircle className="h-3 w-3" /> Rechazar
                               </Button>
                             </div>
@@ -1030,33 +1310,82 @@ const MinorPurchases = () => {
           </DialogHeader>
           {detail && (
             <div className="space-y-2 text-sm">
-              <p><strong>ID:</strong> <span className="font-mono">{detail.id}</span></p>
-              <p><strong>Fecha del gasto:</strong> {fmtDate(detail.expenseDate)}</p>
-              <p><strong>Registrado:</strong> {fmtDate(detail.requestedAt)}</p>
-              <p><strong>Descripción:</strong> {detail.description}</p>
-              <p><strong>Monto:</strong> {fmt(detail.amount)}</p>
-              <p><strong>Método:</strong> {detail.paymentMethod}</p>
-              <p><strong>Categoría:</strong> {detail.category}</p>
-              <p><strong>Departamento:</strong> {detail.department}</p>
-              <p><strong>Registrado por:</strong> {detail.requestedByName}</p>
-              <p><strong>Solicitado por:</strong> {detail.requestedFor || "—"}</p>
-              {detail.linkedDocNumber && <p><strong>Vinculado a:</strong> {detail.linkedDocType} {detail.linkedDocNumber}</p>}
-              <p><strong>Estado:</strong> {statusBadge(detail)}</p>
-              {detail.approvedBy && <p><strong>Aprobado por:</strong> {detail.approvedBy}</p>}
+              <p>
+                <strong>ID:</strong> <span className="font-mono">{detail.id}</span>
+              </p>
+              <p>
+                <strong>Fecha del gasto:</strong> {fmtDate(detail.expenseDate)}
+              </p>
+              <p>
+                <strong>Registrado:</strong> {fmtDate(detail.requestedAt)}
+              </p>
+              <p>
+                <strong>Descripción:</strong> {detail.description}
+              </p>
+              <p>
+                <strong>Monto:</strong> {fmt(detail.amount)}
+              </p>
+              <p>
+                <strong>Método:</strong> {detail.paymentMethod}
+              </p>
+              <p>
+                <strong>Categoría:</strong> {detail.category}
+              </p>
+              <p>
+                <strong>Departamento:</strong> {detail.department}
+              </p>
+              <p>
+                <strong>Registrado por:</strong> {detail.requestedByName}
+              </p>
+              <p>
+                <strong>Solicitado por:</strong> {detail.requestedFor || "—"}
+              </p>
+              {detail.linkedDocNumber && (
+                <p>
+                  <strong>Vinculado a:</strong> {detail.linkedDocType} {detail.linkedDocNumber}
+                </p>
+              )}
+              <p>
+                <strong>Estado:</strong> {statusBadge(detail)}
+              </p>
+              {detail.approvedBy && (
+                <p>
+                  <strong>Aprobado por:</strong> {detail.approvedBy}
+                </p>
+              )}
               {detail.voided && (
                 <div className="p-2 rounded bg-destructive/10 text-destructive text-xs">
-                  <p><strong>Anulado por:</strong> {detail.voidedBy}</p>
-                  <p><strong>Motivo:</strong> {detail.voidedReason}</p>
+                  <p>
+                    <strong>Anulado por:</strong> {detail.voidedBy}
+                  </p>
+                  <p>
+                    <strong>Motivo:</strong> {detail.voidedReason}
+                  </p>
                 </div>
               )}
-              {detail.notes && <p><strong>Notas:</strong> {detail.notes}</p>}
+              {detail.notes && (
+                <p>
+                  <strong>Notas:</strong> {detail.notes}
+                </p>
+              )}
               {detail.receiptUrl && (
                 <div>
                   <p className="font-medium mb-1">Comprobante:</p>
                   {detail.receiptUrl.startsWith("data:application/pdf") || /\.pdf($|\?)/i.test(detail.receiptUrl) ? (
-                    <a href={getFileUrl(detail.receiptUrl)} target="_blank" rel="noreferrer" className="text-primary underline">Abrir PDF</a>
+                    <a
+                      href={getFileUrl(detail.receiptUrl)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-primary underline"
+                    >
+                      Abrir PDF
+                    </a>
                   ) : (
-                    <img src={getFileUrl(detail.receiptUrl)} alt="Comprobante" className="max-h-64 mx-auto rounded border" />
+                    <img
+                      src={getFileUrl(detail.receiptUrl)}
+                      alt="Comprobante"
+                      className="max-h-64 mx-auto rounded border"
+                    />
                   )}
                 </div>
               )}
@@ -1066,7 +1395,15 @@ const MinorPurchases = () => {
       </Dialog>
 
       {/* Anulación */}
-      <Dialog open={!!voidDialog} onOpenChange={(o) => { if (!o) { setVoidDialog(null); setVoidReason(""); } }}>
+      <Dialog
+        open={!!voidDialog}
+        onOpenChange={(o) => {
+          if (!o) {
+            setVoidDialog(null);
+            setVoidReason("");
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-heading">Anular Gasto</DialogTitle>
@@ -1076,16 +1413,33 @@ const MinorPurchases = () => {
           </DialogHeader>
           {voidDialog && (
             <div className="space-y-3 text-sm">
-              <p><strong>{voidDialog.description}</strong> — {fmt(voidDialog.amount)}</p>
+              <p>
+                <strong>{voidDialog.description}</strong> — {fmt(voidDialog.amount)}
+              </p>
               <div>
                 <Label>Justificación * (mín 5 caracteres)</Label>
-                <Textarea value={voidReason} onChange={(e) => setVoidReason(e.target.value)} rows={3} placeholder="Motivo de anulación…" />
+                <Textarea
+                  value={voidReason}
+                  onChange={(e) => setVoidReason(e.target.value)}
+                  rows={3}
+                  placeholder="Motivo de anulación…"
+                />
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setVoidDialog(null); setVoidReason(""); }}>Cancelar</Button>
-            <Button variant="destructive" onClick={handleVoid}>Anular</Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setVoidDialog(null);
+                setVoidReason("");
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleVoid}>
+              Anular
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
