@@ -429,6 +429,42 @@ const MinorPurchases = () => {
       .sort((a, b) => b.value - a.value);
   }, [approvedActive, chartRange, customFrom, customTo]);
 
+  // ── Año seleccionado para gráficos mensual / departamento ──
+  const availableYears = useMemo(() => {
+    const set = new Set<string>();
+    approvedActive.forEach(p => {
+      const d = new Date(p.expenseDate || p.requestedAt);
+      set.add(String(d.getFullYear()));
+    });
+    set.add(String(new Date().getFullYear()));
+    return Array.from(set).sort().reverse();
+  }, [approvedActive]);
+
+  // ── Gastos mensuales (Caja Chica vs Tarjeta) por año ──
+  const monthlyData = useMemo(() => {
+    const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+    return months.map((name, i) => {
+      const monthPurchases = approvedActive.filter((p) => {
+        const d = new Date(p.expenseDate || p.requestedAt);
+        return d.getMonth() === i && d.getFullYear().toString() === selectedYear;
+      });
+      const cajaChica = monthPurchases.filter(p => p.paymentMethod === "Caja Chica").reduce((s, p) => s + p.amount, 0);
+      const tarjeta = monthPurchases.filter(p => p.paymentMethod === "Tarjeta Corporativa").reduce((s, p) => s + p.amount, 0);
+      return { name, "Caja Chica": cajaChica, "Tarjeta Corporativa": tarjeta };
+    });
+  }, [approvedActive, selectedYear]);
+
+  // ── Por departamento (año seleccionado) ──
+  const deptData = useMemo(() => {
+    const map: Record<string, number> = {};
+    approvedActive.forEach(p => {
+      const d = new Date(p.expenseDate || p.requestedAt);
+      if (d.getFullYear().toString() !== selectedYear) return;
+      map[p.department] = (map[p.department] || 0) + p.amount;
+    });
+    return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+  }, [approvedActive, selectedYear]);
+
   // ── Historial filtrado ──
   const filteredHistory = useMemo(() => {
     return purchases.filter(p => {
