@@ -326,7 +326,8 @@ export interface HiringRequest {
 
 // ─── Minor Purchases (Caja Chica / Tarjeta Corporativa) ───
 export type PaymentMethod = "Caja Chica" | "Tarjeta Corporativa";
-export type MinorPurchaseStatus = "Pendiente" | "Aprobado" | "Rechazado";
+export type MinorPurchaseStatus = "Pendiente" | "Aprobado" | "Rechazado" | "Anulado";
+export type LinkedDocType = "OC" | "OS" | "";
 
 export interface MinorPurchase {
   id: string;
@@ -337,14 +338,30 @@ export interface MinorPurchase {
   department: string;
   requestedBy: string;
   requestedByName: string;
+  /** Fecha real del gasto (ISO YYYY-MM-DD). Editable por el usuario. */
+  expenseDate: string;
+  /** Fecha del registro en sistema (auditoría). */
   requestedAt: string;
   status: MinorPurchaseStatus;
   approvedBy: string | null;
   approvedAt: string | null;
   assignedApprover: string | null;
+  /** Ruta del comprobante (relativa a /uploads/minor-purchases/...). */
   receiptUrl: string;
+  /** Nombre original del archivo del comprobante. */
+  receiptName?: string;
   notes: string;
   purchasedBy: string;
+  /** Persona que solicita el gasto (puede ser texto libre o nombre del directorio). */
+  requestedFor?: string;
+  /** Vínculo opcional a Orden de Compra/Servicio. */
+  linkedDocType?: LinkedDocType;
+  linkedDocNumber?: string;
+  /** Anulación con justificación. */
+  voided?: boolean;
+  voidedReason?: string;
+  voidedBy?: string;
+  voidedAt?: string;
 }
 
 // ─── Notifications ───
