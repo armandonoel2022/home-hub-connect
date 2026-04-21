@@ -113,6 +113,7 @@ const MinorPurchases = () => {
   const [chartRange, setChartRange] = useState<"week" | "month" | "year" | "custom">("month");
   const [customFrom, setCustomFrom] = useState<string>("");
   const [customTo, setCustomTo] = useState<string>("");
+  const [selectedYear, setSelectedYear] = useState<string>(String(new Date().getFullYear()));
 
   // Form state
   const emptyForm = {
