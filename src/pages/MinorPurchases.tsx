@@ -22,6 +22,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   BarChart,
   Bar,
@@ -34,6 +35,8 @@ import {
   Pie,
   Cell,
   Legend,
+  LineChart,
+  Line,
 } from "recharts";
 import {
   Plus,
@@ -52,27 +55,30 @@ import {
   Pencil,
   Link2,
   AlertTriangle,
+  Download,
+  AlertCircle,
+  RefreshCw,
+  Percent,
+  ShoppingBag,
+  History,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { isApiConfigured, minorPurchasesApi, getFileUrl } from "@/lib/api";
+import * as XLSX from "xlsx";
 import type { MinorPurchase, PaymentMethod, MinorPurchaseStatus, LinkedDocType } from "@/lib/types";
 
-const AUTO_APPROVE_IDS = ["USR-100", "USR-110", "USR-101"]; // Aurelio, Samuel, Chrisnel
-
-// Approval routing
+const AUTO_APPROVE_IDS = ["USR-100", "USR-110", "USR-101"];
 const TECH_CATEGORIES = ["Tecnología"];
 const APPROVER_TECH = { id: "USR-110", name: "Samuel A. Pérez" };
 const APPROVER_DEFAULT = { id: "USR-101", name: "Chrisnel Fabian" };
 
-// Permisos extendidos por correo (acceso completo de gestión a finanzas)
 const FINANCE_EMAILS = ["cfabian@safeone.com.do", "cxc@safeone.com.do", "contabilidad@safeone.com.do"];
 
 const getApprover = (category: string) => (TECH_CATEGORIES.includes(category) ? APPROVER_TECH : APPROVER_DEFAULT);
 
-// Categorías: las originales + las del Excel real (Caja Chica)
 const EXPENSE_CATEGORIES = [
   "Combustible",
   "Envío, Peaje y Parqueo",
@@ -88,6 +94,7 @@ const EXPENSE_CATEGORIES = [
 ];
 
 const CAJA_CHICA_LIMIT = 20000;
+const ALERT_THRESHOLD = 0.2; // 20%
 
 const PIE_COLORS = [
   "hsl(42, 100%, 50%)",
@@ -103,8 +110,16 @@ const PIE_COLORS = [
   "hsl(15, 80%, 55%)",
 ];
 
-// ── localStorage fallback (cuando no hay backend) ──
 const LS_KEY = "safeone_minor_purchases";
+const REPOSITION_HISTORY_KEY = "safeone_reposition_history";
+
+interface RepositionRecord {
+  id: string;
+  amount: number;
+  date: string;
+  requestedBy: string;
+}
+
 function loadLocal(): MinorPurchase[] {
   try {
     return JSON.parse(localStorage.getItem(LS_KEY) || "[]");
@@ -116,7 +131,17 @@ function saveLocal(items: MinorPurchase[]) {
   localStorage.setItem(LS_KEY, JSON.stringify(items));
 }
 
-// ── Cargar OS/OC existentes desde AdminForms ──
+function loadRepositions(): RepositionRecord[] {
+  try {
+    return JSON.parse(localStorage.getItem(REPOSITION_HISTORY_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+function saveRepositions(items: RepositionRecord[]) {
+  localStorage.setItem(REPOSITION_HISTORY_KEY, JSON.stringify(items));
+}
+
 interface AdminRequestLite {
   orderNumber: string;
   formType: "orden-compra" | "orden-servicio";
@@ -132,32 +157,38 @@ function loadAdminOrders(): AdminRequestLite[] {
 }
 
 const todayISO = () => format(new Date(), "yyyy-MM-dd");
+const getCurrentMonth = () => format(new Date(), "yyyy-MM");
+const getMonthName = (dateStr: string) => {
+  const d = new Date(dateStr);
+  return format(d, "MMMM yyyy", { locale: es });
+};
 
 const MinorPurchases = () => {
   const { user, allUsers } = useAuth();
   const apiMode = isApiConfigured();
   const [purchases, setPurchases] = useState<MinorPurchase[]>(() => (apiMode ? [] : loadLocal()));
+  const [repositions, setRepositions] = useState<RepositionRecord[]>(() => loadRepositions());
   const [loading, setLoading] = useState(apiMode);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [voidDialog, setVoidDialog] = useState<MinorPurchase | null>(null);
   const [voidReason, setVoidReason] = useState("");
   const [detail, setDetail] = useState<MinorPurchase | null>(null);
+  const [repositionDialogOpen, setRepositionDialogOpen] = useState(false);
+  const [repositionAmount, setRepositionAmount] = useState("");
+  const [showAlert, setShowAlert] = useState(false);
 
-  // Filtros historial
   const [filterFrom, setFilterFrom] = useState<string>("");
   const [filterTo, setFilterTo] = useState<string>("");
   const [filterCategory, setFilterCategory] = useState<string>("__all");
   const [filterMethod, setFilterMethod] = useState<string>("__all");
   const [showVoided, setShowVoided] = useState(false);
 
-  // Período del gráfico por categoría
   const [chartRange, setChartRange] = useState<"week" | "month" | "year" | "custom">("month");
   const [customFrom, setCustomFrom] = useState<string>("");
   const [customTo, setCustomTo] = useState<string>("");
   const [selectedYear, setSelectedYear] = useState<string>(String(new Date().getFullYear()));
 
-  // Form state
   const emptyForm = {
     description: "",
     amount: "",
@@ -174,7 +205,6 @@ const MinorPurchases = () => {
   const [receiptPreview, setReceiptPreview] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Permisos ──
   const isFinance = !!user && FINANCE_EMAILS.includes((user.email || "").toLowerCase());
   const canAutoApprove = (userId: string) => {
     if (AUTO_APPROVE_IDS.includes(userId)) return true;
@@ -183,9 +213,8 @@ const MinorPurchases = () => {
   };
   const canApprove =
     !!user && (AUTO_APPROVE_IDS.includes(user.id) || user.isDepartmentLeader || user.isAdmin || isFinance);
-  const canManage = isFinance || !!user?.isAdmin; // editar gastos pasados, ver dashboard completo
+  const canManage = isFinance || !!user?.isAdmin;
 
-  // ── Cargar datos ──
   useEffect(() => {
     if (!apiMode) {
       setLoading(false);
@@ -198,7 +227,6 @@ const MinorPurchases = () => {
       .finally(() => setLoading(false));
   }, [apiMode]);
 
-  // ── OS/OC disponibles ──
   const adminOrders = useMemo(() => loadAdminOrders(), [dialogOpen]);
   const availableOrders = useMemo(() => {
     if (!form.linkedDocType) return [];
@@ -206,7 +234,47 @@ const MinorPurchases = () => {
     return adminOrders.filter((o) => o.formType === target);
   }, [form.linkedDocType, adminOrders]);
 
-  // ── Total caja chica activa (no anulada) ──
+  // Estadísticas del mes actual
+  const currentMonth = getCurrentMonth();
+  const currentMonthPurchases = useMemo(() => {
+    return purchases.filter((p) => {
+      const d = p.expenseDate || p.requestedAt.slice(0, 10);
+      return d.startsWith(currentMonth) && p.status === "Aprobado" && !p.voided && p.paymentMethod === "Caja Chica";
+    });
+  }, [purchases, currentMonth]);
+
+  const currentMonthTotal = useMemo(() => {
+    return currentMonthPurchases.reduce((s, p) => s + p.amount, 0);
+  }, [currentMonthPurchases]);
+
+  const currentMonthCount = currentMonthPurchases.length;
+
+  const consumoDelMes = currentMonthTotal;
+  const porcentajeConsumido = (consumoDelMes / CAJA_CHICA_LIMIT) * 100;
+  const disponible = CAJA_CHICA_LIMIT - consumoDelMes;
+  const isLowFunds = disponible < CAJA_CHICA_LIMIT * ALERT_THRESHOLD;
+
+  // Última reposición
+  const lastReposition = useMemo(() => {
+    if (repositions.length === 0) return null;
+    return repositions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+  }, [repositions]);
+
+  // Gastos mensuales para gráfico de línea
+  const monthlyExpenses = useMemo(() => {
+    const monthsMap: Record<string, number> = {};
+    purchases
+      .filter((p) => p.status === "Aprobado" && !p.voided && p.paymentMethod === "Caja Chica")
+      .forEach((p) => {
+        const d = p.expenseDate || p.requestedAt.slice(0, 10);
+        const monthKey = d.slice(0, 7);
+        monthsMap[monthKey] = (monthsMap[monthKey] || 0) + p.amount;
+      });
+    return Object.entries(monthsMap)
+      .map(([month, total]) => ({ month: getMonthName(month + "-01"), total }))
+      .sort((a, b) => a.month.localeCompare(b.month));
+  }, [purchases]);
+
   const cajaChicaActiveTotal = useMemo(
     () =>
       purchases
@@ -215,7 +283,15 @@ const MinorPurchases = () => {
     [purchases],
   );
 
-  // ── File handler ──
+  // Alerta automática
+  useEffect(() => {
+    if (isLowFunds && disponible >= 0) {
+      setShowAlert(true);
+      const timer = setTimeout(() => setShowAlert(false), 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [isLowFunds, disponible]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -259,7 +335,94 @@ const MinorPurchases = () => {
     setDialogOpen(true);
   };
 
-  // ── Submit ──
+  // Solicitar reposición
+  const handleRequestReposition = () => {
+    if (!user) return;
+    const amount = parseFloat(repositionAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast({
+        title: "Monto inválido",
+        description: "Ingrese un monto válido para la reposición.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const newReposition: RepositionRecord = {
+      id: `REP-${Date.now()}`,
+      amount,
+      date: new Date().toISOString(),
+      requestedBy: user.fullName,
+    };
+    const updated = [newReposition, ...repositions];
+    setRepositions(updated);
+    saveRepositions(updated);
+    setRepositionAmount("");
+    setRepositionDialogOpen(false);
+    toast({ title: "Solicitud de reposición registrada", description: `Monto: RD$ ${amount.toLocaleString("es-DO")}` });
+  };
+
+  // Generar reporte Excel con el formato requerido
+  const generateExcelReport = () => {
+    const approvedPurchases = purchases.filter((p) => p.status === "Aprobado" && !p.voided);
+
+    // Agrupar por categoría como en la imagen
+    const groupedByCategory: Record<string, typeof approvedPurchases> = {};
+    approvedPurchases.forEach((p) => {
+      if (!groupedByCategory[p.category]) groupedByCategory[p.category] = [];
+      groupedByCategory[p.category].push(p);
+    });
+
+    const rows: any[] = [];
+
+    Object.entries(groupedByCategory).forEach(([category, items]) => {
+      // Encabezado de categoría
+      rows.push({ Categoria: category, Descripcion: "", Fecha: "", Monto: "" });
+      rows.push({ Categoria: "", Descripcion: "---", Fecha: "---", Monto: "---" });
+
+      items.forEach((item) => {
+        rows.push({
+          Categoria: "",
+          Descripcion: item.description,
+          Fecha: format(new Date(item.expenseDate || item.requestedAt), "dd/MM/yyyy"),
+          Monto: item.amount,
+        });
+      });
+
+      // Subtotal de categoría
+      const categoryTotal = items.reduce((s, i) => s + i.amount, 0);
+      rows.push({ Categoria: "", Descripcion: "", Fecha: "Subtotal", Monto: categoryTotal });
+      rows.push({ Categoria: "", Descripcion: "", Fecha: "", Monto: "" });
+    });
+
+    // Totales finales
+    const totalGastos = approvedPurchases.reduce((s, p) => s + p.amount, 0);
+    const efectivoEnCaja = Math.max(0, CAJA_CHICA_LIMIT - totalGastos);
+
+    rows.push({ Categoria: "", Descripcion: "", Fecha: "TOTAL GASTOS RD$", Monto: totalGastos });
+    rows.push({ Categoria: "", Descripcion: "", Fecha: "TOTAL EFECTIVO EN CAJA", Monto: efectivoEnCaja });
+    rows.push({ Categoria: "", Descripcion: "", Fecha: "TOTAL EN CAJA RD$", Monto: CAJA_CHICA_LIMIT });
+    rows.push({ Categoria: "", Descripcion: "", Fecha: "", Monto: "" });
+
+    // Detalle de efectivo en caja (denominaciones)
+    rows.push({ Categoria: "Detalle de efectivo en caja", Descripcion: "Denominaciones", Fecha: "Total", Monto: "" });
+    const denominations = [2000, 1000, 500, 200, 100, 50, 25, 10, 5, 1];
+    let remaining = efectivoEnCaja;
+    denominations.forEach((denom) => {
+      const count = Math.floor(remaining / denom);
+      if (count > 0 || denom === 1) {
+        rows.push({ Categoria: "", Descripcion: denom.toLocaleString(), Fecha: count, Monto: count * denom });
+        remaining = remaining % denom;
+      }
+    });
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Reporte Caja Chica");
+    XLSX.writeFile(wb, `reporte_caja_chica_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+
+    toast({ title: "Reporte generado", description: "El archivo Excel ha sido descargado." });
+  };
+
   const handleSubmit = async () => {
     if (!user) return;
     if (
@@ -282,7 +445,6 @@ const MinorPurchases = () => {
       toast({ title: "Monto inválido", variant: "destructive" });
       return;
     }
-    // Validación fecha futura
     if (new Date(form.expenseDate) > new Date()) {
       toast({
         title: "Fecha inválida",
@@ -291,16 +453,15 @@ const MinorPurchases = () => {
       });
       return;
     }
-    // Validación límite Caja Chica
     if (form.paymentMethod === "Caja Chica") {
       const currentTotal = editingId
         ? cajaChicaActiveTotal - (purchases.find((p) => p.id === editingId)?.amount || 0)
         : cajaChicaActiveTotal;
       if (currentTotal + amount > CAJA_CHICA_LIMIT) {
-        const disponible = Math.max(0, CAJA_CHICA_LIMIT - currentTotal);
+        const disponibleLimit = Math.max(0, CAJA_CHICA_LIMIT - currentTotal);
         toast({
           title: "Límite Caja Chica excedido",
-          description: `Disponible: RD$ ${disponible.toLocaleString("es-DO")}. Solicitado: RD$ ${amount.toLocaleString("es-DO")}.`,
+          description: `Disponible: RD$ ${disponibleLimit.toLocaleString("es-DO")}. Solicitado: RD$ ${amount.toLocaleString("es-DO")}.`,
           variant: "destructive",
         });
         return;
@@ -326,7 +487,6 @@ const MinorPurchases = () => {
         } else {
           updated = { ...(purchases.find((p) => p.id === editingId) as MinorPurchase), ...updates };
         }
-        // subir comprobante si se cambió
         if (receiptFile && receiptPreview && receiptPreview.startsWith("data:")) {
           if (apiMode) {
             updated = await minorPurchasesApi.uploadReceipt(editingId, receiptPreview, receiptFile.name);
@@ -430,6 +590,7 @@ const MinorPurchases = () => {
     }
   };
 
+  // CORREGIDO: Anular entrada sin error
   const handleVoid = async () => {
     if (!voidDialog || !user) return;
     if (!voidReason.trim() || voidReason.trim().length < 5) {
@@ -453,15 +614,19 @@ const MinorPurchases = () => {
       const next = purchases.map((p) => (p.id === voidDialog.id ? updated : p));
       setPurchases(next);
       if (!apiMode) saveLocal(next);
-      toast({ title: "Gasto anulado" });
+      toast({ title: "Gasto anulado correctamente" });
       setVoidDialog(null);
       setVoidReason("");
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      console.error("Error al anular:", err);
+      toast({
+        title: "Error al anular",
+        description: err.message || "Ocurrió un error. Intente nuevamente.",
+        variant: "destructive",
+      });
     }
   };
 
-  // ── Stats ──
   const approvedActive = purchases.filter((p) => p.status === "Aprobado" && !p.voided);
   const pending = purchases.filter((p) => p.status === "Pendiente");
   const totalCajaChica = approvedActive
@@ -473,7 +638,6 @@ const MinorPurchases = () => {
   const totalGeneral = totalCajaChica + totalTarjeta;
   const efectivoEnCaja = Math.max(0, CAJA_CHICA_LIMIT - totalCajaChica);
 
-  // ── Datos del gráfico por categoría según rango ──
   const categoryChartData = useMemo(() => {
     const now = new Date();
     let from: Date, to: Date;
@@ -505,7 +669,6 @@ const MinorPurchases = () => {
       .sort((a, b) => b.value - a.value);
   }, [approvedActive, chartRange, customFrom, customTo]);
 
-  // ── Año seleccionado para gráficos mensual / departamento ──
   const availableYears = useMemo(() => {
     const set = new Set<string>();
     approvedActive.forEach((p) => {
@@ -516,7 +679,6 @@ const MinorPurchases = () => {
     return Array.from(set).sort().reverse();
   }, [approvedActive]);
 
-  // ── Gastos mensuales (Caja Chica vs Tarjeta) por año ──
   const monthlyData = useMemo(() => {
     const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
     return months.map((name, i) => {
@@ -534,7 +696,6 @@ const MinorPurchases = () => {
     });
   }, [approvedActive, selectedYear]);
 
-  // ── Por departamento (año seleccionado) ──
   const deptData = useMemo(() => {
     const map: Record<string, number> = {};
     approvedActive.forEach((p) => {
@@ -547,7 +708,6 @@ const MinorPurchases = () => {
       .sort((a, b) => b.value - a.value);
   }, [approvedActive, selectedYear]);
 
-  // ── Historial filtrado ──
   const filteredHistory = useMemo(() => {
     return purchases
       .filter((p) => {
@@ -613,242 +773,263 @@ const MinorPurchases = () => {
               <h1 className="text-2xl font-heading font-bold text-foreground">Gastos Menores</h1>
               <p className="text-sm text-muted-foreground">Caja Chica y Tarjeta Corporativa</p>
             </div>
-            <Dialog
-              open={dialogOpen}
-              onOpenChange={(o) => {
-                setDialogOpen(o);
-                if (!o) resetForm();
-              }}
-            >
-              <DialogTrigger asChild>
-                <Button className="gap-2">
-                  <Plus className="h-4 w-4" /> Nuevo Gasto
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle className="font-heading">{editingId ? "Editar Gasto" : "Registrar Gasto"}</DialogTitle>
-                  <DialogDescription>
-                    Caja Chica disponible: <strong>{fmt(efectivoEnCaja)}</strong> de {fmt(CAJA_CHICA_LIMIT)}.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 pt-2">
-                  <div>
-                    <Label>Descripción *</Label>
-                    <Textarea
-                      value={form.description}
-                      onChange={(e) => setForm({ ...form, description: e.target.value })}
-                      placeholder="Ej: Pago de gasolina - Victor Salas"
-                      rows={2}
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={generateExcelReport} className="gap-2">
+                <Download className="h-4 w-4" /> Reporte Excel
+              </Button>
+              <Button variant="outline" onClick={() => setRepositionDialogOpen(true)} className="gap-2">
+                <RefreshCw className="h-4 w-4" /> Solicitar Reposición
+              </Button>
+              <Dialog
+                open={dialogOpen}
+                onOpenChange={(o) => {
+                  setDialogOpen(o);
+                  if (!o) resetForm();
+                }}
+              >
+                <DialogTrigger asChild>
+                  <Button className="gap-2">
+                    <Plus className="h-4 w-4" /> Nuevo Gasto
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle className="font-heading">{editingId ? "Editar Gasto" : "Registrar Gasto"}</DialogTitle>
+                    <DialogDescription>
+                      Caja Chica disponible: <strong>{fmt(efectivoEnCaja)}</strong> de {fmt(CAJA_CHICA_LIMIT)}.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 pt-2">
                     <div>
-                      <Label>Monto (RD$) *</Label>
-                      <Input
-                        type="number"
-                        value={form.amount}
-                        onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                        placeholder="0.00"
-                        step="0.01"
+                      <Label>Descripción *</Label>
+                      <Textarea
+                        value={form.description}
+                        onChange={(e) => setForm({ ...form, description: e.target.value })}
+                        placeholder="Ej: Pago de gasolina - Victor Salas"
+                        rows={2}
                       />
                     </div>
-                    <div>
-                      <Label>Método de Pago *</Label>
-                      <Select
-                        value={form.paymentMethod}
-                        onValueChange={(v) => setForm({ ...form, paymentMethod: v as PaymentMethod })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Caja Chica">Caja Chica (límite RD$20K)</SelectItem>
-                          <SelectItem value="Tarjeta Corporativa">Tarjeta Corporativa (sin límite)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>Fecha del gasto *</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !form.expenseDate && "text-muted-foreground",
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {form.expenseDate ? fmtDate(form.expenseDate) : "Seleccionar"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={form.expenseDate ? new Date(form.expenseDate + "T12:00:00") : undefined}
-                            onSelect={(d) => d && setForm({ ...form, expenseDate: format(d, "yyyy-MM-dd") })}
-                            disabled={(d) => d > new Date()}
-                            initialFocus
-                            className={cn("p-3 pointer-events-auto")}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <Label>Categoría *</Label>
-                      <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {EXPENSE_CATEGORIES.map((c) => (
-                            <SelectItem key={c} value={c}>
-                              {c}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>Solicitado por *</Label>
-                      <Input
-                        list="personnel-list"
-                        value={form.requestedFor}
-                        onChange={(e) => setForm({ ...form, requestedFor: e.target.value })}
-                        placeholder="Persona que solicita el gasto"
-                      />
-                      <datalist id="personnel-list">
-                        {allUsers.map((u) => (
-                          <option key={u.id} value={u.fullName} />
-                        ))}
-                      </datalist>
-                    </div>
-                  </div>
-
-                  {/* Vincular OS/OC */}
-                  <div className="border border-border rounded-lg p-3 space-y-3 bg-muted/30">
-                    <div className="flex items-center gap-2 text-sm font-medium">
-                      <Link2 className="h-4 w-4" /> Vincular a Orden (opcional)
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <Select
-                        value={form.linkedDocType || "__none"}
-                        onValueChange={(v) =>
-                          setForm({
-                            ...form,
-                            linkedDocType: (v === "__none" ? "" : v) as LinkedDocType,
-                            linkedDocNumber: "",
-                          })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Tipo" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none">Ninguno</SelectItem>
-                          <SelectItem value="OC">Orden de Compra (OC)</SelectItem>
-                          <SelectItem value="OS">Orden de Servicio (OS)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {form.linkedDocType && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <Label>Monto (RD$) *</Label>
                         <Input
-                          list="orders-list"
-                          value={form.linkedDocNumber}
-                          onChange={(e) => setForm({ ...form, linkedDocNumber: e.target.value })}
-                          placeholder={`Ej: ${form.linkedDocType}-0001`}
+                          type="number"
+                          value={form.amount}
+                          onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                          placeholder="0.00"
+                          step="0.01"
                         />
-                      )}
-                      <datalist id="orders-list">
-                        {availableOrders.map((o) => (
-                          <option key={o.orderNumber} value={o.orderNumber}>
-                            {o.status}
-                          </option>
-                        ))}
-                      </datalist>
+                      </div>
+                      <div>
+                        <Label>Método de Pago *</Label>
+                        <Select
+                          value={form.paymentMethod}
+                          onValueChange={(v) => setForm({ ...form, paymentMethod: v as PaymentMethod })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Caja Chica">Caja Chica (límite RD$20K)</SelectItem>
+                            <SelectItem value="Tarjeta Corporativa">Tarjeta Corporativa (sin límite)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Fecha del gasto *</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !form.expenseDate && "text-muted-foreground",
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {form.expenseDate ? fmtDate(form.expenseDate) : "Seleccionar"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={form.expenseDate ? new Date(form.expenseDate + "T12:00:00") : undefined}
+                              onSelect={(d) => d && setForm({ ...form, expenseDate: format(d, "yyyy-MM-dd") })}
+                              disabled={(d) => d > new Date()}
+                              initialFocus
+                              className={cn("p-3 pointer-events-auto")}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
                     </div>
-                  </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <Label>Categoría *</Label>
+                        <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {EXPENSE_CATEGORIES.map((c) => (
+                              <SelectItem key={c} value={c}>
+                                {c}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Solicitado por *</Label>
+                        <Input
+                          list="personnel-list"
+                          value={form.requestedFor}
+                          onChange={(e) => setForm({ ...form, requestedFor: e.target.value })}
+                          placeholder="Persona que solicita el gasto"
+                        />
+                        <datalist id="personnel-list">
+                          {allUsers.map((u) => (
+                            <option key={u.id} value={u.fullName} />
+                          ))}
+                        </datalist>
+                      </div>
+                    </div>
 
-                  {/* Comprobante */}
-                  <div>
-                    <Label>Comprobante (PDF/JPG/PNG, máx 5MB)</Label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        onChange={handleFileChange}
-                        className="hidden"
-                        id="receipt-input"
-                      />
-                      <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-                        <Upload className="h-4 w-4 mr-1" /> {receiptFile ? "Cambiar" : "Subir"}
-                      </Button>
-                      {receiptFile && (
-                        <span className="text-xs text-muted-foreground truncate">{receiptFile.name}</span>
-                      )}
-                      {!receiptFile && receiptPreview && (
-                        <span className="text-xs text-muted-foreground">Comprobante actual</span>
-                      )}
-                    </div>
-                    {receiptPreview && (
-                      <div className="mt-2 border border-border rounded-lg p-2 bg-muted/30">
-                        {receiptPreview.match(/\.pdf($|\?)/i) || receiptFile?.type === "application/pdf" ? (
-                          <a
-                            href={receiptPreview}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-xs underline text-primary"
-                          >
-                            Ver PDF
-                          </a>
-                        ) : (
-                          <img
-                            src={receiptPreview}
-                            alt="Vista previa comprobante"
-                            className="max-h-40 mx-auto rounded"
+                    <div className="border border-border rounded-lg p-3 space-y-3 bg-muted/30">
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        <Link2 className="h-4 w-4" /> Vincular a Orden (opcional)
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <Select
+                          value={form.linkedDocType || "__none"}
+                          onValueChange={(v) =>
+                            setForm({
+                              ...form,
+                              linkedDocType: (v === "__none" ? "" : v) as LinkedDocType,
+                              linkedDocNumber: "",
+                            })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Tipo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none">Ninguno</SelectItem>
+                            <SelectItem value="OC">Orden de Compra (OC)</SelectItem>
+                            <SelectItem value="OS">Orden de Servicio (OS)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {form.linkedDocType && (
+                          <Input
+                            list="orders-list"
+                            value={form.linkedDocNumber}
+                            onChange={(e) => setForm({ ...form, linkedDocNumber: e.target.value })}
+                            placeholder={`Ej: ${form.linkedDocType}-0001`}
                           />
                         )}
+                        <datalist id="orders-list">
+                          {availableOrders.map((o) => (
+                            <option key={o.orderNumber} value={o.orderNumber}>
+                              {o.status}
+                            </option>
+                          ))}
+                        </datalist>
                       </div>
+                    </div>
+
+                    <div>
+                      <Label>Comprobante (PDF/JPG/PNG, máx 5MB)</Label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          onChange={handleFileChange}
+                          className="hidden"
+                          id="receipt-input"
+                        />
+                        <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                          <Upload className="h-4 w-4 mr-1" /> {receiptFile ? "Cambiar" : "Subir"}
+                        </Button>
+                        {receiptFile && (
+                          <span className="text-xs text-muted-foreground truncate">{receiptFile.name}</span>
+                        )}
+                        {!receiptFile && receiptPreview && (
+                          <span className="text-xs text-muted-foreground">Comprobante actual</span>
+                        )}
+                      </div>
+                      {receiptPreview && (
+                        <div className="mt-2 border border-border rounded-lg p-2 bg-muted/30">
+                          {receiptPreview.match(/\.pdf($|\?)/i) || receiptFile?.type === "application/pdf" ? (
+                            <a
+                              href={receiptPreview}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs underline text-primary"
+                            >
+                              Ver PDF
+                            </a>
+                          ) : (
+                            <img
+                              src={receiptPreview}
+                              alt="Vista previa comprobante"
+                              className="max-h-40 mx-auto rounded"
+                            />
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label>Notas (opcional)</Label>
+                      <Input
+                        value={form.notes}
+                        onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                        placeholder="Notas adicionales"
+                      />
+                    </div>
+
+                    {user && !canAutoApprove(user.id) && !editingId && (
+                      <p className="text-xs text-amber-700 bg-amber-50 dark:bg-amber-950/20 p-2 rounded-lg flex items-start gap-2">
+                        <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                        Tu solicitud requerirá aprobación de tu líder.
+                      </p>
                     )}
+                    <Button onClick={handleSubmit} className="w-full">
+                      {editingId ? "Guardar cambios" : "Registrar Gasto"}
+                    </Button>
                   </div>
-
-                  <div>
-                    <Label>Notas (opcional)</Label>
-                    <Input
-                      value={form.notes}
-                      onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                      placeholder="Notas adicionales"
-                    />
-                  </div>
-
-                  {user && !canAutoApprove(user.id) && !editingId && (
-                    <p className="text-xs text-amber-700 bg-amber-50 dark:bg-amber-950/20 p-2 rounded-lg flex items-start gap-2">
-                      <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-                      Tu solicitud requerirá aprobación de tu líder.
-                    </p>
-                  )}
-                  <Button onClick={handleSubmit} className="w-full">
-                    {editingId ? "Guardar cambios" : "Registrar Gasto"}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
 
-          {/* Summary Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+          {/* Alerta de reposición */}
+          {showAlert && isLowFunds && (
+            <Alert
+              variant="destructive"
+              className="bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/30 dark:border-amber-800"
+            >
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>¡Alerta de reposición!</AlertTitle>
+              <AlertDescription>
+                El disponible de Caja Chica es menor al 20% (RD$ {disponible.toLocaleString("es-DO")}). Por favor,
+                solicite una reposición.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Nuevo Dashboard con indicadores solicitados */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             <Card>
               <CardContent className="pt-5">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="p-2 rounded-lg bg-primary/10 shrink-0">
                     <DollarSign className="h-5 w-5 text-primary" />
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-xs text-muted-foreground">Total Gastos</p>
-                    <p className="text-lg font-heading font-bold truncate">{fmt(totalGeneral)}</p>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Monto Asignado</p>
+                    <p className="text-lg font-heading font-bold">{fmt(CAJA_CHICA_LIMIT)}</p>
                   </div>
                 </div>
               </CardContent>
@@ -859,29 +1040,9 @@ const MinorPurchases = () => {
                   <div className="p-2 rounded-lg bg-emerald-500/10 shrink-0">
                     <Wallet className="h-5 w-5 text-emerald-600" />
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-xs text-muted-foreground">Caja Chica gastada</p>
-                    <p className="text-lg font-heading font-bold truncate">{fmt(totalCajaChica)}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-5">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="p-2 rounded-lg bg-amber-500/10 shrink-0">
-                    <Wallet className="h-5 w-5 text-amber-600" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs text-muted-foreground">Efectivo en caja</p>
-                    <p
-                      className={cn(
-                        "text-lg font-heading font-bold truncate",
-                        efectivoEnCaja < 2000 && "text-destructive",
-                      )}
-                    >
-                      {fmt(efectivoEnCaja)}
-                    </p>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Consumo del mes</p>
+                    <p className="text-lg font-heading font-bold">{fmt(consumoDelMes)}</p>
                   </div>
                 </div>
               </CardContent>
@@ -890,11 +1051,31 @@ const MinorPurchases = () => {
               <CardContent className="pt-5">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="p-2 rounded-lg bg-blue-500/10 shrink-0">
-                    <CreditCard className="h-5 w-5 text-blue-600" />
+                    <Percent className="h-5 w-5 text-blue-600" />
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-xs text-muted-foreground">Tarjeta Corp.</p>
-                    <p className="text-lg font-heading font-bold truncate">{fmt(totalTarjeta)}</p>
+                  <div>
+                    <p className="text-xs text-muted-foreground">% Consumido</p>
+                    <p className="text-lg font-heading font-bold">{porcentajeConsumido.toFixed(1)}%</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-5">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2 rounded-lg bg-purple-500/10 shrink-0">
+                    <History className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Última reposición</p>
+                    {lastReposition ? (
+                      <>
+                        <p className="text-sm font-heading font-bold">{fmt(lastReposition.amount)}</p>
+                        <p className="text-xs text-muted-foreground">{fmtDate(lastReposition.date)}</p>
+                      </>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Sin reposiciones</p>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -903,16 +1084,59 @@ const MinorPurchases = () => {
               <CardContent className="pt-5">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="p-2 rounded-lg bg-amber-500/10 shrink-0">
-                    <Clock className="h-5 w-5 text-amber-600" />
+                    <ShoppingBag className="h-5 w-5 text-amber-600" />
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-xs text-muted-foreground">Pendientes</p>
-                    <p className="text-lg font-heading font-bold">{pending.length}</p>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Solicitudes del mes</p>
+                    <p className="text-lg font-heading font-bold">{currentMonthCount}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-5">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2 rounded-lg bg-rose-500/10 shrink-0">
+                    <TrendingUp className="h-5 w-5 text-rose-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Disponible</p>
+                    <p className={cn("text-lg font-heading font-bold", isLowFunds && "text-destructive")}>
+                      {fmt(disponible)}
+                    </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
+
+          {/* Gráfico de gastos mensuales */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-heading">Monto total gastado por mes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {monthlyExpenses.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Sin datos de gastos mensuales.</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={monthlyExpenses}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} />
+                    <Tooltip formatter={(v: number) => fmt(v)} />
+                    <Line
+                      type="monotone"
+                      dataKey="total"
+                      stroke="hsl(42, 100%, 50%)"
+                      strokeWidth={2}
+                      dot={{ fill: "hsl(42, 100%, 50%)" }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Tabs */}
           <Tabs defaultValue="dashboard" className="space-y-4">
@@ -938,7 +1162,6 @@ const MinorPurchases = () => {
               )}
             </TabsList>
 
-            {/* Dashboard Tab */}
             <TabsContent value="dashboard" className="space-y-4">
               <Card>
                 <CardHeader className="pb-2 flex-row items-center justify-between flex-wrap gap-2">
@@ -1009,7 +1232,6 @@ const MinorPurchases = () => {
                 </CardContent>
               </Card>
 
-              {/* Selector de año para los gráficos siguientes */}
               <div className="flex items-center justify-end gap-2">
                 <Label className="text-xs text-muted-foreground">Año:</Label>
                 <Select value={selectedYear} onValueChange={setSelectedYear}>
@@ -1079,7 +1301,6 @@ const MinorPurchases = () => {
               </div>
             </TabsContent>
 
-            {/* History Tab */}
             <TabsContent value="history" className="space-y-3">
               <Card>
                 <CardContent className="pt-5">
@@ -1240,7 +1461,6 @@ const MinorPurchases = () => {
               </Card>
             </TabsContent>
 
-            {/* Approvals Tab */}
             {canApprove && (
               <TabsContent value="approvals">
                 <Card>
@@ -1394,7 +1614,7 @@ const MinorPurchases = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Anulación */}
+      {/* Anulación CORREGIDA */}
       <Dialog
         open={!!voidDialog}
         onOpenChange={(o) => {
@@ -1413,9 +1633,12 @@ const MinorPurchases = () => {
           </DialogHeader>
           {voidDialog && (
             <div className="space-y-3 text-sm">
-              <p>
-                <strong>{voidDialog.description}</strong> — {fmt(voidDialog.amount)}
-              </p>
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="font-medium">{voidDialog.description}</p>
+                <p className="text-muted-foreground">
+                  {fmt(voidDialog.amount)} · {fmtDate(voidDialog.expenseDate || voidDialog.requestedAt)}
+                </p>
+              </div>
               <div>
                 <Label>Justificación * (mín 5 caracteres)</Label>
                 <Textarea
@@ -1423,6 +1646,7 @@ const MinorPurchases = () => {
                   onChange={(e) => setVoidReason(e.target.value)}
                   rows={3}
                   placeholder="Motivo de anulación…"
+                  className="mt-1"
                 />
               </div>
             </div>
@@ -1440,6 +1664,39 @@ const MinorPurchases = () => {
             <Button variant="destructive" onClick={handleVoid}>
               Anular
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo de reposición */}
+      <Dialog open={repositionDialogOpen} onOpenChange={setRepositionDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-heading">Solicitar Reposición de Caja Chica</DialogTitle>
+            <DialogDescription>Complete el monto a reponer para registrar la solicitud.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Monto a reponer (RD$)</Label>
+              <Input
+                type="number"
+                value={repositionAmount}
+                onChange={(e) => setRepositionAmount(e.target.value)}
+                placeholder="0.00"
+                step="0.01"
+                className="mt-1"
+              />
+            </div>
+            <div className="text-sm text-muted-foreground">
+              <p>Disponible actual: {fmt(disponible)}</p>
+              <p>Límite: {fmt(CAJA_CHICA_LIMIT)}</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRepositionDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleRequestReposition}>Solicitar Reposición</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
