@@ -257,10 +257,18 @@ export const minorPurchasesApi = {
   getAll: () => apiFetch<MinorPurchase[]>("/minor-purchases"),
   create: (mp: Omit<MinorPurchase, "id">) =>
     apiFetch<MinorPurchase>("/minor-purchases", { method: "POST", body: JSON.stringify(mp) }),
+  update: (id: string, data: Partial<MinorPurchase>) =>
+    apiFetch<MinorPurchase>(`/minor-purchases/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  remove: (id: string) =>
+    apiFetch<void>(`/minor-purchases/${id}`, { method: "DELETE" }),
   approve: (id: string, data: { by: string }) =>
     apiFetch<MinorPurchase>(`/minor-purchases/${id}/approve`, { method: "POST", body: JSON.stringify(data) }),
   reject: (id: string, data: { by: string }) =>
     apiFetch<MinorPurchase>(`/minor-purchases/${id}/reject`, { method: "POST", body: JSON.stringify(data) }),
+  voidPurchase: (id: string, data: { by: string; reason: string }) =>
+    apiFetch<MinorPurchase>(`/minor-purchases/${id}/void`, { method: "POST", body: JSON.stringify(data) }),
+  uploadReceipt: (id: string, dataUrl: string, fileName: string) =>
+    apiFetch<MinorPurchase>(`/minor-purchases/${id}/receipt`, { method: "POST", body: JSON.stringify({ dataUrl, fileName }) }),
 };
 
 // ─── KPIs API ───
