@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import AppLayout from "@/components/AppLayout";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,6 +61,7 @@ import {
   Percent,
   ShoppingBag,
   History,
+  Building2,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -113,12 +114,66 @@ const PIE_COLORS = [
 const LS_KEY = "safeone_minor_purchases";
 const REPOSITION_HISTORY_KEY = "safeone_reposition_history";
 
-interface RepositionRecord {
+interface MonthlyReposition {
   id: string;
-  amount: number;
-  date: string;
+  yearMonth: string;
+  amountReposed: number;
   requestedBy: string;
+  requestedAt: string;
+  approvedAt?: string;
+  status: "pendiente" | "aprobado" | "reposado";
 }
+
+// ==================== FUNCIONES DE UTILIDAD ====================
+const getYearMonth = (date: Date | string): string => {
+  const d = typeof date === "string" ? new Date(date) : date;
+  return format(d, "yyyy-MM");
+};
+
+const getCurrentYearMonth = (): string => getYearMonth(new Date());
+const getPreviousYearMonth = (): string => {
+  const prevMonth = new Date();
+  prevMonth.setMonth(prevMonth.getMonth() - 1);
+  return getYearMonth(prevMonth);
+};
+
+const getMonthDisplay = (yearMonth: string): string => {
+  const [year, month] = yearMonth.split("-");
+  const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+  return format(date, "MMMM yyyy", { locale: es });
+};
+
+const getTotalSpentInMonth = (purchases: MinorPurchase[], yearMonth: string): number => {
+  return purchases
+    .filter((p) => {
+      const expenseMonth = getYearMonth(p.expenseDate || p.requestedAt);
+      return expenseMonth === yearMonth && p.status === "Aprobado" && !p.voided && p.paymentMethod === "Caja Chica";
+    })
+    .reduce((s, p) => s + p.amount, 0);
+};
+
+const getAvailableForMonth = (purchases: MinorPurchase[], yearMonth: string): number => {
+  return Math.max(0, CAJA_CHICA_LIMIT - getTotalSpentInMonth(purchases, yearMonth));
+};
+
+const canAddExpenseInMonth = (
+  purchases: MinorPurchase[],
+  yearMonth: string,
+  amount: number,
+  excludeId?: string,
+): boolean => {
+  let totalSpent = getTotalSpentInMonth(purchases, yearMonth);
+  if (excludeId) {
+    const excludedAmount = purchases.find((p) => p.id === excludeId)?.amount || 0;
+    totalSpent -= excludedAmount;
+  }
+  return totalSpent + amount <= CAJA_CHICA_LIMIT;
+};
+
+const getPendingReposition = (repositions: MonthlyReposition[]): MonthlyReposition | null => {
+  const prevMonth = getPreviousYearMonth();
+  return repositions.find((r) => r.yearMonth === prevMonth && r.status === "pendiente") || null;
+};
 
 function loadLocal(): MinorPurchase[] {
   try {
@@ -131,14 +186,14 @@ function saveLocal(items: MinorPurchase[]) {
   localStorage.setItem(LS_KEY, JSON.stringify(items));
 }
 
-function loadRepositions(): RepositionRecord[] {
+function loadRepositions(): MonthlyReposition[] {
   try {
     return JSON.parse(localStorage.getItem(REPOSITION_HISTORY_KEY) || "[]");
   } catch {
     return [];
   }
 }
-function saveRepositions(items: RepositionRecord[]) {
+function saveRepositions(items: MonthlyReposition[]) {
   localStorage.setItem(REPOSITION_HISTORY_KEY, JSON.stringify(items));
 }
 
@@ -157,17 +212,123 @@ function loadAdminOrders(): AdminRequestLite[] {
 }
 
 const todayISO = () => format(new Date(), "yyyy-MM-dd");
-const getCurrentMonth = () => format(new Date(), "yyyy-MM");
-const getMonthName = (dateStr: string) => {
-  const d = new Date(dateStr);
-  return format(d, "MMMM yyyy", { locale: es });
+const fmt = (n: number) => new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP" }).format(n);
+const fmtDate = (iso: string) => {
+  if (!iso) return "—";
+  const d = new Date(iso.length <= 10 ? iso + "T12:00:00" : iso);
+  return format(d, "dd/MM/yyyy", { locale: es });
+};
+
+// ==================== GENERADOR DE REPORTE EXCEL ====================
+const generateExcelReport = (purchases: MinorPurchase[]) => {
+  const approvedPurchases = purchases.filter(
+    (p) => p.status === "Aprobado" && !p.voided && p.paymentMethod === "Caja Chica",
+  );
+
+  const sortedPurchases = [...approvedPurchases].sort(
+    (a, b) => new Date(a.expenseDate || a.requestedAt).getTime() - new Date(b.expenseDate || b.requestedAt).getTime(),
+  );
+
+  const groupedByCategory: Record<string, typeof sortedPurchases> = {};
+  sortedPurchases.forEach((p) => {
+    let categoryKey = p.category;
+    if (categoryKey === "Envío, Peaje y Parqueo") categoryKey = "ENVIO PEAJE Y PARQUEO";
+    else if (categoryKey === "Combustible") categoryKey = "COMBUSTIBLE";
+    else if (categoryKey === "Reparación") categoryKey = "REPARACION";
+    else categoryKey = "OTROS";
+
+    if (!groupedByCategory[categoryKey]) groupedByCategory[categoryKey] = [];
+    groupedByCategory[categoryKey].push(p);
+  });
+
+  const categoryOrder = ["COMBUSTIBLE", "ENVIO PEAJE Y PARQUEO", "REPARACION", "OTROS"];
+  const rows: any[] = [];
+
+  rows.push({ A: "SAFEONE SECURITY COMPANY", B: "", C: "", D: "" });
+  rows.push({ A: "REPOSICION DE CAJA CHICA", B: "", C: "", D: "" });
+
+  const minDate =
+    sortedPurchases.length > 0
+      ? sortedPurchases[0].expenseDate || sortedPurchases[0].requestedAt
+      : new Date().toISOString();
+  const maxDate =
+    sortedPurchases.length > 0
+      ? sortedPurchases[sortedPurchases.length - 1].expenseDate ||
+        sortedPurchases[sortedPurchases.length - 1].requestedAt
+      : new Date().toISOString();
+  rows.push({ A: `${fmtDate(minDate)} AL ${fmtDate(maxDate)}`, B: "", C: "", D: "" });
+  rows.push({ A: "", B: "", C: "", D: "" });
+
+  let totalGeneral = 0;
+
+  categoryOrder.forEach((category) => {
+    const items = groupedByCategory[category] || [];
+    rows.push({ A: category, B: "", C: "", D: "" });
+    rows.push({ A: "", B: "", C: "", D: "" });
+
+    let categoryTotal = 0;
+
+    items.forEach((item) => {
+      rows.push({
+        A: fmtDate(item.expenseDate || item.requestedAt),
+        B: item.description,
+        C: "",
+        D: item.amount,
+      });
+      categoryTotal += item.amount;
+      totalGeneral += item.amount;
+    });
+
+    rows.push({ A: "", B: "", C: "", D: "" });
+    rows.push({ A: "", B: "", C: "", D: categoryTotal });
+    rows.push({ A: "", B: "", C: "", D: "" });
+  });
+
+  const efectivoEnCaja = Math.max(0, CAJA_CHICA_LIMIT - totalGeneral);
+
+  rows.push({ A: "", B: "", C: "TOTAL GASTOS RD$", D: totalGeneral });
+  rows.push({ A: "", B: "", C: "TOTAL EFECTIVO EN CAJA", D: efectivoEnCaja });
+  rows.push({ A: "", B: "", C: "TOTAL EN CAJA RD$", D: CAJA_CHICA_LIMIT });
+  rows.push({ A: "", B: "", C: "", D: "" });
+
+  rows.push({ A: "Detalle de efectivo en caja", B: "Denominaciones", C: "", D: "Total" });
+
+  const denominations = [2000, 1000, 500, 200, 100, 50, 25, 10, 5, 1];
+  let remaining = efectivoEnCaja;
+
+  denominations.forEach((denom) => {
+    const count = Math.floor(remaining / denom);
+    if (count > 0 || denom === 1) {
+      rows.push({
+        A: "",
+        B: denom.toLocaleString(),
+        C: count,
+        D: count * denom,
+      });
+      remaining = remaining % denom;
+    } else {
+      rows.push({ A: "", B: denom.toLocaleString(), C: "", D: "" });
+    }
+  });
+
+  rows.push({ A: "", B: "", C: "", D: "" });
+  rows.push({ A: "", B: "", C: "Total", D: efectivoEnCaja });
+
+  const ws = XLSX.utils.json_to_sheet(rows, { header: ["A", "B", "C", "D"], skipHeader: true });
+  ws["!cols"] = [{ wch: 15 }, { wch: 50 }, { wch: 10 }, { wch: 15 }];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Reporte Caja Chica");
+  XLSX.writeFile(wb, `reporte_caja_chica_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+
+  toast({ title: "Reporte generado", description: "El archivo Excel ha sido descargado con el formato solicitado." });
 };
 
 const MinorPurchases = () => {
   const { user, allUsers } = useAuth();
   const apiMode = isApiConfigured();
   const [purchases, setPurchases] = useState<MinorPurchase[]>(() => (apiMode ? [] : loadLocal()));
-  const [repositions, setRepositions] = useState<RepositionRecord[]>(() => loadRepositions());
+  const [repositions, setRepositions] = useState<MonthlyReposition[]>(() => loadRepositions());
   const [loading, setLoading] = useState(apiMode);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -175,7 +336,6 @@ const MinorPurchases = () => {
   const [voidReason, setVoidReason] = useState("");
   const [detail, setDetail] = useState<MinorPurchase | null>(null);
   const [repositionDialogOpen, setRepositionDialogOpen] = useState(false);
-  const [repositionAmount, setRepositionAmount] = useState("");
   const [showAlert, setShowAlert] = useState(false);
 
   const [filterFrom, setFilterFrom] = useState<string>("");
@@ -189,6 +349,7 @@ const MinorPurchases = () => {
   const [customTo, setCustomTo] = useState<string>("");
   const [selectedYear, setSelectedYear] = useState<string>(String(new Date().getFullYear()));
 
+  // ==================== FORMULARIO CON DEPARTAMENTO MANUAL ====================
   const emptyForm = {
     description: "",
     amount: "",
@@ -197,6 +358,7 @@ const MinorPurchases = () => {
     notes: "",
     expenseDate: todayISO(),
     requestedFor: "",
+    requestedForDepartment: "", // NUEVO: departamento manual cuando no está en la lista
     linkedDocType: "" as LinkedDocType,
     linkedDocNumber: "",
   };
@@ -214,6 +376,22 @@ const MinorPurchases = () => {
   const canApprove =
     !!user && (AUTO_APPROVE_IDS.includes(user.id) || user.isDepartmentLeader || user.isAdmin || isFinance);
   const canManage = isFinance || !!user?.isAdmin;
+
+  // Verificar si el nombre del solicitante está en la lista de empleados
+  const isRequestedForInList = useMemo(() => {
+    if (!form.requestedFor.trim()) return false;
+    return allUsers.some((u) => u.fullName.toLowerCase() === form.requestedFor.trim().toLowerCase());
+  }, [form.requestedFor, allUsers]);
+
+  // Obtener el departamento del solicitante si está en la lista
+  const getRequestedForDepartment = useMemo(() => {
+    if (!form.requestedFor.trim()) return "";
+    const foundUser = allUsers.find((u) => u.fullName.toLowerCase() === form.requestedFor.trim().toLowerCase());
+    return foundUser?.department || "";
+  }, [form.requestedFor, allUsers]);
+
+  // Departamento final a guardar (automático o manual)
+  const finalDepartment = isRequestedForInList ? getRequestedForDepartment : form.requestedForDepartment;
 
   useEffect(() => {
     if (!apiMode) {
@@ -234,63 +412,60 @@ const MinorPurchases = () => {
     return adminOrders.filter((o) => o.formType === target);
   }, [form.linkedDocType, adminOrders]);
 
-  // Estadísticas del mes actual
-  const currentMonth = getCurrentMonth();
-  const currentMonthPurchases = useMemo(() => {
-    return purchases.filter((p) => {
-      const d = p.expenseDate || p.requestedAt.slice(0, 10);
-      return d.startsWith(currentMonth) && p.status === "Aprobado" && !p.voided && p.paymentMethod === "Caja Chica";
-    });
-  }, [purchases, currentMonth]);
+  // ==================== LÓGICA MENSUAL ====================
+  const currentYearMonth = getCurrentYearMonth();
+  const previousYearMonth = getPreviousYearMonth();
 
-  const currentMonthTotal = useMemo(() => {
-    return currentMonthPurchases.reduce((s, p) => s + p.amount, 0);
-  }, [currentMonthPurchases]);
+  const currentMonthSpent = useMemo(
+    () => getTotalSpentInMonth(purchases, currentYearMonth),
+    [purchases, currentYearMonth],
+  );
 
-  const currentMonthCount = currentMonthPurchases.length;
+  const currentMonthAvailable = CAJA_CHICA_LIMIT - currentMonthSpent;
+  const currentMonthPercentage = (currentMonthSpent / CAJA_CHICA_LIMIT) * 100;
+  const isLowFunds = currentMonthAvailable < CAJA_CHICA_LIMIT * ALERT_THRESHOLD;
 
-  const consumoDelMes = currentMonthTotal;
-  const porcentajeConsumido = (consumoDelMes / CAJA_CHICA_LIMIT) * 100;
-  const disponible = CAJA_CHICA_LIMIT - consumoDelMes;
-  const isLowFunds = disponible < CAJA_CHICA_LIMIT * ALERT_THRESHOLD;
+  const previousMonthSpent = useMemo(
+    () => getTotalSpentInMonth(purchases, previousYearMonth),
+    [purchases, previousYearMonth],
+  );
 
-  // Última reposición
+  const pendingReposition = getPendingReposition(repositions);
   const lastReposition = useMemo(() => {
-    if (repositions.length === 0) return null;
-    return repositions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+    const completed = repositions.filter((r) => r.status === "aprobado" || r.status === "reposado");
+    if (completed.length === 0) return null;
+    return completed.sort((a, b) => b.yearMonth.localeCompare(a.yearMonth))[0];
   }, [repositions]);
 
-  // Gastos mensuales para gráfico de línea
+  const currentMonthRequestsCount = useMemo(() => {
+    return purchases.filter((p) => {
+      const expenseMonth = getYearMonth(p.expenseDate || p.requestedAt);
+      return (
+        expenseMonth === currentYearMonth && p.paymentMethod === "Caja Chica" && p.status === "Aprobado" && !p.voided
+      );
+    }).length;
+  }, [purchases, currentYearMonth]);
+
   const monthlyExpenses = useMemo(() => {
     const monthsMap: Record<string, number> = {};
     purchases
       .filter((p) => p.status === "Aprobado" && !p.voided && p.paymentMethod === "Caja Chica")
       .forEach((p) => {
-        const d = p.expenseDate || p.requestedAt.slice(0, 10);
-        const monthKey = d.slice(0, 7);
+        const monthKey = getYearMonth(p.expenseDate || p.requestedAt);
         monthsMap[monthKey] = (monthsMap[monthKey] || 0) + p.amount;
       });
     return Object.entries(monthsMap)
-      .map(([month, total]) => ({ month: getMonthName(month + "-01"), total }))
-      .sort((a, b) => a.month.localeCompare(b.month));
+      .map(([month, total]) => ({ month: getMonthDisplay(month), total, monthKey: month }))
+      .sort((a, b) => a.monthKey.localeCompare(b.monthKey));
   }, [purchases]);
 
-  const cajaChicaActiveTotal = useMemo(
-    () =>
-      purchases
-        .filter((p) => p.paymentMethod === "Caja Chica" && p.status !== "Anulado" && !p.voided)
-        .reduce((s, p) => s + p.amount, 0),
-    [purchases],
-  );
-
-  // Alerta automática
   useEffect(() => {
-    if (isLowFunds && disponible >= 0) {
+    if (isLowFunds && currentMonthAvailable >= 0) {
       setShowAlert(true);
       const timer = setTimeout(() => setShowAlert(false), 10000);
       return () => clearTimeout(timer);
     }
-  }, [isLowFunds, disponible]);
+  }, [isLowFunds, currentMonthAvailable]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -327,6 +502,7 @@ const MinorPurchases = () => {
       notes: p.notes || "",
       expenseDate: p.expenseDate || p.requestedAt.slice(0, 10),
       requestedFor: p.requestedFor || "",
+      requestedForDepartment: p.department || "",
       linkedDocType: (p.linkedDocType || "") as LinkedDocType,
       linkedDocNumber: p.linkedDocNumber || "",
     });
@@ -335,96 +511,60 @@ const MinorPurchases = () => {
     setDialogOpen(true);
   };
 
-  // Solicitar reposición
   const handleRequestReposition = () => {
     if (!user) return;
-    const amount = parseFloat(repositionAmount);
-    if (isNaN(amount) || amount <= 0) {
+
+    if (previousMonthSpent === 0) {
       toast({
-        title: "Monto inválido",
-        description: "Ingrese un monto válido para la reposición.",
+        title: "No hay gastos pendientes",
+        description: "El mes anterior no tuvo gastos de Caja Chica.",
         variant: "destructive",
       });
       return;
     }
-    const newReposition: RepositionRecord = {
+
+    if (pendingReposition) {
+      toast({
+        title: "Ya hay una reposición pendiente",
+        description: `Para ${getMonthDisplay(previousYearMonth)}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newReposition: MonthlyReposition = {
       id: `REP-${Date.now()}`,
-      amount,
-      date: new Date().toISOString(),
+      yearMonth: previousYearMonth,
+      amountReposed: previousMonthSpent,
       requestedBy: user.fullName,
+      requestedAt: new Date().toISOString(),
+      status: "pendiente",
     };
+
     const updated = [newReposition, ...repositions];
     setRepositions(updated);
     saveRepositions(updated);
-    setRepositionAmount("");
     setRepositionDialogOpen(false);
-    toast({ title: "Solicitud de reposición registrada", description: `Monto: RD$ ${amount.toLocaleString("es-DO")}` });
+
+    toast({
+      title: "Solicitud de reposición registrada",
+      description: `Monto a reponer: RD$ ${previousMonthSpent.toLocaleString("es-DO")} (gastos de ${getMonthDisplay(previousYearMonth)})`,
+    });
   };
 
-  // Generar reporte Excel con el formato requerido
-  const generateExcelReport = () => {
-    const approvedPurchases = purchases.filter((p) => p.status === "Aprobado" && !p.voided);
-
-    // Agrupar por categoría como en la imagen
-    const groupedByCategory: Record<string, typeof approvedPurchases> = {};
-    approvedPurchases.forEach((p) => {
-      if (!groupedByCategory[p.category]) groupedByCategory[p.category] = [];
-      groupedByCategory[p.category].push(p);
-    });
-
-    const rows: any[] = [];
-
-    Object.entries(groupedByCategory).forEach(([category, items]) => {
-      // Encabezado de categoría
-      rows.push({ Categoria: category, Descripcion: "", Fecha: "", Monto: "" });
-      rows.push({ Categoria: "", Descripcion: "---", Fecha: "---", Monto: "---" });
-
-      items.forEach((item) => {
-        rows.push({
-          Categoria: "",
-          Descripcion: item.description,
-          Fecha: format(new Date(item.expenseDate || item.requestedAt), "dd/MM/yyyy"),
-          Monto: item.amount,
-        });
-      });
-
-      // Subtotal de categoría
-      const categoryTotal = items.reduce((s, i) => s + i.amount, 0);
-      rows.push({ Categoria: "", Descripcion: "", Fecha: "Subtotal", Monto: categoryTotal });
-      rows.push({ Categoria: "", Descripcion: "", Fecha: "", Monto: "" });
-    });
-
-    // Totales finales
-    const totalGastos = approvedPurchases.reduce((s, p) => s + p.amount, 0);
-    const efectivoEnCaja = Math.max(0, CAJA_CHICA_LIMIT - totalGastos);
-
-    rows.push({ Categoria: "", Descripcion: "", Fecha: "TOTAL GASTOS RD$", Monto: totalGastos });
-    rows.push({ Categoria: "", Descripcion: "", Fecha: "TOTAL EFECTIVO EN CAJA", Monto: efectivoEnCaja });
-    rows.push({ Categoria: "", Descripcion: "", Fecha: "TOTAL EN CAJA RD$", Monto: CAJA_CHICA_LIMIT });
-    rows.push({ Categoria: "", Descripcion: "", Fecha: "", Monto: "" });
-
-    // Detalle de efectivo en caja (denominaciones)
-    rows.push({ Categoria: "Detalle de efectivo en caja", Descripcion: "Denominaciones", Fecha: "Total", Monto: "" });
-    const denominations = [2000, 1000, 500, 200, 100, 50, 25, 10, 5, 1];
-    let remaining = efectivoEnCaja;
-    denominations.forEach((denom) => {
-      const count = Math.floor(remaining / denom);
-      if (count > 0 || denom === 1) {
-        rows.push({ Categoria: "", Descripcion: denom.toLocaleString(), Fecha: count, Monto: count * denom });
-        remaining = remaining % denom;
-      }
-    });
-
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Reporte Caja Chica");
-    XLSX.writeFile(wb, `reporte_caja_chica_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
-
-    toast({ title: "Reporte generado", description: "El archivo Excel ha sido descargado." });
+  const handleApproveReposition = (id: string) => {
+    const updated = repositions.map((r) =>
+      r.id === id ? { ...r, status: "aprobado" as const, approvedAt: new Date().toISOString() } : r,
+    );
+    setRepositions(updated);
+    saveRepositions(updated);
+    toast({ title: "Reposición aprobada", description: "El monto será repuesto en la próxima liquidación." });
   };
 
   const handleSubmit = async () => {
     if (!user) return;
+
+    // Validaciones
     if (
       !form.description ||
       !form.amount ||
@@ -440,6 +580,17 @@ const MinorPurchases = () => {
       });
       return;
     }
+
+    // Validar departamento
+    if (!isRequestedForInList && !form.requestedForDepartment.trim()) {
+      toast({
+        title: "Departamento requerido",
+        description: "Debe seleccionar un departamento para el solicitante no registrado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const amount = parseFloat(form.amount);
     if (isNaN(amount) || amount <= 0) {
       toast({ title: "Monto inválido", variant: "destructive" });
@@ -453,15 +604,15 @@ const MinorPurchases = () => {
       });
       return;
     }
+
+    // Validación de límite mensual para Caja Chica
     if (form.paymentMethod === "Caja Chica") {
-      const currentTotal = editingId
-        ? cajaChicaActiveTotal - (purchases.find((p) => p.id === editingId)?.amount || 0)
-        : cajaChicaActiveTotal;
-      if (currentTotal + amount > CAJA_CHICA_LIMIT) {
-        const disponibleLimit = Math.max(0, CAJA_CHICA_LIMIT - currentTotal);
+      const expenseYearMonth = getYearMonth(form.expenseDate);
+      if (!canAddExpenseInMonth(purchases, expenseYearMonth, amount, editingId || undefined)) {
+        const available = getAvailableForMonth(purchases, expenseYearMonth);
         toast({
-          title: "Límite Caja Chica excedido",
-          description: `Disponible: RD$ ${disponibleLimit.toLocaleString("es-DO")}. Solicitado: RD$ ${amount.toLocaleString("es-DO")}.`,
+          title: "Límite mensual excedido",
+          description: `El límite de Caja Chica para ${getMonthDisplay(expenseYearMonth)} es RD$ ${CAJA_CHICA_LIMIT.toLocaleString("es-DO")}. Disponible: ${fmt(available)}.`,
           variant: "destructive",
         });
         return;
@@ -478,6 +629,7 @@ const MinorPurchases = () => {
           notes: form.notes,
           expenseDate: form.expenseDate,
           requestedFor: form.requestedFor.trim(),
+          department: finalDepartment, // Departamento final
           linkedDocType: form.linkedDocType || undefined,
           linkedDocNumber: form.linkedDocNumber.trim() || undefined,
         };
@@ -506,7 +658,7 @@ const MinorPurchases = () => {
           amount,
           paymentMethod: form.paymentMethod as PaymentMethod,
           category: form.category,
-          department: user.department,
+          department: finalDepartment, // Departamento final
           requestedBy: user.id,
           requestedByName: user.fullName,
           expenseDate: form.expenseDate,
@@ -590,7 +742,6 @@ const MinorPurchases = () => {
     }
   };
 
-  // CORREGIDO: Anular entrada sin error
   const handleVoid = async () => {
     if (!voidDialog || !user) return;
     if (!voidReason.trim() || voidReason.trim().length < 5) {
@@ -636,7 +787,6 @@ const MinorPurchases = () => {
     .filter((p) => p.paymentMethod === "Tarjeta Corporativa")
     .reduce((s, p) => s + p.amount, 0);
   const totalGeneral = totalCajaChica + totalTarjeta;
-  const efectivoEnCaja = Math.max(0, CAJA_CHICA_LIMIT - totalCajaChica);
 
   const categoryChartData = useMemo(() => {
     const now = new Date();
@@ -755,13 +905,6 @@ const MinorPurchases = () => {
     }
   };
 
-  const fmt = (n: number) => new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP" }).format(n);
-  const fmtDate = (iso: string) => {
-    if (!iso) return "—";
-    const d = new Date(iso.length <= 10 ? iso + "T12:00:00" : iso);
-    return format(d, "dd/MM/yyyy", { locale: es });
-  };
-
   return (
     <AppLayout>
       <div className="flex flex-col min-h-screen">
@@ -771,13 +914,20 @@ const MinorPurchases = () => {
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
               <h1 className="text-2xl font-heading font-bold text-foreground">Gastos Menores</h1>
-              <p className="text-sm text-muted-foreground">Caja Chica y Tarjeta Corporativa</p>
+              <p className="text-sm text-muted-foreground">
+                Caja Chica (RD$ {CAJA_CHICA_LIMIT.toLocaleString("es-DO")} mensuales) y Tarjeta Corporativa
+              </p>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={generateExcelReport} className="gap-2">
+              <Button variant="outline" onClick={() => generateExcelReport(purchases)} className="gap-2">
                 <Download className="h-4 w-4" /> Reporte Excel
               </Button>
-              <Button variant="outline" onClick={() => setRepositionDialogOpen(true)} className="gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setRepositionDialogOpen(true)}
+                className="gap-2"
+                disabled={previousMonthSpent === 0 || !!pendingReposition}
+              >
                 <RefreshCw className="h-4 w-4" /> Solicitar Reposición
               </Button>
               <Dialog
@@ -796,7 +946,7 @@ const MinorPurchases = () => {
                   <DialogHeader>
                     <DialogTitle className="font-heading">{editingId ? "Editar Gasto" : "Registrar Gasto"}</DialogTitle>
                     <DialogDescription>
-                      Caja Chica disponible: <strong>{fmt(efectivoEnCaja)}</strong> de {fmt(CAJA_CHICA_LIMIT)}.
+                      Disponible este mes: <strong>{fmt(currentMonthAvailable)}</strong> de {fmt(CAJA_CHICA_LIMIT)}.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 pt-2">
@@ -830,7 +980,7 @@ const MinorPurchases = () => {
                             <SelectValue placeholder="Seleccionar" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Caja Chica">Caja Chica (límite RD$20K)</SelectItem>
+                            <SelectItem value="Caja Chica">Caja Chica (RD$20K/mes)</SelectItem>
                             <SelectItem value="Tarjeta Corporativa">Tarjeta Corporativa (sin límite)</SelectItem>
                           </SelectContent>
                         </Select>
@@ -857,7 +1007,6 @@ const MinorPurchases = () => {
                               onSelect={(d) => d && setForm({ ...form, expenseDate: format(d, "yyyy-MM-dd") })}
                               disabled={(d) => d > new Date()}
                               initialFocus
-                              className={cn("p-3 pointer-events-auto")}
                             />
                           </PopoverContent>
                         </Popover>
@@ -884,17 +1033,61 @@ const MinorPurchases = () => {
                         <Input
                           list="personnel-list"
                           value={form.requestedFor}
-                          onChange={(e) => setForm({ ...form, requestedFor: e.target.value })}
-                          placeholder="Persona que solicita el gasto"
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setForm({ ...form, requestedFor: value });
+                          }}
+                          placeholder="Nombre de la persona que solicita el gasto"
+                          className={cn(!isRequestedForInList && form.requestedFor && "border-amber-500")}
                         />
                         <datalist id="personnel-list">
                           {allUsers.map((u) => (
-                            <option key={u.id} value={u.fullName} />
+                            <option key={u.id} value={u.fullName}>
+                              {u.department ? `(${u.department})` : ""}
+                            </option>
                           ))}
                         </datalist>
+                        {!isRequestedForInList && form.requestedFor && (
+                          <p className="text-xs text-amber-600 mt-1">
+                            ⚠️ Nombre no encontrado en la lista. Debe seleccionar un departamento manualmente.
+                          </p>
+                        )}
                       </div>
                     </div>
 
+                    {/* Campo Departamento Manual (solo si el nombre no está en la lista) */}
+                    {!isRequestedForInList && form.requestedFor && (
+                      <div>
+                        <Label className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4" /> Departamento * (manual)
+                        </Label>
+                        <Select
+                          value={form.requestedForDepartment}
+                          onValueChange={(v) => setForm({ ...form, requestedForDepartment: v })}
+                        >
+                          <SelectTrigger className={cn(!form.requestedForDepartment && "border-destructive")}>
+                            <SelectValue placeholder="Seleccionar departamento" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Administración">Administración</SelectItem>
+                            <SelectItem value="Contabilidad">Contabilidad</SelectItem>
+                            <SelectItem value="CXC">CXC</SelectItem>
+                            <SelectItem value="Técnica">Técnica</SelectItem>
+                            <SelectItem value="Operaciones">Operaciones</SelectItem>
+                            <SelectItem value="Ventas">Ventas</SelectItem>
+                            <SelectItem value="IT">IT</SelectItem>
+                            <SelectItem value="Recursos Humanos">Recursos Humanos</SelectItem>
+                            <SelectItem value="Compras">Compras</SelectItem>
+                            <SelectItem value="Logística">Logística</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {!form.requestedForDepartment && (
+                          <p className="text-xs text-destructive mt-1">Departamento requerido</p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Vincular OS/OC */}
                     <div className="border border-border rounded-lg p-3 space-y-3 bg-muted/30">
                       <div className="flex items-center gap-2 text-sm font-medium">
                         <Link2 className="h-4 w-4" /> Vincular a Orden (opcional)
@@ -937,6 +1130,7 @@ const MinorPurchases = () => {
                       </div>
                     </div>
 
+                    {/* Comprobante */}
                     <div>
                       <Label>Comprobante (PDF/JPG/PNG, máx 5MB)</Label>
                       <div className="flex items-center gap-2 mt-1">
@@ -1013,13 +1207,14 @@ const MinorPurchases = () => {
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>¡Alerta de reposición!</AlertTitle>
               <AlertDescription>
-                El disponible de Caja Chica es menor al 20% (RD$ {disponible.toLocaleString("es-DO")}). Por favor,
-                solicite una reposición.
+                El disponible de Caja Chica para este mes es menor al 20% (RD${" "}
+                {currentMonthAvailable.toLocaleString("es-DO")}). Por favor, solicite una reposición para el próximo
+                mes.
               </AlertDescription>
             </Alert>
           )}
 
-          {/* Nuevo Dashboard con indicadores solicitados */}
+          {/* Dashboard con indicadores mensuales */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             <Card>
               <CardContent className="pt-5">
@@ -1028,7 +1223,7 @@ const MinorPurchases = () => {
                     <DollarSign className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Monto Asignado</p>
+                    <p className="text-xs text-muted-foreground">Monto Asignado (mes)</p>
                     <p className="text-lg font-heading font-bold">{fmt(CAJA_CHICA_LIMIT)}</p>
                   </div>
                 </div>
@@ -1042,7 +1237,7 @@ const MinorPurchases = () => {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Consumo del mes</p>
-                    <p className="text-lg font-heading font-bold">{fmt(consumoDelMes)}</p>
+                    <p className="text-lg font-heading font-bold">{fmt(currentMonthSpent)}</p>
                   </div>
                 </div>
               </CardContent>
@@ -1055,7 +1250,7 @@ const MinorPurchases = () => {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">% Consumido</p>
-                    <p className="text-lg font-heading font-bold">{porcentajeConsumido.toFixed(1)}%</p>
+                    <p className="text-lg font-heading font-bold">{currentMonthPercentage.toFixed(1)}%</p>
                   </div>
                 </div>
               </CardContent>
@@ -1070,8 +1265,8 @@ const MinorPurchases = () => {
                     <p className="text-xs text-muted-foreground">Última reposición</p>
                     {lastReposition ? (
                       <>
-                        <p className="text-sm font-heading font-bold">{fmt(lastReposition.amount)}</p>
-                        <p className="text-xs text-muted-foreground">{fmtDate(lastReposition.date)}</p>
+                        <p className="text-sm font-heading font-bold">{fmt(lastReposition.amountReposed)}</p>
+                        <p className="text-xs text-muted-foreground">{getMonthDisplay(lastReposition.yearMonth)}</p>
                       </>
                     ) : (
                       <p className="text-sm text-muted-foreground">Sin reposiciones</p>
@@ -1088,7 +1283,7 @@ const MinorPurchases = () => {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Solicitudes del mes</p>
-                    <p className="text-lg font-heading font-bold">{currentMonthCount}</p>
+                    <p className="text-lg font-heading font-bold">{currentMonthRequestsCount}</p>
                   </div>
                 </div>
               </CardContent>
@@ -1100,9 +1295,9 @@ const MinorPurchases = () => {
                     <TrendingUp className="h-5 w-5 text-rose-600" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Disponible</p>
+                    <p className="text-xs text-muted-foreground">Disponible este mes</p>
                     <p className={cn("text-lg font-heading font-bold", isLowFunds && "text-destructive")}>
-                      {fmt(disponible)}
+                      {fmt(currentMonthAvailable)}
                     </p>
                   </div>
                 </div>
@@ -1110,7 +1305,7 @@ const MinorPurchases = () => {
             </Card>
           </div>
 
-          {/* Gráfico de gastos mensuales */}
+          {/* Gráfico de gastos mensuales históricos */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base font-heading">Monto total gastado por mes</CardTitle>
@@ -1123,7 +1318,7 @@ const MinorPurchases = () => {
                   <LineChart data={monthlyExpenses}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} domain={[0, CAJA_CHICA_LIMIT]} />
                     <Tooltip formatter={(v: number) => fmt(v)} />
                     <Line
                       type="monotone"
@@ -1158,6 +1353,12 @@ const MinorPurchases = () => {
                       {pending.length}
                     </span>
                   )}
+                </TabsTrigger>
+              )}
+              {(isFinance || user?.isAdmin) && (
+                <TabsTrigger value="repositions">
+                  <RefreshCw className="h-4 w-4 mr-1" />
+                  Reposiciones
                 </TabsTrigger>
               )}
             </TabsList>
@@ -1372,6 +1573,7 @@ const MinorPurchases = () => {
                           <TableHead>Fecha gasto</TableHead>
                           <TableHead>Descripción</TableHead>
                           <TableHead>Solicita</TableHead>
+                          <TableHead>Departamento</TableHead>
                           <TableHead>Categoría</TableHead>
                           <TableHead>Método</TableHead>
                           <TableHead>OC/OS</TableHead>
@@ -1383,13 +1585,13 @@ const MinorPurchases = () => {
                       <TableBody>
                         {loading ? (
                           <TableRow>
-                            <TableCell colSpan={10} className="text-center text-muted-foreground py-6">
+                            <TableCell colSpan={11} className="text-center text-muted-foreground py-6">
                               Cargando…
                             </TableCell>
                           </TableRow>
                         ) : filteredHistory.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={10} className="text-center text-muted-foreground py-6">
+                            <TableCell colSpan={11} className="text-center text-muted-foreground py-6">
                               Sin gastos.
                             </TableCell>
                           </TableRow>
@@ -1402,6 +1604,7 @@ const MinorPurchases = () => {
                               </TableCell>
                               <TableCell className="text-sm max-w-[240px] truncate">{p.description}</TableCell>
                               <TableCell className="text-sm">{p.requestedFor || p.requestedByName}</TableCell>
+                              <TableCell className="text-sm">{p.department || "—"}</TableCell>
                               <TableCell className="text-sm">{p.category}</TableCell>
                               <TableCell>
                                 <Badge variant="outline" className="text-xs">
@@ -1518,6 +1721,68 @@ const MinorPurchases = () => {
                 </Card>
               </TabsContent>
             )}
+
+            {(isFinance || user?.isAdmin) && (
+              <TabsContent value="repositions">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base font-heading">Solicitudes de Reposición</CardTitle>
+                    <CardDescription>
+                      Las reposiciones son por el monto gastado en el mes anterior (máximo RD${" "}
+                      {CAJA_CHICA_LIMIT.toLocaleString("es-DO")}).
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {repositions.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-8">
+                        No hay solicitudes de reposición.
+                      </p>
+                    ) : (
+                      <div className="space-y-3">
+                        {repositions.map((r) => (
+                          <div
+                            key={r.id}
+                            className="flex items-center justify-between gap-3 p-4 border border-border rounded-lg flex-wrap"
+                          >
+                            <div className="space-y-1">
+                              <p className="font-medium">{getMonthDisplay(r.yearMonth)}</p>
+                              <p className="text-sm">
+                                Monto a reponer: <strong>{fmt(r.amountReposed)}</strong>
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Solicitado por: {r.requestedBy} · {fmtDate(r.requestedAt)}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge
+                                variant={
+                                  r.status === "pendiente"
+                                    ? "outline"
+                                    : r.status === "aprobado"
+                                      ? "default"
+                                      : "secondary"
+                                }
+                              >
+                                {r.status === "pendiente"
+                                  ? "Pendiente"
+                                  : r.status === "aprobado"
+                                    ? "Aprobada"
+                                    : "Repuesta"}
+                              </Badge>
+                              {r.status === "pendiente" && (isFinance || user?.isAdmin) && (
+                                <Button size="sm" onClick={() => handleApproveReposition(r.id)}>
+                                  Aprobar
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
           </Tabs>
         </div>
       </div>
@@ -1552,7 +1817,7 @@ const MinorPurchases = () => {
                 <strong>Categoría:</strong> {detail.category}
               </p>
               <p>
-                <strong>Departamento:</strong> {detail.department}
+                <strong>Departamento:</strong> {detail.department || "—"}
               </p>
               <p>
                 <strong>Registrado por:</strong> {detail.requestedByName}
@@ -1614,7 +1879,7 @@ const MinorPurchases = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Anulación CORREGIDA */}
+      {/* Anulación */}
       <Dialog
         open={!!voidDialog}
         onOpenChange={(o) => {
@@ -1673,30 +1938,28 @@ const MinorPurchases = () => {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-heading">Solicitar Reposición de Caja Chica</DialogTitle>
-            <DialogDescription>Complete el monto a reponer para registrar la solicitud.</DialogDescription>
+            <DialogDescription>
+              La reposición es por el monto gastado en <strong>{getMonthDisplay(previousYearMonth)}</strong>.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label>Monto a reponer (RD$)</Label>
-              <Input
-                type="number"
-                value={repositionAmount}
-                onChange={(e) => setRepositionAmount(e.target.value)}
-                placeholder="0.00"
-                step="0.01"
-                className="mt-1"
-              />
+            <div className="p-4 bg-muted rounded-lg text-center">
+              <p className="text-sm text-muted-foreground">Monto a reponer</p>
+              <p className="text-2xl font-heading font-bold text-primary">{fmt(previousMonthSpent)}</p>
+              <p className="text-xs text-muted-foreground mt-1">Gastado en {getMonthDisplay(previousYearMonth)}</p>
             </div>
             <div className="text-sm text-muted-foreground">
-              <p>Disponible actual: {fmt(disponible)}</p>
-              <p>Límite: {fmt(CAJA_CHICA_LIMIT)}</p>
+              <p>Límite mensual: {fmt(CAJA_CHICA_LIMIT)}</p>
+              <p>Disponible este mes: {fmt(currentMonthAvailable)}</p>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRepositionDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleRequestReposition}>Solicitar Reposición</Button>
+            <Button onClick={handleRequestReposition} disabled={previousMonthSpent === 0 || !!pendingReposition}>
+              Solicitar Reposición
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
