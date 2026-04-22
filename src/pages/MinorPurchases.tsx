@@ -818,9 +818,16 @@ const MinorPurchases = () => {
     setEditingDenominations(updated);
   };
 
-  const handleSaveDenominations = () => {
+  const handleSaveDenominations = async () => {
     setDenominations(editingDenominations);
     saveDenominations(editingDenominations);
+    if (apiMode) {
+      try {
+        await pettyCashApi.updateDenominations(editingDenominations);
+      } catch {
+        /* keep local copy */
+      }
+    }
     setDenominationsDialogOpen(false);
     toast({ title: "Denominaciones actualizadas", description: "El desglose de efectivo ha sido guardado." });
   };
