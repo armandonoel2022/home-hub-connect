@@ -420,12 +420,20 @@ const AdminHub = () => {
                 iconBg: "bg-primary/15 text-primary",
               },
               {
-                label: "Gastos Menores",
-                desc: "Caja chica y tarjetas corporativas",
+                label: "Caja Chica",
+                desc: "Gastos menores con límite mensual y reposiciones",
                 icon: Receipt,
                 to: "/gastos-menores",
                 gradient: "from-accent/20 via-accent/5 to-transparent",
                 iconBg: "bg-accent/20 text-accent-foreground",
+              },
+              {
+                label: "Tarjetas Corporativas",
+                desc: "Tarjetas asignadas, límites y cargos mensuales",
+                icon: Receipt,
+                to: "/admin/tarjetas-corporativas",
+                gradient: "from-primary/15 via-primary/5 to-transparent",
+                iconBg: "bg-primary/15 text-primary",
               },
               {
                 label: "Flotilla — Mantenimiento",
