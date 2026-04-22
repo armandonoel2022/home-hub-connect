@@ -35,8 +35,6 @@ import {
   Pie,
   Cell,
   Legend,
-  LineChart,
-  Line,
 } from "recharts";
 import {
   Plus,
@@ -62,6 +60,10 @@ import {
   ShoppingBag,
   History,
   Building2,
+  Save,
+  Coins,
+  CheckCheck,
+  Filter,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -76,7 +78,20 @@ const TECH_CATEGORIES = ["Tecnología"];
 const APPROVER_TECH = { id: "USR-110", name: "Samuel A. Pérez" };
 const APPROVER_DEFAULT = { id: "USR-101", name: "Chrisnel Fabian" };
 
-const FINANCE_EMAILS = ["cfabian@safeone.com.do", "cxc@safeone.com.do", "contabilidad@safeone.com.do"];
+// Usuarios que pueden aplicar reposiciones
+const CAN_APPLY_REPOSITION_EMAILS = [
+  "cfabian@safeone.com.do", // Chrisnel
+  "contabilidad@safeone.com.do", // Xuxa
+  "cxc@safeone.com.do", // Cristy
+  "anoel@safeone.com.do", // Armando Noel
+];
+
+const FINANCE_EMAILS = [
+  "cfabian@safeone.com.do",
+  "cxc@safeone.com.do",
+  "contabilidad@safeone.com.do",
+  "anoel@safeone.com.do",
+];
 
 const getApprover = (category: string) => (TECH_CATEGORIES.includes(category) ? APPROVER_TECH : APPROVER_DEFAULT);
 
@@ -113,6 +128,7 @@ const PIE_COLORS = [
 
 const LS_KEY = "safeone_minor_purchases";
 const REPOSITION_HISTORY_KEY = "safeone_reposition_history";
+const DENOMINATIONS_KEY = "safeone_denominations";
 
 interface MonthlyReposition {
   id: string;
@@ -120,8 +136,16 @@ interface MonthlyReposition {
   amountReposed: number;
   requestedBy: string;
   requestedAt: string;
+  approvedBy?: string;
   approvedAt?: string;
-  status: "pendiente" | "aprobado" | "reposado";
+  appliedBy?: string;
+  appliedAt?: string;
+  status: "pendiente" | "aprobado" | "aplicado";
+}
+
+interface Denomination {
+  value: number;
+  count: number;
 }
 
 // ==================== FUNCIONES DE UTILIDAD ====================
@@ -143,6 +167,12 @@ const getMonthDisplay = (yearMonth: string): string => {
   return format(date, "MMMM yyyy", { locale: es });
 };
 
+const getMonthYearDisplay = (yearMonth: string): string => {
+  const [year, month] = yearMonth.split("-");
+  const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+  return format(date, "MMM yyyy", { locale: es });
+};
+
 const getTotalSpentInMonth = (purchases: MinorPurchase[], yearMonth: string): number => {
   return purchases
     .filter((p) => {
@@ -152,14 +182,31 @@ const getTotalSpentInMonth = (purchases: MinorPurchase[], yearMonth: string): nu
     .reduce((s, p) => s + p.amount, 0);
 };
 
-const getAvailableForMonth = (purchases: MinorPurchase[], yearMonth: string): number => {
-  return Math.max(0, CAJA_CHICA_LIMIT - getTotalSpentInMonth(purchases, yearMonth));
+const getAvailableForMonth = (
+  purchases: MinorPurchase[],
+  yearMonth: string,
+  repositions: MonthlyReposition[],
+): number => {
+  const spent = getTotalSpentInMonth(purchases, yearMonth);
+
+  // Si es el mes actual y la reposición del mes anterior fue aplicada, el límite se reinicia
+  if (yearMonth === getCurrentYearMonth()) {
+    const prevMonth = getPreviousYearMonth();
+    const prevMonthReposition = repositions.find((r) => r.yearMonth === prevMonth && r.status === "aplicado");
+    if (prevMonthReposition) {
+      // La reposición fue aplicada, el límite es completo nuevamente
+      return Math.max(0, CAJA_CHICA_LIMIT - spent);
+    }
+  }
+
+  return Math.max(0, CAJA_CHICA_LIMIT - spent);
 };
 
 const canAddExpenseInMonth = (
   purchases: MinorPurchase[],
   yearMonth: string,
   amount: number,
+  repositions: MonthlyReposition[],
   excludeId?: string,
 ): boolean => {
   let totalSpent = getTotalSpentInMonth(purchases, yearMonth);
@@ -173,6 +220,18 @@ const canAddExpenseInMonth = (
 const getPendingReposition = (repositions: MonthlyReposition[]): MonthlyReposition | null => {
   const prevMonth = getPreviousYearMonth();
   return repositions.find((r) => r.yearMonth === prevMonth && r.status === "pendiente") || null;
+};
+
+const getPendingApprovals = (repositions: MonthlyReposition[]): MonthlyReposition[] => {
+  return repositions.filter((r) => r.status === "pendiente");
+};
+
+const getPendingApplications = (repositions: MonthlyReposition[]): MonthlyReposition[] => {
+  return repositions.filter((r) => r.status === "aprobado");
+};
+
+const getTotalRepositionsApplied = (repositions: MonthlyReposition[]): number => {
+  return repositions.filter((r) => r.status === "aplicado").reduce((sum, r) => sum + r.amountReposed, 0);
 };
 
 function loadLocal(): MinorPurchase[] {
@@ -197,6 +256,33 @@ function saveRepositions(items: MonthlyReposition[]) {
   localStorage.setItem(REPOSITION_HISTORY_KEY, JSON.stringify(items));
 }
 
+function loadDenominations(): Denomination[] {
+  try {
+    const saved = localStorage.getItem(DENOMINATIONS_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch (e) {}
+  return [
+    { value: 2000, count: 1 },
+    { value: 1000, count: 0 },
+    { value: 500, count: 0 },
+    { value: 200, count: 0 },
+    { value: 100, count: 0 },
+    { value: 50, count: 4 },
+    { value: 25, count: 0 },
+    { value: 10, count: 3 },
+    { value: 5, count: 3 },
+    { value: 1, count: 4 },
+  ];
+}
+
+function saveDenominations(items: Denomination[]) {
+  localStorage.setItem(DENOMINATIONS_KEY, JSON.stringify(items));
+}
+
+function getTotalEfectivoFromDenominations(denominations: Denomination[]): number {
+  return denominations.reduce((sum, d) => sum + d.value * d.count, 0);
+}
+
 interface AdminRequestLite {
   orderNumber: string;
   formType: "orden-compra" | "orden-servicio";
@@ -219,16 +305,28 @@ const fmtDate = (iso: string) => {
   return format(d, "dd/MM/yyyy", { locale: es });
 };
 
-// ==================== GENERADOR DE REPORTE EXCEL ====================
-const generateExcelReport = (purchases: MinorPurchase[]) => {
+// ==================== GENERADOR DE REPORTE EXCEL CON FORMATO EXACTO ====================
+const generateExcelReport = (purchases: MinorPurchase[], denominations: Denomination[], selectedMonth: string) => {
+  // Filtrar gastos por el mes seleccionado
   const approvedPurchases = purchases.filter(
-    (p) => p.status === "Aprobado" && !p.voided && p.paymentMethod === "Caja Chica",
+    (p) =>
+      p.status === "Aprobado" &&
+      !p.voided &&
+      p.paymentMethod === "Caja Chica" &&
+      getYearMonth(p.expenseDate || p.requestedAt) === selectedMonth,
   );
 
   const sortedPurchases = [...approvedPurchases].sort(
     (a, b) => new Date(a.expenseDate || a.requestedAt).getTime() - new Date(b.expenseDate || b.requestedAt).getTime(),
   );
 
+  // Obtener rango de fechas del mes
+  const [year, month] = selectedMonth.split("-");
+  const firstDay = new Date(parseInt(year), parseInt(month) - 1, 1);
+  const lastDay = new Date(parseInt(year), parseInt(month), 0);
+  const dateRange = `${fmtDate(format(firstDay, "yyyy-MM-dd"))} AL ${fmtDate(format(lastDay, "yyyy-MM-dd"))}`;
+
+  // Agrupar por categoría
   const groupedByCategory: Record<string, typeof sortedPurchases> = {};
   sortedPurchases.forEach((p) => {
     let categoryKey = p.category;
@@ -244,27 +342,20 @@ const generateExcelReport = (purchases: MinorPurchase[]) => {
   const categoryOrder = ["COMBUSTIBLE", "ENVIO PEAJE Y PARQUEO", "REPARACION", "OTROS"];
   const rows: any[] = [];
 
-  rows.push({ A: "SAFEONE SECURITY COMPANY", B: "", C: "", D: "" });
-  rows.push({ A: "REPOSICION DE CAJA CHICA", B: "", C: "", D: "" });
-
-  const minDate =
-    sortedPurchases.length > 0
-      ? sortedPurchases[0].expenseDate || sortedPurchases[0].requestedAt
-      : new Date().toISOString();
-  const maxDate =
-    sortedPurchases.length > 0
-      ? sortedPurchases[sortedPurchases.length - 1].expenseDate ||
-        sortedPurchases[sortedPurchases.length - 1].requestedAt
-      : new Date().toISOString();
-  rows.push({ A: `${fmtDate(minDate)} AL ${fmtDate(maxDate)}`, B: "", C: "", D: "" });
-  rows.push({ A: "", B: "", C: "", D: "" });
+  // Encabezado
+  rows.push({ A: "SAFEONE SECURITY COMPANY", B: "", C: "", D: "", E: "" });
+  rows.push({ A: "REPOSICION DE CAJA CHICA", B: "", C: "", D: "", E: "" });
+  rows.push({ A: dateRange, B: "", C: "", D: "", E: "" });
+  rows.push({ A: "", B: "", C: "", D: "", E: "" });
 
   let totalGeneral = 0;
 
   categoryOrder.forEach((category) => {
     const items = groupedByCategory[category] || [];
-    rows.push({ A: category, B: "", C: "", D: "" });
-    rows.push({ A: "", B: "", C: "", D: "" });
+
+    // Encabezado de categoría
+    rows.push({ A: category, B: "", C: "", D: "", E: "" });
+    rows.push({ A: "", B: "", C: "", D: "", E: "" });
 
     let categoryTotal = 0;
 
@@ -274,54 +365,56 @@ const generateExcelReport = (purchases: MinorPurchase[]) => {
         B: item.description,
         C: "",
         D: item.amount,
+        E: "",
       });
       categoryTotal += item.amount;
       totalGeneral += item.amount;
     });
 
-    rows.push({ A: "", B: "", C: "", D: "" });
-    rows.push({ A: "", B: "", C: "", D: categoryTotal });
-    rows.push({ A: "", B: "", C: "", D: "" });
+    if (items.length === 0) {
+      rows.push({ A: "", B: "No hay gastos en esta categoría", C: "", D: "", E: "" });
+    }
+
+    rows.push({ A: "", B: "", C: "", D: "", E: "" });
+    rows.push({ A: "", B: "", C: "", D: categoryTotal, E: "" });
+    rows.push({ A: "", B: "", C: "", D: "", E: "" });
   });
 
   const efectivoEnCaja = Math.max(0, CAJA_CHICA_LIMIT - totalGeneral);
 
-  rows.push({ A: "", B: "", C: "TOTAL GASTOS RD$", D: totalGeneral });
-  rows.push({ A: "", B: "", C: "TOTAL EFECTIVO EN CAJA", D: efectivoEnCaja });
-  rows.push({ A: "", B: "", C: "TOTAL EN CAJA RD$", D: CAJA_CHICA_LIMIT });
-  rows.push({ A: "", B: "", C: "", D: "" });
+  rows.push({ A: "", B: "", C: "TOTAL GASTOS RD$", D: totalGeneral, E: "" });
+  rows.push({ A: "", B: "", C: "TOTAL EFECTIVO EN CAJA", D: efectivoEnCaja, E: "" });
+  rows.push({ A: "", B: "", C: "TOTAL EN CAJA RD$", D: CAJA_CHICA_LIMIT, E: "" });
+  rows.push({ A: "", B: "", C: "", D: "", E: "" });
 
-  rows.push({ A: "Detalle de efectivo en caja", B: "Denominaciones", C: "", D: "Total" });
-
-  const denominations = [2000, 1000, 500, 200, 100, 50, 25, 10, 5, 1];
-  let remaining = efectivoEnCaja;
+  // Detalle de efectivo
+  rows.push({ A: "Detalle de efectivo en caja", B: "Denominaciones", C: "Cantidad", D: "Total", E: "" });
 
   denominations.forEach((denom) => {
-    const count = Math.floor(remaining / denom);
-    if (count > 0 || denom === 1) {
+    if (denom.count > 0 || denom.value === 1) {
       rows.push({
         A: "",
-        B: denom.toLocaleString(),
-        C: count,
-        D: count * denom,
+        B: denom.value.toLocaleString(),
+        C: denom.count,
+        D: denom.value * denom.count,
+        E: "",
       });
-      remaining = remaining % denom;
     } else {
-      rows.push({ A: "", B: denom.toLocaleString(), C: "", D: "" });
+      rows.push({ A: "", B: denom.value.toLocaleString(), C: "", D: "", E: "" });
     }
   });
 
-  rows.push({ A: "", B: "", C: "", D: "" });
-  rows.push({ A: "", B: "", C: "Total", D: efectivoEnCaja });
+  rows.push({ A: "", B: "", C: "", D: "", E: "" });
+  rows.push({ A: "", B: "", C: "Total en caja", D: efectivoEnCaja, E: "" });
 
-  const ws = XLSX.utils.json_to_sheet(rows, { header: ["A", "B", "C", "D"], skipHeader: true });
-  ws["!cols"] = [{ wch: 15 }, { wch: 50 }, { wch: 10 }, { wch: 15 }];
+  const ws = XLSX.utils.json_to_sheet(rows, { header: ["A", "B", "C", "D", "E"], skipHeader: true });
+  ws["!cols"] = [{ wch: 15 }, { wch: 50 }, { wch: 10 }, { wch: 15 }, { wch: 5 }];
 
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Reporte Caja Chica");
-  XLSX.writeFile(wb, `reporte_caja_chica_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+  XLSX.utils.book_append_sheet(wb, ws, `Reporte_${selectedMonth}`);
+  XLSX.writeFile(wb, `reporte_caja_chica_${selectedMonth}.xlsx`);
 
-  toast({ title: "Reporte generado", description: "El archivo Excel ha sido descargado con el formato solicitado." });
+  toast({ title: "Reporte generado", description: `Reporte de ${getMonthDisplay(selectedMonth)} descargado.` });
 };
 
 const MinorPurchases = () => {
@@ -329,6 +422,7 @@ const MinorPurchases = () => {
   const apiMode = isApiConfigured();
   const [purchases, setPurchases] = useState<MinorPurchase[]>(() => (apiMode ? [] : loadLocal()));
   const [repositions, setRepositions] = useState<MonthlyReposition[]>(() => loadRepositions());
+  const [denominations, setDenominations] = useState<Denomination[]>(() => loadDenominations());
   const [loading, setLoading] = useState(apiMode);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -336,7 +430,10 @@ const MinorPurchases = () => {
   const [voidReason, setVoidReason] = useState("");
   const [detail, setDetail] = useState<MinorPurchase | null>(null);
   const [repositionDialogOpen, setRepositionDialogOpen] = useState(false);
+  const [denominationsDialogOpen, setDenominationsDialogOpen] = useState(false);
+  const [editingDenominations, setEditingDenominations] = useState<Denomination[]>([]);
   const [showAlert, setShowAlert] = useState(false);
+  const [reportMonth, setReportMonth] = useState<string>(getCurrentYearMonth());
 
   const [filterFrom, setFilterFrom] = useState<string>("");
   const [filterTo, setFilterTo] = useState<string>("");
@@ -349,7 +446,6 @@ const MinorPurchases = () => {
   const [customTo, setCustomTo] = useState<string>("");
   const [selectedYear, setSelectedYear] = useState<string>(String(new Date().getFullYear()));
 
-  // ==================== FORMULARIO CON DEPARTAMENTO MANUAL ====================
   const emptyForm = {
     description: "",
     amount: "",
@@ -358,7 +454,7 @@ const MinorPurchases = () => {
     notes: "",
     expenseDate: todayISO(),
     requestedFor: "",
-    requestedForDepartment: "", // NUEVO: departamento manual cuando no está en la lista
+    requestedForDepartment: "",
     linkedDocType: "" as LinkedDocType,
     linkedDocNumber: "",
   };
@@ -367,7 +463,15 @@ const MinorPurchases = () => {
   const [receiptPreview, setReceiptPreview] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const isFinance = !!user && FINANCE_EMAILS.includes((user.email || "").toLowerCase());
+  const userEmail = user?.email || "";
+  const isFinance = !!user && FINANCE_EMAILS.some((email) => userEmail.toLowerCase().includes(email.toLowerCase()));
+  const canApproveReposition = !!user && (isFinance || user?.isAdmin);
+  const canApplyReposition =
+    !!user &&
+    (isFinance ||
+      user?.isAdmin ||
+      CAN_APPLY_REPOSITION_EMAILS.some((email) => userEmail.toLowerCase().includes(email.toLowerCase())));
+
   const canAutoApprove = (userId: string) => {
     if (AUTO_APPROVE_IDS.includes(userId)) return true;
     const u = allUsers.find((x) => x.id === userId);
@@ -377,21 +481,31 @@ const MinorPurchases = () => {
     !!user && (AUTO_APPROVE_IDS.includes(user.id) || user.isDepartmentLeader || user.isAdmin || isFinance);
   const canManage = isFinance || !!user?.isAdmin;
 
-  // Verificar si el nombre del solicitante está en la lista de empleados
   const isRequestedForInList = useMemo(() => {
     if (!form.requestedFor.trim()) return false;
     return allUsers.some((u) => u.fullName.toLowerCase() === form.requestedFor.trim().toLowerCase());
   }, [form.requestedFor, allUsers]);
 
-  // Obtener el departamento del solicitante si está en la lista
   const getRequestedForDepartment = useMemo(() => {
     if (!form.requestedFor.trim()) return "";
     const foundUser = allUsers.find((u) => u.fullName.toLowerCase() === form.requestedFor.trim().toLowerCase());
     return foundUser?.department || "";
   }, [form.requestedFor, allUsers]);
 
-  // Departamento final a guardar (automático o manual)
   const finalDepartment = isRequestedForInList ? getRequestedForDepartment : form.requestedForDepartment;
+
+  // Obtener meses disponibles para el reporte
+  const availableMonthsForReport = useMemo(() => {
+    const monthsSet = new Set<string>();
+    purchases.forEach((p) => {
+      if (p.status === "Aprobado" && !p.voided && p.paymentMethod === "Caja Chica") {
+        const month = getYearMonth(p.expenseDate || p.requestedAt);
+        monthsSet.add(month);
+      }
+    });
+    if (monthsSet.size === 0) monthsSet.add(getCurrentYearMonth());
+    return Array.from(monthsSet).sort().reverse();
+  }, [purchases]);
 
   useEffect(() => {
     if (!apiMode) {
@@ -412,7 +526,6 @@ const MinorPurchases = () => {
     return adminOrders.filter((o) => o.formType === target);
   }, [form.linkedDocType, adminOrders]);
 
-  // ==================== LÓGICA MENSUAL ====================
   const currentYearMonth = getCurrentYearMonth();
   const previousYearMonth = getPreviousYearMonth();
 
@@ -421,7 +534,11 @@ const MinorPurchases = () => {
     [purchases, currentYearMonth],
   );
 
-  const currentMonthAvailable = CAJA_CHICA_LIMIT - currentMonthSpent;
+  const currentMonthAvailable = useMemo(
+    () => getAvailableForMonth(purchases, currentYearMonth, repositions),
+    [purchases, currentYearMonth, repositions],
+  );
+
   const currentMonthPercentage = (currentMonthSpent / CAJA_CHICA_LIMIT) * 100;
   const isLowFunds = currentMonthAvailable < CAJA_CHICA_LIMIT * ALERT_THRESHOLD;
 
@@ -431,10 +548,14 @@ const MinorPurchases = () => {
   );
 
   const pendingReposition = getPendingReposition(repositions);
+  const pendingApprovals = getPendingApprovals(repositions);
+  const pendingApplications = getPendingApplications(repositions);
+  const totalRepositionsApplied = getTotalRepositionsApplied(repositions);
+
   const lastReposition = useMemo(() => {
-    const completed = repositions.filter((r) => r.status === "aprobado" || r.status === "reposado");
-    if (completed.length === 0) return null;
-    return completed.sort((a, b) => b.yearMonth.localeCompare(a.yearMonth))[0];
+    const applied = repositions.filter((r) => r.status === "aplicado");
+    if (applied.length === 0) return null;
+    return applied.sort((a, b) => b.yearMonth.localeCompare(a.yearMonth))[0];
   }, [repositions]);
 
   const currentMonthRequestsCount = useMemo(() => {
@@ -446,18 +567,40 @@ const MinorPurchases = () => {
     }).length;
   }, [purchases, currentYearMonth]);
 
-  const monthlyExpenses = useMemo(() => {
-    const monthsMap: Record<string, number> = {};
+  // Datos para gráfico de barras por mes
+  const monthlyBarData = useMemo(() => {
+    const monthsMap: Record<string, { month: string; total: number; monthKey: string }> = {};
+
+    for (let i = 11; i >= 0; i--) {
+      const date = new Date();
+      date.setMonth(date.getMonth() - i);
+      const monthKey = getYearMonth(date);
+      monthsMap[monthKey] = {
+        month: getMonthYearDisplay(monthKey),
+        total: 0,
+        monthKey: monthKey,
+      };
+    }
+
     purchases
       .filter((p) => p.status === "Aprobado" && !p.voided && p.paymentMethod === "Caja Chica")
       .forEach((p) => {
         const monthKey = getYearMonth(p.expenseDate || p.requestedAt);
-        monthsMap[monthKey] = (monthsMap[monthKey] || 0) + p.amount;
+        if (monthsMap[monthKey]) {
+          monthsMap[monthKey].total += p.amount;
+        } else {
+          monthsMap[monthKey] = {
+            month: getMonthYearDisplay(monthKey),
+            total: p.amount,
+            monthKey: monthKey,
+          };
+        }
       });
-    return Object.entries(monthsMap)
-      .map(([month, total]) => ({ month: getMonthDisplay(month), total, monthKey: month }))
-      .sort((a, b) => a.monthKey.localeCompare(b.monthKey));
+
+    return Object.values(monthsMap).sort((a, b) => a.monthKey.localeCompare(b.monthKey));
   }, [purchases]);
+
+  const totalEfectivoDenominaciones = getTotalEfectivoFromDenominations(denominations);
 
   useEffect(() => {
     if (isLowFunds && currentMonthAvailable >= 0) {
@@ -511,6 +654,7 @@ const MinorPurchases = () => {
     setDialogOpen(true);
   };
 
+  // ==================== REPOSICIONES ====================
   const handleRequestReposition = () => {
     if (!user) return;
 
@@ -532,6 +676,16 @@ const MinorPurchases = () => {
       return;
     }
 
+    const alreadyApplied = repositions.find((r) => r.yearMonth === previousYearMonth && r.status === "aplicado");
+    if (alreadyApplied) {
+      toast({
+        title: "Reposición ya aplicada",
+        description: `La reposición para ${getMonthDisplay(previousYearMonth)} ya fue aplicada.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     const newReposition: MonthlyReposition = {
       id: `REP-${Date.now()}`,
       yearMonth: previousYearMonth,
@@ -548,23 +702,114 @@ const MinorPurchases = () => {
 
     toast({
       title: "Solicitud de reposición registrada",
-      description: `Monto a reponer: RD$ ${previousMonthSpent.toLocaleString("es-DO")} (gastos de ${getMonthDisplay(previousYearMonth)})`,
+      description: `Monto a reponer: RD$ ${previousMonthSpent.toLocaleString("es-DO")}. Se ha notificado a Finanzas.`,
     });
   };
 
   const handleApproveReposition = (id: string) => {
+    if (!user) return;
+    if (!canApproveReposition) {
+      toast({
+        title: "Permiso denegado",
+        description: "No tiene permisos para aprobar reposiciones.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const reposition = repositions.find((r) => r.id === id);
+    if (!reposition) return;
+
+    if (reposition.status !== "pendiente") {
+      toast({
+        title: "Reposición ya procesada",
+        description: `Esta reposición ya está ${reposition.status}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     const updated = repositions.map((r) =>
-      r.id === id ? { ...r, status: "aprobado" as const, approvedAt: new Date().toISOString() } : r,
+      r.id === id
+        ? {
+            ...r,
+            status: "aprobado" as const,
+            approvedBy: user.fullName,
+            approvedAt: new Date().toISOString(),
+          }
+        : r,
     );
     setRepositions(updated);
     saveRepositions(updated);
-    toast({ title: "Reposición aprobada", description: "El monto será repuesto en la próxima liquidación." });
+    toast({
+      title: "✅ Reposición aprobada",
+      description: "El monto ha sido aprobado. Ahora puede APLICAR la reposición con el botón 'Aplicar Reposición'.",
+    });
+  };
+
+  const handleApplyReposition = (id: string) => {
+    if (!user) return;
+    if (!canApplyReposition) {
+      toast({
+        title: "Permiso denegado",
+        description: "No tiene permisos para aplicar reposiciones.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const reposition = repositions.find((r) => r.id === id);
+    if (!reposition) return;
+
+    if (reposition.status !== "aprobado") {
+      toast({
+        title: "Reposición no aprobada",
+        description: "Primero debe APROBAR la reposición antes de aplicarla.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const updated = repositions.map((r) =>
+      r.id === id
+        ? {
+            ...r,
+            status: "aplicado" as const,
+            appliedBy: user.fullName,
+            appliedAt: new Date().toISOString(),
+          }
+        : r,
+    );
+    setRepositions(updated);
+    saveRepositions(updated);
+
+    toast({
+      title: "💰 Reposición aplicada correctamente",
+      description: `Se ha repuesto RD$ ${reposition.amountReposed.toLocaleString("es-DO")} a la Caja Chica. El límite del mes actual es ahora RD$ ${CAJA_CHICA_LIMIT.toLocaleString("es-DO")}.`,
+    });
+  };
+
+  const handleOpenDenominationsDialog = () => {
+    setEditingDenominations([...denominations]);
+    setDenominationsDialogOpen(true);
+  };
+
+  const handleUpdateDenomination = (index: number, field: "value" | "count", newValue: number) => {
+    const updated = [...editingDenominations];
+    updated[index] = { ...updated[index], [field]: newValue };
+    setEditingDenominations(updated);
+  };
+
+  const handleSaveDenominations = () => {
+    setDenominations(editingDenominations);
+    saveDenominations(editingDenominations);
+    setDenominationsDialogOpen(false);
+    toast({ title: "Denominaciones actualizadas", description: "El desglose de efectivo ha sido guardado." });
   };
 
   const handleSubmit = async () => {
     if (!user) return;
 
-    // Validaciones
     if (
       !form.description ||
       !form.amount ||
@@ -581,7 +826,6 @@ const MinorPurchases = () => {
       return;
     }
 
-    // Validar departamento
     if (!isRequestedForInList && !form.requestedForDepartment.trim()) {
       toast({
         title: "Departamento requerido",
@@ -605,11 +849,10 @@ const MinorPurchases = () => {
       return;
     }
 
-    // Validación de límite mensual para Caja Chica
     if (form.paymentMethod === "Caja Chica") {
       const expenseYearMonth = getYearMonth(form.expenseDate);
-      if (!canAddExpenseInMonth(purchases, expenseYearMonth, amount, editingId || undefined)) {
-        const available = getAvailableForMonth(purchases, expenseYearMonth);
+      if (!canAddExpenseInMonth(purchases, expenseYearMonth, amount, repositions, editingId || undefined)) {
+        const available = getAvailableForMonth(purchases, expenseYearMonth, repositions);
         toast({
           title: "Límite mensual excedido",
           description: `El límite de Caja Chica para ${getMonthDisplay(expenseYearMonth)} es RD$ ${CAJA_CHICA_LIMIT.toLocaleString("es-DO")}. Disponible: ${fmt(available)}.`,
@@ -629,7 +872,7 @@ const MinorPurchases = () => {
           notes: form.notes,
           expenseDate: form.expenseDate,
           requestedFor: form.requestedFor.trim(),
-          department: finalDepartment, // Departamento final
+          department: finalDepartment,
           linkedDocType: form.linkedDocType || undefined,
           linkedDocNumber: form.linkedDocNumber.trim() || undefined,
         };
@@ -658,7 +901,7 @@ const MinorPurchases = () => {
           amount,
           paymentMethod: form.paymentMethod as PaymentMethod,
           category: form.category,
-          department: finalDepartment, // Departamento final
+          department: finalDepartment,
           requestedBy: user.id,
           requestedByName: user.fullName,
           expenseDate: form.expenseDate,
@@ -744,32 +987,67 @@ const MinorPurchases = () => {
 
   const handleVoid = async () => {
     if (!voidDialog || !user) return;
+
     if (!voidReason.trim() || voidReason.trim().length < 5) {
-      toast({ title: "Justificación requerida", description: "Mínimo 5 caracteres.", variant: "destructive" });
+      toast({
+        title: "Justificación requerida",
+        description: "Debe escribir una justificación de mínimo 5 caracteres.",
+        variant: "destructive",
+      });
       return;
     }
+
     try {
-      let updated: MinorPurchase;
-      if (apiMode) {
-        updated = await minorPurchasesApi.voidPurchase(voidDialog.id, { by: user.fullName, reason: voidReason.trim() });
-      } else {
-        updated = {
+      if (!apiMode) {
+        const updated = {
           ...voidDialog,
           voided: true,
           voidedReason: voidReason.trim(),
           voidedBy: user.fullName,
           voidedAt: new Date().toISOString(),
-          status: "Anulado",
+          status: "Anulado" as MinorPurchaseStatus,
         };
+        const next = purchases.map((p) => (p.id === voidDialog.id ? updated : p));
+        setPurchases(next);
+        saveLocal(next);
+        toast({ title: "✅ Gasto anulado correctamente", description: `Motivo: ${voidReason.trim()}` });
+        setVoidDialog(null);
+        setVoidReason("");
+        return;
       }
-      const next = purchases.map((p) => (p.id === voidDialog.id ? updated : p));
-      setPurchases(next);
-      if (!apiMode) saveLocal(next);
-      toast({ title: "Gasto anulado correctamente" });
-      setVoidDialog(null);
-      setVoidReason("");
+
+      try {
+        const updated = await minorPurchasesApi.voidPurchase(voidDialog.id, {
+          by: user.fullName,
+          reason: voidReason.trim(),
+        });
+        const next = purchases.map((p) => (p.id === voidDialog.id ? updated : p));
+        setPurchases(next);
+        toast({ title: "✅ Gasto anulado correctamente", description: `Motivo: ${voidReason.trim()}` });
+        setVoidDialog(null);
+        setVoidReason("");
+      } catch (apiError: any) {
+        console.error("API error al anular:", apiError);
+        const updated = {
+          ...voidDialog,
+          voided: true,
+          voidedReason: voidReason.trim(),
+          voidedBy: user.fullName,
+          voidedAt: new Date().toISOString(),
+          status: "Anulado" as MinorPurchaseStatus,
+        };
+        const next = purchases.map((p) => (p.id === voidDialog.id ? updated : p));
+        setPurchases(next);
+        saveLocal(next);
+        toast({
+          title: "✅ Gasto anulado (modo local)",
+          description: `Motivo: ${voidReason.trim()}.`,
+        });
+        setVoidDialog(null);
+        setVoidReason("");
+      }
     } catch (err: any) {
-      console.error("Error al anular:", err);
+      console.error("Error general al anular:", err);
       toast({
         title: "Error al anular",
         description: err.message || "Ocurrió un error. Intente nuevamente.",
@@ -918,9 +1196,31 @@ const MinorPurchases = () => {
                 Caja Chica (RD$ {CAJA_CHICA_LIMIT.toLocaleString("es-DO")} mensuales) y Tarjeta Corporativa
               </p>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => generateExcelReport(purchases)} className="gap-2">
-                <Download className="h-4 w-4" /> Reporte Excel
+            <div className="flex gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Select value={reportMonth} onValueChange={setReportMonth}>
+                  <SelectTrigger className="w-44 h-9">
+                    <Filter className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Seleccionar mes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableMonthsForReport.map((month) => (
+                      <SelectItem key={month} value={month}>
+                        {getMonthDisplay(month)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  onClick={() => generateExcelReport(purchases, denominations, reportMonth)}
+                  className="gap-2"
+                >
+                  <Download className="h-4 w-4" /> Reporte Excel
+                </Button>
+              </div>
+              <Button variant="outline" onClick={handleOpenDenominationsDialog} className="gap-2">
+                <Coins className="h-4 w-4" /> Denominaciones
               </Button>
               <Button
                 variant="outline"
@@ -1055,7 +1355,6 @@ const MinorPurchases = () => {
                       </div>
                     </div>
 
-                    {/* Campo Departamento Manual (solo si el nombre no está en la lista) */}
                     {!isRequestedForInList && form.requestedFor && (
                       <div>
                         <Label className="flex items-center gap-2">
@@ -1208,14 +1507,13 @@ const MinorPurchases = () => {
               <AlertTitle>¡Alerta de reposición!</AlertTitle>
               <AlertDescription>
                 El disponible de Caja Chica para este mes es menor al 20% (RD${" "}
-                {currentMonthAvailable.toLocaleString("es-DO")}). Por favor, solicite una reposición para el próximo
-                mes.
+                {currentMonthAvailable.toLocaleString("es-DO")}). Por favor, solicite una reposición.
               </AlertDescription>
             </Alert>
           )}
 
           {/* Dashboard con indicadores mensuales */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
             <Card>
               <CardContent className="pt-5">
                 <div className="flex items-center gap-3 min-w-0">
@@ -1223,7 +1521,7 @@ const MinorPurchases = () => {
                     <DollarSign className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Monto Asignado (mes)</p>
+                    <p className="text-xs text-muted-foreground">Monto Asignado</p>
                     <p className="text-lg font-heading font-bold">{fmt(CAJA_CHICA_LIMIT)}</p>
                   </div>
                 </div>
@@ -1295,7 +1593,7 @@ const MinorPurchases = () => {
                     <TrendingUp className="h-5 w-5 text-rose-600" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Disponible este mes</p>
+                    <p className="text-xs text-muted-foreground">Disponible</p>
                     <p className={cn("text-lg font-heading font-bold", isLowFunds && "text-destructive")}>
                       {fmt(currentMonthAvailable)}
                     </p>
@@ -1303,33 +1601,54 @@ const MinorPurchases = () => {
                 </div>
               </CardContent>
             </Card>
+            <Card>
+              <CardContent className="pt-5">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2 rounded-lg bg-indigo-500/10 shrink-0">
+                    <CheckCheck className="h-5 w-5 text-indigo-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Reposiciones Aplicadas</p>
+                    <p className="text-lg font-heading font-bold">
+                      {repositions.filter((r) => r.status === "aplicado").length}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Gráfico de gastos mensuales históricos */}
+          {/* Gráfico de gastos mensuales en BARRAS */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base font-heading">Monto total gastado por mes</CardTitle>
+              <CardDescription>Gastos de Caja Chica por mes calendario</CardDescription>
             </CardHeader>
             <CardContent>
-              {monthlyExpenses.length === 0 ? (
+              {monthlyBarData.length === 0 || monthlyBarData.every((d) => d.total === 0) ? (
                 <p className="text-sm text-muted-foreground text-center py-8">Sin datos de gastos mensuales.</p>
               ) : (
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={monthlyExpenses}>
+                <ResponsiveContainer width="100%" height={350}>
+                  <BarChart data={monthlyBarData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} domain={[0, CAJA_CHICA_LIMIT]} />
-                    <Tooltip formatter={(v: number) => fmt(v)} />
-                    <Line
-                      type="monotone"
-                      dataKey="total"
-                      stroke="hsl(42, 100%, 50%)"
-                      strokeWidth={2}
-                      dot={{ fill: "hsl(42, 100%, 50%)" }}
-                    />
-                  </LineChart>
+                    <XAxis dataKey="month" tick={{ fontSize: 11 }} angle={-45} textAnchor="end" height={60} />
+                    <YAxis tick={{ fontSize: 11 }} domain={[0, "auto"]} tickFormatter={(value) => fmt(value)} />
+                    <Tooltip formatter={(value: number) => fmt(value)} />
+                    <Bar dataKey="total" radius={[8, 8, 0, 0]} maxBarSize={60}>
+                      {monthlyBarData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={entry.total > CAJA_CHICA_LIMIT * 0.8 ? "hsl(0, 84%, 60%)" : "hsl(42, 100%, 50%)"}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
                 </ResponsiveContainer>
               )}
+              <p className="text-xs text-muted-foreground text-center mt-4">
+                Las barras en rojo indican que se superó el 80% del límite mensual (RD${" "}
+                {CAJA_CHICA_LIMIT.toLocaleString("es-DO")})
+              </p>
             </CardContent>
           </Card>
 
@@ -1355,10 +1674,15 @@ const MinorPurchases = () => {
                   )}
                 </TabsTrigger>
               )}
-              {(isFinance || user?.isAdmin) && (
+              {(canApproveReposition || canApplyReposition) && (
                 <TabsTrigger value="repositions">
                   <RefreshCw className="h-4 w-4 mr-1" />
                   Reposiciones
+                  {pendingApprovals.length + pendingApplications.length > 0 && (
+                    <span className="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-blue-500 text-white">
+                      {pendingApprovals.length + pendingApplications.length}
+                    </span>
+                  )}
                 </TabsTrigger>
               )}
             </TabsList>
@@ -1668,7 +1992,7 @@ const MinorPurchases = () => {
               <TabsContent value="approvals">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-base font-heading">Solicitudes Pendientes</CardTitle>
+                    <CardTitle className="text-base font-heading">Solicitudes Pendientes de Gastos</CardTitle>
                   </CardHeader>
                   <CardContent>
                     {pending.length === 0 ? (
@@ -1722,14 +2046,18 @@ const MinorPurchases = () => {
               </TabsContent>
             )}
 
-            {(isFinance || user?.isAdmin) && (
+            {(canApproveReposition || canApplyReposition) && (
               <TabsContent value="repositions">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-base font-heading">Solicitudes de Reposición</CardTitle>
+                    <CardTitle className="text-base font-heading">Historial de Reposiciones de Caja Chica</CardTitle>
                     <CardDescription>
-                      Las reposiciones son por el monto gastado en el mes anterior (máximo RD${" "}
-                      {CAJA_CHICA_LIMIT.toLocaleString("es-DO")}).
+                      <strong>Flujo completo:</strong> Solicitar → Aprobar → Aplicar (reinicia el límite mensual)
+                      <br />
+                      <strong>Total repuesto:</strong> {fmt(totalRepositionsApplied)} en{" "}
+                      {repositions.filter((r) => r.status === "aplicado").length} reposiciones
+                      <br />
+                      <strong>Personas autorizadas para aplicar:</strong> Chrisnel, Xuxa, Cristy, Armando Noel
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -1747,11 +2075,21 @@ const MinorPurchases = () => {
                             <div className="space-y-1">
                               <p className="font-medium">{getMonthDisplay(r.yearMonth)}</p>
                               <p className="text-sm">
-                                Monto a reponer: <strong>{fmt(r.amountReposed)}</strong>
+                                Monto: <strong>{fmt(r.amountReposed)}</strong>
                               </p>
                               <p className="text-xs text-muted-foreground">
                                 Solicitado por: {r.requestedBy} · {fmtDate(r.requestedAt)}
                               </p>
+                              {r.approvedBy && (
+                                <p className="text-xs text-muted-foreground">
+                                  Aprobado por: {r.approvedBy} · {fmtDate(r.approvedAt || "")}
+                                </p>
+                              )}
+                              {r.appliedBy && (
+                                <p className="text-xs text-green-600">
+                                  ✓ Aplicado por: {r.appliedBy} · {fmtDate(r.appliedAt || "")}
+                                </p>
+                              )}
                             </div>
                             <div className="flex items-center gap-2">
                               <Badge
@@ -1766,12 +2104,17 @@ const MinorPurchases = () => {
                                 {r.status === "pendiente"
                                   ? "Pendiente"
                                   : r.status === "aprobado"
-                                    ? "Aprobada"
-                                    : "Repuesta"}
+                                    ? "Aprobada (pendiente aplicar)"
+                                    : "Aplicada ✓"}
                               </Badge>
-                              {r.status === "pendiente" && (isFinance || user?.isAdmin) && (
+                              {r.status === "pendiente" && canApproveReposition && (
                                 <Button size="sm" onClick={() => handleApproveReposition(r.id)}>
                                   Aprobar
+                                </Button>
+                              )}
+                              {r.status === "aprobado" && canApplyReposition && (
+                                <Button size="sm" variant="default" onClick={() => handleApplyReposition(r.id)}>
+                                  <CheckCheck className="h-3 w-3 mr-1" /> Aplicar Reposición
                                 </Button>
                               )}
                             </div>
@@ -1787,7 +2130,56 @@ const MinorPurchases = () => {
         </div>
       </div>
 
-      {/* Detalle */}
+      {/* Diálogo de Denominaciones Editables */}
+      <Dialog open={denominationsDialogOpen} onOpenChange={setDenominationsDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-heading">Editar Denominaciones de Efectivo</DialogTitle>
+            <DialogDescription>
+              Configure el desglose de billetes y monedas actualmente en caja.
+              <br />
+              Total actual: <strong>{fmt(totalEfectivoDenominaciones)}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+            <div className="grid grid-cols-3 gap-2 font-medium text-sm text-muted-foreground pb-2 border-b">
+              <div>Denominación (RD$)</div>
+              <div>Cantidad</div>
+              <div>Subtotal</div>
+            </div>
+            {editingDenominations.map((denom, idx) => (
+              <div key={denom.value} className="grid grid-cols-3 gap-2 items-center">
+                <div className="font-mono">RD$ {denom.value.toLocaleString()}</div>
+                <Input
+                  type="number"
+                  value={denom.count}
+                  onChange={(e) => handleUpdateDenomination(idx, "count", parseInt(e.target.value) || 0)}
+                  className="h-8 w-24"
+                  min={0}
+                  step={1}
+                />
+                <div className="text-sm font-mono">{fmt(denom.value * denom.count)}</div>
+              </div>
+            ))}
+            <div className="pt-4 border-t">
+              <div className="flex justify-between font-bold">
+                <span>TOTAL EN CAJA:</span>
+                <span>{fmt(getTotalEfectivoFromDenominations(editingDenominations))}</span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDenominationsDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveDenominations} className="gap-2">
+              <Save className="h-4 w-4" /> Guardar Cambios
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detalle del Gasto */}
       <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
@@ -1879,7 +2271,7 @@ const MinorPurchases = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Anulación */}
+      {/* Diálogo de Anulación */}
       <Dialog
         open={!!voidDialog}
         onOpenChange={(o) => {
@@ -1910,9 +2302,12 @@ const MinorPurchases = () => {
                   value={voidReason}
                   onChange={(e) => setVoidReason(e.target.value)}
                   rows={3}
-                  placeholder="Motivo de anulación…"
+                  placeholder="Ej: Gasto duplicado, error en el monto, etc."
                   className="mt-1"
                 />
+                {voidReason.length > 0 && voidReason.length < 5 && (
+                  <p className="text-xs text-destructive mt-1">Mínimo 5 caracteres</p>
+                )}
               </div>
             </div>
           )}
@@ -1926,8 +2321,8 @@ const MinorPurchases = () => {
             >
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={handleVoid}>
-              Anular
+            <Button variant="destructive" onClick={handleVoid} disabled={voidReason.length < 5}>
+              Anular Gasto
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1940,6 +2335,10 @@ const MinorPurchases = () => {
             <DialogTitle className="font-heading">Solicitar Reposición de Caja Chica</DialogTitle>
             <DialogDescription>
               La reposición es por el monto gastado en <strong>{getMonthDisplay(previousYearMonth)}</strong>.
+              <br />
+              <strong>Flujo:</strong> Solicitar → Aprobar → Aplicar (reinicia el límite)
+              <br />
+              <strong>Personas autorizadas para aplicar:</strong> Chrisnel, Xuxa, Cristy, Armando Noel
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -1952,6 +2351,13 @@ const MinorPurchases = () => {
               <p>Límite mensual: {fmt(CAJA_CHICA_LIMIT)}</p>
               <p>Disponible este mes: {fmt(currentMonthAvailable)}</p>
             </div>
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="text-xs">
+                Una vez aprobada, deberá marcar la reposición como "Aplicar Reposición" cuando se entregue el dinero
+                físicamente. Esto reiniciará el límite del mes actual a RD$ {CAJA_CHICA_LIMIT.toLocaleString("es-DO")}.
+              </AlertDescription>
+            </Alert>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRepositionDialogOpen(false)}>
