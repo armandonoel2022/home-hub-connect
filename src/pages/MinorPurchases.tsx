@@ -666,139 +666,129 @@ const MinorPurchases = () => {
   };
 
   // ==================== REPOSICIONES ====================
-  const handleRequestReposition = () => {
+  const persistRepositions = (next: MonthlyReposition[]) => {
+    setRepositions(next);
+    saveRepositionsLocal(next);
+  };
+
+  const getSpentForMonth = (yearMonth: string) => getTotalSpentInMonth(purchases, yearMonth);
+
+  const handleRequestReposition = async () => {
     if (!user) return;
 
-    if (previousMonthSpent === 0) {
+    const targetMonth = repositionMonth;
+    const spent = getSpentForMonth(targetMonth);
+
+    if (spent === 0) {
       toast({
-        title: "No hay gastos pendientes",
-        description: "El mes anterior no tuvo gastos de Caja Chica.",
+        title: "No hay gastos en ese mes",
+        description: `${getMonthDisplay(targetMonth)} no registra gastos de Caja Chica aprobados.`,
         variant: "destructive",
       });
       return;
     }
 
-    if (pendingReposition) {
+    const exists = repositions.find((r) => r.yearMonth === targetMonth && r.status !== "rechazado");
+    if (exists) {
       toast({
-        title: "Ya hay una reposición pendiente",
-        description: `Para ${getMonthDisplay(previousYearMonth)}.`,
+        title: "Reposición existente",
+        description: `Ya existe una reposición ${exists.status} para ${getMonthDisplay(targetMonth)}.`,
         variant: "destructive",
       });
       return;
     }
 
-    const alreadyApplied = repositions.find((r) => r.yearMonth === previousYearMonth && r.status === "aplicado");
-    if (alreadyApplied) {
-      toast({
-        title: "Reposición ya aplicada",
-        description: `La reposición para ${getMonthDisplay(previousYearMonth)} ya fue aplicada.`,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const newReposition: MonthlyReposition = {
+    let newReposition: MonthlyReposition = {
       id: `REP-${Date.now()}`,
-      yearMonth: previousYearMonth,
-      amountReposed: previousMonthSpent,
+      yearMonth: targetMonth,
+      amountReposed: spent,
       requestedBy: user.fullName,
       requestedAt: new Date().toISOString(),
       status: "pendiente",
     };
 
-    const updated = [newReposition, ...repositions];
-    setRepositions(updated);
-    saveRepositions(updated);
+    if (apiMode) {
+      try {
+        newReposition = await pettyCashApi.createReposition({
+          yearMonth: targetMonth,
+          amountReposed: spent,
+          requestedBy: user.fullName,
+        });
+      } catch (e: any) {
+        toast({ title: "Error", description: e.message || "No se pudo registrar.", variant: "destructive" });
+        return;
+      }
+    }
+
+    persistRepositions([newReposition, ...repositions]);
     setRepositionDialogOpen(false);
 
     toast({
       title: "Solicitud de reposición registrada",
-      description: `Monto a reponer: RD$ ${previousMonthSpent.toLocaleString("es-DO")}. Se ha notificado a Finanzas.`,
+      description: `Monto a reponer: RD$ ${spent.toLocaleString("es-DO")} para ${getMonthDisplay(targetMonth)}.`,
     });
   };
 
-  const handleApproveReposition = (id: string) => {
+  const handleApproveReposition = async (id: string) => {
     if (!user) return;
     if (!canApproveReposition) {
-      toast({
-        title: "Permiso denegado",
-        description: "No tiene permisos para aprobar reposiciones.",
-        variant: "destructive",
-      });
+      toast({ title: "Permiso denegado", description: "No tiene permisos para aprobar.", variant: "destructive" });
       return;
     }
-
     const reposition = repositions.find((r) => r.id === id);
-    if (!reposition) return;
+    if (!reposition || reposition.status !== "pendiente") return;
 
-    if (reposition.status !== "pendiente") {
-      toast({
-        title: "Reposición ya procesada",
-        description: `Esta reposición ya está ${reposition.status}.`,
-        variant: "destructive",
-      });
-      return;
+    let updatedRep: MonthlyReposition = {
+      ...reposition,
+      status: "aprobado",
+      approvedBy: user.fullName,
+      approvedAt: new Date().toISOString(),
+    };
+    if (apiMode) {
+      try {
+        updatedRep = await pettyCashApi.approveReposition(id, user.fullName);
+      } catch (e: any) {
+        toast({ title: "Error", description: e.message, variant: "destructive" });
+        return;
+      }
     }
-
-    const updated = repositions.map((r) =>
-      r.id === id
-        ? {
-            ...r,
-            status: "aprobado" as const,
-            approvedBy: user.fullName,
-            approvedAt: new Date().toISOString(),
-          }
-        : r,
-    );
-    setRepositions(updated);
-    saveRepositions(updated);
+    persistRepositions(repositions.map((r) => (r.id === id ? updatedRep : r)));
     toast({
       title: "✅ Reposición aprobada",
-      description: "El monto ha sido aprobado. Ahora puede APLICAR la reposición con el botón 'Aplicar Reposición'.",
+      description: "Ahora puede APLICAR la reposición con el botón 'Aplicar Reposición'.",
     });
   };
 
-  const handleApplyReposition = (id: string) => {
+  const handleApplyReposition = async (id: string) => {
     if (!user) return;
     if (!canApplyReposition) {
-      toast({
-        title: "Permiso denegado",
-        description: "No tiene permisos para aplicar reposiciones.",
-        variant: "destructive",
-      });
+      toast({ title: "Permiso denegado", description: "No tiene permisos para aplicar.", variant: "destructive" });
       return;
     }
-
     const reposition = repositions.find((r) => r.id === id);
-    if (!reposition) return;
+    if (!reposition || reposition.status !== "aprobado") return;
 
-    if (reposition.status !== "aprobado") {
-      toast({
-        title: "Reposición no aprobada",
-        description: "Primero debe APROBAR la reposición antes de aplicarla.",
-        variant: "destructive",
-      });
-      return;
+    let updatedRep: MonthlyReposition = {
+      ...reposition,
+      status: "aplicado",
+      appliedBy: user.fullName,
+      appliedAt: new Date().toISOString(),
+    };
+    if (apiMode) {
+      try {
+        updatedRep = await pettyCashApi.applyReposition(id, user.fullName);
+      } catch (e: any) {
+        toast({ title: "Error", description: e.message, variant: "destructive" });
+        return;
+      }
     }
-
-    const updated = repositions.map((r) =>
-      r.id === id
-        ? {
-            ...r,
-            status: "aplicado" as const,
-            appliedBy: user.fullName,
-            appliedAt: new Date().toISOString(),
-          }
-        : r,
-    );
-    setRepositions(updated);
-    saveRepositions(updated);
-
+    persistRepositions(repositions.map((r) => (r.id === id ? updatedRep : r)));
     toast({
       title: "💰 Reposición aplicada correctamente",
-      description: `Se ha repuesto RD$ ${reposition.amountReposed.toLocaleString("es-DO")} a la Caja Chica. El límite del mes actual es ahora RD$ ${CAJA_CHICA_LIMIT.toLocaleString("es-DO")}.`,
+      description: `Se ha repuesto RD$ ${reposition.amountReposed.toLocaleString("es-DO")} a la Caja Chica.`,
     });
   };
+
 
   const handleOpenDenominationsDialog = () => {
     setEditingDenominations([...denominations]);
