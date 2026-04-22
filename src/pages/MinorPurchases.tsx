@@ -528,6 +528,23 @@ const MinorPurchases = () => {
       .then(setPurchases)
       .catch(() => toast({ title: "Error", description: "No se pudo cargar el listado.", variant: "destructive" }))
       .finally(() => setLoading(false));
+
+    // Sincronizar reposiciones y denominaciones con el servidor
+    pettyCashApi
+      .getState()
+      .then((state) => {
+        if (state.repositions?.length) {
+          setRepositions(state.repositions);
+          saveRepositionsLocal(state.repositions);
+        }
+        if (state.denominations?.length) {
+          setDenominations(state.denominations);
+          saveDenominations(state.denominations);
+        }
+      })
+      .catch(() => {
+        /* fallback to localStorage silently */
+      });
   }, [apiMode]);
 
   const adminOrders = useMemo(() => loadAdminOrders(), [dialogOpen]);
