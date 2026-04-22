@@ -2373,28 +2373,57 @@ const MinorPurchases = () => {
           <DialogHeader>
             <DialogTitle className="font-heading">Solicitar Reposición de Caja Chica</DialogTitle>
             <DialogDescription>
-              La reposición es por el monto gastado en <strong>{getMonthDisplay(previousYearMonth)}</strong>.
+              Selecciona el mes a reponer. La reposición restablece el límite mensual a {fmt(CAJA_CHICA_LIMIT)}.
               <br />
-              <strong>Flujo:</strong> Solicitar → Aprobar → Aplicar (reinicia el límite)
+              <strong>Flujo:</strong> Solicitar → Aprobar → Aplicar
               <br />
-              <strong>Personas autorizadas para aplicar:</strong> Chrisnel, Xuxa, Cristy, Armando Noel
+              <strong>Autorizados para aplicar:</strong> Chrisnel, Xuxa, Cristy, Armando Noel
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Mes a reponer</Label>
+              <Select value={repositionMonth} onValueChange={setRepositionMonth}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar mes" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(() => {
+                    // Meses con gasto > 0 sin reposición aplicada (cualquier mes histórico)
+                    const monthsWithSpending = Array.from(
+                      new Set(
+                        purchases
+                          .filter((p) => p.status === "Aprobado" && !p.voided && p.paymentMethod === "Caja Chica")
+                          .map((p) => getYearMonth(p.expenseDate || p.requestedAt)),
+                      ),
+                    ).sort().reverse();
+                    if (monthsWithSpending.length === 0) {
+                      return <SelectItem value={getPreviousYearMonth()} disabled>Sin meses con gastos</SelectItem>;
+                    }
+                    return monthsWithSpending.map((m) => {
+                      const spent = getSpentForMonth(m);
+                      const existing = repositions.find((r) => r.yearMonth === m);
+                      return (
+                        <SelectItem key={m} value={m} disabled={!!existing}>
+                          {getMonthDisplay(m)} — {fmt(spent)}
+                          {existing && ` (${existing.status})`}
+                        </SelectItem>
+                      );
+                    });
+                  })()}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="p-4 bg-muted rounded-lg text-center">
               <p className="text-sm text-muted-foreground">Monto a reponer</p>
-              <p className="text-2xl font-heading font-bold text-primary">{fmt(previousMonthSpent)}</p>
-              <p className="text-xs text-muted-foreground mt-1">Gastado en {getMonthDisplay(previousYearMonth)}</p>
-            </div>
-            <div className="text-sm text-muted-foreground">
-              <p>Límite mensual: {fmt(CAJA_CHICA_LIMIT)}</p>
-              <p>Disponible este mes: {fmt(currentMonthAvailable)}</p>
+              <p className="text-2xl font-heading font-bold text-primary">{fmt(getSpentForMonth(repositionMonth))}</p>
+              <p className="text-xs text-muted-foreground mt-1">Gastado en {getMonthDisplay(repositionMonth)}</p>
             </div>
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="text-xs">
-                Una vez aprobada, deberá marcar la reposición como "Aplicar Reposición" cuando se entregue el dinero
-                físicamente. Esto reiniciará el límite del mes actual a RD$ {CAJA_CHICA_LIMIT.toLocaleString("es-DO")}.
+                Una vez aprobada, debe presionar "Aplicar Reposición" cuando se entregue el dinero físicamente.
+                Esto restablece el límite del mes actual a {fmt(CAJA_CHICA_LIMIT)}.
               </AlertDescription>
             </Alert>
           </div>
@@ -2402,7 +2431,13 @@ const MinorPurchases = () => {
             <Button variant="outline" onClick={() => setRepositionDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleRequestReposition} disabled={previousMonthSpent === 0 || !!pendingReposition}>
+            <Button
+              onClick={handleRequestReposition}
+              disabled={
+                getSpentForMonth(repositionMonth) === 0 ||
+                !!repositions.find((r) => r.yearMonth === repositionMonth)
+              }
+            >
               Solicitar Reposición
             </Button>
           </DialogFooter>
