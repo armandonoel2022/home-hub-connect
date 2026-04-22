@@ -261,7 +261,7 @@ function loadRepositions(): MonthlyReposition[] {
     return [];
   }
 }
-function saveRepositions(items: MonthlyReposition[]) {
+function saveRepositionsLocal(items: MonthlyReposition[]) {
   localStorage.setItem(REPOSITION_HISTORY_KEY, JSON.stringify(items));
 }
 
@@ -439,6 +439,8 @@ const MinorPurchases = () => {
   const [voidReason, setVoidReason] = useState("");
   const [detail, setDetail] = useState<MinorPurchase | null>(null);
   const [repositionDialogOpen, setRepositionDialogOpen] = useState(false);
+  const [repositionMonth, setRepositionMonth] = useState<string>(getPreviousYearMonth());
+  const [otherMonthDialogOpen, setOtherMonthDialogOpen] = useState(false);
   const [denominationsDialogOpen, setDenominationsDialogOpen] = useState(false);
   const [editingDenominations, setEditingDenominations] = useState<Denomination[]>([]);
   const [showAlert, setShowAlert] = useState(false);
