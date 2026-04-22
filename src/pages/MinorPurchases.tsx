@@ -1863,6 +1863,92 @@ const MinorPurchases = () => {
                   </CardContent>
                 </Card>
               </div>
+
+              {/* Top usuarios y top departamentos del mes actual */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base font-heading">Top usuarios — {getMonthDisplay(currentYearMonth)}</CardTitle>
+                    <CardDescription>Personas con más gastos de Caja Chica este mes</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {(() => {
+                      const monthExp = purchases.filter(
+                        (p) =>
+                          p.status === "Aprobado" &&
+                          !p.voided &&
+                          p.paymentMethod === "Caja Chica" &&
+                          getYearMonth(p.expenseDate || p.requestedAt) === currentYearMonth,
+                      );
+                      const byUser: Record<string, number> = {};
+                      monthExp.forEach((p) => {
+                        const key = p.requestedFor?.trim() || p.requestedByName || "—";
+                        byUser[key] = (byUser[key] || 0) + p.amount;
+                      });
+                      const list = Object.entries(byUser).sort((a, b) => b[1] - a[1]).slice(0, 10);
+                      if (list.length === 0)
+                        return <p className="text-sm text-muted-foreground text-center py-8">Sin gastos este mes.</p>;
+                      return (
+                        <div className="space-y-2">
+                          {list.map(([name, total]) => (
+                            <div key={name} className="flex items-center justify-between p-2 rounded border border-border">
+                              <span className="text-sm truncate">{name}</span>
+                              <span className="text-sm font-semibold">{fmt(total)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base font-heading">Por departamento — {getMonthDisplay(currentYearMonth)}</CardTitle>
+                    <CardDescription>Departamentos con más gasto este mes</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {(() => {
+                      const monthExp = purchases.filter(
+                        (p) =>
+                          p.status === "Aprobado" &&
+                          !p.voided &&
+                          p.paymentMethod === "Caja Chica" &&
+                          getYearMonth(p.expenseDate || p.requestedAt) === currentYearMonth,
+                      );
+                      const byDept: Record<string, number> = {};
+                      monthExp.forEach((p) => {
+                        const key = p.department?.trim() || "Sin depto";
+                        byDept[key] = (byDept[key] || 0) + p.amount;
+                      });
+                      const list = Object.entries(byDept).sort((a, b) => b[1] - a[1]);
+                      if (list.length === 0)
+                        return <p className="text-sm text-muted-foreground text-center py-8">Sin gastos este mes.</p>;
+                      const total = list.reduce((s, [, v]) => s + v, 0);
+                      return (
+                        <div className="space-y-2">
+                          {list.map(([name, value]) => {
+                            const pct = total > 0 ? (value / total) * 100 : 0;
+                            return (
+                              <div key={name} className="space-y-1">
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="truncate">{name}</span>
+                                  <span className="font-semibold">
+                                    {fmt(value)} <span className="text-xs text-muted-foreground">({pct.toFixed(0)}%)</span>
+                                  </span>
+                                </div>
+                                <div className="h-2 bg-muted rounded overflow-hidden">
+                                  <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
 
             <TabsContent value="history" className="space-y-3">
