@@ -1216,43 +1216,45 @@ const MinorPurchases = () => {
           {/* Header */}
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
-              <h1 className="text-2xl font-heading font-bold text-foreground">Gastos Menores</h1>
+              <h1 className="text-2xl font-heading font-bold text-foreground">Caja Chica</h1>
               <p className="text-sm text-muted-foreground">
-                Caja Chica (RD$ {CAJA_CHICA_LIMIT.toLocaleString("es-DO")} mensuales) y Tarjeta Corporativa
+                Gestión de caja chica · Límite RD$ {CAJA_CHICA_LIMIT.toLocaleString("es-DO")} mensuales
               </p>
             </div>
             <div className="flex gap-2 flex-wrap">
-              <div className="flex items-center gap-2">
-                <Select value={reportMonth} onValueChange={setReportMonth}>
-                  <SelectTrigger className="w-44 h-9">
-                    <Filter className="h-4 w-4 mr-2" />
-                    <SelectValue placeholder="Seleccionar mes" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableMonthsForReport.map((month) => (
-                      <SelectItem key={month} value={month}>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="gap-2">
+                    <Download className="h-4 w-4" /> Reporte Excel
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Exportar reporte</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => generateExcelReport(purchases, denominations, getCurrentYearMonth())}
+                  >
+                    Exportar mes actual ({getMonthDisplay(getCurrentYearMonth())})
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-xs text-muted-foreground">Otros meses</DropdownMenuLabel>
+                  {availableMonthsForReport
+                    .filter((m) => m !== getCurrentYearMonth())
+                    .slice(0, 12)
+                    .map((month) => (
+                      <DropdownMenuItem key={month} onClick={() => generateExcelReport(purchases, denominations, month)}>
                         {getMonthDisplay(month)}
-                      </SelectItem>
+                      </DropdownMenuItem>
                     ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  variant="outline"
-                  onClick={() => generateExcelReport(purchases, denominations, reportMonth)}
-                  className="gap-2"
-                >
-                  <Download className="h-4 w-4" /> Reporte Excel
-                </Button>
-              </div>
+                  {availableMonthsForReport.filter((m) => m !== getCurrentYearMonth()).length === 0 && (
+                    <DropdownMenuItem disabled>Sin otros meses registrados</DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button variant="outline" onClick={handleOpenDenominationsDialog} className="gap-2">
                 <Coins className="h-4 w-4" /> Denominaciones
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => setRepositionDialogOpen(true)}
-                className="gap-2"
-                disabled={previousMonthSpent === 0 || !!pendingReposition}
-              >
+              <Button variant="outline" onClick={() => setRepositionDialogOpen(true)} className="gap-2">
                 <RefreshCw className="h-4 w-4" /> Solicitar Reposición
               </Button>
               <Dialog
