@@ -688,7 +688,7 @@ const MinorPurchases = () => {
       return;
     }
 
-    const exists = repositions.find((r) => r.yearMonth === targetMonth && r.status !== "rechazado");
+    const exists = repositions.find((r) => r.yearMonth === targetMonth);
     if (exists) {
       toast({
         title: "Reposición existente",
