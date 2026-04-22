@@ -118,7 +118,8 @@ const EXPENSE_CATEGORIES = [
 ];
 
 const CAJA_CHICA_LIMIT = 20000;
-const ALERT_THRESHOLD = 0.2; // 20%
+const ALERT_THRESHOLD = 0.2; // 20% disponible → alerta crítica
+const WARNING_THRESHOLD_AMOUNT = 15000; // RD$ 15,000 gastados → warning preventivo (75%)
 
 const PIE_COLORS = [
   "hsl(42, 100%, 50%)",
