@@ -48,6 +48,8 @@ app.use('/api/department-processes', require('./routes/department-processes'));
 app.use('/api/audit-log', require('./routes/audit-log'));
 app.use('/api/fleet-maintenance', require('./routes/fleet-maintenance'));
 app.use('/api/keys', require('./routes/keys'));
+app.use('/api/petty-cash', require('./routes/petty-cash'));
+app.use('/api/corporate-cards', require('./routes/corporate-cards'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({

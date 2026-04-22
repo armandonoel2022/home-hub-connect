@@ -24,6 +24,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   BarChart,
   Bar,
   XAxis,
@@ -69,7 +77,7 @@ import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { isApiConfigured, minorPurchasesApi, getFileUrl } from "@/lib/api";
+import { isApiConfigured, minorPurchasesApi, getFileUrl, pettyCashApi } from "@/lib/api";
 import * as XLSX from "xlsx";
 import type { MinorPurchase, PaymentMethod, MinorPurchaseStatus, LinkedDocType } from "@/lib/types";
 
@@ -110,7 +118,8 @@ const EXPENSE_CATEGORIES = [
 ];
 
 const CAJA_CHICA_LIMIT = 20000;
-const ALERT_THRESHOLD = 0.2; // 20%
+const ALERT_THRESHOLD = 0.2; // 20% disponible → alerta crítica
+const WARNING_THRESHOLD_AMOUNT = 15000; // RD$ 15,000 gastados → warning preventivo (75%)
 
 const PIE_COLORS = [
   "hsl(42, 100%, 50%)",
@@ -252,7 +261,7 @@ function loadRepositions(): MonthlyReposition[] {
     return [];
   }
 }
-function saveRepositions(items: MonthlyReposition[]) {
+function saveRepositionsLocal(items: MonthlyReposition[]) {
   localStorage.setItem(REPOSITION_HISTORY_KEY, JSON.stringify(items));
 }
 
@@ -430,6 +439,8 @@ const MinorPurchases = () => {
   const [voidReason, setVoidReason] = useState("");
   const [detail, setDetail] = useState<MinorPurchase | null>(null);
   const [repositionDialogOpen, setRepositionDialogOpen] = useState(false);
+  const [repositionMonth, setRepositionMonth] = useState<string>(getPreviousYearMonth());
+  const [otherMonthDialogOpen, setOtherMonthDialogOpen] = useState(false);
   const [denominationsDialogOpen, setDenominationsDialogOpen] = useState(false);
   const [editingDenominations, setEditingDenominations] = useState<Denomination[]>([]);
   const [showAlert, setShowAlert] = useState(false);
@@ -517,6 +528,23 @@ const MinorPurchases = () => {
       .then(setPurchases)
       .catch(() => toast({ title: "Error", description: "No se pudo cargar el listado.", variant: "destructive" }))
       .finally(() => setLoading(false));
+
+    // Sincronizar reposiciones y denominaciones con el servidor
+    pettyCashApi
+      .getState()
+      .then((state) => {
+        if (state.repositions?.length) {
+          setRepositions(state.repositions);
+          saveRepositionsLocal(state.repositions);
+        }
+        if (state.denominations?.length) {
+          setDenominations(state.denominations);
+          saveDenominations(state.denominations);
+        }
+      })
+      .catch(() => {
+        /* fallback to localStorage silently */
+      });
   }, [apiMode]);
 
   const adminOrders = useMemo(() => loadAdminOrders(), [dialogOpen]);
@@ -655,139 +683,129 @@ const MinorPurchases = () => {
   };
 
   // ==================== REPOSICIONES ====================
-  const handleRequestReposition = () => {
+  const persistRepositions = (next: MonthlyReposition[]) => {
+    setRepositions(next);
+    saveRepositionsLocal(next);
+  };
+
+  const getSpentForMonth = (yearMonth: string) => getTotalSpentInMonth(purchases, yearMonth);
+
+  const handleRequestReposition = async () => {
     if (!user) return;
 
-    if (previousMonthSpent === 0) {
+    const targetMonth = repositionMonth;
+    const spent = getSpentForMonth(targetMonth);
+
+    if (spent === 0) {
       toast({
-        title: "No hay gastos pendientes",
-        description: "El mes anterior no tuvo gastos de Caja Chica.",
+        title: "No hay gastos en ese mes",
+        description: `${getMonthDisplay(targetMonth)} no registra gastos de Caja Chica aprobados.`,
         variant: "destructive",
       });
       return;
     }
 
-    if (pendingReposition) {
+    const exists = repositions.find((r) => r.yearMonth === targetMonth);
+    if (exists) {
       toast({
-        title: "Ya hay una reposición pendiente",
-        description: `Para ${getMonthDisplay(previousYearMonth)}.`,
+        title: "Reposición existente",
+        description: `Ya existe una reposición ${exists.status} para ${getMonthDisplay(targetMonth)}.`,
         variant: "destructive",
       });
       return;
     }
 
-    const alreadyApplied = repositions.find((r) => r.yearMonth === previousYearMonth && r.status === "aplicado");
-    if (alreadyApplied) {
-      toast({
-        title: "Reposición ya aplicada",
-        description: `La reposición para ${getMonthDisplay(previousYearMonth)} ya fue aplicada.`,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const newReposition: MonthlyReposition = {
+    let newReposition: MonthlyReposition = {
       id: `REP-${Date.now()}`,
-      yearMonth: previousYearMonth,
-      amountReposed: previousMonthSpent,
+      yearMonth: targetMonth,
+      amountReposed: spent,
       requestedBy: user.fullName,
       requestedAt: new Date().toISOString(),
       status: "pendiente",
     };
 
-    const updated = [newReposition, ...repositions];
-    setRepositions(updated);
-    saveRepositions(updated);
+    if (apiMode) {
+      try {
+        newReposition = await pettyCashApi.createReposition({
+          yearMonth: targetMonth,
+          amountReposed: spent,
+          requestedBy: user.fullName,
+        });
+      } catch (e: any) {
+        toast({ title: "Error", description: e.message || "No se pudo registrar.", variant: "destructive" });
+        return;
+      }
+    }
+
+    persistRepositions([newReposition, ...repositions]);
     setRepositionDialogOpen(false);
 
     toast({
       title: "Solicitud de reposición registrada",
-      description: `Monto a reponer: RD$ ${previousMonthSpent.toLocaleString("es-DO")}. Se ha notificado a Finanzas.`,
+      description: `Monto a reponer: RD$ ${spent.toLocaleString("es-DO")} para ${getMonthDisplay(targetMonth)}.`,
     });
   };
 
-  const handleApproveReposition = (id: string) => {
+  const handleApproveReposition = async (id: string) => {
     if (!user) return;
     if (!canApproveReposition) {
-      toast({
-        title: "Permiso denegado",
-        description: "No tiene permisos para aprobar reposiciones.",
-        variant: "destructive",
-      });
+      toast({ title: "Permiso denegado", description: "No tiene permisos para aprobar.", variant: "destructive" });
       return;
     }
-
     const reposition = repositions.find((r) => r.id === id);
-    if (!reposition) return;
+    if (!reposition || reposition.status !== "pendiente") return;
 
-    if (reposition.status !== "pendiente") {
-      toast({
-        title: "Reposición ya procesada",
-        description: `Esta reposición ya está ${reposition.status}.`,
-        variant: "destructive",
-      });
-      return;
+    let updatedRep: MonthlyReposition = {
+      ...reposition,
+      status: "aprobado",
+      approvedBy: user.fullName,
+      approvedAt: new Date().toISOString(),
+    };
+    if (apiMode) {
+      try {
+        updatedRep = await pettyCashApi.approveReposition(id, user.fullName);
+      } catch (e: any) {
+        toast({ title: "Error", description: e.message, variant: "destructive" });
+        return;
+      }
     }
-
-    const updated = repositions.map((r) =>
-      r.id === id
-        ? {
-            ...r,
-            status: "aprobado" as const,
-            approvedBy: user.fullName,
-            approvedAt: new Date().toISOString(),
-          }
-        : r,
-    );
-    setRepositions(updated);
-    saveRepositions(updated);
+    persistRepositions(repositions.map((r) => (r.id === id ? updatedRep : r)));
     toast({
       title: "✅ Reposición aprobada",
-      description: "El monto ha sido aprobado. Ahora puede APLICAR la reposición con el botón 'Aplicar Reposición'.",
+      description: "Ahora puede APLICAR la reposición con el botón 'Aplicar Reposición'.",
     });
   };
 
-  const handleApplyReposition = (id: string) => {
+  const handleApplyReposition = async (id: string) => {
     if (!user) return;
     if (!canApplyReposition) {
-      toast({
-        title: "Permiso denegado",
-        description: "No tiene permisos para aplicar reposiciones.",
-        variant: "destructive",
-      });
+      toast({ title: "Permiso denegado", description: "No tiene permisos para aplicar.", variant: "destructive" });
       return;
     }
-
     const reposition = repositions.find((r) => r.id === id);
-    if (!reposition) return;
+    if (!reposition || reposition.status !== "aprobado") return;
 
-    if (reposition.status !== "aprobado") {
-      toast({
-        title: "Reposición no aprobada",
-        description: "Primero debe APROBAR la reposición antes de aplicarla.",
-        variant: "destructive",
-      });
-      return;
+    let updatedRep: MonthlyReposition = {
+      ...reposition,
+      status: "aplicado",
+      appliedBy: user.fullName,
+      appliedAt: new Date().toISOString(),
+    };
+    if (apiMode) {
+      try {
+        updatedRep = await pettyCashApi.applyReposition(id, user.fullName);
+      } catch (e: any) {
+        toast({ title: "Error", description: e.message, variant: "destructive" });
+        return;
+      }
     }
-
-    const updated = repositions.map((r) =>
-      r.id === id
-        ? {
-            ...r,
-            status: "aplicado" as const,
-            appliedBy: user.fullName,
-            appliedAt: new Date().toISOString(),
-          }
-        : r,
-    );
-    setRepositions(updated);
-    saveRepositions(updated);
-
+    persistRepositions(repositions.map((r) => (r.id === id ? updatedRep : r)));
     toast({
       title: "💰 Reposición aplicada correctamente",
-      description: `Se ha repuesto RD$ ${reposition.amountReposed.toLocaleString("es-DO")} a la Caja Chica. El límite del mes actual es ahora RD$ ${CAJA_CHICA_LIMIT.toLocaleString("es-DO")}.`,
+      description: `Se ha repuesto RD$ ${reposition.amountReposed.toLocaleString("es-DO")} a la Caja Chica.`,
     });
   };
+
 
   const handleOpenDenominationsDialog = () => {
     setEditingDenominations([...denominations]);
@@ -800,9 +818,16 @@ const MinorPurchases = () => {
     setEditingDenominations(updated);
   };
 
-  const handleSaveDenominations = () => {
+  const handleSaveDenominations = async () => {
     setDenominations(editingDenominations);
     saveDenominations(editingDenominations);
+    if (apiMode) {
+      try {
+        await pettyCashApi.updateDenominations(editingDenominations);
+      } catch {
+        /* keep local copy */
+      }
+    }
     setDenominationsDialogOpen(false);
     toast({ title: "Denominaciones actualizadas", description: "El desglose de efectivo ha sido guardado." });
   };
@@ -1191,43 +1216,45 @@ const MinorPurchases = () => {
           {/* Header */}
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
-              <h1 className="text-2xl font-heading font-bold text-foreground">Gastos Menores</h1>
+              <h1 className="text-2xl font-heading font-bold text-foreground">Caja Chica</h1>
               <p className="text-sm text-muted-foreground">
-                Caja Chica (RD$ {CAJA_CHICA_LIMIT.toLocaleString("es-DO")} mensuales) y Tarjeta Corporativa
+                Gestión de caja chica · Límite RD$ {CAJA_CHICA_LIMIT.toLocaleString("es-DO")} mensuales
               </p>
             </div>
             <div className="flex gap-2 flex-wrap">
-              <div className="flex items-center gap-2">
-                <Select value={reportMonth} onValueChange={setReportMonth}>
-                  <SelectTrigger className="w-44 h-9">
-                    <Filter className="h-4 w-4 mr-2" />
-                    <SelectValue placeholder="Seleccionar mes" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableMonthsForReport.map((month) => (
-                      <SelectItem key={month} value={month}>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="gap-2">
+                    <Download className="h-4 w-4" /> Reporte Excel
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Exportar reporte</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => generateExcelReport(purchases, denominations, getCurrentYearMonth())}
+                  >
+                    Exportar mes actual ({getMonthDisplay(getCurrentYearMonth())})
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-xs text-muted-foreground">Otros meses</DropdownMenuLabel>
+                  {availableMonthsForReport
+                    .filter((m) => m !== getCurrentYearMonth())
+                    .slice(0, 12)
+                    .map((month) => (
+                      <DropdownMenuItem key={month} onClick={() => generateExcelReport(purchases, denominations, month)}>
                         {getMonthDisplay(month)}
-                      </SelectItem>
+                      </DropdownMenuItem>
                     ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  variant="outline"
-                  onClick={() => generateExcelReport(purchases, denominations, reportMonth)}
-                  className="gap-2"
-                >
-                  <Download className="h-4 w-4" /> Reporte Excel
-                </Button>
-              </div>
+                  {availableMonthsForReport.filter((m) => m !== getCurrentYearMonth()).length === 0 && (
+                    <DropdownMenuItem disabled>Sin otros meses registrados</DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button variant="outline" onClick={handleOpenDenominationsDialog} className="gap-2">
                 <Coins className="h-4 w-4" /> Denominaciones
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => setRepositionDialogOpen(true)}
-                className="gap-2"
-                disabled={previousMonthSpent === 0 || !!pendingReposition}
-              >
+              <Button variant="outline" onClick={() => setRepositionDialogOpen(true)} className="gap-2">
                 <RefreshCw className="h-4 w-4" /> Solicitar Reposición
               </Button>
               <Dialog
@@ -1497,11 +1524,23 @@ const MinorPurchases = () => {
             </div>
           </div>
 
-          {/* Alerta de reposición */}
+          {/* Warning preventivo al alcanzar RD$ 15,000 (75% del límite) */}
+          {currentMonthSpent >= WARNING_THRESHOLD_AMOUNT && !isLowFunds && (
+            <Alert className="bg-amber-50 border-amber-200 text-amber-900 dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-100">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>⚠️ Atención: cerca del límite mensual</AlertTitle>
+              <AlertDescription>
+                Has gastado <strong>{fmt(currentMonthSpent)}</strong> de {fmt(CAJA_CHICA_LIMIT)} ({currentMonthPercentage.toFixed(0)}%).
+                Quedan <strong>{fmt(currentMonthAvailable)}</strong> disponibles. Considera planificar una reposición.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Alerta crítica de reposición (≤20% disponible) */}
           {showAlert && isLowFunds && (
             <Alert
               variant="destructive"
-              className="bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/30 dark:border-amber-800"
+              className="bg-red-50 border-red-200 text-red-900 dark:bg-red-950/30 dark:border-red-800"
             >
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>¡Alerta de reposición!</AlertTitle>
@@ -1821,6 +1860,92 @@ const MinorPurchases = () => {
                         </PieChart>
                       </ResponsiveContainer>
                     )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Top usuarios y top departamentos del mes actual */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base font-heading">Top usuarios — {getMonthDisplay(currentYearMonth)}</CardTitle>
+                    <CardDescription>Personas con más gastos de Caja Chica este mes</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {(() => {
+                      const monthExp = purchases.filter(
+                        (p) =>
+                          p.status === "Aprobado" &&
+                          !p.voided &&
+                          p.paymentMethod === "Caja Chica" &&
+                          getYearMonth(p.expenseDate || p.requestedAt) === currentYearMonth,
+                      );
+                      const byUser: Record<string, number> = {};
+                      monthExp.forEach((p) => {
+                        const key = p.requestedFor?.trim() || p.requestedByName || "—";
+                        byUser[key] = (byUser[key] || 0) + p.amount;
+                      });
+                      const list = Object.entries(byUser).sort((a, b) => b[1] - a[1]).slice(0, 10);
+                      if (list.length === 0)
+                        return <p className="text-sm text-muted-foreground text-center py-8">Sin gastos este mes.</p>;
+                      return (
+                        <div className="space-y-2">
+                          {list.map(([name, total]) => (
+                            <div key={name} className="flex items-center justify-between p-2 rounded border border-border">
+                              <span className="text-sm truncate">{name}</span>
+                              <span className="text-sm font-semibold">{fmt(total)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base font-heading">Por departamento — {getMonthDisplay(currentYearMonth)}</CardTitle>
+                    <CardDescription>Departamentos con más gasto este mes</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {(() => {
+                      const monthExp = purchases.filter(
+                        (p) =>
+                          p.status === "Aprobado" &&
+                          !p.voided &&
+                          p.paymentMethod === "Caja Chica" &&
+                          getYearMonth(p.expenseDate || p.requestedAt) === currentYearMonth,
+                      );
+                      const byDept: Record<string, number> = {};
+                      monthExp.forEach((p) => {
+                        const key = p.department?.trim() || "Sin depto";
+                        byDept[key] = (byDept[key] || 0) + p.amount;
+                      });
+                      const list = Object.entries(byDept).sort((a, b) => b[1] - a[1]);
+                      if (list.length === 0)
+                        return <p className="text-sm text-muted-foreground text-center py-8">Sin gastos este mes.</p>;
+                      const total = list.reduce((s, [, v]) => s + v, 0);
+                      return (
+                        <div className="space-y-2">
+                          {list.map(([name, value]) => {
+                            const pct = total > 0 ? (value / total) * 100 : 0;
+                            return (
+                              <div key={name} className="space-y-1">
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="truncate">{name}</span>
+                                  <span className="font-semibold">
+                                    {fmt(value)} <span className="text-xs text-muted-foreground">({pct.toFixed(0)}%)</span>
+                                  </span>
+                                </div>
+                                <div className="h-2 bg-muted rounded overflow-hidden">
+                                  <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
                   </CardContent>
                 </Card>
               </div>
@@ -2334,28 +2459,57 @@ const MinorPurchases = () => {
           <DialogHeader>
             <DialogTitle className="font-heading">Solicitar Reposición de Caja Chica</DialogTitle>
             <DialogDescription>
-              La reposición es por el monto gastado en <strong>{getMonthDisplay(previousYearMonth)}</strong>.
+              Selecciona el mes a reponer. La reposición restablece el límite mensual a {fmt(CAJA_CHICA_LIMIT)}.
               <br />
-              <strong>Flujo:</strong> Solicitar → Aprobar → Aplicar (reinicia el límite)
+              <strong>Flujo:</strong> Solicitar → Aprobar → Aplicar
               <br />
-              <strong>Personas autorizadas para aplicar:</strong> Chrisnel, Xuxa, Cristy, Armando Noel
+              <strong>Autorizados para aplicar:</strong> Chrisnel, Xuxa, Cristy, Armando Noel
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Mes a reponer</Label>
+              <Select value={repositionMonth} onValueChange={setRepositionMonth}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar mes" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(() => {
+                    // Meses con gasto > 0 sin reposición aplicada (cualquier mes histórico)
+                    const monthsWithSpending = Array.from(
+                      new Set(
+                        purchases
+                          .filter((p) => p.status === "Aprobado" && !p.voided && p.paymentMethod === "Caja Chica")
+                          .map((p) => getYearMonth(p.expenseDate || p.requestedAt)),
+                      ),
+                    ).sort().reverse();
+                    if (monthsWithSpending.length === 0) {
+                      return <SelectItem value={getPreviousYearMonth()} disabled>Sin meses con gastos</SelectItem>;
+                    }
+                    return monthsWithSpending.map((m) => {
+                      const spent = getSpentForMonth(m);
+                      const existing = repositions.find((r) => r.yearMonth === m);
+                      return (
+                        <SelectItem key={m} value={m} disabled={!!existing}>
+                          {getMonthDisplay(m)} — {fmt(spent)}
+                          {existing && ` (${existing.status})`}
+                        </SelectItem>
+                      );
+                    });
+                  })()}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="p-4 bg-muted rounded-lg text-center">
               <p className="text-sm text-muted-foreground">Monto a reponer</p>
-              <p className="text-2xl font-heading font-bold text-primary">{fmt(previousMonthSpent)}</p>
-              <p className="text-xs text-muted-foreground mt-1">Gastado en {getMonthDisplay(previousYearMonth)}</p>
-            </div>
-            <div className="text-sm text-muted-foreground">
-              <p>Límite mensual: {fmt(CAJA_CHICA_LIMIT)}</p>
-              <p>Disponible este mes: {fmt(currentMonthAvailable)}</p>
+              <p className="text-2xl font-heading font-bold text-primary">{fmt(getSpentForMonth(repositionMonth))}</p>
+              <p className="text-xs text-muted-foreground mt-1">Gastado en {getMonthDisplay(repositionMonth)}</p>
             </div>
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="text-xs">
-                Una vez aprobada, deberá marcar la reposición como "Aplicar Reposición" cuando se entregue el dinero
-                físicamente. Esto reiniciará el límite del mes actual a RD$ {CAJA_CHICA_LIMIT.toLocaleString("es-DO")}.
+                Una vez aprobada, debe presionar "Aplicar Reposición" cuando se entregue el dinero físicamente.
+                Esto restablece el límite del mes actual a {fmt(CAJA_CHICA_LIMIT)}.
               </AlertDescription>
             </Alert>
           </div>
@@ -2363,7 +2517,13 @@ const MinorPurchases = () => {
             <Button variant="outline" onClick={() => setRepositionDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleRequestReposition} disabled={previousMonthSpent === 0 || !!pendingReposition}>
+            <Button
+              onClick={handleRequestReposition}
+              disabled={
+                getSpentForMonth(repositionMonth) === 0 ||
+                !!repositions.find((r) => r.yearMonth === repositionMonth)
+              }
+            >
               Solicitar Reposición
             </Button>
           </DialogFooter>
