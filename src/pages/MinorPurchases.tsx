@@ -1524,11 +1524,23 @@ const MinorPurchases = () => {
             </div>
           </div>
 
-          {/* Alerta de reposición */}
+          {/* Warning preventivo al alcanzar RD$ 15,000 (75% del límite) */}
+          {currentMonthSpent >= WARNING_THRESHOLD_AMOUNT && !isLowFunds && (
+            <Alert className="bg-amber-50 border-amber-200 text-amber-900 dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-100">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>⚠️ Atención: cerca del límite mensual</AlertTitle>
+              <AlertDescription>
+                Has gastado <strong>{fmt(currentMonthSpent)}</strong> de {fmt(CAJA_CHICA_LIMIT)} ({currentMonthPercentage.toFixed(0)}%).
+                Quedan <strong>{fmt(currentMonthAvailable)}</strong> disponibles. Considera planificar una reposición.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Alerta crítica de reposición (≤20% disponible) */}
           {showAlert && isLowFunds && (
             <Alert
               variant="destructive"
-              className="bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/30 dark:border-amber-800"
+              className="bg-red-50 border-red-200 text-red-900 dark:bg-red-950/30 dark:border-red-800"
             >
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>¡Alerta de reposición!</AlertTitle>
