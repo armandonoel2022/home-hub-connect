@@ -271,7 +271,88 @@ export const minorPurchasesApi = {
     apiFetch<MinorPurchase>(`/minor-purchases/${id}/receipt`, { method: "POST", body: JSON.stringify({ dataUrl, fileName }) }),
 };
 
-// ─── KPIs API ───
+// ─── Petty Cash (repositions + denominations) ───
+export interface MonthlyReposition {
+  id: string;
+  yearMonth: string;
+  amountReposed: number;
+  requestedBy: string;
+  requestedAt: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  appliedBy?: string;
+  appliedAt?: string;
+  status: "pendiente" | "aprobado" | "aplicado";
+}
+export interface PettyCashState {
+  repositions: MonthlyReposition[];
+  denominations: { value: number; count: number }[];
+}
+export const pettyCashApi = {
+  getState: () => apiFetch<PettyCashState>("/petty-cash"),
+  createReposition: (data: { yearMonth: string; amountReposed: number; requestedBy: string }) =>
+    apiFetch<MonthlyReposition>("/petty-cash/repositions", { method: "POST", body: JSON.stringify(data) }),
+  approveReposition: (id: string, by: string) =>
+    apiFetch<MonthlyReposition>(`/petty-cash/repositions/${id}/approve`, { method: "POST", body: JSON.stringify({ by }) }),
+  applyReposition: (id: string, by: string) =>
+    apiFetch<MonthlyReposition>(`/petty-cash/repositions/${id}/apply`, { method: "POST", body: JSON.stringify({ by }) }),
+  removeReposition: (id: string) =>
+    apiFetch<void>(`/petty-cash/repositions/${id}`, { method: "DELETE" }),
+  updateDenominations: (denominations: { value: number; count: number }[]) =>
+    apiFetch<{ value: number; count: number }[]>(`/petty-cash/denominations`, {
+      method: "PUT",
+      body: JSON.stringify({ denominations }),
+    }),
+};
+
+// ─── Corporate Cards ───
+export interface CorporateCard {
+  id: string;
+  holder: string;
+  holderUserId: string | null;
+  last4: string;
+  brand: string;
+  monthlyLimit: number;
+  department: string;
+  notes: string;
+  active: boolean;
+  createdAt: string;
+}
+export interface CardCharge {
+  id: string;
+  cardId: string;
+  expenseDate: string;
+  description: string;
+  amount: number;
+  category: string;
+  merchant: string;
+  notes: string;
+  registeredBy: string;
+  registeredAt: string;
+  receiptUrl: string;
+  receiptName: string;
+  voided?: boolean;
+  voidedReason?: string;
+  voidedBy?: string;
+  voidedAt?: string;
+}
+export const corporateCardsApi = {
+  getState: () => apiFetch<{ cards: CorporateCard[]; charges: CardCharge[] }>("/corporate-cards"),
+  createCard: (data: Partial<CorporateCard>) =>
+    apiFetch<CorporateCard>("/corporate-cards/cards", { method: "POST", body: JSON.stringify(data) }),
+  updateCard: (id: string, data: Partial<CorporateCard>) =>
+    apiFetch<CorporateCard>(`/corporate-cards/cards/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  removeCard: (id: string) =>
+    apiFetch<void>(`/corporate-cards/cards/${id}`, { method: "DELETE" }),
+  createCharge: (data: Partial<CardCharge> & { receiptDataUrl?: string; receiptName?: string }) =>
+    apiFetch<CardCharge>("/corporate-cards/charges", { method: "POST", body: JSON.stringify(data) }),
+  updateCharge: (id: string, data: Partial<CardCharge>) =>
+    apiFetch<CardCharge>(`/corporate-cards/charges/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  voidCharge: (id: string, by: string, reason: string) =>
+    apiFetch<CardCharge>(`/corporate-cards/charges/${id}/void`, { method: "POST", body: JSON.stringify({ by, reason }) }),
+  removeCharge: (id: string) =>
+    apiFetch<void>(`/corporate-cards/charges/${id}`, { method: "DELETE" }),
+};
 export const kpisApi = {
   getObjectives: () => apiFetch<any[]>("/kpis/objectives"),
   updateObjective: (id: string, data: any) =>
