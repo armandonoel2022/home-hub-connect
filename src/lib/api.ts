@@ -353,6 +353,8 @@ export const corporateCardsApi = {
   removeCharge: (id: string) =>
     apiFetch<void>(`/corporate-cards/charges/${id}`, { method: "DELETE" }),
 };
+
+// ─── KPIs API ───
 export const kpisApi = {
   getObjectives: () => apiFetch<any[]>("/kpis/objectives"),
   updateObjective: (id: string, data: any) =>
