@@ -15,8 +15,9 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
   GraduationCap, Award, CheckCircle2, Clock, FileText, Printer, Download,
-  ChevronLeft, ChevronRight, ShieldCheck, BookOpen,
+  ChevronLeft, ChevronRight, ShieldCheck, BookOpen, KeyRound, Users as UsersIcon,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { downloadCertificatePdf, printCertificatePdf } from "@/lib/trainingCertificate";
 
 // ─── Local storage fallback (cuando API no está configurada) ──────────────
