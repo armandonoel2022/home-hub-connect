@@ -46,7 +46,7 @@ function renderRich(text: string) {
 }
 
 const Training = () => {
-  const { user } = useAuth();
+  const { user, allUsers } = useAuth();
   const apiMode = isApiConfigured();
 
   const [enrollments, setEnrollments] = useState<TrainingEnrollment[]>([]);
@@ -58,6 +58,16 @@ const Training = () => {
   const [evalMode, setEvalMode] = useState<"quiz" | "confirm">("quiz");
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [confirmChecked, setConfirmChecked] = useState(false);
+
+  // Admin panel state
+  const isAdminOrHR = !!user && (user.isAdmin || user.department === "Recursos Humanos");
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [adminTab, setAdminTab] = useState<"pins" | "compliance">("pins");
+  const [pins, setPins] = useState<Record<string, string>>({});
+  const [pinDrafts, setPinDrafts] = useState<Record<string, string>>({});
+  const [allEnrollments, setAllEnrollments] = useState<TrainingEnrollment[]>([]);
+  const [allCertificates, setAllCertificates] = useState<TrainingCertificate[]>([]);
+  const [adminSearch, setAdminSearch] = useState("");
 
   // Load data
   const refresh = async () => {
