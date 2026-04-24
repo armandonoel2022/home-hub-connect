@@ -545,6 +545,108 @@ const Training = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* ═══ Admin Panel ═══ */}
+      <Dialog open={adminOpen} onOpenChange={setAdminOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5 text-gold" />
+              Administración de Capacitaciones
+            </DialogTitle>
+            <div className="flex gap-2 mt-2">
+              <Button size="sm" variant={adminTab === "pins" ? "default" : "outline"} onClick={() => setAdminTab("pins")}>
+                <KeyRound className="h-4 w-4 mr-1" /> PINs Kiosko
+              </Button>
+              <Button size="sm" variant={adminTab === "compliance" ? "default" : "outline"} onClick={() => setAdminTab("compliance")}>
+                <ShieldCheck className="h-4 w-4 mr-1" /> Compliance
+              </Button>
+            </div>
+            <Input
+              placeholder="Buscar empleado..."
+              value={adminSearch}
+              onChange={(e) => setAdminSearch(e.target.value)}
+              className="mt-2"
+            />
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto pr-2">
+            {adminTab === "pins" && (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground mb-2">
+                  Asigna un PIN de 4 dígitos a cada empleado para que pueda acceder al kiosko en su puesto.
+                  El acceso es por <strong>código de empleado + PIN</strong> en <code>/kiosko</code>.
+                </p>
+                {(allUsers || [])
+                  .filter(u => !adminSearch ||
+                    u.fullName.toLowerCase().includes(adminSearch.toLowerCase()) ||
+                    u.id.toLowerCase().includes(adminSearch.toLowerCase()))
+                  .map(u => (
+                    <div key={u.id} className="flex items-center gap-2 p-2 border border-border rounded">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{u.fullName}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">
+                          {u.id} · {u.position} · {u.department}
+                        </p>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {pins[u.id] ? <Badge variant="secondary">PIN: ••••</Badge> : <Badge variant="outline">Sin PIN</Badge>}
+                      </div>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={4}
+                        placeholder="0000"
+                        value={pinDrafts[u.id] || ""}
+                        onChange={(e) => setPinDrafts({ ...pinDrafts, [u.id]: e.target.value.replace(/\D/g, "").slice(0, 4) })}
+                        className="w-20 text-center"
+                      />
+                      <Button size="sm" onClick={() => savePin(u.id)}>Guardar</Button>
+                    </div>
+                  ))}
+              </div>
+            )}
+            {adminTab === "compliance" && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Estado de cumplimiento por empleado. Verde = todos los cursos completados.
+                </p>
+                <div className="space-y-1">
+                  {(allUsers || [])
+                    .filter(u => !adminSearch ||
+                      u.fullName.toLowerCase().includes(adminSearch.toLowerCase()))
+                    .map(u => {
+                      const myEnrs = allEnrollments.filter(e => e.userId === u.id);
+                      const completed = myEnrs.filter(e => e.status === "completado").length;
+                      const total = TRAINING_COURSES.length;
+                      const pct = Math.round((completed / total) * 100);
+                      const myCerts = allCertificates.filter(c => c.userId === u.id);
+                      return (
+                        <div key={u.id} className="flex items-center gap-3 p-2 border border-border rounded">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{u.fullName}</p>
+                            <p className="text-[10px] text-muted-foreground truncate">{u.position} · {u.department}</p>
+                          </div>
+                          <div className="w-32">
+                            <Progress value={pct} className="h-1.5" />
+                          </div>
+                          <Badge className={completed === total ? "bg-green-600" : ""}>
+                            {completed}/{total}
+                          </Badge>
+                          {myCerts.length > 0 && (
+                            <Badge variant="outline">
+                              <Award className="h-3 w-3 mr-1" />{myCerts.length}
+                            </Badge>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 };
