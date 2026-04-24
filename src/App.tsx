@@ -47,6 +47,8 @@ import TechTasks from "./pages/TechTasks";
 import ClientTracking from "./pages/ClientTracking";
 import AdminHub from "./pages/AdminHub";
 import FleetMaintenance from "./pages/FleetMaintenance";
+import Training from "./pages/Training";
+import Kiosk from "./pages/Kiosk";
 import NotFound from "./pages/NotFound";
 
 
@@ -123,6 +125,7 @@ function ProtectedRoutes() {
         <Route path="/reportes" element={<Reports />} />
         <Route path="/tech-tasks" element={<TechTasks />} />
         <Route path="/seguimiento-clientes" element={<ClientTracking />} />
+        <Route path="/capacitaciones" element={<Training />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </>
@@ -142,6 +145,7 @@ const App = () => {
                 <Routes>
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/registro" element={<RegisterPage />} />
+                  <Route path="/kiosko" element={<Kiosk />} />
                   <Route path="/presentacion" element={<Presentation />} />
                   <Route path="/*" element={<ProtectedRoutes />} />
                 </Routes>
