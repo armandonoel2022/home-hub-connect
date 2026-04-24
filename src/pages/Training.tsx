@@ -245,6 +245,37 @@ const Training = () => {
     if (cert) await downloadCertificatePdf(cert);
   };
 
+  // ─── Admin: load PINs + global compliance
+  const loadAdminData = async () => {
+    if (!isAdminOrHR) return;
+    try {
+      const [p, allEnrs] = await Promise.all([
+        trainingApi.getPins(),
+        // Reuse enrollments endpoint without userId → returns all
+        trainingApi.getEnrollments(),
+      ]);
+      setPins(p || {});
+      setAllEnrollments(allEnrs || []);
+      const allCerts = await trainingApi.getCertificates();
+      setAllCertificates(allCerts || []);
+    } catch (e: any) {
+      toast.error("No se pudieron cargar datos de administración");
+    }
+  };
+
+  const savePin = async (userId: string) => {
+    const pin = pinDrafts[userId];
+    if (!/^\d{4}$/.test(pin || "")) { toast.error("PIN debe ser 4 dígitos"); return; }
+    try {
+      await trainingApi.setPin(userId, pin);
+      setPins({ ...pins, [userId]: pin });
+      setPinDrafts({ ...pinDrafts, [userId]: "" });
+      toast.success("PIN actualizado");
+    } catch (e: any) {
+      toast.error(e?.message || "Error guardando PIN");
+    }
+  };
+
   // ─── Render
   if (!user) return null;
 
@@ -254,15 +285,27 @@ const Training = () => {
         <Navbar />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 w-full py-6 flex-1">
           {/* Header */}
-          <div className="mb-6">
-            <h1 className="font-heading text-3xl font-bold text-foreground flex items-center gap-3">
-              <GraduationCap className="h-8 w-8 text-gold" />
-              Capacitaciones BASC
-            </h1>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Completa los cursos obligatorios para mantener el cumplimiento BASC.
-              Recibirás un certificado oficial al aprobar cada uno.
-            </p>
+          <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h1 className="font-heading text-3xl font-bold text-foreground flex items-center gap-3">
+                <GraduationCap className="h-8 w-8 text-gold" />
+                Capacitaciones BASC
+              </h1>
+              <p className="text-muted-foreground mt-1 text-sm">
+                Completa los cursos obligatorios para mantener el cumplimiento BASC.
+                Recibirás un certificado oficial al aprobar cada uno.
+              </p>
+            </div>
+            {isAdminOrHR && (
+              <Button
+                variant="outline"
+                onClick={() => { setAdminOpen(true); loadAdminData(); }}
+                className="shrink-0"
+              >
+                <KeyRound className="h-4 w-4 mr-2" />
+                Administración
+              </Button>
+            )}
           </div>
 
           {/* Stats */}
