@@ -469,4 +469,39 @@ export const auditApi = {
   getStats: () => apiFetch<any>("/audit-log/stats"),
 };
 
+// ─── Training (Capacitaciones BASC) API ───
+import type { TrainingEnrollment, TrainingCertificate } from "./trainingTypes";
+
+export const trainingApi = {
+  // Enrollments
+  getEnrollments: (userId?: string) =>
+    apiFetch<TrainingEnrollment[]>(`/training/enrollments${userId ? `?userId=${encodeURIComponent(userId)}` : ""}`),
+  saveEnrollment: (data: { userId: string; courseId: string; currentSection: number; sectionsRead: number[]; status: string }) =>
+    apiFetch<TrainingEnrollment>("/training/enrollments", { method: "POST", body: JSON.stringify(data) }),
+  // Attempts (quiz/confirm) → certificate
+  submitAttempt: (data: {
+    userId: string; courseId: string; mode: "quiz" | "confirm";
+    answers?: number[]; score?: number | null; passed: boolean;
+    fullName: string; position: string; department: string;
+  }) =>
+    apiFetch<{ enrollment: TrainingEnrollment; attempt: any; certificate: TrainingCertificate | null }>(
+      "/training/attempts", { method: "POST", body: JSON.stringify(data) }
+    ),
+  // Certificates
+  getCertificates: (userId?: string) =>
+    apiFetch<TrainingCertificate[]>(`/training/certificates${userId ? `?userId=${encodeURIComponent(userId)}` : ""}`),
+  // PINs (RRHH/Admin)
+  getPins: () => apiFetch<Record<string, string>>("/training/pins"),
+  setPin: (userId: string, pin: string) =>
+    apiFetch<{ userId: string; pin: string }>(`/training/pins/${encodeURIComponent(userId)}`, {
+      method: "PUT", body: JSON.stringify({ pin }),
+    }),
+  // Kiosk login (no auth required)
+  kioskLogin: (employeeCode: string, pin: string) =>
+    apiFetch<{ user: { id: string; fullName: string; position: string; department: string } }>(
+      "/training/kiosk-login", { method: "POST", body: JSON.stringify({ employeeCode, pin }) }
+    ),
+};
+
 export default apiFetch;
+
