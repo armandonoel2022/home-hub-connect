@@ -101,8 +101,16 @@ const Training = () => {
   const enrollmentFor = (cId: string) => enrollments.find(e => e.courseId === cId);
   const certificateFor = (cId: string) => certificates.find(c => c.courseId === cId);
 
+  // Un curso se considera completado si tiene status 'completado' O si existe
+  // un certificado emitido para ese curso (recuperación frente a estados perdidos).
+  const isCourseCompleted = (cId: string) => {
+    const enr = enrollmentFor(cId);
+    if (enr?.status === "completado") return true;
+    return !!certificateFor(cId);
+  };
+
   // Stats
-  const completedCount = enrollments.filter(e => e.status === "completado").length;
+  const completedCount = TRAINING_COURSES.filter(c => isCourseCompleted(c.id)).length;
   const totalCourses = TRAINING_COURSES.length;
   const completionPct = Math.round((completedCount / totalCourses) * 100);
 
