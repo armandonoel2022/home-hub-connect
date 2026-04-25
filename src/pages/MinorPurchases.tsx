@@ -1132,7 +1132,7 @@ const MinorPurchases = () => {
       }
       const next = purchases.map((p) => (p.id === oldId ? updated : p));
       setPurchases(next);
-      if (!apiMode) savePurchases(next);
+      if (!apiMode) saveLocal(next);
       toast({ title: "ID reasignado", description: `${oldId} → ${newId}` });
       setReassignDialog(null);
       setReassignNewId("");
