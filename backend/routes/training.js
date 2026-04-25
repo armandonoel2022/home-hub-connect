@@ -95,7 +95,11 @@ router.post('/enrollments', (req, res) => {
   } else {
     e.currentSection = currentSection;
     e.sectionsRead = Array.from(new Set([...(e.sectionsRead || []), ...sectionsRead]));
-    e.status = status;
+    // No degradar el estado: si ya está 'completado', se mantiene aunque
+    // el usuario vuelva a entrar a repasar el material.
+    if (e.status !== 'completado') {
+      e.status = status;
+    }
     e.updatedAt = now;
   }
   saveState(state);
