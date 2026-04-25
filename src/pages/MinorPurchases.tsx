@@ -1086,7 +1086,68 @@ const MinorPurchases = () => {
     }
   };
 
-  const approvedActive = purchases.filter((p) => p.status === "Aprobado" && !p.voided);
+  const handleReassignId = async () => {
+    if (!reassignDialog || !user) return;
+    const newId = reassignNewId.trim().toUpperCase();
+    const reason = reassignReason.trim();
+    if (!/^MP-\d{3,}$/.test(newId)) {
+      toast({ title: "Formato inválido", description: "Debe ser MP-### (ej. MP-002).", variant: "destructive" });
+      return;
+    }
+    if (newId === reassignDialog.id) {
+      toast({ title: "Sin cambios", description: "El nuevo ID es igual al actual.", variant: "destructive" });
+      return;
+    }
+    if (reason.length < 5) {
+      toast({ title: "Justificación requerida", description: "Mínimo 5 caracteres.", variant: "destructive" });
+      return;
+    }
+    // Validación local: si existe otro registro activo (no anulado) con ese ID, bloquear.
+    const conflict = purchases.find((p) => p.id === newId);
+    if (conflict && !(conflict.voided || conflict.status === "Anulado")) {
+      toast({
+        title: "ID en uso",
+        description: `${newId} pertenece a un gasto activo. Sólo se pueden reutilizar IDs anulados.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setReassignBusy(true);
+    try {
+      const oldId = reassignDialog.id;
+      let updated: MinorPurchase;
+      if (apiMode) {
+        updated = await minorPurchasesApi.reassignId(oldId, { newId, reason, by: user.fullName });
+      } else {
+        const history = Array.isArray(reassignDialog.idHistory) ? reassignDialog.idHistory.slice() : [];
+        history.push({
+          previousId: oldId,
+          newId,
+          changedBy: user.fullName,
+          changedAt: new Date().toISOString(),
+          reason,
+        });
+        updated = { ...reassignDialog, id: newId, idHistory: history };
+      }
+      const next = purchases.map((p) => (p.id === oldId ? updated : p));
+      setPurchases(next);
+      if (!apiMode) savePurchases(next);
+      toast({ title: "ID reasignado", description: `${oldId} → ${newId}` });
+      setReassignDialog(null);
+      setReassignNewId("");
+      setReassignReason("");
+    } catch (err: any) {
+      toast({
+        title: "Error al reasignar",
+        description: err?.message || "No se pudo cambiar el ID.",
+        variant: "destructive",
+      });
+    } finally {
+      setReassignBusy(false);
+    }
+  };
+
   const pending = purchases.filter((p) => p.status === "Pendiente");
   const totalCajaChica = approvedActive
     .filter((p) => p.paymentMethod === "Caja Chica")
