@@ -124,11 +124,14 @@ const Training = () => {
 
   const persistProgress = async () => {
     if (!activeCourse || !user) return;
+    const existingEnr = enrollmentFor(activeCourse.id);
+    const alreadyCompleted = existingEnr?.status === "completado";
     const data = {
       userId: user.id, courseId: activeCourse.id,
       currentSection: section,
       sectionsRead: Array.from(readSections),
-      status: readSections.size >= activeCourse.sections.length ? "en-progreso" : "en-progreso",
+      // Preservar 'completado' si el usuario sólo está repasando.
+      status: alreadyCompleted ? "completado" : "en-progreso",
     };
     if (apiMode) {
       try { await trainingApi.saveEnrollment(data); } catch {}
@@ -139,6 +142,7 @@ const Training = () => {
       if (existing) {
         existing.currentSection = section;
         existing.sectionsRead = Array.from(new Set([...(existing.sectionsRead || []), ...readSections]));
+        if (existing.status !== "completado") existing.status = "en-progreso";
         existing.updatedAt = now;
       } else {
         local.enrollments.push({
