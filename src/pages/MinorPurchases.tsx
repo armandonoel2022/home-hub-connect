@@ -2168,6 +2168,21 @@ const MinorPurchases = () => {
                                       <Ban className="h-4 w-4" />
                                     </Button>
                                   )}
+                                  {canManage && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      onClick={() => {
+                                        setReassignDialog(p);
+                                        setReassignNewId("");
+                                        setReassignReason("");
+                                      }}
+                                      title="Cambiar ID"
+                                    >
+                                      <Hash className="h-4 w-4" />
+                                    </Button>
+                                  )}
                                 </div>
                               </TableCell>
                             </TableRow>
