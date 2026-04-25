@@ -52,6 +52,49 @@ const router = createCrudRoutes(FILE, 'MP', {
       res.json(items[idx]);
     });
 
+    // Reasignar el ID de un gasto (deja historial). Útil cuando el ID original
+    // queda "bloqueado" por un registro anulado y se necesita reordenar la numeración.
+    r.post('/:id/reassign-id', auth, (req, res) => {
+      const items = readData(FILE);
+      const idx = items.findIndex(i => i.id === req.params.id);
+      if (idx === -1) return res.status(404).json({ message: 'No encontrado' });
+
+      const newId = String(req.body.newId || '').trim().toUpperCase();
+      const reason = String(req.body.reason || '').trim();
+      const by = req.body.by || req.user?.fullName || req.user?.id || 'Sistema';
+
+      if (!newId) return res.status(400).json({ message: 'Nuevo ID requerido' });
+      if (!/^MP-\d{3,}$/.test(newId)) return res.status(400).json({ message: 'Formato esperado: MP-### (ej. MP-002)' });
+      if (reason.length < 5) return res.status(400).json({ message: 'Justificación requerida (mín 5 caracteres)' });
+      if (newId === items[idx].id) return res.status(400).json({ message: 'El nuevo ID es igual al actual' });
+
+      // Conflicto: el nuevo ID solo puede usarse si NO hay otro registro activo con ese ID.
+      // Se permite si el destino existe pero está anulado/eliminado lógicamente (voided=true o status='Anulado').
+      const conflict = items.find(i => i.id === newId);
+      if (conflict && !(conflict.voided || conflict.status === 'Anulado')) {
+        return res.status(409).json({ message: `El ID ${newId} ya está en uso por un gasto activo` });
+      }
+
+      const original = items[idx];
+      const history = Array.isArray(original.idHistory) ? original.idHistory.slice() : [];
+      history.push({
+        previousId: original.id,
+        newId,
+        changedBy: by,
+        changedAt: new Date().toISOString(),
+        reason,
+      });
+
+      items[idx] = {
+        ...original,
+        id: newId,
+        idHistory: history,
+        updatedAt: new Date().toISOString(),
+      };
+      writeData(FILE, items);
+      res.json(items[idx]);
+    });
+
     // Subida de comprobante (base64 data URL)
     r.post('/:id/receipt', auth, jsonLarge, (req, res) => {
       const items = readData(FILE);
