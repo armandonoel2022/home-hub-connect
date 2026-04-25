@@ -72,6 +72,7 @@ import {
   Coins,
   CheckCheck,
   Filter,
+  Hash,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -437,6 +438,10 @@ const MinorPurchases = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [voidDialog, setVoidDialog] = useState<MinorPurchase | null>(null);
   const [voidReason, setVoidReason] = useState("");
+  const [reassignDialog, setReassignDialog] = useState<MinorPurchase | null>(null);
+  const [reassignNewId, setReassignNewId] = useState("");
+  const [reassignReason, setReassignReason] = useState("");
+  const [reassignBusy, setReassignBusy] = useState(false);
   const [detail, setDetail] = useState<MinorPurchase | null>(null);
   const [repositionDialogOpen, setRepositionDialogOpen] = useState(false);
   const [repositionMonth, setRepositionMonth] = useState<string>(getPreviousYearMonth());
@@ -1078,6 +1083,68 @@ const MinorPurchases = () => {
         description: err.message || "Ocurrió un error. Intente nuevamente.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleReassignId = async () => {
+    if (!reassignDialog || !user) return;
+    const newId = reassignNewId.trim().toUpperCase();
+    const reason = reassignReason.trim();
+    if (!/^MP-\d{3,}$/.test(newId)) {
+      toast({ title: "Formato inválido", description: "Debe ser MP-### (ej. MP-002).", variant: "destructive" });
+      return;
+    }
+    if (newId === reassignDialog.id) {
+      toast({ title: "Sin cambios", description: "El nuevo ID es igual al actual.", variant: "destructive" });
+      return;
+    }
+    if (reason.length < 5) {
+      toast({ title: "Justificación requerida", description: "Mínimo 5 caracteres.", variant: "destructive" });
+      return;
+    }
+    // Validación local: si existe otro registro activo (no anulado) con ese ID, bloquear.
+    const conflict = purchases.find((p) => p.id === newId);
+    if (conflict && !(conflict.voided || conflict.status === "Anulado")) {
+      toast({
+        title: "ID en uso",
+        description: `${newId} pertenece a un gasto activo. Sólo se pueden reutilizar IDs anulados.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setReassignBusy(true);
+    try {
+      const oldId = reassignDialog.id;
+      let updated: MinorPurchase;
+      if (apiMode) {
+        updated = await minorPurchasesApi.reassignId(oldId, { newId, reason, by: user.fullName });
+      } else {
+        const history = Array.isArray(reassignDialog.idHistory) ? reassignDialog.idHistory.slice() : [];
+        history.push({
+          previousId: oldId,
+          newId,
+          changedBy: user.fullName,
+          changedAt: new Date().toISOString(),
+          reason,
+        });
+        updated = { ...reassignDialog, id: newId, idHistory: history };
+      }
+      const next = purchases.map((p) => (p.id === oldId ? updated : p));
+      setPurchases(next);
+      if (!apiMode) saveLocal(next);
+      toast({ title: "ID reasignado", description: `${oldId} → ${newId}` });
+      setReassignDialog(null);
+      setReassignNewId("");
+      setReassignReason("");
+    } catch (err: any) {
+      toast({
+        title: "Error al reasignar",
+        description: err?.message || "No se pudo cambiar el ID.",
+        variant: "destructive",
+      });
+    } finally {
+      setReassignBusy(false);
     }
   };
 
@@ -2101,6 +2168,21 @@ const MinorPurchases = () => {
                                       <Ban className="h-4 w-4" />
                                     </Button>
                                   )}
+                                  {canManage && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      onClick={() => {
+                                        setReassignDialog(p);
+                                        setReassignNewId("");
+                                        setReassignReason("");
+                                      }}
+                                      title="Cambiar ID"
+                                    >
+                                      <Hash className="h-4 w-4" />
+                                    </Button>
+                                  )}
                                 </div>
                               </TableCell>
                             </TableRow>
@@ -2448,6 +2530,96 @@ const MinorPurchases = () => {
             </Button>
             <Button variant="destructive" onClick={handleVoid} disabled={voidReason.length < 5}>
               Anular Gasto
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo de Reasignación de ID */}
+      <Dialog
+        open={!!reassignDialog}
+        onOpenChange={(o) => {
+          if (!o) {
+            setReassignDialog(null);
+            setReassignNewId("");
+            setReassignReason("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-heading flex items-center gap-2">
+              <Hash className="h-4 w-4" /> Cambiar ID del gasto
+            </DialogTitle>
+            <DialogDescription>
+              Útil cuando el ID original quedó ocupado por un gasto anulado. Se conserva el historial completo.
+            </DialogDescription>
+          </DialogHeader>
+          {reassignDialog && (
+            <div className="space-y-3 text-sm">
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="font-medium">{reassignDialog.description}</p>
+                <p className="text-muted-foreground">
+                  ID actual: <span className="font-mono">{reassignDialog.id}</span> · {fmt(reassignDialog.amount)}
+                </p>
+              </div>
+              <div>
+                <Label>Nuevo ID *</Label>
+                <Input
+                  value={reassignNewId}
+                  onChange={(e) => setReassignNewId(e.target.value.toUpperCase())}
+                  placeholder="Ej: MP-002"
+                  className="mt-1 font-mono"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Formato MP-### · sólo se permite reutilizar IDs de gastos anulados.
+                </p>
+              </div>
+              <div>
+                <Label>Justificación * (mín 5 caracteres)</Label>
+                <Textarea
+                  value={reassignReason}
+                  onChange={(e) => setReassignReason(e.target.value)}
+                  rows={3}
+                  placeholder="Ej: Reordenar numeración tras anulación de MP-002."
+                  className="mt-1"
+                />
+              </div>
+              {reassignDialog.idHistory && reassignDialog.idHistory.length > 0 && (
+                <div className="border rounded-lg p-2 bg-muted/40">
+                  <p className="text-xs font-semibold mb-1">Historial de cambios de ID</p>
+                  <ul className="text-xs space-y-1 max-h-32 overflow-auto">
+                    {reassignDialog.idHistory.map((h, i) => (
+                      <li key={i} className="font-mono">
+                        {h.previousId} → {h.newId}
+                        <span className="text-muted-foreground"> · {fmtDate(h.changedAt)} · {h.changedBy}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setReassignDialog(null);
+                setReassignNewId("");
+                setReassignReason("");
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleReassignId}
+              disabled={
+                reassignBusy ||
+                reassignReason.length < 5 ||
+                !/^MP-\d{3,}$/.test(reassignNewId.trim().toUpperCase())
+              }
+            >
+              {reassignBusy ? "Guardando..." : "Cambiar ID"}
             </Button>
           </DialogFooter>
         </DialogContent>
