@@ -361,7 +361,7 @@ const Training = () => {
             {TRAINING_COURSES.map((c) => {
               const enr = enrollmentFor(c.id);
               const cert = certificateFor(c.id);
-              const completed = enr?.status === "completado";
+              const completed = enr?.status === "completado" || !!cert;
               const progress = enr ? Math.round(((enr.sectionsRead?.length || 0) / c.sections.length) * 100) : 0;
               return (
                 <Card key={c.id} className={`transition-all hover:shadow-lg ${completed ? "border-green-500/40" : ""}`}>
