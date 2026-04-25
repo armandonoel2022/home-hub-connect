@@ -101,8 +101,16 @@ const Training = () => {
   const enrollmentFor = (cId: string) => enrollments.find(e => e.courseId === cId);
   const certificateFor = (cId: string) => certificates.find(c => c.courseId === cId);
 
+  // Un curso se considera completado si tiene status 'completado' O si existe
+  // un certificado emitido para ese curso (recuperación frente a estados perdidos).
+  const isCourseCompleted = (cId: string) => {
+    const enr = enrollmentFor(cId);
+    if (enr?.status === "completado") return true;
+    return !!certificateFor(cId);
+  };
+
   // Stats
-  const completedCount = enrollments.filter(e => e.status === "completado").length;
+  const completedCount = TRAINING_COURSES.filter(c => isCourseCompleted(c.id)).length;
   const totalCourses = TRAINING_COURSES.length;
   const completionPct = Math.round((completedCount / totalCourses) * 100);
 
@@ -124,11 +132,14 @@ const Training = () => {
 
   const persistProgress = async () => {
     if (!activeCourse || !user) return;
+    const existingEnr = enrollmentFor(activeCourse.id);
+    const alreadyCompleted = existingEnr?.status === "completado";
     const data = {
       userId: user.id, courseId: activeCourse.id,
       currentSection: section,
       sectionsRead: Array.from(readSections),
-      status: readSections.size >= activeCourse.sections.length ? "en-progreso" : "en-progreso",
+      // Preservar 'completado' si el usuario sólo está repasando.
+      status: alreadyCompleted ? "completado" : "en-progreso",
     };
     if (apiMode) {
       try { await trainingApi.saveEnrollment(data); } catch {}
@@ -139,6 +150,7 @@ const Training = () => {
       if (existing) {
         existing.currentSection = section;
         existing.sectionsRead = Array.from(new Set([...(existing.sectionsRead || []), ...readSections]));
+        if (existing.status !== "completado") existing.status = "en-progreso";
         existing.updatedAt = now;
       } else {
         local.enrollments.push({
@@ -349,7 +361,7 @@ const Training = () => {
             {TRAINING_COURSES.map((c) => {
               const enr = enrollmentFor(c.id);
               const cert = certificateFor(c.id);
-              const completed = enr?.status === "completado";
+              const completed = enr?.status === "completado" || !!cert;
               const progress = enr ? Math.round(((enr.sectionsRead?.length || 0) / c.sections.length) * 100) : 0;
               return (
                 <Card key={c.id} className={`transition-all hover:shadow-lg ${completed ? "border-green-500/40" : ""}`}>
@@ -617,10 +629,16 @@ const Training = () => {
                       u.fullName.toLowerCase().includes(adminSearch.toLowerCase()))
                     .map(u => {
                       const myEnrs = allEnrollments.filter(e => e.userId === u.id);
-                      const completed = myEnrs.filter(e => e.status === "completado").length;
+                      const myCerts = allCertificates.filter(c => c.userId === u.id);
+                      // Un curso cuenta como completado si hay enrollment 'completado'
+                      // o si existe certificado para ese curso (recupera estados perdidos).
+                      const completedCourseIds = new Set<string>([
+                        ...myEnrs.filter(e => e.status === "completado").map(e => e.courseId),
+                        ...myCerts.map(c => c.courseId),
+                      ]);
+                      const completed = TRAINING_COURSES.filter(c => completedCourseIds.has(c.id)).length;
                       const total = TRAINING_COURSES.length;
                       const pct = Math.round((completed / total) * 100);
-                      const myCerts = allCertificates.filter(c => c.userId === u.id);
                       return (
                         <div key={u.id} className="flex items-center gap-3 p-2 border border-border rounded">
                           <div className="flex-1 min-w-0">
