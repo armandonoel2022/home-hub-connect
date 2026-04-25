@@ -362,6 +362,16 @@ export interface MinorPurchase {
   voidedReason?: string;
   voidedBy?: string;
   voidedAt?: string;
+  /** Historial de cambios de ID (auditoría). */
+  idHistory?: IdChangeRecord[];
+}
+
+export interface IdChangeRecord {
+  previousId: string;
+  newId: string;
+  changedBy: string;
+  changedAt: string;
+  reason: string;
 }
 
 // ─── Notifications ───
