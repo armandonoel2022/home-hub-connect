@@ -1148,6 +1148,7 @@ const MinorPurchases = () => {
     }
   };
 
+  const approvedActive = purchases.filter((p) => p.status === "Aprobado" && !p.voided);
   const pending = purchases.filter((p) => p.status === "Pendiente");
   const totalCajaChica = approvedActive
     .filter((p) => p.paymentMethod === "Caja Chica")
