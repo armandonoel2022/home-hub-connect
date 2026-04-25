@@ -629,10 +629,16 @@ const Training = () => {
                       u.fullName.toLowerCase().includes(adminSearch.toLowerCase()))
                     .map(u => {
                       const myEnrs = allEnrollments.filter(e => e.userId === u.id);
-                      const completed = myEnrs.filter(e => e.status === "completado").length;
+                      const myCerts = allCertificates.filter(c => c.userId === u.id);
+                      // Un curso cuenta como completado si hay enrollment 'completado'
+                      // o si existe certificado para ese curso (recupera estados perdidos).
+                      const completedCourseIds = new Set<string>([
+                        ...myEnrs.filter(e => e.status === "completado").map(e => e.courseId),
+                        ...myCerts.map(c => c.courseId),
+                      ]);
+                      const completed = TRAINING_COURSES.filter(c => completedCourseIds.has(c.id)).length;
                       const total = TRAINING_COURSES.length;
                       const pct = Math.round((completed / total) * 100);
-                      const myCerts = allCertificates.filter(c => c.userId === u.id);
                       return (
                         <div key={u.id} className="flex items-center gap-3 p-2 border border-border rounded">
                           <div className="flex-1 min-w-0">
