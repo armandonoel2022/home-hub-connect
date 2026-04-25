@@ -438,6 +438,10 @@ const MinorPurchases = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [voidDialog, setVoidDialog] = useState<MinorPurchase | null>(null);
   const [voidReason, setVoidReason] = useState("");
+  const [reassignDialog, setReassignDialog] = useState<MinorPurchase | null>(null);
+  const [reassignNewId, setReassignNewId] = useState("");
+  const [reassignReason, setReassignReason] = useState("");
+  const [reassignBusy, setReassignBusy] = useState(false);
   const [detail, setDetail] = useState<MinorPurchase | null>(null);
   const [repositionDialogOpen, setRepositionDialogOpen] = useState(false);
   const [repositionMonth, setRepositionMonth] = useState<string>(getPreviousYearMonth());
