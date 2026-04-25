@@ -269,6 +269,8 @@ export const minorPurchasesApi = {
     apiFetch<MinorPurchase>(`/minor-purchases/${id}/void`, { method: "POST", body: JSON.stringify(data) }),
   uploadReceipt: (id: string, dataUrl: string, fileName: string) =>
     apiFetch<MinorPurchase>(`/minor-purchases/${id}/receipt`, { method: "POST", body: JSON.stringify({ dataUrl, fileName }) }),
+  reassignId: (id: string, data: { newId: string; reason: string; by: string }) =>
+    apiFetch<MinorPurchase>(`/minor-purchases/${id}/reassign-id`, { method: "POST", body: JSON.stringify(data) }),
 };
 
 // ─── Petty Cash (repositions + denominations) ───
