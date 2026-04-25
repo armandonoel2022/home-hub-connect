@@ -2535,6 +2535,96 @@ const MinorPurchases = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Diálogo de Reasignación de ID */}
+      <Dialog
+        open={!!reassignDialog}
+        onOpenChange={(o) => {
+          if (!o) {
+            setReassignDialog(null);
+            setReassignNewId("");
+            setReassignReason("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-heading flex items-center gap-2">
+              <Hash className="h-4 w-4" /> Cambiar ID del gasto
+            </DialogTitle>
+            <DialogDescription>
+              Útil cuando el ID original quedó ocupado por un gasto anulado. Se conserva el historial completo.
+            </DialogDescription>
+          </DialogHeader>
+          {reassignDialog && (
+            <div className="space-y-3 text-sm">
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="font-medium">{reassignDialog.description}</p>
+                <p className="text-muted-foreground">
+                  ID actual: <span className="font-mono">{reassignDialog.id}</span> · {fmt(reassignDialog.amount)}
+                </p>
+              </div>
+              <div>
+                <Label>Nuevo ID *</Label>
+                <Input
+                  value={reassignNewId}
+                  onChange={(e) => setReassignNewId(e.target.value.toUpperCase())}
+                  placeholder="Ej: MP-002"
+                  className="mt-1 font-mono"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Formato MP-### · sólo se permite reutilizar IDs de gastos anulados.
+                </p>
+              </div>
+              <div>
+                <Label>Justificación * (mín 5 caracteres)</Label>
+                <Textarea
+                  value={reassignReason}
+                  onChange={(e) => setReassignReason(e.target.value)}
+                  rows={3}
+                  placeholder="Ej: Reordenar numeración tras anulación de MP-002."
+                  className="mt-1"
+                />
+              </div>
+              {reassignDialog.idHistory && reassignDialog.idHistory.length > 0 && (
+                <div className="border rounded-lg p-2 bg-muted/40">
+                  <p className="text-xs font-semibold mb-1">Historial de cambios de ID</p>
+                  <ul className="text-xs space-y-1 max-h-32 overflow-auto">
+                    {reassignDialog.idHistory.map((h, i) => (
+                      <li key={i} className="font-mono">
+                        {h.previousId} → {h.newId}
+                        <span className="text-muted-foreground"> · {fmtDate(h.changedAt)} · {h.changedBy}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setReassignDialog(null);
+                setReassignNewId("");
+                setReassignReason("");
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleReassignId}
+              disabled={
+                reassignBusy ||
+                reassignReason.length < 5 ||
+                !/^MP-\d{3,}$/.test(reassignNewId.trim().toUpperCase())
+              }
+            >
+              {reassignBusy ? "Guardando..." : "Cambiar ID"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Diálogo de reposición */}
       <Dialog open={repositionDialogOpen} onOpenChange={setRepositionDialogOpen}>
         <DialogContent className="sm:max-w-md">
