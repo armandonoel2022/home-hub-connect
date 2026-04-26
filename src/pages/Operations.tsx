@@ -448,7 +448,13 @@ const OperationsPage = () => {
       (p.province || "").toLowerCase().includes(search.toLowerCase());
     const matchProvince = !filterProvince || p.province === filterProvince;
     const matchCondition = !filterCondition || p.weaponCondition === filterCondition;
-    return matchSearch && matchProvince && matchCondition;
+    const hasWeapon = !!(p.weaponSerial && p.weaponSerial !== "No visible" && p.weaponSerial !== "Borrosos");
+    const isLinked = weaponAssetMap.has(p.id);
+    let matchLinking = true;
+    if (filterLinking === "linked") matchLinking = isLinked;
+    else if (filterLinking === "unlinked") matchLinking = hasWeapon && !isLinked;
+    else if (filterLinking === "withWeapon") matchLinking = hasWeapon;
+    return matchSearch && matchProvince && matchCondition && matchLinking;
   });
 
   const totalCount = personnel.length;
