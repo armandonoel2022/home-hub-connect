@@ -650,18 +650,21 @@ const OperationsPage = () => {
                 <Package className="h-4 w-4" /> Vinculación Armas — Activo Fijo
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="bg-muted rounded-lg p-3 text-center">
+                <button onClick={() => { setFilterLinking("withWeapon"); setFilterProvince(""); setFilterCondition(""); setSearch(""); setViewMode("list"); }}
+                  className="bg-muted rounded-lg p-3 text-center hover:shadow-md hover:scale-[1.02] transition-all cursor-pointer">
                   <p className="text-2xl font-bold text-card-foreground">{linkStats.withWeapon}</p>
                   <p className="text-xs text-muted-foreground">Con arma asignada</p>
-                </div>
-                <div className="bg-emerald-50 rounded-lg p-3 text-center">
+                </button>
+                <button onClick={() => { setFilterLinking("linked"); setFilterProvince(""); setFilterCondition(""); setSearch(""); setViewMode("list"); }}
+                  className="bg-emerald-50 rounded-lg p-3 text-center hover:shadow-md hover:scale-[1.02] transition-all cursor-pointer">
                   <p className="text-2xl font-bold text-emerald-700">{linkStats.linked}</p>
                   <p className="text-xs text-emerald-600">Vinculadas a Activo Fijo</p>
-                </div>
-                <div className="bg-amber-50 rounded-lg p-3 text-center">
+                </button>
+                <button onClick={() => { setFilterLinking("unlinked"); setFilterProvince(""); setFilterCondition(""); setSearch(""); setViewMode("list"); }}
+                  className="bg-amber-50 rounded-lg p-3 text-center hover:shadow-md hover:scale-[1.02] transition-all cursor-pointer">
                   <p className="text-2xl font-bold text-amber-700">{linkStats.unlinked}</p>
                   <p className="text-xs text-amber-600">Sin vincular</p>
-                </div>
+                </button>
                 <div className="bg-muted rounded-lg p-3 text-center">
                   <p className="text-2xl font-bold text-card-foreground">{linkStats.linkPercentage}%</p>
                   <p className="text-xs text-muted-foreground">Cobertura</p>
@@ -675,8 +678,9 @@ const OperationsPage = () => {
               else setFilterCondition("");
               if (filters.search) setSearch(filters.search);
               else setSearch("");
+              setFilterLinking("");
               setViewMode("list");
-            }} />
+            }} onAssign={(p) => setAssignTarget(p)} />
           </div>
         )}
 
