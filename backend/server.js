@@ -71,6 +71,6 @@ app.use((err, req, res, next) => {
 // Start — no database connection needed!
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ SafeOne API corriendo en puerto ${PORT}`);
-  console.log(`   Almacenamiento: JSON files en ${path.join(__dirname, 'data')}`);
+  console.log(`   Almacenamiento: JSON files en ${DATA_DIR}`);
   console.log(`   Health: http://localhost:${PORT}/api/health`);
 });
