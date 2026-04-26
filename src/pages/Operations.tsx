@@ -911,6 +911,16 @@ const OperationsPage = () => {
               <option value="">Todas las Condiciones</option>
               {WEAPON_CONDITIONS.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
+            <select value={filterLinking} onChange={e => setFilterLinking(e.target.value as any)} className="px-3 py-2.5 rounded-lg bg-card border border-border text-foreground text-sm">
+              <option value="">Todas (vinculación)</option>
+              <option value="withWeapon">Con arma asignada</option>
+              <option value="linked">Vinculadas a Activo Fijo</option>
+              <option value="unlinked">Sin vincular</option>
+            </select>
+            {(filterProvince || filterCondition || filterLinking || search) && (
+              <button onClick={() => { setFilterProvince(""); setFilterCondition(""); setFilterLinking(""); setSearch(""); }}
+                className="px-3 py-2.5 rounded-lg bg-muted text-card-foreground text-sm hover:bg-border">Limpiar filtros</button>
+            )}
           </div>
         )}
 
