@@ -57,7 +57,7 @@ app.use('/api/training', require('./routes/training'));
 app.get('/api/health', (req, res) => res.json({
   status: 'ok',
   storage: 'file-based (JSON)',
-  dataDir: path.join(__dirname, 'data'),
+  dataDir: DATA_DIR,
   timestamp: new Date(),
   uptime: process.uptime(),
 }));
