@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const { ensureDirs } = require('./config/fileStorage');
+const { ensureDirs, UPLOADS_DIR, DATA_DIR } = require('./config/fileStorage');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -25,8 +25,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve uploaded files statically
-app.use('/uploads', express.static(path.join(__dirname, 'data', 'uploads')));
+// Serve uploaded files statically (resolved from the real DATA_DIR, which may live
+// outside the project folder so it survives git pulls / re-exports).
+app.use('/uploads', express.static(UPLOADS_DIR));
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
@@ -56,7 +57,7 @@ app.use('/api/training', require('./routes/training'));
 app.get('/api/health', (req, res) => res.json({
   status: 'ok',
   storage: 'file-based (JSON)',
-  dataDir: path.join(__dirname, 'data'),
+  dataDir: DATA_DIR,
   timestamp: new Date(),
   uptime: process.uptime(),
 }));
@@ -70,6 +71,6 @@ app.use((err, req, res, next) => {
 // Start — no database connection needed!
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ SafeOne API corriendo en puerto ${PORT}`);
-  console.log(`   Almacenamiento: JSON files en ${path.join(__dirname, 'data')}`);
+  console.log(`   Almacenamiento: JSON files en ${DATA_DIR}`);
   console.log(`   Health: http://localhost:${PORT}/api/health`);
 });

@@ -2,6 +2,21 @@
 
 API REST (Express.js + SQL Server) para la intranet SafeOne.
 
+## ⚠️ Persistencia de datos (LEER PRIMERO)
+
+Los datos se guardan como archivos JSON. La ubicación se controla con la
+variable `DATA_DIR` en `.env`. **Debe apuntar a una carpeta FUERA del
+proyecto** (recomendado: `C:\intranet-data`) para que actualizar el código
+desde GitHub **NO borre** los datos.
+
+- Default en Windows si no se define: `C:\intranet-data`
+- Default en otros SO: `./data` (solo desarrollo, NO usar en producción)
+
+Crear la carpeta una vez en el servidor:
+```cmd
+mkdir C:\intranet-data
+```
+
 ## Despliegue en el Servidor
 
 ### Paso 1: Instalar Node.js
