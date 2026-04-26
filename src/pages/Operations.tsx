@@ -111,11 +111,7 @@ function PersonnelDashboard({ personnel, onFilter, onAssign }: { personnel: Arme
 
   // Locations with no assigned personnel (posts without a name)
   const unfilledPosts = useMemo(() => {
-    return personnel.filter(p => !p.name || p.name.trim() === "").map(p => ({
-      client: p.client,
-      location: p.location,
-      province: p.province,
-    }));
+    return personnel.filter(p => !p.name || p.name.trim() === "");
   }, [personnel]);
 
   const totalAmmo = personnel.reduce((s, p) => s + (p.ammunitionCount || 0), 0);
