@@ -25,8 +25,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve uploaded files statically
-app.use('/uploads', express.static(path.join(__dirname, 'data', 'uploads')));
+// Serve uploaded files statically (resolved from the real DATA_DIR, which may live
+// outside the project folder so it survives git pulls / re-exports).
+app.use('/uploads', express.static(UPLOADS_DIR));
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
