@@ -734,6 +734,67 @@ const OperationsPage = () => {
     setTransferTarget(null);
   };
 
+  const handleAssignToVacant = async (
+    vigilanteId: string,
+    mode: "move" | "new",
+    reason: string,
+    shiftType: ShiftType,
+    shiftHours: number,
+    shiftNotes: string,
+    newPersonData?: Partial<ArmedPersonnel>
+  ) => {
+    if (!assignTarget) return;
+    const transfer: PersonnelTransfer = {
+      id: `TR-${Date.now()}`,
+      date: new Date().toISOString(),
+      fromClient: "",
+      fromLocation: "",
+      toClient: assignTarget.client,
+      toLocation: assignTarget.location,
+      reason: `Asignación a puesto vacante${reason ? ` — ${reason}` : ""} | Turno: ${shiftType} (${shiftHours}h)${shiftNotes ? ` | ${shiftNotes}` : ""}`,
+      authorizedBy: user?.fullName || "Admin",
+    };
+
+    if (mode === "move" && vigilanteId) {
+      const vig = personnel.find(p => p.id === vigilanteId);
+      if (!vig) return;
+      const movedData: Partial<ArmedPersonnel> = {
+        client: assignTarget.client,
+        location: assignTarget.location,
+        province: assignTarget.province,
+        shiftType,
+        shiftHours,
+        shiftNotes,
+        transferHistory: [...(vig.transferHistory || []), { ...transfer, fromClient: vig.client, fromLocation: vig.location }],
+      };
+      try { await updatePersonnel(vigilanteId, movedData); }
+      catch { setPersonnel(prev => prev.map(p => p.id === vigilanteId ? { ...p, ...movedData } : p)); }
+
+      const newVacantData: Partial<ArmedPersonnel> = {
+        name: "", employeeCode: "", photo: "",
+        weaponType: "", weaponBrand: "", weaponSerial: "", weaponCaliber: "",
+        ammunitionCount: 0, weaponCondition: "", licenseNumber: "", licenseExpiry: "",
+        shiftType: undefined, shiftHours: undefined, shiftNotes: undefined,
+        client: vig.client,
+        location: vig.location,
+        province: vig.province,
+      };
+      try { await updatePersonnel(assignTarget.id, newVacantData); }
+      catch { setPersonnel(prev => prev.map(p => p.id === assignTarget.id ? { ...p, ...newVacantData } : p)); }
+    } else if (mode === "new" && newPersonData) {
+      const filled: Partial<ArmedPersonnel> = {
+        name: newPersonData.name,
+        employeeCode: newPersonData.employeeCode,
+        shiftType, shiftHours, shiftNotes,
+        assignedDate: new Date().toISOString().split("T")[0],
+        transferHistory: [...(assignTarget.transferHistory || []), transfer],
+      };
+      try { await updatePersonnel(assignTarget.id, filled); }
+      catch { setPersonnel(prev => prev.map(p => p.id === assignTarget.id ? { ...p, ...filled } : p)); }
+    }
+    setAssignTarget(null);
+  };
+
   const formFields = [
     { key: "employeeCode", label: "Código de Empleado *" },
     { key: "name", label: "Nombre del Vigilante" },
