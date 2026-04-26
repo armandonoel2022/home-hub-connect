@@ -25,24 +25,9 @@
 const fs = require('fs');
 const path = require('path');
 
-// Base data directory.
-// IMPORTANT: keep data OUTSIDE the project folder so that git pull / re-export
-// from GitHub never touches user-generated data. Default on Windows points to
-// C:\intranet-data; on other platforms uses ./data inside the backend folder.
-function resolveDefaultDataDir() {
-  if (process.env.DATA_DIR) return process.env.DATA_DIR;
-  if (process.platform === 'win32') {
-    // Honor SystemDrive (usually C:) and place data alongside other intranet data.
-    const drive = process.env.SystemDrive || 'C:';
-    return path.join(drive + path.sep, 'intranet-data');
-  }
-  return path.join(__dirname, '..', 'data');
-}
-
-const DATA_DIR = resolveDefaultDataDir();
+// Base data directory — same drive as the project
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
-
-console.log(`📁 Data directory: ${DATA_DIR}`);
 
 // Department folder mapping (C:\ folders → department names)
 const DEPARTMENT_FOLDERS = {
