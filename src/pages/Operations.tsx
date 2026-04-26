@@ -70,7 +70,7 @@ function PersonnelMap({ personnel, onTransfer }: { personnel: ArmedPersonnel[]; 
 }
 
 // ─── Dashboard Component ───
-function PersonnelDashboard({ personnel, onFilter }: { personnel: ArmedPersonnel[]; onFilter?: (filters: { province?: string; condition?: string; search?: string }) => void }) {
+function PersonnelDashboard({ personnel, onFilter, onAssign }: { personnel: ArmedPersonnel[]; onFilter?: (filters: { province?: string; condition?: string; search?: string }) => void; onAssign?: (p: ArmedPersonnel) => void }) {
   const byProvince = useMemo(() => {
     const map: Record<string, number> = {};
     personnel.forEach(p => { map[p.province || "Sin provincia"] = (map[p.province || "Sin provincia"] || 0) + 1; });
