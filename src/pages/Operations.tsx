@@ -387,6 +387,8 @@ const OperationsPage = () => {
   const [filterProvince, setFilterProvince] = useState("");
   const [filterCondition, setFilterCondition] = useState("");
   const [transferTarget, setTransferTarget] = useState<ArmedPersonnel | null>(null);
+  const [assignTarget, setAssignTarget] = useState<ArmedPersonnel | null>(null);
+  const [filterLinking, setFilterLinking] = useState<"" | "linked" | "unlinked" | "withWeapon">("");
   const [showDeletedLog, setShowDeletedLog] = useState(false);
   const [showTransferLog, setShowTransferLog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
