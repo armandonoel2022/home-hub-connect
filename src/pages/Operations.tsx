@@ -970,9 +970,10 @@ const OperationsPage = () => {
 
                 {parseCoords(selected.coordinates) && (
                   <div className="mt-4">
-                    <a href={`https://www.google.com/maps?q=${selected.coordinates}`} target="_blank" rel="noopener"
+                    <a href={`https://www.openstreetmap.org/?mlat=${selected.coordinates.split(',')[0].trim()}&mlon=${selected.coordinates.split(',')[1].trim()}#map=17/${selected.coordinates.split(',')[0].trim()}/${selected.coordinates.split(',')[1].trim()}`} target="_blank" rel="noopener"
                       className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-blue-50 text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors w-full justify-center">
-                      <MapPin className="h-4 w-4" /> Ver ubicación en Google Maps
+                      <MapPin className="h-4 w-4" /> Ver ubicación en OpenStreetMap
+                    </a>
                     </a>
                   </div>
                 )}
