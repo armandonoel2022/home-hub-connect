@@ -73,7 +73,7 @@ export default function PersonnelMapView({ personnel, onTransfer }: Props) {
             <p><strong>Serial:</strong> ${p.weaponSerial}</p>
             <p><strong>Estado:</strong> ${p.weaponCondition}</p>
             ${shiftLabel}
-            <a href="https://www.google.com/maps?q=${p.coordinates}" target="_blank" style="color:#2563eb;text-decoration:underline;font-size:11px">Abrir en Google Maps</a>
+            <a href="https://www.openstreetmap.org/?mlat=${pos[0]}&mlon=${pos[1]}#map=17/${pos[0]}/${pos[1]}" target="_blank" rel="noopener" style="color:#2563eb;text-decoration:underline;font-size:11px">Abrir en OpenStreetMap</a>
             ${transferBtn}
           </div>
         `);
