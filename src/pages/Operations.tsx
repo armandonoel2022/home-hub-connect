@@ -775,7 +775,7 @@ const OperationsPage = () => {
                         </td>
                         <td className="px-3 py-2 text-center">
                           {hasCoords ? (
-                            <a href={`https://www.google.com/maps?q=${p.coordinates}`} target="_blank" rel="noopener" onClick={e => e.stopPropagation()} className="text-blue-600 hover:text-blue-800" title="Ver en Google Maps">
+                            <a href={`https://www.openstreetmap.org/?mlat=${p.coordinates.split(',')[0].trim()}&mlon=${p.coordinates.split(',')[1].trim()}#map=17/${p.coordinates.split(',')[0].trim()}/${p.coordinates.split(',')[1].trim()}`} target="_blank" rel="noopener" onClick={e => e.stopPropagation()} className="text-blue-600 hover:text-blue-800" title="Ver en OpenStreetMap">
                               <MapPin className="h-4 w-4" />
                             </a>
                           ) : <span className="text-muted-foreground">—</span>}
