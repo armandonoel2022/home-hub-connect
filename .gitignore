@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Backend runtime data (JSON storage + uploaded files).
+# Data is persisted OUTSIDE the project (default C:\intranet-data on Windows),
+# but if a deployment falls back to ./backend/data, never overwrite it from git.
+backend/data/
+backend/.env
