@@ -1247,6 +1247,15 @@ const OperationsPage = () => {
           </div>
         )}
 
+        {assignTarget && (
+          <AssignVigilanteModal
+            vacantPost={assignTarget}
+            allPersonnel={personnel}
+            onClose={() => setAssignTarget(null)}
+            onAssign={handleAssignToVacant}
+          />
+        )}
+
 
         {transferTarget && (
           <TransferModal
