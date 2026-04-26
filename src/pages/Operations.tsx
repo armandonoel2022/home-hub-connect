@@ -217,11 +217,19 @@ function PersonnelDashboard({ personnel, onFilter, onAssign }: { personnel: Arme
             Puestos sin Vigilante Asignado ({unfilledPosts.length})
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {unfilledPosts.map((p, i) => (
-              <div key={i} className="bg-white rounded-lg px-3 py-2 text-sm">
-                <span className="font-medium text-red-800">{p.client}</span>
-                <span className="text-red-600"> — {p.location}</span>
-                <span className="text-red-400 text-xs block">{p.province}</span>
+            {unfilledPosts.map((p) => (
+              <div key={p.id} className="bg-white rounded-lg px-3 py-2 text-sm flex items-center justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <span className="font-medium text-red-800">{p.client}</span>
+                  <span className="text-red-600"> — {p.location}</span>
+                  <span className="text-red-400 text-xs block">{p.province}</span>
+                </div>
+                {onAssign && (
+                  <button onClick={() => onAssign(p)} title="Asignar vigilante a este puesto"
+                    className="shrink-0 flex items-center gap-1 px-2 py-1 rounded-md bg-amber-500 text-white text-xs font-semibold hover:bg-amber-600 transition-colors">
+                    <Shield className="h-3 w-3" /> Asignar
+                  </button>
+                )}
               </div>
             ))}
           </div>
