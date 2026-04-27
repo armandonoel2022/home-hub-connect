@@ -79,7 +79,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { isApiConfigured, minorPurchasesApi, getFileUrl, pettyCashApi } from "@/lib/api";
-import * as XLSX from "xlsx";
+import * as XLSX from "xlsx-js-style";
 import type { MinorPurchase, PaymentMethod, MinorPurchaseStatus, LinkedDocType } from "@/lib/types";
 
 const AUTO_APPROVE_IDS = ["USR-100", "USR-110", "USR-101"];
@@ -351,18 +351,60 @@ const generateExcelReport = (purchases: MinorPurchase[], denominations: Denomina
 
   const categoryOrder = ["COMBUSTIBLE", "ENVIO,PEAJE Y PARQUEO", "REPARACION", "OTROS"];
 
-  // Build sheet as AOA. Columns: A=Fecha, B=Descripción, C=Monto, D=Subtotal
+  // Estilos
+  const borderAll = {
+    top: { style: "thin", color: { rgb: "000000" } },
+    bottom: { style: "thin", color: { rgb: "000000" } },
+    left: { style: "thin", color: { rgb: "000000" } },
+    right: { style: "thin", color: { rgb: "000000" } },
+  };
+  const titleStyle = {
+    font: { bold: true, sz: 12 },
+    alignment: { horizontal: "center", vertical: "center" },
+    border: borderAll,
+  };
+  const categoryStyle = {
+    font: { bold: true, sz: 11 },
+    fill: { patternType: "solid", fgColor: { rgb: "FFFF00" } },
+    alignment: { horizontal: "center", vertical: "center" },
+    border: borderAll,
+  };
+  const cellStyle = { border: borderAll, alignment: { vertical: "center" } };
+  const dateStyle = { ...cellStyle, alignment: { horizontal: "center", vertical: "center" } };
+  const moneyStyle = { ...cellStyle, numFmt: '"$"#,##0.00;[Red]("$"#,##0.00);"$"\\ -' };
+  const moneyBoldStyle = { ...moneyStyle, font: { bold: true } };
+  const labelRightBold = { ...cellStyle, font: { bold: true }, alignment: { horizontal: "right", vertical: "center" } };
+  const denomHeaderStyle = {
+    font: { bold: true },
+    fill: { patternType: "solid", fgColor: { rgb: "D9D9D9" } },
+    alignment: { horizontal: "center", vertical: "center" },
+    border: borderAll,
+  };
+
+  // Build sheet as AOA (array of arrays). Columns: A=Fecha, B=Descripción, C=Monto, D=Subtotal
   const aoa: any[][] = [];
+  const styles: Record<string, any> = {};
   const merges: any[] = [];
 
+  const setCell = (r: number, c: number, value: any, style?: any) => {
+    const addr = XLSX.utils.encode_cell({ r, c });
+    styles[addr] = { value, style };
+  };
+
+  // Row 0: Empresa
   aoa.push(["SAFEONE SECURITY COMPANY", "", "", ""]);
   merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } });
+  setCell(0, 0, "SAFEONE SECURITY COMPANY", titleStyle);
 
+  // Row 1: Reposición
   aoa.push(["REPOSICION DE CAJA CHICA", "", "", ""]);
   merges.push({ s: { r: 1, c: 0 }, e: { r: 1, c: 3 } });
+  setCell(1, 0, "REPOSICION DE CAJA CHICA", titleStyle);
 
+  // Row 2: Rango fechas
   aoa.push([dateRange, "", "", ""]);
   merges.push({ s: { r: 2, c: 0 }, e: { r: 2, c: 3 } });
+  setCell(2, 0, dateRange, titleStyle);
 
   let r = 3;
   let totalGeneral = 0;
@@ -370,8 +412,13 @@ const generateExcelReport = (purchases: MinorPurchase[], denominations: Denomina
   categoryOrder.forEach((category) => {
     const items = groupedByCategory[category] || [];
 
+    // Encabezado de categoría (merged A:C, subtotal en D vacio inicial)
     aoa.push([category, "", "", ""]);
     merges.push({ s: { r, c: 0 }, e: { r, c: 2 } });
+    setCell(r, 0, category, categoryStyle);
+    setCell(r, 1, "", categoryStyle);
+    setCell(r, 2, "", categoryStyle);
+    setCell(r, 3, "", categoryStyle);
     r++;
 
     let categoryTotal = 0;
@@ -381,45 +428,90 @@ const generateExcelReport = (purchases: MinorPurchase[], denominations: Denomina
       const item = items[i];
       if (item) {
         aoa.push([fmtDate(item.expenseDate || item.requestedAt), item.description, item.amount, ""]);
+        setCell(r, 0, fmtDate(item.expenseDate || item.requestedAt), dateStyle);
+        setCell(r, 1, item.description, cellStyle);
+        setCell(r, 2, item.amount, moneyStyle);
+        setCell(r, 3, "", cellStyle);
         categoryTotal += item.amount;
         totalGeneral += item.amount;
       } else {
         aoa.push(["", "", "", ""]);
+        setCell(r, 0, "", cellStyle);
+        setCell(r, 1, "", cellStyle);
+        setCell(r, 2, "", cellStyle);
+        setCell(r, 3, "", cellStyle);
       }
       r++;
     }
 
+    // Fila de subtotal de categoría (en columna D)
     aoa.push(["", "", "", categoryTotal]);
+    setCell(r, 0, "", cellStyle);
+    setCell(r, 1, "", cellStyle);
+    setCell(r, 2, "", moneyBoldStyle);
+    setCell(r, 3, categoryTotal, moneyBoldStyle);
     r++;
+
+    // Fila vacia separadora
     aoa.push(["", "", "", ""]);
     r++;
   });
 
   const efectivoEnCaja = Math.max(0, CAJA_CHICA_LIMIT - totalGeneral);
 
+  // Totales
   aoa.push(["", "", "TOTAL GASTOS RD$", totalGeneral]);
+  setCell(r, 2, "TOTAL GASTOS RD$", labelRightBold);
+  setCell(r, 3, totalGeneral, moneyBoldStyle);
   r++;
+
   aoa.push(["", "", "TOTAL EFECTIVO EN CAJA", efectivoEnCaja]);
+  setCell(r, 2, "TOTAL EFECTIVO EN CAJA", labelRightBold);
+  setCell(r, 3, efectivoEnCaja, moneyBoldStyle);
   r++;
+
   aoa.push(["", "", "TOTAL EN CAJA RD$", CAJA_CHICA_LIMIT]);
+  setCell(r, 2, "TOTAL EN CAJA RD$", labelRightBold);
+  setCell(r, 3, CAJA_CHICA_LIMIT, moneyBoldStyle);
   r++;
+
+  // Fila vacia
   aoa.push(["", "", "", ""]);
   r++;
 
+  // Detalle de efectivo (encabezado)
   aoa.push(["Detalle de efectivo en caja", "Denominaciones", "Total", ""]);
+  setCell(r, 0, "Detalle de efectivo en caja", denomHeaderStyle);
+  setCell(r, 1, "Denominaciones", denomHeaderStyle);
+  setCell(r, 2, "Total", denomHeaderStyle);
   r++;
 
   let totalDenoms = 0;
   denominations.forEach((denom) => {
     const total = denom.value * denom.count;
     totalDenoms += total;
-    aoa.push([denom.value, denom.count || "", total || "", ""]);
+    aoa.push([denom.value, denom.count || "", total || ""]);
+    setCell(r, 0, denom.value, { ...cellStyle, numFmt: "#,##0.00", alignment: { horizontal: "right", vertical: "center" } });
+    setCell(r, 1, denom.count || "", { ...cellStyle, alignment: { horizontal: "center", vertical: "center" } });
+    setCell(r, 2, total || "", moneyStyle);
     r++;
   });
 
+  // Total denominaciones
   aoa.push(["", "", totalDenoms, ""]);
+  setCell(r, 1, "", { ...cellStyle, font: { bold: true } });
+  setCell(r, 2, totalDenoms, moneyBoldStyle);
+  r++;
 
+  // Build worksheet
   const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+  // Apply styles
+  Object.entries(styles).forEach(([addr, info]) => {
+    if (!ws[addr]) ws[addr] = { t: typeof info.value === "number" ? "n" : "s", v: info.value };
+    if (info.style) (ws[addr] as any).s = info.style;
+  });
+
   ws["!cols"] = [{ wch: 14 }, { wch: 50 }, { wch: 14 }, { wch: 14 }];
   ws["!merges"] = merges;
 
