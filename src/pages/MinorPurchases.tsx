@@ -340,7 +340,7 @@ const generateExcelReport = (purchases: MinorPurchase[], denominations: Denomina
   const groupedByCategory: Record<string, typeof sortedPurchases> = {};
   sortedPurchases.forEach((p) => {
     let categoryKey = p.category;
-    if (categoryKey === "Envío, Peaje y Parqueo") categoryKey = "ENVIO PEAJE Y PARQUEO";
+    if (categoryKey === "Envío, Peaje y Parqueo") categoryKey = "ENVIO,PEAJE Y PARQUEO";
     else if (categoryKey === "Combustible") categoryKey = "COMBUSTIBLE";
     else if (categoryKey === "Reparación") categoryKey = "REPARACION";
     else categoryKey = "OTROS";
@@ -349,80 +349,175 @@ const generateExcelReport = (purchases: MinorPurchase[], denominations: Denomina
     groupedByCategory[categoryKey].push(p);
   });
 
-  const categoryOrder = ["COMBUSTIBLE", "ENVIO PEAJE Y PARQUEO", "REPARACION", "OTROS"];
-  const rows: any[] = [];
+  const categoryOrder = ["COMBUSTIBLE", "ENVIO,PEAJE Y PARQUEO", "REPARACION", "OTROS"];
 
-  // Encabezado
-  rows.push({ A: "SAFEONE SECURITY COMPANY", B: "", C: "", D: "", E: "" });
-  rows.push({ A: "REPOSICION DE CAJA CHICA", B: "", C: "", D: "", E: "" });
-  rows.push({ A: dateRange, B: "", C: "", D: "", E: "" });
-  rows.push({ A: "", B: "", C: "", D: "", E: "" });
+  // Estilos
+  const borderAll = {
+    top: { style: "thin", color: { rgb: "000000" } },
+    bottom: { style: "thin", color: { rgb: "000000" } },
+    left: { style: "thin", color: { rgb: "000000" } },
+    right: { style: "thin", color: { rgb: "000000" } },
+  };
+  const titleStyle = {
+    font: { bold: true, sz: 12 },
+    alignment: { horizontal: "center", vertical: "center" },
+    border: borderAll,
+  };
+  const categoryStyle = {
+    font: { bold: true, sz: 11 },
+    fill: { patternType: "solid", fgColor: { rgb: "FFFF00" } },
+    alignment: { horizontal: "center", vertical: "center" },
+    border: borderAll,
+  };
+  const cellStyle = { border: borderAll, alignment: { vertical: "center" } };
+  const dateStyle = { ...cellStyle, alignment: { horizontal: "center", vertical: "center" } };
+  const moneyStyle = { ...cellStyle, numFmt: '"$"#,##0.00;[Red]("$"#,##0.00);"$"\\ -' };
+  const moneyBoldStyle = { ...moneyStyle, font: { bold: true } };
+  const labelRightBold = { ...cellStyle, font: { bold: true }, alignment: { horizontal: "right", vertical: "center" } };
+  const denomHeaderStyle = {
+    font: { bold: true },
+    fill: { patternType: "solid", fgColor: { rgb: "D9D9D9" } },
+    alignment: { horizontal: "center", vertical: "center" },
+    border: borderAll,
+  };
 
+  // Build sheet as AOA (array of arrays). Columns: A=Fecha, B=Descripción, C=Monto, D=Subtotal
+  const aoa: any[][] = [];
+  const styles: Record<string, any> = {};
+  const merges: any[] = [];
+
+  const setCell = (r: number, c: number, value: any, style?: any) => {
+    const addr = XLSX.utils.encode_cell({ r, c });
+    styles[addr] = { value, style };
+  };
+
+  // Row 0: Empresa
+  aoa.push(["SAFEONE SECURITY COMPANY", "", "", ""]);
+  merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } });
+  setCell(0, 0, "SAFEONE SECURITY COMPANY", titleStyle);
+
+  // Row 1: Reposición
+  aoa.push(["REPOSICION DE CAJA CHICA", "", "", ""]);
+  merges.push({ s: { r: 1, c: 0 }, e: { r: 1, c: 3 } });
+  setCell(1, 0, "REPOSICION DE CAJA CHICA", titleStyle);
+
+  // Row 2: Rango fechas
+  aoa.push([dateRange, "", "", ""]);
+  merges.push({ s: { r: 2, c: 0 }, e: { r: 2, c: 3 } });
+  setCell(2, 0, dateRange, titleStyle);
+
+  let r = 3;
   let totalGeneral = 0;
 
   categoryOrder.forEach((category) => {
     const items = groupedByCategory[category] || [];
 
-    // Encabezado de categoría
-    rows.push({ A: category, B: "", C: "", D: "", E: "" });
-    rows.push({ A: "", B: "", C: "", D: "", E: "" });
+    // Encabezado de categoría (merged A:C, subtotal en D vacio inicial)
+    aoa.push([category, "", "", ""]);
+    merges.push({ s: { r, c: 0 }, e: { r, c: 2 } });
+    setCell(r, 0, category, categoryStyle);
+    setCell(r, 1, "", categoryStyle);
+    setCell(r, 2, "", categoryStyle);
+    setCell(r, 3, "", categoryStyle);
+    r++;
 
     let categoryTotal = 0;
+    const minRows = Math.max(items.length, category === "ENVIO,PEAJE Y PARQUEO" ? 4 : 1);
 
-    items.forEach((item) => {
-      rows.push({
-        A: fmtDate(item.expenseDate || item.requestedAt),
-        B: item.description,
-        C: "",
-        D: item.amount,
-        E: "",
-      });
-      categoryTotal += item.amount;
-      totalGeneral += item.amount;
-    });
-
-    if (items.length === 0) {
-      rows.push({ A: "", B: "No hay gastos en esta categoría", C: "", D: "", E: "" });
+    for (let i = 0; i < minRows; i++) {
+      const item = items[i];
+      if (item) {
+        aoa.push([fmtDate(item.expenseDate || item.requestedAt), item.description, item.amount, ""]);
+        setCell(r, 0, fmtDate(item.expenseDate || item.requestedAt), dateStyle);
+        setCell(r, 1, item.description, cellStyle);
+        setCell(r, 2, item.amount, moneyStyle);
+        setCell(r, 3, "", cellStyle);
+        categoryTotal += item.amount;
+        totalGeneral += item.amount;
+      } else {
+        aoa.push(["", "", "", ""]);
+        setCell(r, 0, "", cellStyle);
+        setCell(r, 1, "", cellStyle);
+        setCell(r, 2, "", cellStyle);
+        setCell(r, 3, "", cellStyle);
+      }
+      r++;
     }
 
-    rows.push({ A: "", B: "", C: "", D: "", E: "" });
-    rows.push({ A: "", B: "", C: "", D: categoryTotal, E: "" });
-    rows.push({ A: "", B: "", C: "", D: "", E: "" });
+    // Fila de subtotal de categoría (en columna D)
+    aoa.push(["", "", "", categoryTotal]);
+    setCell(r, 0, "", cellStyle);
+    setCell(r, 1, "", cellStyle);
+    setCell(r, 2, "", moneyBoldStyle);
+    setCell(r, 3, categoryTotal, moneyBoldStyle);
+    r++;
+
+    // Fila vacia separadora
+    aoa.push(["", "", "", ""]);
+    r++;
   });
 
   const efectivoEnCaja = Math.max(0, CAJA_CHICA_LIMIT - totalGeneral);
 
-  rows.push({ A: "", B: "", C: "TOTAL GASTOS RD$", D: totalGeneral, E: "" });
-  rows.push({ A: "", B: "", C: "TOTAL EFECTIVO EN CAJA", D: efectivoEnCaja, E: "" });
-  rows.push({ A: "", B: "", C: "TOTAL EN CAJA RD$", D: CAJA_CHICA_LIMIT, E: "" });
-  rows.push({ A: "", B: "", C: "", D: "", E: "" });
+  // Totales
+  aoa.push(["", "", "TOTAL GASTOS RD$", totalGeneral]);
+  setCell(r, 2, "TOTAL GASTOS RD$", labelRightBold);
+  setCell(r, 3, totalGeneral, moneyBoldStyle);
+  r++;
 
-  // Detalle de efectivo
-  rows.push({ A: "Detalle de efectivo en caja", B: "Denominaciones", C: "Cantidad", D: "Total", E: "" });
+  aoa.push(["", "", "TOTAL EFECTIVO EN CAJA", efectivoEnCaja]);
+  setCell(r, 2, "TOTAL EFECTIVO EN CAJA", labelRightBold);
+  setCell(r, 3, efectivoEnCaja, moneyBoldStyle);
+  r++;
 
+  aoa.push(["", "", "TOTAL EN CAJA RD$", CAJA_CHICA_LIMIT]);
+  setCell(r, 2, "TOTAL EN CAJA RD$", labelRightBold);
+  setCell(r, 3, CAJA_CHICA_LIMIT, moneyBoldStyle);
+  r++;
+
+  // Fila vacia
+  aoa.push(["", "", "", ""]);
+  r++;
+
+  // Detalle de efectivo (encabezado)
+  aoa.push(["Detalle de efectivo en caja", "Denominaciones", "Total", ""]);
+  setCell(r, 0, "Detalle de efectivo en caja", denomHeaderStyle);
+  setCell(r, 1, "Denominaciones", denomHeaderStyle);
+  setCell(r, 2, "Total", denomHeaderStyle);
+  r++;
+
+  let totalDenoms = 0;
   denominations.forEach((denom) => {
-    if (denom.count > 0 || denom.value === 1) {
-      rows.push({
-        A: "",
-        B: denom.value.toLocaleString(),
-        C: denom.count,
-        D: denom.value * denom.count,
-        E: "",
-      });
-    } else {
-      rows.push({ A: "", B: denom.value.toLocaleString(), C: "", D: "", E: "" });
-    }
+    const total = denom.value * denom.count;
+    totalDenoms += total;
+    aoa.push([denom.value, denom.count || "", total || ""]);
+    setCell(r, 0, denom.value, { ...cellStyle, numFmt: "#,##0.00", alignment: { horizontal: "right", vertical: "center" } });
+    setCell(r, 1, denom.count || "", { ...cellStyle, alignment: { horizontal: "center", vertical: "center" } });
+    setCell(r, 2, total || "", moneyStyle);
+    r++;
   });
 
-  rows.push({ A: "", B: "", C: "", D: "", E: "" });
-  rows.push({ A: "", B: "", C: "Total en caja", D: efectivoEnCaja, E: "" });
+  // Total denominaciones
+  aoa.push(["", "", totalDenoms, ""]);
+  setCell(r, 1, "", { ...cellStyle, font: { bold: true } });
+  setCell(r, 2, totalDenoms, moneyBoldStyle);
+  r++;
 
-  const ws = XLSX.utils.json_to_sheet(rows, { header: ["A", "B", "C", "D", "E"], skipHeader: true });
-  ws["!cols"] = [{ wch: 15 }, { wch: 50 }, { wch: 10 }, { wch: 15 }, { wch: 5 }];
+  // Build worksheet
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+  // Apply styles
+  Object.entries(styles).forEach(([addr, info]) => {
+    if (!ws[addr]) ws[addr] = { t: typeof info.value === "number" ? "n" : "s", v: info.value };
+    if (info.style) (ws[addr] as any).s = info.style;
+  });
+
+  ws["!cols"] = [{ wch: 14 }, { wch: 50 }, { wch: 14 }, { wch: 14 }];
+  ws["!merges"] = merges;
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, `Reporte_${selectedMonth}`);
-  XLSX.writeFile(wb, `reporte_caja_chica_${selectedMonth}.xlsx`);
+  XLSX.writeFile(wb, `reposicion_caja_chica_${selectedMonth}.xlsx`);
 
   toast({ title: "Reporte generado", description: `Reporte de ${getMonthDisplay(selectedMonth)} descargado.` });
 };
