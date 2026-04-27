@@ -730,6 +730,20 @@ const MinorPurchases = () => {
 
   const totalEfectivoDenominaciones = getTotalEfectivoFromDenominations(denominations);
 
+  // ─── Cuadre contable global (acumulado histórico) ───
+  const totalSpentGlobal = useMemo(
+    () =>
+      purchases
+        .filter((p) => p.paymentMethod === "Caja Chica" && p.status === "Aprobado" && !p.voided)
+        .reduce((sum, p) => sum + p.amount, 0),
+    [purchases],
+  );
+  // Saldo contable acumulado = Fondo inicial + reposiciones aplicadas − gastos aprobados
+  const accountingBalance = CAJA_CHICA_LIMIT + totalRepositionsApplied - totalSpentGlobal;
+  // Diferencia entre lo que debería haber en caja (contable) y lo físico (denominaciones)
+  const cashDifference = totalEfectivoDenominaciones - accountingBalance;
+  const isBalanced = Math.abs(cashDifference) < 0.01;
+
   useEffect(() => {
     if (isLowFunds && currentMonthAvailable >= 0) {
       setShowAlert(true);
