@@ -730,6 +730,20 @@ const MinorPurchases = () => {
 
   const totalEfectivoDenominaciones = getTotalEfectivoFromDenominations(denominations);
 
+  // ─── Cuadre contable global (acumulado histórico) ───
+  const totalSpentGlobal = useMemo(
+    () =>
+      purchases
+        .filter((p) => p.paymentMethod === "Caja Chica" && p.status === "Aprobado" && !p.voided)
+        .reduce((sum, p) => sum + p.amount, 0),
+    [purchases],
+  );
+  // Saldo contable acumulado = Fondo inicial + reposiciones aplicadas − gastos aprobados
+  const accountingBalance = CAJA_CHICA_LIMIT + totalRepositionsApplied - totalSpentGlobal;
+  // Diferencia entre lo que debería haber en caja (contable) y lo físico (denominaciones)
+  const cashDifference = totalEfectivoDenominaciones - accountingBalance;
+  const isBalanced = Math.abs(cashDifference) < 0.01;
+
   useEffect(() => {
     if (isLowFunds && currentMonthAvailable >= 0) {
       setShowAlert(true);
@@ -1819,7 +1833,78 @@ const MinorPurchases = () => {
             </Card>
           </div>
 
-          {/* Gráfico de gastos mensuales en BARRAS */}
+          {/* Panel de Cuadre Contable (Débito/Crédito) */}
+          <Card className="border-l-4 border-l-primary">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <CardTitle className="text-base font-heading">Cuadre Contable de Caja Chica</CardTitle>
+                  <CardDescription>
+                    Saldo acumulado histórico para conciliación (Fondo + Reposiciones − Gastos)
+                  </CardDescription>
+                </div>
+                <Badge variant={isBalanced ? "default" : "destructive"} className="text-xs">
+                  {isBalanced ? "✓ Cuadrado" : "⚠ Descuadrado"}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div className="p-3 rounded-lg bg-muted/50 border">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Fondo Inicial</p>
+                  <p className="text-lg font-heading font-bold">{fmt(CAJA_CHICA_LIMIT)}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+                  <p className="text-xs text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">
+                    (+) Reposiciones aplicadas
+                  </p>
+                  <p className="text-lg font-heading font-bold text-emerald-700 dark:text-emerald-400">
+                    {fmt(totalRepositionsApplied)}
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg bg-rose-500/5 border border-rose-500/20">
+                  <p className="text-xs text-rose-700 dark:text-rose-400 uppercase tracking-wide">
+                    (−) Gastos aprobados
+                  </p>
+                  <p className="text-lg font-heading font-bold text-rose-700 dark:text-rose-400">
+                    {fmt(totalSpentGlobal)}
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg bg-primary/10 border border-primary/30">
+                  <p className="text-xs text-primary uppercase tracking-wide">= Saldo contable</p>
+                  <p className="text-lg font-heading font-bold text-primary">{fmt(accountingBalance)}</p>
+                </div>
+                <div
+                  className={cn(
+                    "p-3 rounded-lg border",
+                    isBalanced
+                      ? "bg-emerald-500/5 border-emerald-500/20"
+                      : "bg-amber-500/5 border-amber-500/30",
+                  )}
+                >
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Efectivo físico</p>
+                  <p className="text-lg font-heading font-bold">{fmt(totalEfectivoDenominaciones)}</p>
+                  <p
+                    className={cn(
+                      "text-xs mt-1 font-medium",
+                      isBalanced ? "text-emerald-600" : "text-amber-700 dark:text-amber-400",
+                    )}
+                  >
+                    Diferencia: {cashDifference >= 0 ? "+" : ""}
+                    {fmt(cashDifference)}
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-3">
+                <strong>Fórmula:</strong> Fondo Inicial ({fmt(CAJA_CHICA_LIMIT)}) + Reposiciones aplicadas (
+                {fmt(totalRepositionsApplied)}) − Gastos aprobados ({fmt(totalSpentGlobal)}) ={" "}
+                <strong>{fmt(accountingBalance)}</strong>. Debe coincidir con el desglose de denominaciones físicas
+                para que la caja esté cuadrada.
+              </p>
+            </CardContent>
+          </Card>
+
+
           <Card>
             <CardHeader>
               <CardTitle className="text-base font-heading">Monto total gastado por mes</CardTitle>
