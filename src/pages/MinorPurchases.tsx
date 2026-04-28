@@ -2536,6 +2536,16 @@ const MinorPurchases = () => {
                                   <CheckCheck className="h-3 w-3 mr-1" /> Aplicar Reposición
                                 </Button>
                               )}
+                              {user?.isAdmin && (
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => handleDeleteReposition(r.id)}
+                                  title="Eliminar reposición (requiere justificación, queda registrado en auditoría)"
+                                >
+                                  <Trash2 className="h-3 w-3 mr-1" /> Eliminar
+                                </Button>
+                              )}
                             </div>
                           </div>
                         ))}
