@@ -105,6 +105,7 @@ export default function KeysManager({ onBack }: Props) {
     accion: "entrega", persona: "", motivo: "",
   });
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [reviewIntercept, setReviewIntercept] = useState<KeyRecord | null>(null);
 
   useEffect(() => {
     Promise.all([loadKeys(), loadFixedAssets()]).then(([k, a]) => {
