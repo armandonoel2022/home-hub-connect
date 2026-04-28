@@ -54,7 +54,11 @@ const HRForms = () => {
   const [activeForm, setActiveForm] = useState<FormType | null>(null);
   const [formMode, setFormMode] = useState<FormMode | null>(null);
   const [withLetterhead, setWithLetterhead] = useState(true);
-  const [activeView, setActiveView] = useState<ActiveView>("forms");
+  // Empleados externos a RRHH ven directamente "Mis Solicitudes"; RRHH/supervisores ven "Formularios" (vista interna)
+  const isHRStaff = user?.department === "Recursos Humanos";
+  const isApprover = user?.isDepartmentLeader === true || user?.isAdmin === true;
+  const showInternalView = isHRStaff || isApprover;
+  const [activeView, setActiveView] = useState<ActiveView>(showInternalView ? "forms" : "my-requests");
   const [refreshKey, setRefreshKey] = useState(0);
   const printRef = useRef<HTMLDivElement>(null);
   const virtualFormRef = useRef<HTMLDivElement>(null);
