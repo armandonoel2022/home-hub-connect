@@ -705,6 +705,42 @@ export default function KeysManager({ onBack }: Props) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── Review intercept (llave sin revisar) ── */}
+      <Dialog open={!!reviewIntercept} onOpenChange={() => setReviewIntercept(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Llave sin revisar
+            </DialogTitle>
+            <DialogDescription>
+              La llave <strong className="font-mono text-primary">{reviewIntercept?.code || reviewIntercept?.id}</strong>{" "}
+              ({reviewIntercept?.descripcion}) aún no ha sido validada por Chrisnel Fabián.
+              ¿Cómo deseas proceder antes de modificarla?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
+              <p className="font-medium text-foreground mb-1">Opciones disponibles</p>
+              <ul className="list-disc list-inside space-y-1">
+                <li><strong className="text-emerald-600">Confirmar revisión:</strong> marca la llave como revisada hoy y registra el evento en el historial.</li>
+                <li><strong className="text-amber-600">Dejar como sin revisar:</strong> abre el formulario sin cambiar el estado de revisión.</li>
+              </ul>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setReviewIntercept(null)}>Cancelar</Button>
+            <Button variant="outline" className="border-amber-500 text-amber-600 hover:bg-amber-50" onClick={handleKeepUnreviewed}>
+              Dejar como sin revisar
+            </Button>
+            <Button className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2" onClick={handleConfirmReview}>
+              <ShieldCheck className="h-4 w-4" />
+              Confirmar revisión
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
