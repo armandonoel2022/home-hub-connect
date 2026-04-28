@@ -89,6 +89,10 @@ const TECH_CATEGORIES = ["Tecnología"];
 const APPROVER_TECH = { id: "USR-110", name: "Samuel A. Pérez" };
 const APPROVER_DEFAULT = { id: "USR-101", name: "Chrisnel Fabian" };
 
+// Único autorizado para aprobar excedentes del límite mensual de Caja Chica
+const OVER_LIMIT_APPROVER_EMAIL = "cfabian@safeone.com.do";
+const OVER_LIMIT_APPROVER_NAME = "Chrisnel Fabian";
+
 // Usuarios que pueden aplicar reposiciones
 const CAN_APPLY_REPOSITION_EMAILS = [
   "cfabian@safeone.com.do", // Chrisnel
