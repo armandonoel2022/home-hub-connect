@@ -357,8 +357,26 @@ const DepartmentGrid = () => {
                   <h3
                     className={cn("font-heading font-bold text-white text-base leading-tight", (DEPT_ROUTES[dept.name] || DEPT_MULTI_ROUTES[dept.name]) && "cursor-pointer hover:underline")}
                     onClick={() => {
-                      if (DEPT_ROUTES[dept.name]) navigate(DEPT_ROUTES[dept.name]);
-                      else if (DEPT_MULTI_ROUTES[dept.name]) setShowDeptMenu(showDeptMenu === dept.name ? null : dept.name);
+                      if (DEPT_ROUTES[dept.name]) {
+                        // Bloqueo de acceso para departamentos restringidos (ej: Administración)
+                        if (RESTRICTED_DEPT_ROUTES.has(dept.name) && !user?.isAdmin && user?.department !== dept.name) {
+                          toast({
+                            title: "🔒 Acceso restringido",
+                            description: `El acceso al módulo de ${dept.name} está restringido a su personal. Solicita acceso a Chrisnel Fabián si lo necesitas.`,
+                            variant: "destructive",
+                          });
+                          // Crea una notificación / ticket informal de solicitud (no bloqueante)
+                          try {
+                            addNotification({
+                              type: "info",
+                              title: `Solicitud de acceso a ${dept.name}`,
+                              message: `${user?.fullName || "Un usuario"} solicitó acceso al módulo de ${dept.name}.`,
+                            });
+                          } catch {}
+                          return;
+                        }
+                        navigate(DEPT_ROUTES[dept.name]);
+                      } else if (DEPT_MULTI_ROUTES[dept.name]) setShowDeptMenu(showDeptMenu === dept.name ? null : dept.name);
                     }}
                   >
                     {dept.name}
