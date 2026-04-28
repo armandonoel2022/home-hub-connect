@@ -663,6 +663,9 @@ function StatusBadge({ status }: { status: string }) {
     "Pendiente Supervisor": "bg-amber-100 text-amber-800 border-amber-200",
     "Aprobada Supervisor": "bg-blue-100 text-blue-800 border-blue-200",
     "Pendiente RRHH": "bg-orange-100 text-orange-800 border-orange-200",
+    "Pendiente Administración": "bg-violet-100 text-violet-800 border-violet-200",
+    "Pendiente Gerencia General": "bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200",
+    "Pendiente Aplicación RRHH": "bg-cyan-100 text-cyan-800 border-cyan-200",
     "Aprobada": "bg-emerald-100 text-emerald-800 border-emerald-200",
     "Rechazada": "bg-red-100 text-red-800 border-red-200",
   };
@@ -676,6 +679,7 @@ function StatusBadge({ status }: { status: string }) {
 // ── Request card for "Mis Solicitudes" ──
 function RequestCard({ req }: { req: HRRequest }) {
   const fc = formConfig.find(f => f.key === req.formType);
+  const isLoan = req.formType === "prestamos";
   return (
     <div className="bg-card rounded-xl border border-border p-5">
       <div className="flex items-start justify-between">
@@ -697,19 +701,44 @@ function RequestCard({ req }: { req: HRRequest }) {
         ))}
       </div>
       {/* Approval timeline */}
-      <div className="mt-3 pt-3 border-t border-border flex gap-4 text-xs text-muted-foreground">
-        <div className="flex items-center gap-1">
-          {req.supervisorApproval ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Clock className="h-3.5 w-3.5" />}
-          Supervisor: {req.supervisorApproval ? `${req.supervisorApproval.byName} ✓` : req.supervisorName}
+      {isLoan ? (
+        <div className="mt-3 pt-3 border-t border-border flex gap-4 text-xs text-muted-foreground flex-wrap">
+          <div className="flex items-center gap-1">
+            {req.rrhhApproval ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Clock className="h-3.5 w-3.5" />}
+            RRHH: {req.rrhhApproval ? `${req.rrhhApproval.byName} ✓` : "Pendiente"}
+          </div>
+          <div className="flex items-center gap-1">
+            {req.adminApproval ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Clock className="h-3.5 w-3.5" />}
+            Administración: {req.adminApproval ? `${req.adminApproval.byName} ✓` : "Pendiente"}
+          </div>
+          {(req.gerenciaApproval || req.status === "Pendiente Gerencia General") && (
+            <div className="flex items-center gap-1">
+              {req.gerenciaApproval ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Clock className="h-3.5 w-3.5" />}
+              Gerencia General: {req.gerenciaApproval ? `${req.gerenciaApproval.byName} ✓` : "Pendiente"}
+            </div>
+          )}
         </div>
-        <div className="flex items-center gap-1">
-          {req.rrhhApproval ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Clock className="h-3.5 w-3.5" />}
-          RRHH: {req.rrhhApproval ? `${req.rrhhApproval.byName} ✓` : "Pendiente"}
+      ) : (
+        <div className="mt-3 pt-3 border-t border-border flex gap-4 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1">
+            {req.supervisorApproval ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Clock className="h-3.5 w-3.5" />}
+            Supervisor: {req.supervisorApproval ? `${req.supervisorApproval.byName} ✓` : req.supervisorName}
+          </div>
+          <div className="flex items-center gap-1">
+            {req.rrhhApproval ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Clock className="h-3.5 w-3.5" />}
+            RRHH: {req.rrhhApproval ? `${req.rrhhApproval.byName} ✓` : "Pendiente"}
+          </div>
         </div>
-      </div>
+      )}
       {req.supervisorApproval?.coverPerson && (
         <div className="mt-2 text-xs text-muted-foreground">
           <span className="font-medium">Persona que cubre:</span> {req.supervisorApproval.coverPerson}
+        </div>
+      )}
+      {isLoan && req.loanApplyDate && (
+        <div className="mt-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded p-2">
+          ✅ Aplicado el <strong>{req.loanApplyDate}</strong>
+          {req.loanApplyComment && <> — {req.loanApplyComment}</>}
         </div>
       )}
       {req.status === "Rechazada" && req.rejectionReason && (
