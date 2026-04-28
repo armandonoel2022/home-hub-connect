@@ -550,6 +550,27 @@ const MinorPurchases = () => {
   const [denominationsDialogOpen, setDenominationsDialogOpen] = useState(false);
   const [editingDenominations, setEditingDenominations] = useState<Denomination[]>([]);
   const [showAlert, setShowAlert] = useState(false);
+
+  // Diálogo de política y cálculos
+  const [policyDialogOpen, setPolicyDialogOpen] = useState(false);
+
+  // Diálogo de autorización de excedente del límite mensual
+  const [overLimitDialog, setOverLimitDialog] = useState<{
+    open: boolean;
+    requestedAmount: number;
+    available: number;
+    excess: number;
+    yearMonth: string;
+  } | null>(null);
+  const [overLimitPassword, setOverLimitPassword] = useState("");
+  const [overLimitJustification, setOverLimitJustification] = useState("");
+  const [overLimitBusy, setOverLimitBusy] = useState(false);
+  // Cuando Chrisnel ya autorizó el excedente del gasto en curso, se guarda aquí
+  const [authorizedOverLimit, setAuthorizedOverLimit] = useState<{
+    by: string;
+    at: string;
+    justification: string;
+  } | null>(null);
   const [reportMonth, setReportMonth] = useState<string>(getCurrentYearMonth());
 
   const [filterFrom, setFilterFrom] = useState<string>("");
