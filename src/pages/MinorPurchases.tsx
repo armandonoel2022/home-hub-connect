@@ -1169,6 +1169,14 @@ const MinorPurchases = () => {
           requestedFor: form.requestedFor.trim(),
           linkedDocType: form.linkedDocType || undefined,
           linkedDocNumber: form.linkedDocNumber.trim() || undefined,
+          ...(authorizedOverLimit
+            ? {
+                overLimitAuthorized: true,
+                overLimitAuthorizedBy: authorizedOverLimit.by,
+                overLimitAuthorizedAt: authorizedOverLimit.at,
+                overLimitJustification: authorizedOverLimit.justification,
+              }
+            : {}),
         };
         let created: MinorPurchase;
         if (apiMode) {
