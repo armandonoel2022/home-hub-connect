@@ -79,7 +79,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { isApiConfigured, minorPurchasesApi, getFileUrl, pettyCashApi } from "@/lib/api";
-import * as XLSX from "xlsx-js-style";
+import * as XLSX from "xlsx";
 import type { MinorPurchase, PaymentMethod, MinorPurchaseStatus, LinkedDocType } from "@/lib/types";
 
 const AUTO_APPROVE_IDS = ["USR-100", "USR-110", "USR-101"];
