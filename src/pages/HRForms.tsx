@@ -241,6 +241,19 @@ const HRForms = () => {
   const [coverPerson, setCoverPerson] = useState("");
   const [approveId, setApproveId] = useState<string | null>(null);
 
+  // Loan flow dialogs
+  const [loanActionId, setLoanActionId] = useState<string | null>(null);
+  const [loanAction, setLoanAction] = useState<"escalate-admin" | "approve-admin" | "escalate-gerencia" | "approve-gerencia" | "apply" | null>(null);
+  const [loanComment, setLoanComment] = useState("");
+  const [loanApplyDate, setLoanApplyDate] = useState("");
+
+  const resetLoanDialog = () => {
+    setLoanActionId(null);
+    setLoanAction(null);
+    setLoanComment("");
+    setLoanApplyDate("");
+  };
+
   const handleApprove = (req: HRRequest) => {
     if (!user) return;
     // For vacaciones, require cover person when supervisor approves
@@ -253,7 +266,7 @@ const HRForms = () => {
     let result: HRRequest | null = null;
     if (req.status === "Pendiente Supervisor") {
       result = approveBySupervisor(req.id, user.id, user.fullName, undefined, req.formType === "vacaciones" ? coverPerson : undefined);
-    } else if (req.status === "Pendiente RRHH") {
+    } else if (req.status === "Pendiente RRHH" && req.formType !== "prestamos") {
       result = approveByRRHH(req.id, user.id, user.fullName);
     }
     if (result) {
@@ -273,6 +286,39 @@ const HRForms = () => {
     toast({ title: "Rechazada", description: `Solicitud ${reqId} fue rechazada.`, variant: "destructive" });
   };
 
+  const handleConfirmLoanAction = () => {
+    if (!user || !loanActionId || !loanAction) return;
+    let result: HRRequest | null = null;
+    if (loanAction === "escalate-admin") {
+      if (!adminApprover?.id) {
+        toast({ title: "Error", description: "No se encontró a Chrisnel Fabián.", variant: "destructive" });
+        return;
+      }
+      result = escalateLoanToAdmin(loanActionId, user.id, user.fullName, adminApprover.id, loanComment);
+    } else if (loanAction === "approve-admin") {
+      result = approveLoanByAdmin(loanActionId, user.id, user.fullName, loanComment, rrhhUserIds);
+    } else if (loanAction === "escalate-gerencia") {
+      if (!gerenciaApprover?.id) {
+        toast({ title: "Error", description: "No se encontró a Aurelio Pérez.", variant: "destructive" });
+        return;
+      }
+      result = escalateLoanToGerencia(loanActionId, user.id, user.fullName, gerenciaApprover.id, loanComment);
+    } else if (loanAction === "approve-gerencia") {
+      result = approveLoanByGerencia(loanActionId, user.id, user.fullName, loanComment, rrhhUserIds);
+    } else if (loanAction === "apply") {
+      if (!loanApplyDate) {
+        toast({ title: "Fecha requerida", description: "Indica la fecha de aplicación del préstamo.", variant: "destructive" });
+        return;
+      }
+      result = applyLoan(loanActionId, user.id, user.fullName, loanApplyDate, loanComment);
+    }
+    if (result) {
+      resetLoanDialog();
+      setRefreshKey((k) => k + 1);
+      toast({ title: "Acción registrada", description: `Solicitud ${result.id} actualizada.` });
+    }
+  };
+
   const handleBack = () => {
     if (formMode) { setFormMode(null); }
     else if (activeForm) { setActiveForm(null); }
@@ -285,6 +331,9 @@ const HRForms = () => {
   const pendingApprovals = user ? getAllHRRequests().filter((r) => {
     if (r.status === "Pendiente Supervisor" && r.supervisorId === user.id) return true;
     if (r.status === "Pendiente RRHH" && isRRHH) return true;
+    if (r.status === "Pendiente Administración" && isAdminApprover) return true;
+    if (r.status === "Pendiente Gerencia General" && isGerenciaApprover) return true;
+    if (r.status === "Pendiente Aplicación RRHH" && isRRHH) return true;
     return false;
   }) : [];
 
