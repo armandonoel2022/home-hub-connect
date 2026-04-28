@@ -475,6 +475,23 @@ const HRForms = () => {
                         <Button size="sm" variant="outline" onClick={() => { setRejectId(null); setRejectReason(""); }}>Cancelar</Button>
                       </div>
                     </div>
+                  ) : loanActionId === req.id && loanAction ? (
+                    <div className="space-y-3 border-t border-border pt-3">
+                      {loanAction === "apply" && (
+                        <div className="space-y-2">
+                          <Label className="text-sm">Fecha de aplicación del préstamo *</Label>
+                          <Input type="date" value={loanApplyDate} onChange={(e) => setLoanApplyDate(e.target.value)} />
+                        </div>
+                      )}
+                      <div className="space-y-2">
+                        <Label className="text-sm">Comentario {loanAction === "apply" ? "(opcional)" : ""}</Label>
+                        <Textarea value={loanComment} onChange={(e) => setLoanComment(e.target.value)} placeholder="Notas internas..." rows={2} />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={handleConfirmLoanAction}>Confirmar</Button>
+                        <Button size="sm" variant="outline" onClick={resetLoanDialog}>Cancelar</Button>
+                      </div>
+                    </div>
                   ) : approveId === req.id && req.formType === "vacaciones" ? (
                     <div className="space-y-3 border-t border-border pt-3">
                       <p className="text-sm font-medium text-card-foreground">¿Quién cubrirá durante las vacaciones?</p>
@@ -488,6 +505,62 @@ const HRForms = () => {
                           <ThumbsUp className="h-3.5 w-3.5" /> Confirmar Aprobación
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => { setApproveId(null); setCoverPerson(""); }}>Cancelar</Button>
+                      </div>
+                    </div>
+                  ) : req.formType === "prestamos" ? (
+                    <div className="space-y-2">
+                      {/* Tenure validation hint for RRHH */}
+                      {req.status === "Pendiente RRHH" && isRRHH && (
+                        <div className="text-xs text-muted-foreground bg-muted/50 rounded p-2">
+                          Antigüedad declarada: <strong>{req.formData["Antigüedad (meses)"] || "?"} meses</strong>.
+                          Política: requiere mínimo <strong>6 meses</strong> en la posición para escalar a Administración.
+                        </div>
+                      )}
+                      <div className="flex gap-2 flex-wrap">
+                        {req.status === "Pendiente RRHH" && isRRHH && (
+                          <>
+                            <Button
+                              size="sm"
+                              className="gap-1"
+                              disabled={Number(req.formData["Antigüedad (meses)"] || 0) < 6}
+                              onClick={() => { setLoanActionId(req.id); setLoanAction("escalate-admin"); }}
+                              title={Number(req.formData["Antigüedad (meses)"] || 0) < 6 ? "Antigüedad menor a 6 meses" : ""}
+                            >
+                              <Send className="h-3.5 w-3.5" /> Enviar a Administración
+                            </Button>
+                            <Button size="sm" variant="destructive" className="gap-1" onClick={() => setRejectId(req.id)}>
+                              <ThumbsDown className="h-3.5 w-3.5" /> Rechazar
+                            </Button>
+                          </>
+                        )}
+                        {req.status === "Pendiente Administración" && isAdminApprover && (
+                          <>
+                            <Button size="sm" className="gap-1" onClick={() => { setLoanActionId(req.id); setLoanAction("approve-admin"); }}>
+                              <ThumbsUp className="h-3.5 w-3.5" /> Aprobar
+                            </Button>
+                            <Button size="sm" variant="outline" className="gap-1" onClick={() => { setLoanActionId(req.id); setLoanAction("escalate-gerencia"); }}>
+                              <Send className="h-3.5 w-3.5" /> Escalar a Gerencia General
+                            </Button>
+                            <Button size="sm" variant="destructive" className="gap-1" onClick={() => setRejectId(req.id)}>
+                              <ThumbsDown className="h-3.5 w-3.5" /> Rechazar
+                            </Button>
+                          </>
+                        )}
+                        {req.status === "Pendiente Gerencia General" && isGerenciaApprover && (
+                          <>
+                            <Button size="sm" className="gap-1" onClick={() => { setLoanActionId(req.id); setLoanAction("approve-gerencia"); }}>
+                              <ThumbsUp className="h-3.5 w-3.5" /> Aprobar (Final)
+                            </Button>
+                            <Button size="sm" variant="destructive" className="gap-1" onClick={() => setRejectId(req.id)}>
+                              <ThumbsDown className="h-3.5 w-3.5" /> Rechazar
+                            </Button>
+                          </>
+                        )}
+                        {req.status === "Pendiente Aplicación RRHH" && isRRHH && (
+                          <Button size="sm" className="gap-1" onClick={() => { setLoanActionId(req.id); setLoanAction("apply"); }}>
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Registrar fecha de aplicación
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ) : (
