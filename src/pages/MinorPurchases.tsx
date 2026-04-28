@@ -695,6 +695,31 @@ const MinorPurchases = () => {
     }).length;
   }, [purchases, currentYearMonth]);
 
+  // ─── Resumen anual (enero–diciembre del año en curso) ───
+  const currentYear = currentYearMonth.slice(0, 4);
+  const yearlyStats = useMemo(() => {
+    const spentByMonth: Record<string, number> = {};
+    let totalSpent = 0;
+    purchases.forEach((p) => {
+      if (p.status !== "Aprobado" || p.voided || p.paymentMethod !== "Caja Chica") return;
+      const ym = getYearMonth(p.expenseDate || p.requestedAt);
+      if (!ym.startsWith(currentYear)) return;
+      spentByMonth[ym] = (spentByMonth[ym] || 0) + p.amount;
+      totalSpent += p.amount;
+    });
+    const monthsWithActivity = Object.keys(spentByMonth).length;
+    const monthIndex = parseInt(currentYearMonth.slice(5, 7), 10); // 1-12
+    // Asignación anual = límite mensual * meses transcurridos del año
+    const yearlyAssigned = CAJA_CHICA_LIMIT * monthIndex;
+    // Reposiciones aplicadas en el año
+    const yearlyReposed = repositions
+      .filter((r) => r.status === "aplicado" && r.yearMonth.startsWith(currentYear))
+      .reduce((s, r) => s + (r.amountReposed || 0), 0);
+    const utilizationPct = yearlyAssigned > 0 ? (totalSpent / yearlyAssigned) * 100 : 0;
+    const avgPerMonth = monthsWithActivity > 0 ? totalSpent / monthsWithActivity : 0;
+    return { totalSpent, yearlyAssigned, yearlyReposed, utilizationPct, avgPerMonth, monthsWithActivity };
+  }, [purchases, repositions, currentYear, currentYearMonth]);
+
   // Datos para gráfico de barras por mes
   const monthlyBarData = useMemo(() => {
     const monthsMap: Record<string, { month: string; total: number; monthKey: string }> = {};
