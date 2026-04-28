@@ -53,6 +53,7 @@ const saveLocal = <T,>(key: string, items: T[]) => localStorage.setItem(key, JSO
 
 const CorporateCards = () => {
   const { user, allUsers } = useAuth();
+  const navigate = useNavigate();
   const apiMode = isApiConfigured();
 
   const [cards, setCards] = useState<CorporateCard[]>(() => loadLocal<CorporateCard>(LS_CARDS));
