@@ -1106,36 +1106,44 @@ function PermissionsForm({ userName, department, showSignature }: { userName: st
 
 // ── Loan form ──
 function LoanForm({ userName, department, showSignature }: { userName: string; department: string; showSignature: boolean }) {
+  const { user } = useAuth();
+  const tenure = (() => {
+    if (!user?.hireDate) return { months: 0, label: "Sin fecha de ingreso registrada" };
+    const hire = new Date(user.hireDate);
+    const now = new Date();
+    const months = (now.getFullYear() - hire.getFullYear()) * 12 + (now.getMonth() - hire.getMonth());
+    const years = Math.floor(months / 12);
+    const rest = months % 12;
+    const label = years > 0
+      ? `${years} año${years > 1 ? "s" : ""}${rest ? ` y ${rest} mes${rest > 1 ? "es" : ""}` : ""}`
+      : `${months} mes${months !== 1 ? "es" : ""}`;
+    return { months, label };
+  })();
+  const meetsPolicy = tenure.months >= 6;
+
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-4">
-        <FormField label="Nombre del Empleado"><Input defaultValue={userName} /></FormField>
-        <FormField label="Departamento"><Input defaultValue={department} /></FormField>
+      <div className={cn(
+        "rounded-lg p-3 border text-sm",
+        meetsPolicy ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-amber-50 border-amber-200 text-amber-800",
+      )}>
+        <p className="font-semibold">Política de préstamos</p>
+        <p className="text-xs mt-1">
+          Antigüedad mínima de <strong>6 meses</strong> en la posición para escalar a Administración.
+          Tu antigüedad: <strong>{tenure.label}</strong>
+          {!meetsPolicy && " — RRHH podrá rechazar la solicitud por incumplir la política."}
+        </p>
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Monto Solicitado (RD$)"><Input type="number" min={0} placeholder="Ej: 15,000" /></FormField>
-        <FormField label="Plazo de Pago">
-          <Select><SelectTrigger><SelectValue placeholder="Seleccione" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1">1 Mes</SelectItem>
-              <SelectItem value="2">2 Meses</SelectItem>
-              <SelectItem value="3">3 Meses</SelectItem>
-              <SelectItem value="6">6 Meses</SelectItem>
-              <SelectItem value="12">12 Meses</SelectItem>
-            </SelectContent>
-          </Select>
-        </FormField>
+        <FormField label="Nombre del Empleado"><Input defaultValue={userName} readOnly /></FormField>
+        <FormField label="Departamento"><Input defaultValue={department} readOnly /></FormField>
       </div>
-      <FormField label="Modalidad de Descuento">
-        <Select><SelectTrigger><SelectValue placeholder="Seleccione" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="quincenal">Quincenal</SelectItem>
-            <SelectItem value="mensual">Mensual</SelectItem>
-          </SelectContent>
-        </Select>
-      </FormField>
+      <div className="grid grid-cols-2 gap-4">
+        <FormField label="Monto Solicitado (RD$)"><Input type="number" min={0} placeholder="Ej: 15000" /></FormField>
+        <FormField label="Plazo de Pago (meses)"><Input type="number" min={1} max={24} placeholder="Ej: 6" /></FormField>
+      </div>
+      <FormField label="Modalidad de Descuento"><Input placeholder="Quincenal o Mensual" /></FormField>
       <FormField label="Motivo del Préstamo"><Textarea placeholder="Describa para qué necesita el préstamo..." rows={3} /></FormField>
-      <FormField label="Antigüedad en la Empresa"><Input placeholder="Ej: 2 años y 3 meses" /></FormField>
       {showSignature && <SignatureBlock />}
     </div>
   );
