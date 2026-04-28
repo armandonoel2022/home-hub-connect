@@ -1052,6 +1052,57 @@ const MinorPurchases = () => {
     toast({ title: "Denominaciones actualizadas", description: "El desglose de efectivo ha sido guardado." });
   };
 
+  const handleAuthorizeOverLimit = async () => {
+    if (!overLimitDialog) return;
+    const justification = overLimitJustification.trim();
+    if (justification.length < 20) {
+      toast({
+        title: "Justificación requerida",
+        description: "Debe describir el motivo del excedente (mínimo 20 caracteres).",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!overLimitPassword) {
+      toast({ title: "Contraseña requerida", variant: "destructive" });
+      return;
+    }
+    setOverLimitBusy(true);
+    try {
+      // Verifica las credenciales de Chrisnel sin alterar la sesión actual.
+      // Guardamos y restauramos el token actual.
+      const currentToken = localStorage.getItem("safeone_token");
+      const currentUser = localStorage.getItem("safeone_user");
+      try {
+        await authApi.login(OVER_LIMIT_APPROVER_EMAIL, overLimitPassword);
+      } finally {
+        // Restaurar siempre la sesión original
+        if (currentToken) localStorage.setItem("safeone_token", currentToken);
+        else localStorage.removeItem("safeone_token");
+        if (currentUser) localStorage.setItem("safeone_user", currentUser);
+        else localStorage.removeItem("safeone_user");
+      }
+      setAuthorizedOverLimit({
+        by: OVER_LIMIT_APPROVER_NAME,
+        at: new Date().toISOString(),
+        justification,
+      });
+      setOverLimitDialog(null);
+      toast({
+        title: "Excedente autorizado",
+        description: `${OVER_LIMIT_APPROVER_NAME} autorizó el excedente. Pulse 'Guardar' nuevamente para registrar el gasto.`,
+      });
+    } catch (err: any) {
+      toast({
+        title: "Autorización fallida",
+        description: err?.message || "Credenciales inválidas de Chrisnel Fabian.",
+        variant: "destructive",
+      });
+    } finally {
+      setOverLimitBusy(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!user) return;
 
