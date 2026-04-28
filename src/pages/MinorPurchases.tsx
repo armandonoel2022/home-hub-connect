@@ -1738,17 +1738,17 @@ const MinorPurchases = () => {
             </Alert>
           )}
 
-          {/* Dashboard con indicadores mensuales */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
+          {/* Dashboard con indicadores mensuales + resumen anual */}
+          <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-9 gap-3">
             <Card>
               <CardContent className="pt-5">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="p-2 rounded-lg bg-primary/10 shrink-0">
                     <DollarSign className="h-5 w-5 text-primary" />
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Monto Asignado</p>
-                    <p className="text-lg font-heading font-bold">{fmt(CAJA_CHICA_LIMIT)}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-muted-foreground truncate">Monto Asignado (mes)</p>
+                    <p className="text-base lg:text-lg font-heading font-bold truncate">{fmt(CAJA_CHICA_LIMIT)}</p>
                   </div>
                 </div>
               </CardContent>
@@ -1759,9 +1759,9 @@ const MinorPurchases = () => {
                   <div className="p-2 rounded-lg bg-emerald-500/10 shrink-0">
                     <Wallet className="h-5 w-5 text-emerald-600" />
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Consumo del mes</p>
-                    <p className="text-lg font-heading font-bold">{fmt(currentMonthSpent)}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-muted-foreground truncate">Consumo del mes</p>
+                    <p className="text-base lg:text-lg font-heading font-bold truncate">{fmt(currentMonthSpent)}</p>
                   </div>
                 </div>
               </CardContent>
@@ -1772,9 +1772,24 @@ const MinorPurchases = () => {
                   <div className="p-2 rounded-lg bg-blue-500/10 shrink-0">
                     <Percent className="h-5 w-5 text-blue-600" />
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">% Consumido</p>
-                    <p className="text-lg font-heading font-bold">{currentMonthPercentage.toFixed(1)}%</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-muted-foreground truncate">% Consumido (mes)</p>
+                    <p className="text-base lg:text-lg font-heading font-bold truncate">{currentMonthPercentage.toFixed(1)}%</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-rose-200 dark:border-rose-900/40">
+              <CardContent className="pt-5">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2 rounded-lg bg-rose-500/10 shrink-0">
+                    <TrendingUp className="h-5 w-5 text-rose-600" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-muted-foreground truncate">Disponible actual</p>
+                    <p className={cn("text-base lg:text-lg font-heading font-bold truncate", isLowFunds && "text-destructive")}>
+                      {fmt(currentMonthAvailable)}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -1785,12 +1800,12 @@ const MinorPurchases = () => {
                   <div className="p-2 rounded-lg bg-purple-500/10 shrink-0">
                     <History className="h-5 w-5 text-purple-600" />
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Última reposición</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-muted-foreground truncate">Última reposición</p>
                     {lastReposition ? (
                       <>
-                        <p className="text-sm font-heading font-bold">{fmt(lastReposition.amountReposed)}</p>
-                        <p className="text-xs text-muted-foreground">{getMonthDisplay(lastReposition.yearMonth)}</p>
+                        <p className="text-sm font-heading font-bold truncate">{fmt(lastReposition.amountReposed)}</p>
+                        <p className="text-xs text-muted-foreground truncate">{getMonthDisplay(lastReposition.yearMonth)}</p>
                       </>
                     ) : (
                       <p className="text-sm text-muted-foreground">Sin reposiciones</p>
@@ -1805,24 +1820,9 @@ const MinorPurchases = () => {
                   <div className="p-2 rounded-lg bg-amber-500/10 shrink-0">
                     <ShoppingBag className="h-5 w-5 text-amber-600" />
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Solicitudes del mes</p>
-                    <p className="text-lg font-heading font-bold">{currentMonthRequestsCount}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-5">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="p-2 rounded-lg bg-rose-500/10 shrink-0">
-                    <TrendingUp className="h-5 w-5 text-rose-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Disponible</p>
-                    <p className={cn("text-lg font-heading font-bold", isLowFunds && "text-destructive")}>
-                      {fmt(currentMonthAvailable)}
-                    </p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-muted-foreground truncate">Solicitudes del mes</p>
+                    <p className="text-base lg:text-lg font-heading font-bold truncate">{currentMonthRequestsCount}</p>
                   </div>
                 </div>
               </CardContent>
@@ -1833,10 +1833,45 @@ const MinorPurchases = () => {
                   <div className="p-2 rounded-lg bg-indigo-500/10 shrink-0">
                     <CheckCheck className="h-5 w-5 text-indigo-600" />
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Reposiciones Aplicadas</p>
-                    <p className="text-lg font-heading font-bold">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-muted-foreground truncate">Reposiciones Aplicadas</p>
+                    <p className="text-base lg:text-lg font-heading font-bold truncate">
                       {repositions.filter((r) => r.status === "aplicado").length}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            {/* ─── Resumen anual ─── */}
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="pt-5">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2 rounded-lg bg-primary/15 shrink-0">
+                    <DollarSign className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-muted-foreground truncate">Consumo anual {currentYear}</p>
+                    <p className="text-base lg:text-lg font-heading font-bold truncate">{fmt(yearlyStats.totalSpent)}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">
+                      de {fmt(yearlyStats.yearlyAssigned)} asignado YTD
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="pt-5">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2 rounded-lg bg-primary/15 shrink-0">
+                    <Percent className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-muted-foreground truncate">Utilización anual</p>
+                    <p className="text-base lg:text-lg font-heading font-bold truncate">
+                      {yearlyStats.utilizationPct.toFixed(1)}%
+                    </p>
+                    <p className="text-[10px] text-muted-foreground truncate">
+                      Prom. mensual: {fmt(yearlyStats.avgPerMonth)}
                     </p>
                   </div>
                 </div>
