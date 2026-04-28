@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Plus, CreditCard, Upload, Eye, Ban, Trash2, AlertCircle, Wallet, Receipt, TrendingUp } from "lucide-react";
+import { Plus, CreditCard, Upload, Eye, Ban, Trash2, AlertCircle, Wallet, Receipt, TrendingUp, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
