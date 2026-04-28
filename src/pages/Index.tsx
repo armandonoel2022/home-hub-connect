@@ -7,7 +7,7 @@ import QuickLinks from "@/components/QuickLinks";
 import Announcements from "@/components/Announcements";
 import DashboardMetrics from "@/components/DashboardMetrics";
 import Footer from "@/components/Footer";
-import { LifeBuoy, Users, ClipboardList } from "lucide-react";
+import { LifeBuoy, Users } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -25,13 +25,6 @@ const Index = () => {
       sublabel: "Vacaciones, permisos, préstamos",
       icon: Users,
       to: "/rrhh/formularios",
-      gradient: "linear-gradient(135deg, hsl(160 55% 40%), hsl(160 60% 28%))",
-    },
-    {
-      label: "Solicitud a Operaciones",
-      sublabel: "Servicios y coordinación",
-      icon: ClipboardList,
-      to: "/operaciones",
       gradient: "linear-gradient(135deg, hsl(42 95% 50%), hsl(30 90% 40%))",
     },
   ];
@@ -44,7 +37,7 @@ const Index = () => {
 
         {/* Quick Request Buttons */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 w-full pt-8 pb-2">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {requestButtons.map((b) => {
               const Icon = b.icon;
               return (

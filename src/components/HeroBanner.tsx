@@ -25,7 +25,7 @@ const HeroBanner = () => {
           {user ? `Hola, ${user.fullName.split(" ")[0]}` : "Bienvenido a la Intranet"}
         </p>
         <h1 className="font-heading font-black text-3xl md:text-5xl text-secondary-foreground leading-tight">
-          SafeOne Security
+          Intranet SafeOne
         </h1>
         <p className="text-muted-foreground mt-2 text-sm md:text-base capitalize">{dateStr}</p>
 
