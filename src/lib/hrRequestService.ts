@@ -14,6 +14,10 @@ function getAll(): HRRequest[] {
 
 function save(requests: HRRequest[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(requests));
+  // Notify in-app listeners (NotificationOverlay)
+  try {
+    window.dispatchEvent(new CustomEvent("safeone:hr-updated"));
+  } catch {}
 }
 
 // ─── Notifications ───
@@ -28,6 +32,9 @@ function getAllNotifications(): HRNotification[] {
 
 function saveNotifications(notifs: HRNotification[]) {
   localStorage.setItem(NOTIF_KEY, JSON.stringify(notifs));
+  try {
+    window.dispatchEvent(new CustomEvent("safeone:hr-updated"));
+  } catch {}
 }
 
 export function getNotificationsForUser(userId: string): HRNotification[] {
@@ -47,9 +54,10 @@ export function markAllNotificationsRead(userId: string) {
 }
 
 function addNotification(forUserId: string, message: string, requestId: string) {
+  if (!forUserId) return;
   const all = getAllNotifications();
   all.unshift({
-    id: `HRN-${Date.now().toString(36)}`,
+    id: `HRN-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
     forUserId,
     message,
     requestId,
@@ -57,6 +65,11 @@ function addNotification(forUserId: string, message: string, requestId: string) 
     createdAt: new Date().toISOString(),
   });
   saveNotifications(all);
+}
+
+/** Notify all RRHH leaders/members. Caller passes a list of user IDs. */
+export function notifyUsers(userIds: string[], message: string, requestId: string) {
+  userIds.filter(Boolean).forEach((uid) => addNotification(uid, message, requestId));
 }
 
 // ─── CRUD ───
@@ -80,16 +93,25 @@ export function getRequestsByUser(userId: string): HRRequest[] {
   return getAll().filter((r) => r.requestedBy === userId);
 }
 
-export function createHRRequest(request: HRRequest): HRRequest {
+export function createHRRequest(request: HRRequest, rrhhUserIds: string[] = []): HRRequest {
   const all = getAll();
   all.unshift(request);
   save(all);
-  // Notify supervisor
-  addNotification(
-    request.supervisorId,
-    `Nueva solicitud de ${request.formType} de ${request.requestedByName} pendiente de tu aprobación.`,
-    request.id
-  );
+
+  // Loan requests: skip supervisor — go straight to RRHH for review
+  if (request.formType === "prestamos") {
+    notifyUsers(
+      rrhhUserIds,
+      `Nueva solicitud de Préstamo de ${request.requestedByName} (RD$ ${request.formData["Monto Solicitado (RD$)"] || "—"}). Pendiente revisión RRHH.`,
+      request.id,
+    );
+  } else {
+    addNotification(
+      request.supervisorId,
+      `Nueva solicitud de ${request.formType} de ${request.requestedByName} pendiente de tu aprobación.`,
+      request.id,
+    );
+  }
   return request;
 }
 
@@ -98,7 +120,7 @@ export function approveBySupervisor(
   approverId: string,
   approverName: string,
   comment?: string,
-  coverPerson?: string
+  coverPerson?: string,
 ): HRRequest | null {
   const all = getAll();
   const req = all.find((r) => r.id === requestId);
@@ -115,11 +137,10 @@ export function approveBySupervisor(
   req.status = "Pendiente RRHH";
   save(all);
 
-  // Notify requester that supervisor approved
   addNotification(
     req.requestedBy,
     `Tu solicitud ${req.id} de ${req.formType} fue aprobada por ${approverName}. Pendiente aprobación de RRHH.`,
-    req.id
+    req.id,
   );
 
   return req;
@@ -129,7 +150,7 @@ export function approveByRRHH(
   requestId: string,
   approverId: string,
   approverName: string,
-  comment?: string
+  comment?: string,
 ): HRRequest | null {
   const all = getAll();
   const req = all.find((r) => r.id === requestId);
@@ -145,13 +166,183 @@ export function approveByRRHH(
   req.status = "Aprobada";
   save(all);
 
-  // Notify requester that RRHH approved (fully approved)
   addNotification(
     req.requestedBy,
     `¡Tu solicitud ${req.id} de ${req.formType} fue APROBADA por RRHH! Ya puedes proceder.`,
-    req.id
+    req.id,
   );
 
+  return req;
+}
+
+// ─── Loan-specific flow ───
+
+/** RRHH validó antigüedad y escala a Administración (Chrisnel Fabián). */
+export function escalateLoanToAdmin(
+  requestId: string,
+  rrhhUserId: string,
+  rrhhUserName: string,
+  adminUserId: string,
+  comment?: string,
+): HRRequest | null {
+  const all = getAll();
+  const req = all.find((r) => r.id === requestId);
+  if (!req || req.formType !== "prestamos") return null;
+
+  req.rrhhApproval = {
+    by: rrhhUserId,
+    byName: rrhhUserName,
+    at: new Date().toISOString(),
+    approved: true,
+    comment: comment || "Antigüedad validada. Escalado a Administración.",
+  };
+  req.status = "Pendiente Administración";
+  save(all);
+
+  addNotification(
+    adminUserId,
+    `Solicitud de Préstamo ${req.id} de ${req.requestedByName} pendiente de tu aprobación.`,
+    req.id,
+  );
+  addNotification(
+    req.requestedBy,
+    `Tu solicitud de préstamo ${req.id} fue validada por RRHH y enviada a Administración.`,
+    req.id,
+  );
+  return req;
+}
+
+/** Chrisnel aprueba el préstamo directamente. */
+export function approveLoanByAdmin(
+  requestId: string,
+  adminUserId: string,
+  adminUserName: string,
+  comment: string | undefined,
+  rrhhUserIds: string[],
+): HRRequest | null {
+  const all = getAll();
+  const req = all.find((r) => r.id === requestId);
+  if (!req || req.status !== "Pendiente Administración") return null;
+
+  req.adminApproval = {
+    by: adminUserId,
+    byName: adminUserName,
+    at: new Date().toISOString(),
+    approved: true,
+    comment,
+  };
+  req.status = "Pendiente Aplicación RRHH";
+  save(all);
+
+  notifyUsers(
+    rrhhUserIds,
+    `Préstamo ${req.id} aprobado por ${adminUserName}. Registra la fecha de aplicación.`,
+    req.id,
+  );
+  addNotification(
+    req.requestedBy,
+    `Tu solicitud de préstamo ${req.id} fue aprobada por Administración.`,
+    req.id,
+  );
+  return req;
+}
+
+/** Chrisnel decide escalar a Don Aurelio (Gerencia General). */
+export function escalateLoanToGerencia(
+  requestId: string,
+  adminUserId: string,
+  adminUserName: string,
+  gerenciaUserId: string,
+  comment?: string,
+): HRRequest | null {
+  const all = getAll();
+  const req = all.find((r) => r.id === requestId);
+  if (!req || req.status !== "Pendiente Administración") return null;
+
+  req.adminApproval = {
+    by: adminUserId,
+    byName: adminUserName,
+    at: new Date().toISOString(),
+    approved: true,
+    comment: comment || "Escalado a Gerencia General para aprobación final.",
+  };
+  req.status = "Pendiente Gerencia General";
+  save(all);
+
+  addNotification(
+    gerenciaUserId,
+    `Solicitud de Préstamo ${req.id} de ${req.requestedByName} escalada por ${adminUserName} para tu aprobación final.`,
+    req.id,
+  );
+  addNotification(
+    req.requestedBy,
+    `Tu solicitud de préstamo ${req.id} fue escalada a Gerencia General.`,
+    req.id,
+  );
+  return req;
+}
+
+/** Aurelio aprueba el préstamo (final). */
+export function approveLoanByGerencia(
+  requestId: string,
+  gerenciaUserId: string,
+  gerenciaUserName: string,
+  comment: string | undefined,
+  rrhhUserIds: string[],
+): HRRequest | null {
+  const all = getAll();
+  const req = all.find((r) => r.id === requestId);
+  if (!req || req.status !== "Pendiente Gerencia General") return null;
+
+  req.gerenciaApproval = {
+    by: gerenciaUserId,
+    byName: gerenciaUserName,
+    at: new Date().toISOString(),
+    approved: true,
+    comment,
+  };
+  req.status = "Pendiente Aplicación RRHH";
+  save(all);
+
+  notifyUsers(
+    rrhhUserIds,
+    `Préstamo ${req.id} aprobado por ${gerenciaUserName} (Gerencia General). Registra la fecha de aplicación.`,
+    req.id,
+  );
+  addNotification(
+    req.requestedBy,
+    `Tu solicitud de préstamo ${req.id} fue APROBADA por Gerencia General.`,
+    req.id,
+  );
+  return req;
+}
+
+/** RRHH registra fecha de aplicación y cierra el préstamo. */
+export function applyLoan(
+  requestId: string,
+  rrhhUserId: string,
+  rrhhUserName: string,
+  applyDate: string,
+  comment?: string,
+): HRRequest | null {
+  const all = getAll();
+  const req = all.find((r) => r.id === requestId);
+  if (!req || req.status !== "Pendiente Aplicación RRHH") return null;
+
+  req.loanApplyDate = applyDate;
+  req.loanApplyComment = comment || null;
+  req.status = "Aprobada";
+  // Record the final RRHH application as a second touch on rrhhApproval comment
+  if (req.rrhhApproval) {
+    req.rrhhApproval.comment = `${req.rrhhApproval.comment || ""} | Aplicado por ${rrhhUserName} el ${applyDate}${comment ? ` — ${comment}` : ""}`;
+  }
+  save(all);
+
+  addNotification(
+    req.requestedBy,
+    `✅ Tu préstamo ${req.id} fue APLICADO por ${rrhhUserName}. Fecha de aplicación: ${applyDate}.${comment ? ` Nota: ${comment}` : ""}`,
+    req.id,
+  );
   return req;
 }
 
@@ -159,7 +350,7 @@ export function rejectRequest(
   requestId: string,
   rejectedBy: string,
   rejectedByName: string,
-  reason: string
+  reason: string,
 ): HRRequest | null {
   const all = getAll();
   const req = all.find((r) => r.id === requestId);
@@ -171,11 +362,10 @@ export function rejectRequest(
   req.rejectedAt = new Date().toISOString();
   save(all);
 
-  // Notify requester
   addNotification(
     req.requestedBy,
     `Tu solicitud ${req.id} de ${req.formType} fue rechazada por ${rejectedByName}. Motivo: ${reason}`,
-    req.id
+    req.id,
   );
 
   return req;
