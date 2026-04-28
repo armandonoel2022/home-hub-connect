@@ -1625,6 +1625,9 @@ const MinorPurchases = () => {
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
+              <Button variant="outline" onClick={() => setPolicyDialogOpen(true)} className="gap-2">
+                <Info className="h-4 w-4" /> Política y cálculos
+              </Button>
               <Button variant="outline" onClick={handleOpenDenominationsDialog} className="gap-2">
                 <Coins className="h-4 w-4" /> Denominaciones
               </Button>
