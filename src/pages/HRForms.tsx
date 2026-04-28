@@ -54,7 +54,11 @@ const HRForms = () => {
   const [activeForm, setActiveForm] = useState<FormType | null>(null);
   const [formMode, setFormMode] = useState<FormMode | null>(null);
   const [withLetterhead, setWithLetterhead] = useState(true);
-  const [activeView, setActiveView] = useState<ActiveView>("forms");
+  // Empleados externos a RRHH ven directamente "Mis Solicitudes"; RRHH/supervisores ven "Formularios" (vista interna)
+  const isHRStaff = user?.department === "Recursos Humanos";
+  const isApprover = user?.isDepartmentLeader === true || user?.isAdmin === true;
+  const showInternalView = isHRStaff || isApprover;
+  const [activeView, setActiveView] = useState<ActiveView>(showInternalView ? "forms" : "my-requests");
   const [refreshKey, setRefreshKey] = useState(0);
   const printRef = useRef<HTMLDivElement>(null);
   const virtualFormRef = useRef<HTMLDivElement>(null);
@@ -356,13 +360,18 @@ const HRForms = () => {
             </Button>
             <div className="flex-1">
               <h1 className="text-2xl font-heading font-bold text-foreground">
-                {activeForm ? formConfig.find(f => f.key === activeForm)?.label : "Recursos Humanos — Formularios"}
+                {activeForm
+                  ? formConfig.find(f => f.key === activeForm)?.label
+                  : showInternalView
+                    ? "Recursos Humanos — Formularios"
+                    : "Mis Solicitudes a RRHH"}
               </h1>
               <p className="text-sm text-muted-foreground">
                 {formMode === "print" ? "Formulario para imprimir y firmar"
                   : formMode === "virtual" ? "Aprobación virtual — completar y enviar"
                   : activeForm ? "Seleccione modalidad"
-                  : activeView === "my-requests" ? "Historial de solicitudes"
+                  : activeView === "my-requests"
+                    ? (showInternalView ? "Historial de solicitudes" : "Solicita vacaciones, permisos, préstamos y más. Aquí verás el estado.")
                   : activeView === "approvals" ? "Solicitudes pendientes de aprobación"
                   : "Seleccione un formulario"}
               </p>
@@ -371,10 +380,12 @@ const HRForms = () => {
 
           {/* Tab navigation */}
           {!activeForm && (
-            <div className="flex gap-2 mb-6 no-print">
-              <Button variant={activeView === "forms" ? "default" : "outline"} size="sm" onClick={() => setActiveView("forms")} className="gap-2">
-                <FileText className="h-4 w-4" /> Formularios
-              </Button>
+            <div className="flex gap-2 mb-6 no-print flex-wrap items-center">
+              {showInternalView && (
+                <Button variant={activeView === "forms" ? "default" : "outline"} size="sm" onClick={() => setActiveView("forms")} className="gap-2">
+                  <FileText className="h-4 w-4" /> Formularios
+                </Button>
+              )}
               <Button variant={activeView === "my-requests" ? "default" : "outline"} size="sm" onClick={() => setActiveView("my-requests")} className="gap-2">
                 <Send className="h-4 w-4" /> Mis Solicitudes
                 {myRequests.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{myRequests.length}</Badge>}
@@ -383,6 +394,12 @@ const HRForms = () => {
                 <Button variant={activeView === "approvals" ? "default" : "outline"} size="sm" onClick={() => setActiveView("approvals")} className="gap-2">
                   <Inbox className="h-4 w-4" /> Aprobaciones
                   {pendingApprovals.length > 0 && <Badge variant="destructive" className="ml-1 text-xs">{pendingApprovals.length}</Badge>}
+                </Button>
+              )}
+              {/* Empleado externo: botón destacado para nueva solicitud */}
+              {!showInternalView && activeView === "my-requests" && (
+                <Button size="sm" className="gap-2 ml-auto" onClick={() => setActiveView("forms")}>
+                  <FileText className="h-4 w-4" /> Nueva Solicitud
                 </Button>
               )}
             </div>
@@ -427,7 +444,10 @@ const HRForms = () => {
                 <div className="text-center py-16 text-muted-foreground">
                   <FileText className="h-12 w-12 mx-auto mb-3 opacity-40" />
                   <p className="font-medium">No tienes solicitudes enviadas</p>
-                  <p className="text-sm">Las solicitudes que envíes por aprobación virtual aparecerán aquí.</p>
+                  <p className="text-sm mb-4">Crea una nueva solicitud (vacaciones, permisos, préstamos, etc.) y aquí verás su estado.</p>
+                  <Button className="gap-2" onClick={() => setActiveView("forms")}>
+                    <FileText className="h-4 w-4" /> Crear Nueva Solicitud
+                  </Button>
                 </div>
               ) : myRequests.map((req) => (
                 <RequestCard key={req.id} req={req} />
