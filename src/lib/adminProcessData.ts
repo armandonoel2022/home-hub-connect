@@ -260,16 +260,7 @@ export const ADMIN_PROCESSES: AdminProcess[] = [
       ci("Preparar documentación financiera"),
     ],
   },
-  {
-    id: id(), category: "activos", name: "Control de llaves",
-    checklist: [
-      ci("Registrar entrega de llaves"),
-      ci("Asignar responsables"),
-      ci("Controlar devoluciones"),
-      ci("Gestionar duplicados"),
-      ci("Mantener inventario actualizado"),
-    ],
-  },
+  // Control de llaves se gestiona como acceso destacado en el Hub (módulo dedicado).
 
   // ── Documentación y Servicios ──
   {
