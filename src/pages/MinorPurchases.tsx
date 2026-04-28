@@ -1098,12 +1098,20 @@ const MinorPurchases = () => {
       const expenseYearMonth = getYearMonth(form.expenseDate);
       if (!canAddExpenseInMonth(purchases, expenseYearMonth, amount, repositions, editingId || undefined)) {
         const available = getAvailableForMonth(purchases, expenseYearMonth, repositions);
-        toast({
-          title: "Límite mensual excedido",
-          description: `El límite de Caja Chica para ${getMonthDisplay(expenseYearMonth)} es RD$ ${CAJA_CHICA_LIMIT.toLocaleString("es-DO")}. Disponible: ${fmt(available)}.`,
-          variant: "destructive",
-        });
-        return;
+        const excess = amount - available;
+        // Si Chrisnel ya autorizó este excedente para este gasto en curso, dejar pasar
+        if (!authorizedOverLimit) {
+          setOverLimitDialog({
+            open: true,
+            requestedAmount: amount,
+            available,
+            excess,
+            yearMonth: expenseYearMonth,
+          });
+          setOverLimitPassword("");
+          setOverLimitJustification("");
+          return;
+        }
       }
     }
 
