@@ -1002,6 +1002,10 @@ const MinorPurchases = () => {
     });
   };
 
+// Único autorizado para aprobar excedentes del límite mensual de Caja Chica
+const OVER_LIMIT_APPROVER_EMAIL = "cfabian@safeone.com.do";
+const OVER_LIMIT_APPROVER_NAME = "Chrisnel Fabian";
+
 
   const handleOpenDenominationsDialog = () => {
     setEditingDenominations([...denominations]);
