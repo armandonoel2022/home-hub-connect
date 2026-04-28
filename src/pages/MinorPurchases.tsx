@@ -1195,9 +1195,33 @@ const MinorPurchases = () => {
         if (!apiMode) saveLocal(next);
         toast({
           title: autoApproved ? "Gasto registrado y aprobado" : "Solicitud enviada",
-          description: autoApproved ? "El gasto fue registrado." : "Pendiente de aprobación.",
+          description: authorizedOverLimit
+            ? `Excedente autorizado por ${authorizedOverLimit.by}.`
+            : autoApproved
+            ? "El gasto fue registrado."
+            : "Pendiente de aprobación.",
         });
+        // Audit log para el excedente autorizado
+        if (authorizedOverLimit && apiMode) {
+          try {
+            await auditApi.create({
+              action: "PETTY_CASH_OVER_LIMIT_AUTHORIZED",
+              performedBy: user.fullName,
+              targetType: "MinorPurchase",
+              targetId: created.id,
+              reason: authorizedOverLimit.justification,
+              details: {
+                amount,
+                authorizedBy: authorizedOverLimit.by,
+                yearMonth: getYearMonth(form.expenseDate),
+              },
+            });
+          } catch {
+            /* no-op */
+          }
+        }
       }
+      setAuthorizedOverLimit(null);
       resetForm();
       setDialogOpen(false);
     } catch (err: any) {
