@@ -444,7 +444,10 @@ const HRForms = () => {
                 <div className="text-center py-16 text-muted-foreground">
                   <FileText className="h-12 w-12 mx-auto mb-3 opacity-40" />
                   <p className="font-medium">No tienes solicitudes enviadas</p>
-                  <p className="text-sm">Las solicitudes que envíes por aprobación virtual aparecerán aquí.</p>
+                  <p className="text-sm mb-4">Crea una nueva solicitud (vacaciones, permisos, préstamos, etc.) y aquí verás su estado.</p>
+                  <Button className="gap-2" onClick={() => setActiveView("forms")}>
+                    <FileText className="h-4 w-4" /> Crear Nueva Solicitud
+                  </Button>
                 </div>
               ) : myRequests.map((req) => (
                 <RequestCard key={req.id} req={req} />
