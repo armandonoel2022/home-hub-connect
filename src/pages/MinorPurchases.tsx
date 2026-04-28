@@ -1644,8 +1644,11 @@ const MinorPurchases = () => {
               <Button variant="outline" onClick={handleOpenDenominationsDialog} className="gap-2">
                 <Coins className="h-4 w-4" /> Denominaciones
               </Button>
-              <Button variant="outline" onClick={() => setRepositionDialogOpen(true)} className="gap-2">
-                <RefreshCw className="h-4 w-4" /> Solicitar Reposición
+              <Button
+                onClick={() => setRepositionDialogOpen(true)}
+                className="gap-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-600 hover:to-amber-700 shadow-md hover:shadow-lg border-0 font-semibold"
+              >
+                <RefreshCw className="h-4 w-4" /> Reponer Caja Chica
               </Button>
               <Dialog
                 open={dialogOpen}
