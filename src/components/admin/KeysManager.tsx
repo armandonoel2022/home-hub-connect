@@ -195,6 +195,45 @@ export default function KeysManager({ onBack }: Props) {
     }
   };
 
+  // Intercepta el botón "Editar" cuando la llave aún no ha sido revisada por Chrisnel.
+  const requestEdit = (k: KeyRecord) => {
+    if (!k.ultimaRevision) {
+      setReviewIntercept(k);
+    } else {
+      setForm(k);
+    }
+  };
+
+  const handleConfirmReview = async () => {
+    if (!reviewIntercept) return;
+    const today = new Date().toISOString().slice(0, 10);
+    try {
+      await updateKey(reviewIntercept.id, { ultimaRevision: today });
+      await addHistory(reviewIntercept.id, {
+        fecha: new Date().toISOString(),
+        accion: "revision",
+        persona: user?.fullName || user?.email || "Sistema",
+        motivo: "Revisión confirmada al editar (validación pendiente)",
+        registradoPor: user?.fullName || user?.email,
+      });
+      toast({ title: "✅ Revisión confirmada", description: `Llave ${reviewIntercept.id} marcada como revisada hoy.` });
+      const updatedList = await loadKeys();
+      setKeys(updatedList);
+      const refreshed = updatedList.find(x => x.id === reviewIntercept.id) || reviewIntercept;
+      setReviewIntercept(null);
+      setForm(refreshed);
+    } catch (e: any) {
+      toast({ title: "Error", description: e?.message, variant: "destructive" });
+    }
+  };
+
+  const handleKeepUnreviewed = () => {
+    if (!reviewIntercept) return;
+    const k = reviewIntercept;
+    setReviewIntercept(null);
+    setForm(k);
+  };
+
   const linkedLabel = (k: KeyRecord) => {
     if (!k.linkedAssetId) return "—";
     if (k.linkedAssetType === "asset") {
