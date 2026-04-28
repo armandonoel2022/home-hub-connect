@@ -37,9 +37,7 @@ type FormMode = "print" | "virtual";
 
 const formConfig: { key: FormType; label: string; icon: any; color: string }[] = [
   { key: "vacaciones", label: "Vacaciones", icon: Palmtree, color: "hsl(160 60% 40%)" },
-  { key: "dias-libres", label: "Días Libres", icon: CalendarOff, color: "hsl(200 70% 50%)" },
   { key: "comida", label: "Comida", icon: UtensilsCrossed, color: "hsl(30 80% 55%)" },
-  { key: "ausencias", label: "Ausencias", icon: UserX, color: "hsl(0 60% 50%)" },
   { key: "permisos", label: "Permisos", icon: Clock, color: "hsl(42 100% 50%)" },
   { key: "prestamos", label: "Solicitud de Préstamos", icon: Banknote, color: "hsl(220 15% 30%)" },
 ];
