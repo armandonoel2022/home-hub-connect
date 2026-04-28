@@ -411,7 +411,7 @@ const HRForms = () => {
               {formConfig.map(fc => {
                 const Icon = fc.icon;
                 return (
-                  <button key={fc.key} onClick={() => { setActiveForm(fc.key); setFormMode(null); }}
+                  <button key={fc.key} onClick={() => { setActiveForm(fc.key); setFormMode(showInternalView ? null : "virtual"); }}
                     className="group flex items-center gap-4 p-5 rounded-xl border-2 border-border bg-card hover:border-primary transition-all text-left">
                     <div className="p-3 rounded-xl" style={{ background: fc.color + "22" }}>
                       <Icon className="h-6 w-6" style={{ color: fc.color }} />
