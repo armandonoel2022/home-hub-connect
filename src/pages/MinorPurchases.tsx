@@ -1934,7 +1934,7 @@ const MinorPurchases = () => {
           )}
 
           {/* Dashboard con indicadores mensuales + resumen anual */}
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-9 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
             <Card>
               <CardContent className="pt-5">
                 <div className="flex items-center gap-3 min-w-0">
