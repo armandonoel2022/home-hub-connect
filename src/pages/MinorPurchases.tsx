@@ -1651,6 +1651,11 @@ const MinorPurchases = () => {
                     <DialogTitle className="font-heading">{editingId ? "Editar Gasto" : "Registrar Gasto"}</DialogTitle>
                     <DialogDescription>
                       Disponible este mes: <strong>{fmt(currentMonthAvailable)}</strong> de {fmt(CAJA_CHICA_LIMIT)}.
+                      {authorizedOverLimit && (
+                        <span className="block mt-1 text-xs font-medium text-primary">
+                          ✓ Excedente autorizado por {authorizedOverLimit.by}
+                        </span>
+                      )}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 pt-2">
