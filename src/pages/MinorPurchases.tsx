@@ -79,7 +79,8 @@ import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { isApiConfigured, minorPurchasesApi, getFileUrl, pettyCashApi, auditApi } from "@/lib/api";
+import { isApiConfigured, minorPurchasesApi, getFileUrl, pettyCashApi, auditApi, authApi } from "@/lib/api";
+import { Info, ShieldCheck } from "lucide-react";
 import * as XLSX from "xlsx";
 import type { MinorPurchase, PaymentMethod, MinorPurchaseStatus, LinkedDocType } from "@/lib/types";
 
@@ -87,6 +88,10 @@ const AUTO_APPROVE_IDS = ["USR-100", "USR-110", "USR-101"];
 const TECH_CATEGORIES = ["Tecnología"];
 const APPROVER_TECH = { id: "USR-110", name: "Samuel A. Pérez" };
 const APPROVER_DEFAULT = { id: "USR-101", name: "Chrisnel Fabian" };
+
+// Único autorizado para aprobar excedentes del límite mensual de Caja Chica
+const OVER_LIMIT_APPROVER_EMAIL = "cfabian@safeone.com.do";
+const OVER_LIMIT_APPROVER_NAME = "Chrisnel Fabian";
 
 // Usuarios que pueden aplicar reposiciones
 const CAN_APPLY_REPOSITION_EMAILS = [
@@ -545,6 +550,27 @@ const MinorPurchases = () => {
   const [denominationsDialogOpen, setDenominationsDialogOpen] = useState(false);
   const [editingDenominations, setEditingDenominations] = useState<Denomination[]>([]);
   const [showAlert, setShowAlert] = useState(false);
+
+  // Diálogo de política y cálculos
+  const [policyDialogOpen, setPolicyDialogOpen] = useState(false);
+
+  // Diálogo de autorización de excedente del límite mensual
+  const [overLimitDialog, setOverLimitDialog] = useState<{
+    open: boolean;
+    requestedAmount: number;
+    available: number;
+    excess: number;
+    yearMonth: string;
+  } | null>(null);
+  const [overLimitPassword, setOverLimitPassword] = useState("");
+  const [overLimitJustification, setOverLimitJustification] = useState("");
+  const [overLimitBusy, setOverLimitBusy] = useState(false);
+  // Cuando Chrisnel ya autorizó el excedente del gasto en curso, se guarda aquí
+  const [authorizedOverLimit, setAuthorizedOverLimit] = useState<{
+    by: string;
+    at: string;
+    justification: string;
+  } | null>(null);
   const [reportMonth, setReportMonth] = useState<string>(getCurrentYearMonth());
 
   const [filterFrom, setFilterFrom] = useState<string>("");
@@ -800,6 +826,7 @@ const MinorPurchases = () => {
     setReceiptPreview("");
     setEditingId(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+    setAuthorizedOverLimit(null);
   };
 
   const openEdit = (p: MinorPurchase) => {
@@ -1001,7 +1028,6 @@ const MinorPurchases = () => {
     });
   };
 
-
   const handleOpenDenominationsDialog = () => {
     setEditingDenominations([...denominations]);
     setDenominationsDialogOpen(true);
@@ -1025,6 +1051,57 @@ const MinorPurchases = () => {
     }
     setDenominationsDialogOpen(false);
     toast({ title: "Denominaciones actualizadas", description: "El desglose de efectivo ha sido guardado." });
+  };
+
+  const handleAuthorizeOverLimit = async () => {
+    if (!overLimitDialog) return;
+    const justification = overLimitJustification.trim();
+    if (justification.length < 20) {
+      toast({
+        title: "Justificación requerida",
+        description: "Debe describir el motivo del excedente (mínimo 20 caracteres).",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!overLimitPassword) {
+      toast({ title: "Contraseña requerida", variant: "destructive" });
+      return;
+    }
+    setOverLimitBusy(true);
+    try {
+      // Verifica las credenciales de Chrisnel sin alterar la sesión actual.
+      // Guardamos y restauramos el token actual.
+      const currentToken = localStorage.getItem("safeone_token");
+      const currentUser = localStorage.getItem("safeone_user");
+      try {
+        await authApi.login(OVER_LIMIT_APPROVER_EMAIL, overLimitPassword);
+      } finally {
+        // Restaurar siempre la sesión original
+        if (currentToken) localStorage.setItem("safeone_token", currentToken);
+        else localStorage.removeItem("safeone_token");
+        if (currentUser) localStorage.setItem("safeone_user", currentUser);
+        else localStorage.removeItem("safeone_user");
+      }
+      setAuthorizedOverLimit({
+        by: OVER_LIMIT_APPROVER_NAME,
+        at: new Date().toISOString(),
+        justification,
+      });
+      setOverLimitDialog(null);
+      toast({
+        title: "Excedente autorizado",
+        description: `${OVER_LIMIT_APPROVER_NAME} autorizó el excedente. Pulse 'Guardar' nuevamente para registrar el gasto.`,
+      });
+    } catch (err: any) {
+      toast({
+        title: "Autorización fallida",
+        description: err?.message || "Credenciales inválidas de Chrisnel Fabian.",
+        variant: "destructive",
+      });
+    } finally {
+      setOverLimitBusy(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -1073,12 +1150,20 @@ const MinorPurchases = () => {
       const expenseYearMonth = getYearMonth(form.expenseDate);
       if (!canAddExpenseInMonth(purchases, expenseYearMonth, amount, repositions, editingId || undefined)) {
         const available = getAvailableForMonth(purchases, expenseYearMonth, repositions);
-        toast({
-          title: "Límite mensual excedido",
-          description: `El límite de Caja Chica para ${getMonthDisplay(expenseYearMonth)} es RD$ ${CAJA_CHICA_LIMIT.toLocaleString("es-DO")}. Disponible: ${fmt(available)}.`,
-          variant: "destructive",
-        });
-        return;
+        const excess = amount - available;
+        // Si Chrisnel ya autorizó este excedente para este gasto en curso, dejar pasar
+        if (!authorizedOverLimit) {
+          setOverLimitDialog({
+            open: true,
+            requestedAmount: amount,
+            available,
+            excess,
+            yearMonth: expenseYearMonth,
+          });
+          setOverLimitPassword("");
+          setOverLimitJustification("");
+          return;
+        }
       }
     }
 
@@ -1136,6 +1221,14 @@ const MinorPurchases = () => {
           requestedFor: form.requestedFor.trim(),
           linkedDocType: form.linkedDocType || undefined,
           linkedDocNumber: form.linkedDocNumber.trim() || undefined,
+          ...(authorizedOverLimit
+            ? {
+                overLimitAuthorized: true,
+                overLimitAuthorizedBy: authorizedOverLimit.by,
+                overLimitAuthorizedAt: authorizedOverLimit.at,
+                overLimitJustification: authorizedOverLimit.justification,
+              }
+            : {}),
         };
         let created: MinorPurchase;
         if (apiMode) {
@@ -1154,9 +1247,33 @@ const MinorPurchases = () => {
         if (!apiMode) saveLocal(next);
         toast({
           title: autoApproved ? "Gasto registrado y aprobado" : "Solicitud enviada",
-          description: autoApproved ? "El gasto fue registrado." : "Pendiente de aprobación.",
+          description: authorizedOverLimit
+            ? `Excedente autorizado por ${authorizedOverLimit.by}.`
+            : autoApproved
+            ? "El gasto fue registrado."
+            : "Pendiente de aprobación.",
         });
+        // Audit log para el excedente autorizado
+        if (authorizedOverLimit && apiMode) {
+          try {
+            await auditApi.create({
+              action: "PETTY_CASH_OVER_LIMIT_AUTHORIZED",
+              performedBy: user.fullName,
+              targetType: "MinorPurchase",
+              targetId: created.id,
+              reason: authorizedOverLimit.justification,
+              details: {
+                amount,
+                authorizedBy: authorizedOverLimit.by,
+                yearMonth: getYearMonth(form.expenseDate),
+              },
+            });
+          } catch {
+            /* no-op */
+          }
+        }
       }
+      setAuthorizedOverLimit(null);
       resetForm();
       setDialogOpen(false);
     } catch (err: any) {
@@ -1508,6 +1625,9 @@ const MinorPurchases = () => {
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
+              <Button variant="outline" onClick={() => setPolicyDialogOpen(true)} className="gap-2">
+                <Info className="h-4 w-4" /> Política y cálculos
+              </Button>
               <Button variant="outline" onClick={handleOpenDenominationsDialog} className="gap-2">
                 <Coins className="h-4 w-4" /> Denominaciones
               </Button>
@@ -1531,6 +1651,11 @@ const MinorPurchases = () => {
                     <DialogTitle className="font-heading">{editingId ? "Editar Gasto" : "Registrar Gasto"}</DialogTitle>
                     <DialogDescription>
                       Disponible este mes: <strong>{fmt(currentMonthAvailable)}</strong> de {fmt(CAJA_CHICA_LIMIT)}.
+                      {authorizedOverLimit && (
+                        <span className="block mt-1 text-xs font-medium text-primary">
+                          ✓ Excedente autorizado por {authorizedOverLimit.by}
+                        </span>
+                      )}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 pt-2">
@@ -2938,6 +3063,199 @@ const MinorPurchases = () => {
               }
             >
               Solicitar Reposición
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Modal: Política y cálculos ─── */}
+      <Dialog open={policyDialogOpen} onOpenChange={setPolicyDialogOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-heading flex items-center gap-2">
+              <Info className="h-5 w-5 text-primary" /> Política y cálculos de Caja Chica
+            </DialogTitle>
+            <DialogDescription>
+              Guía de uso, fórmulas de cálculo y reglas de aprobación.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-5 pt-2 text-sm">
+            <section>
+              <h3 className="font-semibold text-foreground mb-2">📌 Límite mensual</h3>
+              <p className="text-muted-foreground">
+                Cada mes calendario tiene un límite asignado de{" "}
+                <strong className="text-foreground">
+                  RD$ {CAJA_CHICA_LIMIT.toLocaleString("es-DO")}
+                </strong>
+                . El consumo se reinicia el día 1 de cada mes (o al aplicar una reposición).
+              </p>
+            </section>
+
+            <section>
+              <h3 className="font-semibold text-foreground mb-2">🧮 Cómo se calculan los indicadores</h3>
+              <ul className="space-y-2 text-muted-foreground list-disc pl-5">
+                <li>
+                  <strong className="text-foreground">Consumo del mes</strong>: suma de gastos
+                  aprobados (no anulados) cuyo método de pago es "Caja Chica" y cuya fecha de
+                  gasto cae en el mes actual.
+                </li>
+                <li>
+                  <strong className="text-foreground">Disponible actual</strong>: límite mensual −
+                  consumo del mes + reposiciones aplicadas en el mes.
+                </li>
+                <li>
+                  <strong className="text-foreground">Consumo anual {currentYear}</strong>: suma
+                  de gastos de Caja Chica del año en curso (enero a hoy).
+                </li>
+                <li>
+                  <strong className="text-foreground">YTD (Year-To-Date)</strong>: presupuesto
+                  acumulado hasta el mes actual = límite mensual × meses transcurridos.
+                  Hoy: {fmt(CAJA_CHICA_LIMIT)} × {yearlyStats.monthIndex}{" "}
+                  {yearlyStats.monthIndex === 1 ? "mes" : "meses"} ={" "}
+                  <strong className="text-foreground">{fmt(yearlyStats.yearlyAssigned)}</strong>.
+                </li>
+                <li>
+                  <strong className="text-foreground">Anual completo</strong>: presupuesto del año
+                  fiscal completo = {fmt(CAJA_CHICA_LIMIT)} × 12 ={" "}
+                  <strong className="text-foreground">{fmt(yearlyStats.yearlyAssignedFull)}</strong>.
+                  Sirve para cuadre contable de fin de año.
+                </li>
+                <li>
+                  <strong className="text-foreground">Utilización YTD</strong>: consumo anual /
+                  presupuesto YTD. Indica qué tan rápido se está consumiendo respecto al ritmo
+                  esperado.
+                </li>
+              </ul>
+            </section>
+
+            <section>
+              <h3 className="font-semibold text-foreground mb-2">🛡️ Política de aprobación</h3>
+              <ul className="space-y-2 text-muted-foreground list-disc pl-5">
+                <li>
+                  Gastos dentro del límite mensual: se registran normalmente. Auto-aprobados para
+                  Aurelio, Samuel y Chrisnel; el resto requiere aprobación del responsable
+                  (Tecnología → Samuel A. Pérez; otros → Chrisnel Fabian).
+                </li>
+                <li>
+                  <strong className="text-foreground">Excedente del límite mensual</strong>: si un
+                  gasto haría superar los {fmt(CAJA_CHICA_LIMIT)} del mes, el sistema solicita
+                  autorización explícita de{" "}
+                  <strong className="text-foreground">{OVER_LIMIT_APPROVER_NAME}</strong>{" "}
+                  (única persona autorizada). Se requiere su contraseña y una justificación
+                  obligatoria de mínimo 20 caracteres.
+                </li>
+                <li>
+                  Cada autorización de excedente queda registrada en la{" "}
+                  <strong className="text-foreground">bitácora de auditoría</strong> con el monto,
+                  el motivo y la fecha/hora.
+                </li>
+              </ul>
+            </section>
+
+            <section>
+              <h3 className="font-semibold text-foreground mb-2">💰 Reposiciones</h3>
+              <p className="text-muted-foreground">
+                Las reposiciones reinician el disponible del mes correspondiente. Flujo: Solicitar
+                → Aprobar → Aplicar. Solo Chrisnel, Xuxa, Cristy y Armando Noel pueden aplicarlas.
+              </p>
+            </section>
+
+            <section className="rounded-lg bg-muted/40 border p-3">
+              <h3 className="font-semibold text-foreground mb-1">🔍 Cuadre contable</h3>
+              <p className="text-muted-foreground text-xs">
+                Para cuadrar con contabilidad: <strong>Consumo anual</strong> +{" "}
+                <strong>Disponible actual</strong> + (límites de meses futuros del año) deben
+                coincidir con el presupuesto anual completo de {fmt(yearlyStats.yearlyAssignedFull)}.
+                Las reposiciones aplicadas se reportan por separado.
+              </p>
+            </section>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setPolicyDialogOpen(false)}>Entendido</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Modal: Autorización de excedente del límite mensual ─── */}
+      <Dialog
+        open={!!overLimitDialog?.open}
+        onOpenChange={(o) => {
+          if (!o) {
+            setOverLimitDialog(null);
+            setOverLimitPassword("");
+            setOverLimitJustification("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-heading flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-amber-600" /> Autorización requerida
+            </DialogTitle>
+            <DialogDescription>
+              Este gasto excede el límite mensual de Caja Chica. Solo{" "}
+              <strong>{OVER_LIMIT_APPROVER_NAME}</strong> puede autorizarlo.
+            </DialogDescription>
+          </DialogHeader>
+          {overLimitDialog && (
+            <div className="space-y-4 pt-2">
+              <div className="rounded-lg border bg-muted/40 p-3 text-sm space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Monto solicitado:</span>
+                  <strong>{fmt(overLimitDialog.requestedAmount)}</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Disponible en el mes:</span>
+                  <strong>{fmt(overLimitDialog.available)}</strong>
+                </div>
+                <div className="flex justify-between text-destructive">
+                  <span>Excedente a autorizar:</span>
+                  <strong>{fmt(overLimitDialog.excess)}</strong>
+                </div>
+                <div className="text-xs text-muted-foreground pt-1">
+                  Mes: {getMonthDisplay(overLimitDialog.yearMonth)}
+                </div>
+              </div>
+
+              <div>
+                <Label>Justificación del excedente *</Label>
+                <Textarea
+                  value={overLimitJustification}
+                  onChange={(e) => setOverLimitJustification(e.target.value)}
+                  placeholder="Explique por qué se requiere superar el límite mensual..."
+                  rows={3}
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Mínimo 20 caracteres. Quedará registrado en la bitácora de auditoría.
+                </p>
+              </div>
+
+              <div>
+                <Label>Contraseña de {OVER_LIMIT_APPROVER_NAME} *</Label>
+                <Input
+                  type="password"
+                  value={overLimitPassword}
+                  onChange={(e) => setOverLimitPassword(e.target.value)}
+                  placeholder="Contraseña del autorizador"
+                  autoComplete="new-password"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setOverLimitDialog(null);
+                setOverLimitPassword("");
+                setOverLimitJustification("");
+              }}
+              disabled={overLimitBusy}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleAuthorizeOverLimit} disabled={overLimitBusy}>
+              {overLimitBusy ? "Verificando..." : "Autorizar excedente"}
             </Button>
           </DialogFooter>
         </DialogContent>
