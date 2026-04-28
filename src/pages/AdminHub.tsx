@@ -428,6 +428,14 @@ const AdminHub = () => {
                 iconBg: "bg-accent/20 text-accent-foreground",
               },
               {
+                label: "Control de Llaves",
+                desc: "Inventario, asignación, copias y revisiones",
+                icon: KeyRound,
+                action: "keys" as const,
+                gradient: "from-amber-500/15 via-amber-500/5 to-transparent",
+                iconBg: "bg-amber-500/15 text-amber-600",
+              },
+              {
                 label: "Tarjetas Corporativas",
                 desc: "Tarjetas asignadas, límites y cargos mensuales",
                 icon: Receipt,
@@ -443,10 +451,13 @@ const AdminHub = () => {
                 gradient: "from-secondary/40 via-secondary/10 to-transparent",
                 iconBg: "bg-secondary text-secondary-foreground",
               },
-            ].map(({ label, desc, icon: Icon, to, gradient, iconBg }) => (
+            ].map(({ label, desc, icon: Icon, to, action, gradient, iconBg }) => (
               <button
-                key={to}
-                onClick={() => navigate(to)}
+                key={label}
+                onClick={() => {
+                  if (action === "keys") setShowKeys(true);
+                  else if (to) navigate(to);
+                }}
                 className={`group relative overflow-hidden rounded-xl border bg-gradient-to-br ${gradient} p-4 text-left transition-all hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5`}
               >
                 <div className="flex items-start gap-3">
