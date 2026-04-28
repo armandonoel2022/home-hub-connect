@@ -1923,7 +1923,10 @@ const MinorPurchases = () => {
                     <p className="text-xs text-muted-foreground truncate">Consumo anual {currentYear}</p>
                     <p className="text-base lg:text-lg font-heading font-bold truncate">{fmt(yearlyStats.totalSpent)}</p>
                     <p className="text-[10px] text-muted-foreground truncate">
-                      de {fmt(yearlyStats.yearlyAssigned)} asignado YTD
+                      YTD: {fmt(yearlyStats.yearlyAssigned)} ({yearlyStats.monthIndex} {yearlyStats.monthIndex === 1 ? "mes" : "meses"} × {fmt(CAJA_CHICA_LIMIT)})
+                    </p>
+                    <p className="text-[10px] text-muted-foreground truncate">
+                      Anual completo: {fmt(yearlyStats.yearlyAssignedFull)} (12 × {fmt(CAJA_CHICA_LIMIT)})
                     </p>
                   </div>
                 </div>
@@ -1936,9 +1939,12 @@ const MinorPurchases = () => {
                     <Percent className="h-5 w-5 text-primary" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs text-muted-foreground truncate">Utilización anual</p>
+                    <p className="text-xs text-muted-foreground truncate">Utilización</p>
                     <p className="text-base lg:text-lg font-heading font-bold truncate">
-                      {yearlyStats.utilizationPct.toFixed(1)}%
+                      {yearlyStats.utilizationPct.toFixed(1)}% <span className="text-xs font-normal text-muted-foreground">YTD</span>
+                    </p>
+                    <p className="text-[10px] text-muted-foreground truncate">
+                      {yearlyStats.utilizationFullPct.toFixed(1)}% del presupuesto anual
                     </p>
                     <p className="text-[10px] text-muted-foreground truncate">
                       Prom. mensual: {fmt(yearlyStats.avgPerMonth)}
