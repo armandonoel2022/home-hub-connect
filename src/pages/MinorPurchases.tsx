@@ -1592,15 +1592,22 @@ const MinorPurchases = () => {
           {/* Header */}
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate("/admin/hub")}
-                title="Volver al Hub de Administración"
-                className="shrink-0"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
+              {(() => {
+                const canSeeAdminHub = !!user && (user.isAdmin || user.department === "Administración");
+                const backTo = canSeeAdminHub ? "/admin/hub" : "/";
+                const backLabel = canSeeAdminHub ? "Volver al Hub de Administración" : "Volver al Dashboard";
+                return (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => navigate(backTo)}
+                    title={backLabel}
+                    className="shrink-0"
+                  >
+                    <ArrowLeft className="h-5 w-5" />
+                  </Button>
+                );
+              })()}
               <div>
                 <h1 className="text-2xl font-heading font-bold text-foreground">Caja Chica</h1>
                 <p className="text-sm text-muted-foreground">
