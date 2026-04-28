@@ -134,8 +134,21 @@ const HRForms = () => {
   // Find supervisor for current user
   const supervisor = allUsers.find((u) => u.id === user?.reportsTo);
   const rrhhLeader = allUsers.find((u) => u.department === "Recursos Humanos" && u.isDepartmentLeader);
+  const rrhhUserIds = allUsers.filter((u) => u.department === "Recursos Humanos").map((u) => u.id);
+  const adminApprover = allUsers.find((u) => u.fullName === "Chrisnel Fabian");
+  const gerenciaApprover = allUsers.find((u) => u.fullName === "Aurelio Pérez");
   const isRRHH = user?.department === "Recursos Humanos";
+  const isAdminApprover = user?.id === adminApprover?.id;
+  const isGerenciaApprover = user?.id === gerenciaApprover?.id;
   const isSupervisor = user?.isDepartmentLeader === true || user?.isAdmin === true;
+
+  // Compute employee tenure in months for loan validation
+  const tenureMonths = (() => {
+    if (!user?.hireDate) return 0;
+    const hire = new Date(user.hireDate);
+    const now = new Date();
+    return (now.getFullYear() - hire.getFullYear()) * 12 + (now.getMonth() - hire.getMonth());
+  })();
 
   const handleVirtualSubmit = () => {
     if (!user || !activeForm || !virtualFormRef.current) return;
