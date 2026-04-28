@@ -105,6 +105,7 @@ export default function KeysManager({ onBack }: Props) {
     accion: "entrega", persona: "", motivo: "",
   });
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [reviewIntercept, setReviewIntercept] = useState<KeyRecord | null>(null);
 
   useEffect(() => {
     Promise.all([loadKeys(), loadFixedAssets()]).then(([k, a]) => {
@@ -192,6 +193,45 @@ export default function KeysManager({ onBack }: Props) {
     } catch (e: any) {
       toast({ title: "Error", description: e?.message, variant: "destructive" });
     }
+  };
+
+  // Intercepta el botón "Editar" cuando la llave aún no ha sido revisada por Chrisnel.
+  const requestEdit = (k: KeyRecord) => {
+    if (!k.ultimaRevision) {
+      setReviewIntercept(k);
+    } else {
+      setForm(k);
+    }
+  };
+
+  const handleConfirmReview = async () => {
+    if (!reviewIntercept) return;
+    const today = new Date().toISOString().slice(0, 10);
+    try {
+      await updateKey(reviewIntercept.id, { ultimaRevision: today });
+      await addHistory(reviewIntercept.id, {
+        fecha: new Date().toISOString(),
+        accion: "revision",
+        persona: user?.fullName || user?.email || "Sistema",
+        motivo: "Revisión confirmada al editar (validación pendiente)",
+        registradoPor: user?.fullName || user?.email,
+      });
+      toast({ title: "✅ Revisión confirmada", description: `Llave ${reviewIntercept.id} marcada como revisada hoy.` });
+      const updatedList = await loadKeys();
+      setKeys(updatedList);
+      const refreshed = updatedList.find(x => x.id === reviewIntercept.id) || reviewIntercept;
+      setReviewIntercept(null);
+      setForm(refreshed);
+    } catch (e: any) {
+      toast({ title: "Error", description: e?.message, variant: "destructive" });
+    }
+  };
+
+  const handleKeepUnreviewed = () => {
+    if (!reviewIntercept) return;
+    const k = reviewIntercept;
+    setReviewIntercept(null);
+    setForm(k);
   };
 
   const linkedLabel = (k: KeyRecord) => {
@@ -457,7 +497,7 @@ export default function KeysManager({ onBack }: Props) {
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setHistoryOf(k)} title="Historial">
                           <HistoryIcon className="h-3.5 w-3.5" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setForm(k)} title="Editar">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => requestEdit(k)} title="Editar">
                           <Edit2 className="h-3.5 w-3.5" />
                         </Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteId(k.id)} title="Eliminar">
@@ -662,6 +702,42 @@ export default function KeysManager({ onBack }: Props) {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteId(null)}>Cancelar</Button>
             <Button variant="destructive" onClick={() => deleteId && handleDelete(deleteId)}>Eliminar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Review intercept (llave sin revisar) ── */}
+      <Dialog open={!!reviewIntercept} onOpenChange={() => setReviewIntercept(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Llave sin revisar
+            </DialogTitle>
+            <DialogDescription>
+              La llave <strong className="font-mono text-primary">{reviewIntercept?.code || reviewIntercept?.id}</strong>{" "}
+              ({reviewIntercept?.descripcion}) aún no ha sido validada por Chrisnel Fabián.
+              ¿Cómo deseas proceder antes de modificarla?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
+              <p className="font-medium text-foreground mb-1">Opciones disponibles</p>
+              <ul className="list-disc list-inside space-y-1">
+                <li><strong className="text-emerald-600">Confirmar revisión:</strong> marca la llave como revisada hoy y registra el evento en el historial.</li>
+                <li><strong className="text-amber-600">Dejar como sin revisar:</strong> abre el formulario sin cambiar el estado de revisión.</li>
+              </ul>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setReviewIntercept(null)}>Cancelar</Button>
+            <Button variant="outline" className="border-amber-500 text-amber-600 hover:bg-amber-50" onClick={handleKeepUnreviewed}>
+              Dejar como sin revisar
+            </Button>
+            <Button className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2" onClick={handleConfirmReview}>
+              <ShieldCheck className="h-4 w-4" />
+              Confirmar revisión
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

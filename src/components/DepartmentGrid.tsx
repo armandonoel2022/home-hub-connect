@@ -71,10 +71,16 @@ const departmentsMeta: DepartmentMeta[] = [
   { name: "Seguridad Electrónica", icon: Settings, description: "Sistemas de seguridad y alarmas", color: "250 40% 45%" },
 ];
 
+// Departamentos cuyo header del recuadro es un enlace directo a un módulo.
+// Administración tiene control de acceso (solo el propio dpto + admins); el resto es libre.
 const DEPT_ROUTES: Record<string, string> = {
   "Recursos Humanos": "/rrhh/formularios",
   "Administración": "/admin/hub",
+  "Contabilidad": "/gastos-menores",
 };
+
+// Departamentos que requieren pertenecer al área (o ser admin) para acceder al enlace del header.
+const RESTRICTED_DEPT_ROUTES = new Set<string>(["Administración"]);
 
 const DEPT_MULTI_ROUTES: Record<string, { label: string; route: string; icon: any }[]> = {
   "Tecnología y Monitoreo": [
@@ -351,8 +357,18 @@ const DepartmentGrid = () => {
                   <h3
                     className={cn("font-heading font-bold text-white text-base leading-tight", (DEPT_ROUTES[dept.name] || DEPT_MULTI_ROUTES[dept.name]) && "cursor-pointer hover:underline")}
                     onClick={() => {
-                      if (DEPT_ROUTES[dept.name]) navigate(DEPT_ROUTES[dept.name]);
-                      else if (DEPT_MULTI_ROUTES[dept.name]) setShowDeptMenu(showDeptMenu === dept.name ? null : dept.name);
+                      if (DEPT_ROUTES[dept.name]) {
+                        // Bloqueo de acceso para departamentos restringidos (ej: Administración)
+                        if (RESTRICTED_DEPT_ROUTES.has(dept.name) && !user?.isAdmin && user?.department !== dept.name) {
+                          toast({
+                            title: "🔒 Acceso restringido",
+                            description: `El acceso al módulo de ${dept.name} está restringido a su personal. Solicita acceso a Chrisnel Fabián si lo necesitas.`,
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        navigate(DEPT_ROUTES[dept.name]);
+                      } else if (DEPT_MULTI_ROUTES[dept.name]) setShowDeptMenu(showDeptMenu === dept.name ? null : dept.name);
                     }}
                   >
                     {dept.name}

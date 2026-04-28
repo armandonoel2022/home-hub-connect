@@ -80,7 +80,8 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { isApiConfigured, minorPurchasesApi, getFileUrl, pettyCashApi, auditApi, authApi } from "@/lib/api";
-import { Info, ShieldCheck } from "lucide-react";
+import { Info, ShieldCheck, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import type { MinorPurchase, PaymentMethod, MinorPurchaseStatus, LinkedDocType } from "@/lib/types";
 
@@ -530,6 +531,7 @@ const generateExcelReport = (purchases: MinorPurchase[], denominations: Denomina
 
 const MinorPurchases = () => {
   const { user, allUsers } = useAuth();
+  const navigate = useNavigate();
   const apiMode = isApiConfigured();
   const [purchases, setPurchases] = useState<MinorPurchase[]>(() => (apiMode ? [] : loadLocal()));
   const [repositions, setRepositions] = useState<MonthlyReposition[]>(() => loadRepositions());
@@ -1589,11 +1591,22 @@ const MinorPurchases = () => {
         <div className="flex-1 p-6 space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between flex-wrap gap-3">
-            <div>
-              <h1 className="text-2xl font-heading font-bold text-foreground">Caja Chica</h1>
-              <p className="text-sm text-muted-foreground">
-                Gestión de caja chica · Límite RD$ {CAJA_CHICA_LIMIT.toLocaleString("es-DO")} mensuales
-              </p>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/admin/hub")}
+                title="Volver al Hub de Administración"
+                className="shrink-0"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div>
+                <h1 className="text-2xl font-heading font-bold text-foreground">Caja Chica</h1>
+                <p className="text-sm text-muted-foreground">
+                  Gestión de caja chica · Límite RD$ {CAJA_CHICA_LIMIT.toLocaleString("es-DO")} mensuales
+                </p>
+              </div>
             </div>
             <div className="flex gap-2 flex-wrap">
               <DropdownMenu>
@@ -1631,8 +1644,11 @@ const MinorPurchases = () => {
               <Button variant="outline" onClick={handleOpenDenominationsDialog} className="gap-2">
                 <Coins className="h-4 w-4" /> Denominaciones
               </Button>
-              <Button variant="outline" onClick={() => setRepositionDialogOpen(true)} className="gap-2">
-                <RefreshCw className="h-4 w-4" /> Solicitar Reposición
+              <Button
+                onClick={() => setRepositionDialogOpen(true)}
+                className="gap-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-600 hover:to-amber-700 shadow-md hover:shadow-lg border-0 font-semibold"
+              >
+                <RefreshCw className="h-4 w-4" /> Reponer Caja Chica
               </Button>
               <Dialog
                 open={dialogOpen}

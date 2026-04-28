@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Plus, CreditCard, Upload, Eye, Ban, Trash2, AlertCircle, Wallet, Receipt, TrendingUp } from "lucide-react";
+import { Plus, CreditCard, Upload, Eye, Ban, Trash2, AlertCircle, Wallet, Receipt, TrendingUp, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -52,6 +53,7 @@ const saveLocal = <T,>(key: string, items: T[]) => localStorage.setItem(key, JSO
 
 const CorporateCards = () => {
   const { user, allUsers } = useAuth();
+  const navigate = useNavigate();
   const apiMode = isApiConfigured();
 
   const [cards, setCards] = useState<CorporateCard[]>(() => loadLocal<CorporateCard>(LS_CARDS));
@@ -283,13 +285,24 @@ const CorporateCards = () => {
         <div className="flex-1 p-6 space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between flex-wrap gap-3">
-            <div>
-              <h1 className="text-2xl font-heading font-bold text-foreground flex items-center gap-2">
-                <CreditCard className="h-6 w-6 text-primary" /> Tarjetas Corporativas
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Gestión de tarjetas asignadas, límites mensuales y cargos
-              </p>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/admin/hub")}
+                title="Volver al Hub de Administración"
+                className="shrink-0"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div>
+                <h1 className="text-2xl font-heading font-bold text-foreground flex items-center gap-2">
+                  <CreditCard className="h-6 w-6 text-primary" /> Tarjetas Corporativas
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  Gestión de tarjetas asignadas, límites mensuales y cargos
+                </p>
+              </div>
             </div>
             <div className="flex gap-2 flex-wrap">
               {canManage && (

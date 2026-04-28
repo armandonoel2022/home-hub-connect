@@ -310,7 +310,7 @@ const AdminForms = () => {
     if (formMode) { setFormMode(null); }
     else if (activeForm) { setActiveForm(null); setItems([{ tipo: "", descripcion: "", cantidad: 1, precio: 0 }]); }
     else if (activeView !== "forms") { setActiveView("forms"); }
-    else { navigate("/"); }
+    else { navigate("/admin/hub"); }
   };
 
   const fmtCurrency = (n: number) => `RD$ ${n.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
