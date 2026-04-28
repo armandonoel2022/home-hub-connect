@@ -28,6 +28,8 @@ import {
   getAllHRRequests, getRequestsByUser,
   createHRRequest, approveBySupervisor, approveByRRHH,
   rejectRequest, generateRequestId, getNotificationsForUser, markAllNotificationsRead,
+  escalateLoanToAdmin, approveLoanByAdmin, escalateLoanToGerencia,
+  approveLoanByGerencia, applyLoan,
 } from "@/lib/hrRequestService";
 
 type FormType = "vacaciones" | "dias-libres" | "comida" | "ausencias" | "feriados" | "permisos" | "prestamos";
@@ -132,8 +134,21 @@ const HRForms = () => {
   // Find supervisor for current user
   const supervisor = allUsers.find((u) => u.id === user?.reportsTo);
   const rrhhLeader = allUsers.find((u) => u.department === "Recursos Humanos" && u.isDepartmentLeader);
+  const rrhhUserIds = allUsers.filter((u) => u.department === "Recursos Humanos").map((u) => u.id);
+  const adminApprover = allUsers.find((u) => u.fullName === "Chrisnel Fabian");
+  const gerenciaApprover = allUsers.find((u) => u.fullName === "Aurelio Pérez");
   const isRRHH = user?.department === "Recursos Humanos";
+  const isAdminApprover = user?.id === adminApprover?.id;
+  const isGerenciaApprover = user?.id === gerenciaApprover?.id;
   const isSupervisor = user?.isDepartmentLeader === true || user?.isAdmin === true;
+
+  // Compute employee tenure in months for loan validation
+  const tenureMonths = (() => {
+    if (!user?.hireDate) return 0;
+    const hire = new Date(user.hireDate);
+    const now = new Date();
+    return (now.getFullYear() - hire.getFullYear()) * 12 + (now.getMonth() - hire.getMonth());
+  })();
 
   const handleVirtualSubmit = () => {
     if (!user || !activeForm || !virtualFormRef.current) return;
@@ -162,7 +177,21 @@ const HRForms = () => {
       }
     }
 
-    if (!supervisor && !user.isAdmin) {
+    // Loan requests: validate amount and skip supervisor (goes straight to RRHH)
+    const isLoan = activeForm === "prestamos";
+    if (isLoan) {
+      const amount = Number((formData["Monto Solicitado (RD$)"] || "").replace(/[^\d.]/g, ""));
+      if (!amount || amount <= 0) {
+        toast({ title: "Monto requerido", description: "Indica el monto del préstamo solicitado.", variant: "destructive" });
+        return;
+      }
+      if (!formData["Motivo del Préstamo"] || !formData["Motivo del Préstamo"].trim()) {
+        toast({ title: "Motivo requerido", description: "Describe el motivo del préstamo.", variant: "destructive" });
+        return;
+      }
+    }
+
+    if (!isLoan && !supervisor && !user.isAdmin) {
       toast({ title: "Error", description: "No se encontró un supervisor asignado. Contacte a RRHH.", variant: "destructive" });
       return;
     }
@@ -170,26 +199,37 @@ const HRForms = () => {
     const request: HRRequest = {
       id: generateRequestId(),
       formType: activeForm as HRFormType,
-      status: "Pendiente Supervisor",
+      status: isLoan ? "Pendiente RRHH" : "Pendiente Supervisor",
       requestedBy: user.id,
       requestedByName: user.fullName,
       department: user.department,
       requestedAt: new Date().toISOString(),
-      formData,
-      supervisorId: supervisor?.id || rrhhLeader?.id || "",
-      supervisorName: supervisor?.fullName || rrhhLeader?.fullName || "N/A",
+      formData: {
+        ...formData,
+        ...(isLoan && user.hireDate
+          ? { "Fecha de ingreso": format(new Date(user.hireDate), "dd/MM/yyyy"), "Antigüedad (meses)": String(tenureMonths) }
+          : {}),
+      },
+      supervisorId: isLoan ? "" : (supervisor?.id || rrhhLeader?.id || ""),
+      supervisorName: isLoan ? "—" : (supervisor?.fullName || rrhhLeader?.fullName || "N/A"),
       supervisorApproval: null,
       rrhhApproval: null,
+      adminApproval: null,
+      gerenciaApproval: null,
+      loanApplyDate: null,
+      loanApplyComment: null,
       rejectionReason: null,
       rejectedBy: null,
       rejectedAt: null,
     };
 
-    createHRRequest(request);
+    createHRRequest(request, isLoan ? rrhhUserIds : []);
     setRefreshKey((k) => k + 1);
     toast({
       title: "Solicitud Enviada",
-      description: `Tu solicitud de ${formConfig.find(f => f.key === activeForm)?.label} fue enviada a ${request.supervisorName} para aprobación.`,
+      description: isLoan
+        ? `Tu solicitud de préstamo fue enviada a Recursos Humanos para revisión.`
+        : `Tu solicitud de ${formConfig.find(f => f.key === activeForm)?.label} fue enviada a ${request.supervisorName} para aprobación.`,
     });
     setActiveForm(null);
     setFormMode(null);
@@ -200,6 +240,19 @@ const HRForms = () => {
   const [rejectReason, setRejectReason] = useState("");
   const [coverPerson, setCoverPerson] = useState("");
   const [approveId, setApproveId] = useState<string | null>(null);
+
+  // Loan flow dialogs
+  const [loanActionId, setLoanActionId] = useState<string | null>(null);
+  const [loanAction, setLoanAction] = useState<"escalate-admin" | "approve-admin" | "escalate-gerencia" | "approve-gerencia" | "apply" | null>(null);
+  const [loanComment, setLoanComment] = useState("");
+  const [loanApplyDate, setLoanApplyDate] = useState("");
+
+  const resetLoanDialog = () => {
+    setLoanActionId(null);
+    setLoanAction(null);
+    setLoanComment("");
+    setLoanApplyDate("");
+  };
 
   const handleApprove = (req: HRRequest) => {
     if (!user) return;
@@ -213,7 +266,7 @@ const HRForms = () => {
     let result: HRRequest | null = null;
     if (req.status === "Pendiente Supervisor") {
       result = approveBySupervisor(req.id, user.id, user.fullName, undefined, req.formType === "vacaciones" ? coverPerson : undefined);
-    } else if (req.status === "Pendiente RRHH") {
+    } else if (req.status === "Pendiente RRHH" && req.formType !== "prestamos") {
       result = approveByRRHH(req.id, user.id, user.fullName);
     }
     if (result) {
@@ -233,6 +286,39 @@ const HRForms = () => {
     toast({ title: "Rechazada", description: `Solicitud ${reqId} fue rechazada.`, variant: "destructive" });
   };
 
+  const handleConfirmLoanAction = () => {
+    if (!user || !loanActionId || !loanAction) return;
+    let result: HRRequest | null = null;
+    if (loanAction === "escalate-admin") {
+      if (!adminApprover?.id) {
+        toast({ title: "Error", description: "No se encontró a Chrisnel Fabián.", variant: "destructive" });
+        return;
+      }
+      result = escalateLoanToAdmin(loanActionId, user.id, user.fullName, adminApprover.id, loanComment);
+    } else if (loanAction === "approve-admin") {
+      result = approveLoanByAdmin(loanActionId, user.id, user.fullName, loanComment, rrhhUserIds);
+    } else if (loanAction === "escalate-gerencia") {
+      if (!gerenciaApprover?.id) {
+        toast({ title: "Error", description: "No se encontró a Aurelio Pérez.", variant: "destructive" });
+        return;
+      }
+      result = escalateLoanToGerencia(loanActionId, user.id, user.fullName, gerenciaApprover.id, loanComment);
+    } else if (loanAction === "approve-gerencia") {
+      result = approveLoanByGerencia(loanActionId, user.id, user.fullName, loanComment, rrhhUserIds);
+    } else if (loanAction === "apply") {
+      if (!loanApplyDate) {
+        toast({ title: "Fecha requerida", description: "Indica la fecha de aplicación del préstamo.", variant: "destructive" });
+        return;
+      }
+      result = applyLoan(loanActionId, user.id, user.fullName, loanApplyDate, loanComment);
+    }
+    if (result) {
+      resetLoanDialog();
+      setRefreshKey((k) => k + 1);
+      toast({ title: "Acción registrada", description: `Solicitud ${result.id} actualizada.` });
+    }
+  };
+
   const handleBack = () => {
     if (formMode) { setFormMode(null); }
     else if (activeForm) { setActiveForm(null); }
@@ -245,6 +331,9 @@ const HRForms = () => {
   const pendingApprovals = user ? getAllHRRequests().filter((r) => {
     if (r.status === "Pendiente Supervisor" && r.supervisorId === user.id) return true;
     if (r.status === "Pendiente RRHH" && isRRHH) return true;
+    if (r.status === "Pendiente Administración" && isAdminApprover) return true;
+    if (r.status === "Pendiente Gerencia General" && isGerenciaApprover) return true;
+    if (r.status === "Pendiente Aplicación RRHH" && isRRHH) return true;
     return false;
   }) : [];
 
@@ -290,7 +379,7 @@ const HRForms = () => {
                 <Send className="h-4 w-4" /> Mis Solicitudes
                 {myRequests.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{myRequests.length}</Badge>}
               </Button>
-              {(isSupervisor || isRRHH) && (
+              {(isSupervisor || isRRHH || isAdminApprover || isGerenciaApprover) && (
                 <Button variant={activeView === "approvals" ? "default" : "outline"} size="sm" onClick={() => setActiveView("approvals")} className="gap-2">
                   <Inbox className="h-4 w-4" /> Aprobaciones
                   {pendingApprovals.length > 0 && <Badge variant="destructive" className="ml-1 text-xs">{pendingApprovals.length}</Badge>}
@@ -386,6 +475,23 @@ const HRForms = () => {
                         <Button size="sm" variant="outline" onClick={() => { setRejectId(null); setRejectReason(""); }}>Cancelar</Button>
                       </div>
                     </div>
+                  ) : loanActionId === req.id && loanAction ? (
+                    <div className="space-y-3 border-t border-border pt-3">
+                      {loanAction === "apply" && (
+                        <div className="space-y-2">
+                          <Label className="text-sm">Fecha de aplicación del préstamo *</Label>
+                          <Input type="date" value={loanApplyDate} onChange={(e) => setLoanApplyDate(e.target.value)} />
+                        </div>
+                      )}
+                      <div className="space-y-2">
+                        <Label className="text-sm">Comentario {loanAction === "apply" ? "(opcional)" : ""}</Label>
+                        <Textarea value={loanComment} onChange={(e) => setLoanComment(e.target.value)} placeholder="Notas internas..." rows={2} />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={handleConfirmLoanAction}>Confirmar</Button>
+                        <Button size="sm" variant="outline" onClick={resetLoanDialog}>Cancelar</Button>
+                      </div>
+                    </div>
                   ) : approveId === req.id && req.formType === "vacaciones" ? (
                     <div className="space-y-3 border-t border-border pt-3">
                       <p className="text-sm font-medium text-card-foreground">¿Quién cubrirá durante las vacaciones?</p>
@@ -399,6 +505,62 @@ const HRForms = () => {
                           <ThumbsUp className="h-3.5 w-3.5" /> Confirmar Aprobación
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => { setApproveId(null); setCoverPerson(""); }}>Cancelar</Button>
+                      </div>
+                    </div>
+                  ) : req.formType === "prestamos" ? (
+                    <div className="space-y-2">
+                      {/* Tenure validation hint for RRHH */}
+                      {req.status === "Pendiente RRHH" && isRRHH && (
+                        <div className="text-xs text-muted-foreground bg-muted/50 rounded p-2">
+                          Antigüedad declarada: <strong>{req.formData["Antigüedad (meses)"] || "?"} meses</strong>.
+                          Política: requiere mínimo <strong>6 meses</strong> en la posición para escalar a Administración.
+                        </div>
+                      )}
+                      <div className="flex gap-2 flex-wrap">
+                        {req.status === "Pendiente RRHH" && isRRHH && (
+                          <>
+                            <Button
+                              size="sm"
+                              className="gap-1"
+                              disabled={Number(req.formData["Antigüedad (meses)"] || 0) < 6}
+                              onClick={() => { setLoanActionId(req.id); setLoanAction("escalate-admin"); }}
+                              title={Number(req.formData["Antigüedad (meses)"] || 0) < 6 ? "Antigüedad menor a 6 meses" : ""}
+                            >
+                              <Send className="h-3.5 w-3.5" /> Enviar a Administración
+                            </Button>
+                            <Button size="sm" variant="destructive" className="gap-1" onClick={() => setRejectId(req.id)}>
+                              <ThumbsDown className="h-3.5 w-3.5" /> Rechazar
+                            </Button>
+                          </>
+                        )}
+                        {req.status === "Pendiente Administración" && isAdminApprover && (
+                          <>
+                            <Button size="sm" className="gap-1" onClick={() => { setLoanActionId(req.id); setLoanAction("approve-admin"); }}>
+                              <ThumbsUp className="h-3.5 w-3.5" /> Aprobar
+                            </Button>
+                            <Button size="sm" variant="outline" className="gap-1" onClick={() => { setLoanActionId(req.id); setLoanAction("escalate-gerencia"); }}>
+                              <Send className="h-3.5 w-3.5" /> Escalar a Gerencia General
+                            </Button>
+                            <Button size="sm" variant="destructive" className="gap-1" onClick={() => setRejectId(req.id)}>
+                              <ThumbsDown className="h-3.5 w-3.5" /> Rechazar
+                            </Button>
+                          </>
+                        )}
+                        {req.status === "Pendiente Gerencia General" && isGerenciaApprover && (
+                          <>
+                            <Button size="sm" className="gap-1" onClick={() => { setLoanActionId(req.id); setLoanAction("approve-gerencia"); }}>
+                              <ThumbsUp className="h-3.5 w-3.5" /> Aprobar (Final)
+                            </Button>
+                            <Button size="sm" variant="destructive" className="gap-1" onClick={() => setRejectId(req.id)}>
+                              <ThumbsDown className="h-3.5 w-3.5" /> Rechazar
+                            </Button>
+                          </>
+                        )}
+                        {req.status === "Pendiente Aplicación RRHH" && isRRHH && (
+                          <Button size="sm" className="gap-1" onClick={() => { setLoanActionId(req.id); setLoanAction("apply"); }}>
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Registrar fecha de aplicación
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ) : (
@@ -501,6 +663,9 @@ function StatusBadge({ status }: { status: string }) {
     "Pendiente Supervisor": "bg-amber-100 text-amber-800 border-amber-200",
     "Aprobada Supervisor": "bg-blue-100 text-blue-800 border-blue-200",
     "Pendiente RRHH": "bg-orange-100 text-orange-800 border-orange-200",
+    "Pendiente Administración": "bg-violet-100 text-violet-800 border-violet-200",
+    "Pendiente Gerencia General": "bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200",
+    "Pendiente Aplicación RRHH": "bg-cyan-100 text-cyan-800 border-cyan-200",
     "Aprobada": "bg-emerald-100 text-emerald-800 border-emerald-200",
     "Rechazada": "bg-red-100 text-red-800 border-red-200",
   };
@@ -514,6 +679,7 @@ function StatusBadge({ status }: { status: string }) {
 // ── Request card for "Mis Solicitudes" ──
 function RequestCard({ req }: { req: HRRequest }) {
   const fc = formConfig.find(f => f.key === req.formType);
+  const isLoan = req.formType === "prestamos";
   return (
     <div className="bg-card rounded-xl border border-border p-5">
       <div className="flex items-start justify-between">
@@ -535,19 +701,44 @@ function RequestCard({ req }: { req: HRRequest }) {
         ))}
       </div>
       {/* Approval timeline */}
-      <div className="mt-3 pt-3 border-t border-border flex gap-4 text-xs text-muted-foreground">
-        <div className="flex items-center gap-1">
-          {req.supervisorApproval ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Clock className="h-3.5 w-3.5" />}
-          Supervisor: {req.supervisorApproval ? `${req.supervisorApproval.byName} ✓` : req.supervisorName}
+      {isLoan ? (
+        <div className="mt-3 pt-3 border-t border-border flex gap-4 text-xs text-muted-foreground flex-wrap">
+          <div className="flex items-center gap-1">
+            {req.rrhhApproval ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Clock className="h-3.5 w-3.5" />}
+            RRHH: {req.rrhhApproval ? `${req.rrhhApproval.byName} ✓` : "Pendiente"}
+          </div>
+          <div className="flex items-center gap-1">
+            {req.adminApproval ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Clock className="h-3.5 w-3.5" />}
+            Administración: {req.adminApproval ? `${req.adminApproval.byName} ✓` : "Pendiente"}
+          </div>
+          {(req.gerenciaApproval || req.status === "Pendiente Gerencia General") && (
+            <div className="flex items-center gap-1">
+              {req.gerenciaApproval ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Clock className="h-3.5 w-3.5" />}
+              Gerencia General: {req.gerenciaApproval ? `${req.gerenciaApproval.byName} ✓` : "Pendiente"}
+            </div>
+          )}
         </div>
-        <div className="flex items-center gap-1">
-          {req.rrhhApproval ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Clock className="h-3.5 w-3.5" />}
-          RRHH: {req.rrhhApproval ? `${req.rrhhApproval.byName} ✓` : "Pendiente"}
+      ) : (
+        <div className="mt-3 pt-3 border-t border-border flex gap-4 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1">
+            {req.supervisorApproval ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Clock className="h-3.5 w-3.5" />}
+            Supervisor: {req.supervisorApproval ? `${req.supervisorApproval.byName} ✓` : req.supervisorName}
+          </div>
+          <div className="flex items-center gap-1">
+            {req.rrhhApproval ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Clock className="h-3.5 w-3.5" />}
+            RRHH: {req.rrhhApproval ? `${req.rrhhApproval.byName} ✓` : "Pendiente"}
+          </div>
         </div>
-      </div>
+      )}
       {req.supervisorApproval?.coverPerson && (
         <div className="mt-2 text-xs text-muted-foreground">
           <span className="font-medium">Persona que cubre:</span> {req.supervisorApproval.coverPerson}
+        </div>
+      )}
+      {isLoan && req.loanApplyDate && (
+        <div className="mt-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded p-2">
+          ✅ Aplicado el <strong>{req.loanApplyDate}</strong>
+          {req.loanApplyComment && <> — {req.loanApplyComment}</>}
         </div>
       )}
       {req.status === "Rechazada" && req.rejectionReason && (
@@ -915,36 +1106,44 @@ function PermissionsForm({ userName, department, showSignature }: { userName: st
 
 // ── Loan form ──
 function LoanForm({ userName, department, showSignature }: { userName: string; department: string; showSignature: boolean }) {
+  const { user } = useAuth();
+  const tenure = (() => {
+    if (!user?.hireDate) return { months: 0, label: "Sin fecha de ingreso registrada" };
+    const hire = new Date(user.hireDate);
+    const now = new Date();
+    const months = (now.getFullYear() - hire.getFullYear()) * 12 + (now.getMonth() - hire.getMonth());
+    const years = Math.floor(months / 12);
+    const rest = months % 12;
+    const label = years > 0
+      ? `${years} año${years > 1 ? "s" : ""}${rest ? ` y ${rest} mes${rest > 1 ? "es" : ""}` : ""}`
+      : `${months} mes${months !== 1 ? "es" : ""}`;
+    return { months, label };
+  })();
+  const meetsPolicy = tenure.months >= 6;
+
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-4">
-        <FormField label="Nombre del Empleado"><Input defaultValue={userName} /></FormField>
-        <FormField label="Departamento"><Input defaultValue={department} /></FormField>
+      <div className={cn(
+        "rounded-lg p-3 border text-sm",
+        meetsPolicy ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-amber-50 border-amber-200 text-amber-800",
+      )}>
+        <p className="font-semibold">Política de préstamos</p>
+        <p className="text-xs mt-1">
+          Antigüedad mínima de <strong>6 meses</strong> en la posición para escalar a Administración.
+          Tu antigüedad: <strong>{tenure.label}</strong>
+          {!meetsPolicy && " — RRHH podrá rechazar la solicitud por incumplir la política."}
+        </p>
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Monto Solicitado (RD$)"><Input type="number" min={0} placeholder="Ej: 15,000" /></FormField>
-        <FormField label="Plazo de Pago">
-          <Select><SelectTrigger><SelectValue placeholder="Seleccione" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1">1 Mes</SelectItem>
-              <SelectItem value="2">2 Meses</SelectItem>
-              <SelectItem value="3">3 Meses</SelectItem>
-              <SelectItem value="6">6 Meses</SelectItem>
-              <SelectItem value="12">12 Meses</SelectItem>
-            </SelectContent>
-          </Select>
-        </FormField>
+        <FormField label="Nombre del Empleado"><Input defaultValue={userName} readOnly /></FormField>
+        <FormField label="Departamento"><Input defaultValue={department} readOnly /></FormField>
       </div>
-      <FormField label="Modalidad de Descuento">
-        <Select><SelectTrigger><SelectValue placeholder="Seleccione" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="quincenal">Quincenal</SelectItem>
-            <SelectItem value="mensual">Mensual</SelectItem>
-          </SelectContent>
-        </Select>
-      </FormField>
+      <div className="grid grid-cols-2 gap-4">
+        <FormField label="Monto Solicitado (RD$)"><Input type="number" min={0} placeholder="Ej: 15000" /></FormField>
+        <FormField label="Plazo de Pago (meses)"><Input type="number" min={1} max={24} placeholder="Ej: 6" /></FormField>
+      </div>
+      <FormField label="Modalidad de Descuento"><Input placeholder="Quincenal o Mensual" /></FormField>
       <FormField label="Motivo del Préstamo"><Textarea placeholder="Describa para qué necesita el préstamo..." rows={3} /></FormField>
-      <FormField label="Antigüedad en la Empresa"><Input placeholder="Ej: 2 años y 3 meses" /></FormField>
       {showSignature && <SignatureBlock />}
     </div>
   );

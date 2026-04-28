@@ -11,6 +11,7 @@ import ChatNotificationToast from "@/components/chat/ChatNotificationToast";
 import BirthdayOverlay from "@/components/BirthdayOverlay";
 import PanicButton from "@/components/PanicButton";
 import NotificationOverlay from "@/components/NotificationOverlay";
+import HRNotificationOverlay from "@/components/HRNotificationOverlay";
 import Index from "./pages/Index";
 import Tickets from "./pages/Tickets";
 import Inventory from "./pages/Inventory";
@@ -37,8 +38,6 @@ import LoginPage from "./pages/Login";
 import RegisterPage from "./pages/Register";
 import MinorPurchases from "./pages/MinorPurchases";
 import CorporateCards from "./pages/CorporateCards";
-import General from "./pages/General";
-import Adonis from "./pages/Adonis";
 import Presentation from "./pages/Presentation";
 import DepartmentProcesses from "./pages/DepartmentProcesses";
 import AuditLog from "./pages/AuditLog";
@@ -117,8 +116,6 @@ function ProtectedRoutes() {
         <Route path="/gastos-menores" element={<MinorPurchases />} />
         <Route path="/admin/caja-chica" element={<MinorPurchases />} />
         <Route path="/admin/tarjetas-corporativas" element={<CorporateCards />} />
-        <Route path="/general" element={<General />} />
-        <Route path="/adonis" element={<Adonis />} />
         <Route path="/admin/usuarios" element={<UserManagement />} />
         <Route path="/procesos" element={<DepartmentProcesses />} />
         <Route path="/auditoria" element={<AuditLog />} />
@@ -153,6 +150,7 @@ const App = () => {
                 <ChatNotificationToast />
                 <PanicButton />
                 <NotificationOverlay />
+                <HRNotificationOverlay />
                 
               </ChatProvider>
             </NotificationProvider>

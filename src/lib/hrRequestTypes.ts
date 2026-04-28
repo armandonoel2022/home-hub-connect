@@ -1,6 +1,15 @@
 export type HRFormType = "vacaciones" | "dias-libres" | "comida" | "ausencias" | "permisos" | "prestamos";
 
-export type HRRequestStatus = "Pendiente Supervisor" | "Aprobada Supervisor" | "Pendiente RRHH" | "Aprobada" | "Rechazada";
+export type HRRequestStatus =
+  | "Pendiente Supervisor"
+  | "Aprobada Supervisor"
+  | "Pendiente RRHH"
+  // Loan-specific stages:
+  | "Pendiente Administración" // RRHH escaló a Chrisnel Fabián
+  | "Pendiente Gerencia General" // Chrisnel escaló a Aurelio Pérez
+  | "Pendiente Aplicación RRHH" // Aprobado, RRHH debe registrar fecha de aplicación
+  | "Aprobada"
+  | "Rechazada";
 
 export const HR_STATUS_FLOW: HRRequestStatus[] = [
   "Pendiente Supervisor",
@@ -50,6 +59,13 @@ export interface HRRequest {
   supervisorName: string;
   supervisorApproval: HRApprovalStep | null;
   rrhhApproval: HRApprovalStep | null;
+  /** Loan-only: Chrisnel Fabián review */
+  adminApproval?: HRApprovalStep | null;
+  /** Loan-only: Aurelio Pérez (Gerencia General) review */
+  gerenciaApproval?: HRApprovalStep | null;
+  /** Loan-only: scheduled application date set by RRHH after final approval */
+  loanApplyDate?: string | null;
+  loanApplyComment?: string | null;
   rejectionReason: string | null;
   rejectedBy: string | null;
   rejectedAt: string | null;

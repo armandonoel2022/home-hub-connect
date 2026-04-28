@@ -7,10 +7,34 @@ import QuickLinks from "@/components/QuickLinks";
 import Announcements from "@/components/Announcements";
 import DashboardMetrics from "@/components/DashboardMetrics";
 import Footer from "@/components/Footer";
-import { Building2, Calculator } from "lucide-react";
+import { LifeBuoy, Users, ClipboardList } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
+
+  const requestButtons = [
+    {
+      label: "Solicitud a IT",
+      sublabel: "Tickets / Service Request",
+      icon: LifeBuoy,
+      to: "/tickets",
+      gradient: "linear-gradient(135deg, hsl(210 80% 45%), hsl(210 80% 30%))",
+    },
+    {
+      label: "Solicitud a RRHH",
+      sublabel: "Vacaciones, permisos, préstamos",
+      icon: Users,
+      to: "/rrhh/formularios",
+      gradient: "linear-gradient(135deg, hsl(160 55% 40%), hsl(160 60% 28%))",
+    },
+    {
+      label: "Solicitud a Operaciones",
+      sublabel: "Servicios y coordinación",
+      icon: ClipboardList,
+      to: "/operaciones",
+      gradient: "linear-gradient(135deg, hsl(42 95% 50%), hsl(30 90% 40%))",
+    },
+  ];
 
   return (
     <AppLayout>
@@ -18,25 +42,28 @@ const Index = () => {
         <Navbar />
         <HeroBanner />
 
-        {/* System Access Buttons */}
+        {/* Quick Request Buttons */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 w-full pt-8 pb-2">
-          <div className="flex gap-3">
-            <button
-              onClick={() => navigate("/general")}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-heading font-bold text-sm text-secondary-foreground transition-all hover:brightness-110 hover:-translate-y-0.5"
-              style={{ background: "var(--gradient-dark)" }}
-            >
-              <Building2 className="h-4 w-4" />
-              General
-            </button>
-            <button
-              onClick={() => navigate("/adonis")}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-heading font-bold text-sm text-primary-foreground transition-all hover:brightness-110 hover:-translate-y-0.5"
-              style={{ background: "var(--gradient-gold)" }}
-            >
-              <Calculator className="h-4 w-4" />
-              Adonis
-            </button>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {requestButtons.map((b) => {
+              const Icon = b.icon;
+              return (
+                <button
+                  key={b.to}
+                  onClick={() => navigate(b.to)}
+                  className="group flex items-center gap-3 px-5 py-4 rounded-xl text-left text-white transition-all hover:brightness-110 hover:-translate-y-0.5 shadow-md"
+                  style={{ background: b.gradient }}
+                >
+                  <div className="p-2.5 rounded-lg bg-white/15 group-hover:bg-white/25 transition-colors">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-heading font-bold text-sm leading-tight">{b.label}</p>
+                    <p className="text-[11px] opacity-90 truncate">{b.sublabel}</p>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </section>
 
