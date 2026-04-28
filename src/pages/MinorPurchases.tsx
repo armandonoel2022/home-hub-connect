@@ -531,6 +531,7 @@ const generateExcelReport = (purchases: MinorPurchase[], denominations: Denomina
 
 const MinorPurchases = () => {
   const { user, allUsers } = useAuth();
+  const navigate = useNavigate();
   const apiMode = isApiConfigured();
   const [purchases, setPurchases] = useState<MinorPurchase[]>(() => (apiMode ? [] : loadLocal()));
   const [repositions, setRepositions] = useState<MonthlyReposition[]>(() => loadRepositions());
