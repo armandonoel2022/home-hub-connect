@@ -73,6 +73,7 @@ import {
   CheckCheck,
   Filter,
   Hash,
+  Trash2,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
