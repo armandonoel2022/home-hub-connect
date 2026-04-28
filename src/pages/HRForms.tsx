@@ -28,6 +28,8 @@ import {
   getAllHRRequests, getRequestsByUser,
   createHRRequest, approveBySupervisor, approveByRRHH,
   rejectRequest, generateRequestId, getNotificationsForUser, markAllNotificationsRead,
+  escalateLoanToAdmin, approveLoanByAdmin, escalateLoanToGerencia,
+  approveLoanByGerencia, applyLoan,
 } from "@/lib/hrRequestService";
 
 type FormType = "vacaciones" | "dias-libres" | "comida" | "ausencias" | "feriados" | "permisos" | "prestamos";
