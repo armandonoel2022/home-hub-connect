@@ -901,6 +901,62 @@ const MinorPurchases = () => {
     });
   };
 
+  const handleDeleteReposition = async (id: string) => {
+    if (!user?.isAdmin) {
+      toast({ title: "Permiso denegado", description: "Solo Administradores pueden eliminar reposiciones.", variant: "destructive" });
+      return;
+    }
+    const reposition = repositions.find((r) => r.id === id);
+    if (!reposition) return;
+
+    const reason = window.prompt(
+      `⚠️ ELIMINAR REPOSICIÓN — ${getMonthDisplay(reposition.yearMonth)}\nMonto: RD$ ${reposition.amountReposed.toLocaleString("es-DO")}\nEstado: ${reposition.status}\n\nEsta acción es PERMANENTE y se registrará en la bitácora de auditoría.\n\nIngrese la justificación (mínimo 10 caracteres):`,
+      ""
+    );
+    if (reason === null) return;
+    if (reason.trim().length < 10) {
+      toast({ title: "Justificación insuficiente", description: "Debe escribir al menos 10 caracteres.", variant: "destructive" });
+      return;
+    }
+
+    if (apiMode) {
+      try {
+        await pettyCashApi.removeReposition(id);
+      } catch (e: any) {
+        toast({ title: "Error", description: e.message || "No se pudo eliminar.", variant: "destructive" });
+        return;
+      }
+      // Auditoría (best-effort, no bloquea si falla)
+      try {
+        await auditApi.create({
+          action: "DELETE_PETTY_CASH_REPOSITION",
+          entity: "petty-cash-reposition",
+          entityId: id,
+          performedBy: user.fullName,
+          performedById: user.id,
+          reason: reason.trim(),
+          details: {
+            yearMonth: reposition.yearMonth,
+            amountReposed: reposition.amountReposed,
+            status: reposition.status,
+            requestedBy: reposition.requestedBy,
+            approvedBy: reposition.approvedBy,
+            appliedBy: reposition.appliedBy,
+          },
+          timestamp: new Date().toISOString(),
+        });
+      } catch {
+        /* noop */
+      }
+    }
+
+    persistRepositions(repositions.filter((r) => r.id !== id));
+    toast({
+      title: "🗑️ Reposición eliminada",
+      description: `Se eliminó la reposición de ${getMonthDisplay(reposition.yearMonth)}.`,
+    });
+  };
+
   const handleApplyReposition = async (id: string) => {
     if (!user) return;
     if (!canApplyReposition) {
