@@ -71,10 +71,16 @@ const departmentsMeta: DepartmentMeta[] = [
   { name: "Seguridad Electrónica", icon: Settings, description: "Sistemas de seguridad y alarmas", color: "250 40% 45%" },
 ];
 
+// Departamentos cuyo header del recuadro es un enlace directo a un módulo.
+// Administración tiene control de acceso (solo el propio dpto + admins); el resto es libre.
 const DEPT_ROUTES: Record<string, string> = {
   "Recursos Humanos": "/rrhh/formularios",
   "Administración": "/admin/hub",
+  "Contabilidad": "/gastos-menores",
 };
+
+// Departamentos que requieren pertenecer al área (o ser admin) para acceder al enlace del header.
+const RESTRICTED_DEPT_ROUTES = new Set<string>(["Administración"]);
 
 const DEPT_MULTI_ROUTES: Record<string, { label: string; route: string; icon: any }[]> = {
   "Tecnología y Monitoreo": [
