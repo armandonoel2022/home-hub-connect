@@ -365,14 +365,6 @@ const DepartmentGrid = () => {
                             description: `El acceso al módulo de ${dept.name} está restringido a su personal. Solicita acceso a Chrisnel Fabián si lo necesitas.`,
                             variant: "destructive",
                           });
-                          // Crea una notificación / ticket informal de solicitud (no bloqueante)
-                          try {
-                            addNotification({
-                              type: "info",
-                              title: `Solicitud de acceso a ${dept.name}`,
-                              message: `${user?.fullName || "Un usuario"} solicitó acceso al módulo de ${dept.name}.`,
-                            });
-                          } catch {}
                           return;
                         }
                         navigate(DEPT_ROUTES[dept.name]);
