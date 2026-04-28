@@ -710,15 +710,28 @@ const MinorPurchases = () => {
     });
     const monthsWithActivity = Object.keys(spentByMonth).length;
     const monthIndex = parseInt(currentYearMonth.slice(5, 7), 10); // 1-12
-    // Asignación anual = límite mensual * meses transcurridos del año
-    const yearlyAssigned = CAJA_CHICA_LIMIT * monthIndex;
+    // Asignación YTD = límite mensual * meses transcurridos del año (incluye mes actual)
+    const yearlyAssignedYTD = CAJA_CHICA_LIMIT * monthIndex;
+    // Asignación anual completa (12 meses) — para proyección/cuadre anual
+    const yearlyAssignedFull = CAJA_CHICA_LIMIT * 12;
     // Reposiciones aplicadas en el año
     const yearlyReposed = repositions
       .filter((r) => r.status === "aplicado" && r.yearMonth.startsWith(currentYear))
       .reduce((s, r) => s + (r.amountReposed || 0), 0);
-    const utilizationPct = yearlyAssigned > 0 ? (totalSpent / yearlyAssigned) * 100 : 0;
+    const utilizationPct = yearlyAssignedYTD > 0 ? (totalSpent / yearlyAssignedYTD) * 100 : 0;
+    const utilizationFullPct = yearlyAssignedFull > 0 ? (totalSpent / yearlyAssignedFull) * 100 : 0;
     const avgPerMonth = monthsWithActivity > 0 ? totalSpent / monthsWithActivity : 0;
-    return { totalSpent, yearlyAssigned, yearlyReposed, utilizationPct, avgPerMonth, monthsWithActivity };
+    return {
+      totalSpent,
+      yearlyAssigned: yearlyAssignedYTD,
+      yearlyAssignedFull,
+      yearlyReposed,
+      utilizationPct,
+      utilizationFullPct,
+      avgPerMonth,
+      monthsWithActivity,
+      monthIndex,
+    };
   }, [purchases, repositions, currentYear, currentYearMonth]);
 
   // Datos para gráfico de barras por mes
