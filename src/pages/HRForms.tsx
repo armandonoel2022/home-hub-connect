@@ -360,13 +360,18 @@ const HRForms = () => {
             </Button>
             <div className="flex-1">
               <h1 className="text-2xl font-heading font-bold text-foreground">
-                {activeForm ? formConfig.find(f => f.key === activeForm)?.label : "Recursos Humanos — Formularios"}
+                {activeForm
+                  ? formConfig.find(f => f.key === activeForm)?.label
+                  : showInternalView
+                    ? "Recursos Humanos — Formularios"
+                    : "Mis Solicitudes a RRHH"}
               </h1>
               <p className="text-sm text-muted-foreground">
                 {formMode === "print" ? "Formulario para imprimir y firmar"
                   : formMode === "virtual" ? "Aprobación virtual — completar y enviar"
                   : activeForm ? "Seleccione modalidad"
-                  : activeView === "my-requests" ? "Historial de solicitudes"
+                  : activeView === "my-requests"
+                    ? (showInternalView ? "Historial de solicitudes" : "Solicita vacaciones, permisos, préstamos y más. Aquí verás el estado.")
                   : activeView === "approvals" ? "Solicitudes pendientes de aprobación"
                   : "Seleccione un formulario"}
               </p>
@@ -375,10 +380,12 @@ const HRForms = () => {
 
           {/* Tab navigation */}
           {!activeForm && (
-            <div className="flex gap-2 mb-6 no-print">
-              <Button variant={activeView === "forms" ? "default" : "outline"} size="sm" onClick={() => setActiveView("forms")} className="gap-2">
-                <FileText className="h-4 w-4" /> Formularios
-              </Button>
+            <div className="flex gap-2 mb-6 no-print flex-wrap items-center">
+              {showInternalView && (
+                <Button variant={activeView === "forms" ? "default" : "outline"} size="sm" onClick={() => setActiveView("forms")} className="gap-2">
+                  <FileText className="h-4 w-4" /> Formularios
+                </Button>
+              )}
               <Button variant={activeView === "my-requests" ? "default" : "outline"} size="sm" onClick={() => setActiveView("my-requests")} className="gap-2">
                 <Send className="h-4 w-4" /> Mis Solicitudes
                 {myRequests.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{myRequests.length}</Badge>}
@@ -387,6 +394,12 @@ const HRForms = () => {
                 <Button variant={activeView === "approvals" ? "default" : "outline"} size="sm" onClick={() => setActiveView("approvals")} className="gap-2">
                   <Inbox className="h-4 w-4" /> Aprobaciones
                   {pendingApprovals.length > 0 && <Badge variant="destructive" className="ml-1 text-xs">{pendingApprovals.length}</Badge>}
+                </Button>
+              )}
+              {/* Empleado externo: botón destacado para nueva solicitud */}
+              {!showInternalView && activeView === "my-requests" && (
+                <Button size="sm" className="gap-2 ml-auto" onClick={() => setActiveView("forms")}>
+                  <FileText className="h-4 w-4" /> Nueva Solicitud
                 </Button>
               )}
             </div>
