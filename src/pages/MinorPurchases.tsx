@@ -710,15 +710,28 @@ const MinorPurchases = () => {
     });
     const monthsWithActivity = Object.keys(spentByMonth).length;
     const monthIndex = parseInt(currentYearMonth.slice(5, 7), 10); // 1-12
-    // Asignación anual = límite mensual * meses transcurridos del año
-    const yearlyAssigned = CAJA_CHICA_LIMIT * monthIndex;
+    // Asignación YTD = límite mensual * meses transcurridos del año (incluye mes actual)
+    const yearlyAssignedYTD = CAJA_CHICA_LIMIT * monthIndex;
+    // Asignación anual completa (12 meses) — para proyección/cuadre anual
+    const yearlyAssignedFull = CAJA_CHICA_LIMIT * 12;
     // Reposiciones aplicadas en el año
     const yearlyReposed = repositions
       .filter((r) => r.status === "aplicado" && r.yearMonth.startsWith(currentYear))
       .reduce((s, r) => s + (r.amountReposed || 0), 0);
-    const utilizationPct = yearlyAssigned > 0 ? (totalSpent / yearlyAssigned) * 100 : 0;
+    const utilizationPct = yearlyAssignedYTD > 0 ? (totalSpent / yearlyAssignedYTD) * 100 : 0;
+    const utilizationFullPct = yearlyAssignedFull > 0 ? (totalSpent / yearlyAssignedFull) * 100 : 0;
     const avgPerMonth = monthsWithActivity > 0 ? totalSpent / monthsWithActivity : 0;
-    return { totalSpent, yearlyAssigned, yearlyReposed, utilizationPct, avgPerMonth, monthsWithActivity };
+    return {
+      totalSpent,
+      yearlyAssigned: yearlyAssignedYTD,
+      yearlyAssignedFull,
+      yearlyReposed,
+      utilizationPct,
+      utilizationFullPct,
+      avgPerMonth,
+      monthsWithActivity,
+      monthIndex,
+    };
   }, [purchases, repositions, currentYear, currentYearMonth]);
 
   // Datos para gráfico de barras por mes
@@ -1910,7 +1923,10 @@ const MinorPurchases = () => {
                     <p className="text-xs text-muted-foreground truncate">Consumo anual {currentYear}</p>
                     <p className="text-base lg:text-lg font-heading font-bold truncate">{fmt(yearlyStats.totalSpent)}</p>
                     <p className="text-[10px] text-muted-foreground truncate">
-                      de {fmt(yearlyStats.yearlyAssigned)} asignado YTD
+                      YTD: {fmt(yearlyStats.yearlyAssigned)} ({yearlyStats.monthIndex} {yearlyStats.monthIndex === 1 ? "mes" : "meses"} × {fmt(CAJA_CHICA_LIMIT)})
+                    </p>
+                    <p className="text-[10px] text-muted-foreground truncate">
+                      Anual completo: {fmt(yearlyStats.yearlyAssignedFull)} (12 × {fmt(CAJA_CHICA_LIMIT)})
                     </p>
                   </div>
                 </div>
@@ -1923,9 +1939,12 @@ const MinorPurchases = () => {
                     <Percent className="h-5 w-5 text-primary" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs text-muted-foreground truncate">Utilización anual</p>
+                    <p className="text-xs text-muted-foreground truncate">Utilización</p>
                     <p className="text-base lg:text-lg font-heading font-bold truncate">
-                      {yearlyStats.utilizationPct.toFixed(1)}%
+                      {yearlyStats.utilizationPct.toFixed(1)}% <span className="text-xs font-normal text-muted-foreground">YTD</span>
+                    </p>
+                    <p className="text-[10px] text-muted-foreground truncate">
+                      {yearlyStats.utilizationFullPct.toFixed(1)}% del presupuesto anual
                     </p>
                     <p className="text-[10px] text-muted-foreground truncate">
                       Prom. mensual: {fmt(yearlyStats.avgPerMonth)}
