@@ -177,7 +177,21 @@ const HRForms = () => {
       }
     }
 
-    if (!supervisor && !user.isAdmin) {
+    // Loan requests: validate amount and skip supervisor (goes straight to RRHH)
+    const isLoan = activeForm === "prestamos";
+    if (isLoan) {
+      const amount = Number((formData["Monto Solicitado (RD$)"] || "").replace(/[^\d.]/g, ""));
+      if (!amount || amount <= 0) {
+        toast({ title: "Monto requerido", description: "Indica el monto del préstamo solicitado.", variant: "destructive" });
+        return;
+      }
+      if (!formData["Motivo del Préstamo"] || !formData["Motivo del Préstamo"].trim()) {
+        toast({ title: "Motivo requerido", description: "Describe el motivo del préstamo.", variant: "destructive" });
+        return;
+      }
+    }
+
+    if (!isLoan && !supervisor && !user.isAdmin) {
       toast({ title: "Error", description: "No se encontró un supervisor asignado. Contacte a RRHH.", variant: "destructive" });
       return;
     }
@@ -185,26 +199,37 @@ const HRForms = () => {
     const request: HRRequest = {
       id: generateRequestId(),
       formType: activeForm as HRFormType,
-      status: "Pendiente Supervisor",
+      status: isLoan ? "Pendiente RRHH" : "Pendiente Supervisor",
       requestedBy: user.id,
       requestedByName: user.fullName,
       department: user.department,
       requestedAt: new Date().toISOString(),
-      formData,
-      supervisorId: supervisor?.id || rrhhLeader?.id || "",
-      supervisorName: supervisor?.fullName || rrhhLeader?.fullName || "N/A",
+      formData: {
+        ...formData,
+        ...(isLoan && user.hireDate
+          ? { "Fecha de ingreso": format(new Date(user.hireDate), "dd/MM/yyyy"), "Antigüedad (meses)": String(tenureMonths) }
+          : {}),
+      },
+      supervisorId: isLoan ? "" : (supervisor?.id || rrhhLeader?.id || ""),
+      supervisorName: isLoan ? "—" : (supervisor?.fullName || rrhhLeader?.fullName || "N/A"),
       supervisorApproval: null,
       rrhhApproval: null,
+      adminApproval: null,
+      gerenciaApproval: null,
+      loanApplyDate: null,
+      loanApplyComment: null,
       rejectionReason: null,
       rejectedBy: null,
       rejectedAt: null,
     };
 
-    createHRRequest(request);
+    createHRRequest(request, isLoan ? rrhhUserIds : []);
     setRefreshKey((k) => k + 1);
     toast({
       title: "Solicitud Enviada",
-      description: `Tu solicitud de ${formConfig.find(f => f.key === activeForm)?.label} fue enviada a ${request.supervisorName} para aprobación.`,
+      description: isLoan
+        ? `Tu solicitud de préstamo fue enviada a Recursos Humanos para revisión.`
+        : `Tu solicitud de ${formConfig.find(f => f.key === activeForm)?.label} fue enviada a ${request.supervisorName} para aprobación.`,
     });
     setActiveForm(null);
     setFormMode(null);
