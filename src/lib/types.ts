@@ -364,6 +364,11 @@ export interface MinorPurchase {
   voidedAt?: string;
   /** Historial de cambios de ID (auditoría). */
   idHistory?: IdChangeRecord[];
+  /** Excedente del límite mensual de Caja Chica autorizado por Chrisnel Fabian. */
+  overLimitAuthorized?: boolean;
+  overLimitAuthorizedBy?: string;
+  overLimitAuthorizedAt?: string;
+  overLimitJustification?: string;
 }
 
 export interface IdChangeRecord {
