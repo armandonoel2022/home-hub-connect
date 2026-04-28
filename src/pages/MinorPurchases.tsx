@@ -826,6 +826,7 @@ const MinorPurchases = () => {
     setReceiptPreview("");
     setEditingId(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+    setAuthorizedOverLimit(null);
   };
 
   const openEdit = (p: MinorPurchase) => {
