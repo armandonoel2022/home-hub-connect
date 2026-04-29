@@ -860,6 +860,122 @@ const UserManagementPage = () => {
             </div>
           </div>
         )}
+
+        {/* ═══ Import CSV Modal ═══ */}
+        {showImport && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-card rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl">
+              <div className="flex items-center justify-between p-5 border-b border-border">
+                <h2 className="font-heading font-bold text-lg text-card-foreground flex items-center gap-2">
+                  <FileSpreadsheet className="h-5 w-5 text-gold" />
+                  Importar Empleados desde CSV
+                </h2>
+                <button onClick={() => setShowImport(false)} className="p-1 hover:bg-muted rounded-lg">
+                  <X className="h-5 w-5 text-muted-foreground" />
+                </button>
+              </div>
+              <div className="p-5 space-y-4">
+                <div className="bg-muted/50 border border-border rounded-lg p-4 text-sm text-muted-foreground">
+                  <p className="font-semibold text-card-foreground mb-2">Columnas reconocidas (encabezados):</p>
+                  <p className="text-xs font-mono">
+                    Codigo, Nombre1, Nombre2, Apellido1, Apellido2, Cedula,
+                    FechaNacimiento, Telefono/Celular, Puesto, FechaIngreso, Correo
+                  </p>
+                  <p className="mt-2 text-xs">
+                    Las columnas que no estén en esta lista se ignoran. Valores `NULL` también se ignoran.
+                    El nombre completo se arma automáticamente.
+                  </p>
+                  <button onClick={downloadTemplate} className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-gold hover:underline">
+                    <Download className="h-3.5 w-3.5" /> Descargar plantilla CSV
+                  </button>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Departamento al que pertenecen estos empleados</label>
+                  <select
+                    value={importDept}
+                    onChange={(e) => setImportDept(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none"
+                  >
+                    {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Archivo CSV</label>
+                  <input
+                    ref={csvInputRef}
+                    type="file"
+                    accept=".csv,text/csv"
+                    onChange={handleCsvFile}
+                    className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-gold/10 file:text-gold hover:file:bg-gold/20"
+                  />
+                </div>
+
+                {importErrors.length > 0 && (
+                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-xs">
+                    <div className="flex items-center gap-2 font-semibold text-amber-600 mb-1">
+                      <AlertCircle className="h-4 w-4" /> Avisos ({importErrors.length})
+                    </div>
+                    <ul className="space-y-0.5 max-h-24 overflow-y-auto">
+                      {importErrors.map((e, i) => <li key={i} className="text-muted-foreground">• {e}</li>)}
+                    </ul>
+                  </div>
+                )}
+
+                {importPreview.length > 0 && (
+                  <div className="border border-border rounded-lg overflow-hidden">
+                    <div className="px-3 py-2 bg-muted text-xs font-semibold text-card-foreground">
+                      Vista previa: {importPreview.length} empleado(s) listos para importar
+                    </div>
+                    <div className="overflow-x-auto max-h-64">
+                      <table className="w-full text-xs">
+                        <thead className="bg-muted/50 sticky top-0">
+                          <tr>
+                            <th className="text-left px-3 py-1.5">Código</th>
+                            <th className="text-left px-3 py-1.5">Nombre</th>
+                            <th className="text-left px-3 py-1.5">Cédula</th>
+                            <th className="text-left px-3 py-1.5">Cumpleaños</th>
+                            <th className="text-left px-3 py-1.5">Puesto</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                          {importPreview.slice(0, 50).map((u, i) => (
+                            <tr key={i}>
+                              <td className="px-3 py-1.5 font-mono">{u.employeeCode || "—"}</td>
+                              <td className="px-3 py-1.5">{u.fullName}</td>
+                              <td className="px-3 py-1.5 font-mono">{u.cedula || "—"}</td>
+                              <td className="px-3 py-1.5">{u.birthday || "—"}</td>
+                              <td className="px-3 py-1.5">{u.position || "—"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {importPreview.length > 50 && (
+                      <div className="px-3 py-1.5 text-xs text-muted-foreground bg-muted/30 text-center">
+                        … y {importPreview.length - 50} más
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex gap-2 justify-end pt-2 border-t border-border">
+                  <button onClick={() => setShowImport(false)} className="px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted">
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={confirmImport}
+                    disabled={importPreview.length === 0}
+                    className="btn-gold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Importar {importPreview.length > 0 ? `${importPreview.length} empleado(s)` : ""}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AppLayout>
   );
