@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { saveOpsReport, getOpsReports, updateOpsReport } from "@/lib/opsReportsStorage";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import Navbar from "@/components/Navbar";
@@ -54,7 +55,24 @@ const OperationsCenter = () => {
 
   const [activeSection, setActiveSection] = useState<"agentes" | "reportar" | "historial" | null>(null);
   const [activeReport, setActiveReport] = useState<ReportType | null>(null);
-  const [reports, setReports] = useState<OperationsReport[]>([]);
+  const [reports, setReports] = useState<OperationsReport[]>(() =>
+    getOpsReports()
+      .filter((r) => r.source === "Operaciones")
+      .map((r) => ({
+        id: r.id,
+        type: r.type as ReportType,
+        agentId: r.personId,
+        agentName: r.personName,
+        date: r.date,
+        hours: r.hours,
+        description: r.description,
+        coveringFor: r.coveringFor,
+        createdBy: r.createdBy,
+        createdAt: r.createdAt,
+        status: r.status,
+        assignedTo: r.assignedTo,
+      }))
+  );
   const [showDetail, setShowDetail] = useState<OperationsReport | null>(null);
 
   // Form state
@@ -100,6 +118,22 @@ const OperationsCenter = () => {
     };
 
     setReports((prev) => [newReport, ...prev]);
+    saveOpsReport({
+      id: newReport.id,
+      source: "Operaciones",
+      type: newReport.type,
+      personId: newReport.agentId,
+      personName: newReport.agentName,
+      department: "Operaciones",
+      team: agent.location,
+      date: newReport.date,
+      hours: newReport.hours,
+      description: newReport.description,
+      coveringFor: newReport.coveringFor,
+      createdBy: newReport.createdBy,
+      createdAt: newReport.createdAt,
+      status: newReport.status,
+    });
 
     const typeLabel = reportConfig.find((r) => r.key === activeReport)?.label || activeReport;
     let notifMessage = `${agent.name} (Operaciones) — ${typeLabel} el ${format(reportDate, "dd/MM/yyyy")}`;
@@ -153,6 +187,7 @@ const OperationsCenter = () => {
         r.id === reportId ? { ...r, status: "Asignada", assignedTo: staff?.fullName } : r
       )
     );
+    updateOpsReport(reportId, { status: "Asignada", assignedTo: staff?.fullName });
     const report = reports.find((r) => r.id === reportId);
     if (report && staff) {
       addNotification({
@@ -170,6 +205,7 @@ const OperationsCenter = () => {
     setReports((prev) =>
       prev.map((r) => (r.id === reportId ? { ...r, status: "Procesada" } : r))
     );
+    updateOpsReport(reportId, { status: "Procesada" });
   };
 
   const isRRHH = user?.department === "Recursos Humanos" || user?.isAdmin;
