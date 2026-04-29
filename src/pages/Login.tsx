@@ -71,7 +71,7 @@ const LoginPage = () => {
 
         <form onSubmit={handleSubmit} className="bg-card rounded-xl p-6 shadow-2xl space-y-4">
           <div>
-            <label className="text-sm font-medium text-card-foreground block mb-1.5">Usuario o Correo</label>
+            <label className="text-sm font-medium text-card-foreground block mb-1.5">Usuario, Correo o ID</label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input

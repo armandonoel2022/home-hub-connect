@@ -383,7 +383,15 @@ const UserManagementPage = () => {
                           </span>
                         ) : <span className="text-muted-foreground">—</span>}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">{u.email || "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {u.email ? (
+                          u.email
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-xs font-mono bg-muted px-2 py-1 rounded" title="Sin correo — inicia sesión con su ID">
+                            <User className="h-3 w-3 text-gold" />{u.id}
+                          </span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-muted-foreground">{u.department}</td>
                       <td className="px-4 py-3 text-muted-foreground">{u.position}</td>
                       <td className="px-4 py-3">
