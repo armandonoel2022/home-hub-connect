@@ -91,7 +91,8 @@ const UserManagementPage = () => {
   const filtered = allUsers.filter(
     (u) =>
       u.fullName.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase()) ||
+      (u.email || "").toLowerCase().includes(search.toLowerCase()) ||
+      (u.id || "").toLowerCase().includes(search.toLowerCase()) ||
       u.department.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -110,7 +111,7 @@ const UserManagementPage = () => {
   };
 
   const handleSave = () => {
-    if (!form.fullName || !form.email) return;
+    if (!form.fullName) return;
     if (editing) {
       updateUser(editing.id, form);
     } else {
@@ -382,7 +383,15 @@ const UserManagementPage = () => {
                           </span>
                         ) : <span className="text-muted-foreground">—</span>}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">{u.email || "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {u.email ? (
+                          u.email
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-xs font-mono bg-muted px-2 py-1 rounded" title="Sin correo — inicia sesión con su ID">
+                            <User className="h-3 w-3 text-gold" />{u.id}
+                          </span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-muted-foreground">{u.department}</td>
                       <td className="px-4 py-3 text-muted-foreground">{u.position}</td>
                       <td className="px-4 py-3">
@@ -459,7 +468,7 @@ const UserManagementPage = () => {
                 </div>
                 {[
                   { key: "fullName", label: "Nombre Completo *", type: "text" },
-                  { key: "email", label: "Correo Electrónico", type: "email" },
+                  { key: "email", label: "Correo Electrónico (opcional — si no tiene, inicia sesión con su ID de usuario)", type: "email" },
                   { key: "position", label: "Cargo", type: "text" },
                   { key: "extension", label: "Extensión Telefónica", type: "text", placeholder: "Ej: 201" },
                   { key: "fleetPhone", label: "Teléfono Flota", type: "text", placeholder: "Ej: +1 809-555-0010" },

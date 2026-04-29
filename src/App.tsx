@@ -22,6 +22,7 @@ import BASC from "./pages/BASC";
 import PurchaseRequests from "./pages/PurchaseRequests";
 import HiringRequests from "./pages/HiringRequests";
 import HRForms from "./pages/HRForms";
+import HRPayrollReport from "./pages/HRPayrollReport";
 import AdminForms from "./pages/AdminForms";
 import UserManagement from "./pages/UserManagement";
 import Directory from "./pages/Directory";
@@ -103,6 +104,7 @@ function ProtectedRoutes() {
         <Route path="/solicitudes-compra" element={<PurchaseRequests />} />
         <Route path="/solicitudes-personal" element={<HiringRequests />} />
         <Route path="/rrhh/formularios" element={<HRForms />} />
+        <Route path="/rrhh/consolidado-nomina" element={<HRPayrollReport />} />
         <Route path="/admin/formularios" element={<AdminForms />} />
         <Route path="/admin/hub" element={<AdminHub />} />
         <Route path="/admin/flotilla-mantenimiento" element={<FleetMaintenance />} />
