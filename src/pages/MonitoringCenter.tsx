@@ -209,6 +209,7 @@ const MonitoringCenter = () => {
     setReports((prev) =>
       prev.map((r) => (r.id === reportId ? { ...r, status: "Procesada" } : r))
     );
+    updateOpsReport(reportId, { status: "Procesada" });
   };
 
   const isRRHH = user?.department === "Recursos Humanos" || user?.isAdmin;
