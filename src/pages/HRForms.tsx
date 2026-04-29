@@ -387,10 +387,9 @@ const HRForms = () => {
                 <Send className="h-4 w-4" /> Mis Solicitudes
                 {myRequests.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{myRequests.length}</Badge>}
               </Button>
-              {(isSupervisor || isRRHH || isAdminApprover || isGerenciaApprover) && (
-                <Button variant={activeView === "approvals" ? "default" : "outline"} size="sm" onClick={() => setActiveView("approvals")} className="gap-2">
-                  <Inbox className="h-4 w-4" /> Aprobaciones
-                  {pendingApprovals.length > 0 && <Badge variant="destructive" className="ml-1 text-xs">{pendingApprovals.length}</Badge>}
+              {isHRStaff && (
+                <Button variant="outline" size="sm" onClick={() => navigate("/rrhh/consolidado-nomina")} className="gap-2">
+                  <ClipboardList className="h-4 w-4" /> Consolidado Nómina
                 </Button>
               )}
               {/* Empleado externo: botón destacado para nueva solicitud */}
