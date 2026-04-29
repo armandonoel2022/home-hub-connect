@@ -489,8 +489,14 @@ const UserManagementPage = () => {
                   </div>
                 </div>
                 {[
-                  { key: "fullName", label: "Nombre Completo *", type: "text" },
-                  { key: "email", label: "Correo Electrónico (opcional — si no tiene, inicia sesión con su ID de usuario)", type: "email" },
+                  { key: "employeeCode", label: "Código de Empleado", type: "text", placeholder: "Ej: 3751" },
+                  { key: "fullName", label: "Nombre Completo (se autocompleta si llenas los campos separados abajo)", type: "text" },
+                  { key: "firstName1", label: "Primer Nombre", type: "text", placeholder: "Ej: Brandon" },
+                  { key: "firstName2", label: "Segundo Nombre", type: "text", placeholder: "(opcional)" },
+                  { key: "lastName1", label: "Primer Apellido", type: "text", placeholder: "Ej: Diaz" },
+                  { key: "lastName2", label: "Segundo Apellido", type: "text", placeholder: "Ej: Perez" },
+                  { key: "cedula", label: "Cédula", type: "text", placeholder: "Ej: 402-3309103-8" },
+                  { key: "email", label: "Correo Electrónico (opcional — si no tiene, inicia sesión con su Código de Empleado o ID)", type: "email" },
                   { key: "position", label: "Cargo", type: "text" },
                   { key: "extension", label: "Extensión Telefónica", type: "text", placeholder: "Ej: 201" },
                   { key: "fleetPhone", label: "Teléfono Flota", type: "text", placeholder: "Ej: +1 809-555-0010" },
@@ -498,7 +504,7 @@ const UserManagementPage = () => {
                   { key: "team", label: "Equipo", type: "text", placeholder: "Ej: Sede Central, ALNAP, Banco Caribe" },
                   { key: "birthday", label: "Cumpleaños (MM-DD)", type: "text", placeholder: "Ej: 07-15" },
                   { key: "hireDate", label: "Fecha de Ingreso", type: "date", placeholder: "" },
-                ].map(({ key, label, type, placeholder }) => (
+                ].map(({ key, label, type, placeholder }: any) => (
                   <div key={key}>
                     <label className="text-sm font-medium text-card-foreground block mb-1.5">{label}</label>
                     <input
