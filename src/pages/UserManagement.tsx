@@ -91,7 +91,8 @@ const UserManagementPage = () => {
   const filtered = allUsers.filter(
     (u) =>
       u.fullName.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase()) ||
+      (u.email || "").toLowerCase().includes(search.toLowerCase()) ||
+      (u.id || "").toLowerCase().includes(search.toLowerCase()) ||
       u.department.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -110,7 +111,7 @@ const UserManagementPage = () => {
   };
 
   const handleSave = () => {
-    if (!form.fullName || !form.email) return;
+    if (!form.fullName) return;
     if (editing) {
       updateUser(editing.id, form);
     } else {
@@ -459,7 +460,7 @@ const UserManagementPage = () => {
                 </div>
                 {[
                   { key: "fullName", label: "Nombre Completo *", type: "text" },
-                  { key: "email", label: "Correo Electrónico", type: "email" },
+                  { key: "email", label: "Correo Electrónico (opcional — si no tiene, inicia sesión con su ID de usuario)", type: "email" },
                   { key: "position", label: "Cargo", type: "text" },
                   { key: "extension", label: "Extensión Telefónica", type: "text", placeholder: "Ej: 201" },
                   { key: "fleetPhone", label: "Teléfono Flota", type: "text", placeholder: "Ej: +1 809-555-0010" },
