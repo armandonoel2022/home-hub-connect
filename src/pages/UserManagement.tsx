@@ -14,7 +14,13 @@ import ExportMenu from "@/components/ExportMenu";
 import { toast } from "@/hooks/use-toast";
 
 const emptyForm = (): Partial<IntranetUser> => ({
+  employeeCode: "",
   fullName: "",
+  firstName1: "",
+  firstName2: "",
+  lastName1: "",
+  lastName2: "",
+  cedula: "",
   email: "",
   department: DEPARTMENTS[0],
   position: "",
@@ -93,6 +99,8 @@ const UserManagementPage = () => {
       u.fullName.toLowerCase().includes(search.toLowerCase()) ||
       (u.email || "").toLowerCase().includes(search.toLowerCase()) ||
       (u.id || "").toLowerCase().includes(search.toLowerCase()) ||
+      (u.employeeCode || "").toLowerCase().includes(search.toLowerCase()) ||
+      (u.cedula || "").toLowerCase().includes(search.toLowerCase()) ||
       u.department.toLowerCase().includes(search.toLowerCase())
   );
 
