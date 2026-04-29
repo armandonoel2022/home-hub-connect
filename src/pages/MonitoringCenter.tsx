@@ -190,6 +190,7 @@ const MonitoringCenter = () => {
         r.id === reportId ? { ...r, status: "Asignada", assignedTo: staff?.fullName } : r
       )
     );
+    updateOpsReport(reportId, { status: "Asignada", assignedTo: staff?.fullName });
 
     const report = reports.find((r) => r.id === reportId);
     if (report && staff) {
