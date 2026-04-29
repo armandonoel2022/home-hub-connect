@@ -423,6 +423,13 @@ const UserManagementPage = () => {
                 <Plus className="h-4 w-4" />
                 Nuevo Usuario
               </button>
+              <button
+                onClick={() => { setShowImport(true); setImportPreview([]); setImportErrors([]); }}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-sm font-medium text-card-foreground hover:bg-border transition-colors"
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                Importar CSV
+              </button>
               <ExportMenu
                 title="Usuarios SafeOne"
                 columns={[
