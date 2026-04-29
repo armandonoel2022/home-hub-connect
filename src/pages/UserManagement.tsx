@@ -119,13 +119,26 @@ const UserManagementPage = () => {
   };
 
   const handleSave = () => {
-    if (!form.fullName) return;
+    // Si se llenaron los nombres separados, autogenerar fullName
+    const composedName = [form.firstName1, form.firstName2, form.lastName1, form.lastName2]
+      .filter(Boolean).join(" ").trim();
+    const finalFullName = (form.fullName?.trim() || composedName).trim();
+    if (!finalFullName) return;
+
+    const payload = { ...form, fullName: finalFullName };
+
     if (editing) {
-      updateUser(editing.id, form);
+      updateUser(editing.id, payload);
     } else {
       const newUser: IntranetUser = {
         id: `USR-${String(Date.now()).slice(-6)}`,
-        fullName: form.fullName || "",
+        employeeCode: form.employeeCode || "",
+        fullName: finalFullName,
+        firstName1: form.firstName1 || "",
+        firstName2: form.firstName2 || "",
+        lastName1: form.lastName1 || "",
+        lastName2: form.lastName2 || "",
+        cedula: form.cedula || "",
         email: form.email || "",
         department: form.department || DEPARTMENTS[0],
         position: form.position || "",
@@ -136,6 +149,7 @@ const UserManagementPage = () => {
         isDepartmentLeader: form.isDepartmentLeader || false,
         reportsTo: form.reportsTo || "",
         fleetPhone: form.fleetPhone || "",
+        hireDate: form.hireDate || "",
       };
       addUser(newUser);
 
