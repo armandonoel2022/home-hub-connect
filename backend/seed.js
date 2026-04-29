@@ -131,8 +131,96 @@ async function seed() {
     {
       id: 'USR-120', fullName: 'Brandon Díaz', email: 'monitoreo@safeone.com.do',
       department: 'Tecnología y Monitoreo', position: 'Operador de Monitoreo',
-      birthday: '', photoUrl: '', allowedDepartments: ['Tecnología y Monitoreo'],
+      birthday: '07-14', hireDate: '2025-07-28', photoUrl: '', allowedDepartments: ['Tecnología y Monitoreo'],
       isAdmin: false, reportsTo: 'USR-002', extension: '207', shift: 'Turno día', team: 'Sede Central',
+      passwordHash: defaultHash, employeeStatus: 'Activo',
+    },
+    // ─── Equipo de Monitoreo bajo Armando Noel (USR-002) ───
+    // Sede Central
+    {
+      id: 'USR-121', fullName: 'César Reyes', email: '',
+      department: 'Tecnología y Monitoreo', position: 'Operador de Monitoreo',
+      birthday: '08-17', hireDate: '2025-05-13', photoUrl: '', allowedDepartments: ['Tecnología y Monitoreo'],
+      isAdmin: false, reportsTo: 'USR-002', extension: '207', shift: 'Turno día', team: 'Sede Central',
+      passwordHash: defaultHash, employeeStatus: 'Activo',
+    },
+    {
+      id: 'USR-122', fullName: 'Bradelin Almonte', email: '',
+      department: 'Tecnología y Monitoreo', position: 'Operador de Monitoreo',
+      birthday: '02-25', hireDate: '2022-05-17', photoUrl: '', allowedDepartments: ['Tecnología y Monitoreo'],
+      isAdmin: false, reportsTo: 'USR-002', extension: '207', shift: 'Turno noche', team: 'Sede Central',
+      passwordHash: defaultHash, employeeStatus: 'Activo',
+    },
+    {
+      id: 'USR-123', fullName: 'Alejandro Alcántara', email: '',
+      department: 'Tecnología y Monitoreo', position: 'Operador de Monitoreo',
+      birthday: '10-27', hireDate: '2024-09-07', photoUrl: '', allowedDepartments: ['Tecnología y Monitoreo'],
+      isAdmin: false, reportsTo: 'USR-002', extension: '207', shift: 'Turno noche', team: 'Sede Central',
+      passwordHash: defaultHash, employeeStatus: 'Activo',
+    },
+    // ALNAP
+    {
+      id: 'USR-130', fullName: 'Frederlin Peguero', email: '',
+      department: 'Tecnología y Monitoreo', position: 'Operador de Monitoreo',
+      birthday: '03-26', hireDate: '2021-06-03', photoUrl: '', allowedDepartments: ['Tecnología y Monitoreo'],
+      isAdmin: false, reportsTo: 'USR-002', shift: 'Tarde', team: 'ALNAP',
+      passwordHash: defaultHash, employeeStatus: 'Activo',
+    },
+    {
+      id: 'USR-131', fullName: 'Raúl Moreta', email: '',
+      department: 'Tecnología y Monitoreo', position: 'Operador de Monitoreo',
+      birthday: '06-18', hireDate: '2023-10-09', photoUrl: '', allowedDepartments: ['Tecnología y Monitoreo'],
+      isAdmin: false, reportsTo: 'USR-002', shift: 'Mañana', team: 'ALNAP',
+      passwordHash: defaultHash, employeeStatus: 'Activo',
+    },
+    {
+      id: 'USR-132', fullName: 'Luis Enríquez Rosario', email: '',
+      department: 'Tecnología y Monitoreo', position: 'Operador de Monitoreo',
+      birthday: '10-13', hireDate: '2025-11-19', photoUrl: '', allowedDepartments: ['Tecnología y Monitoreo'],
+      isAdmin: false, reportsTo: 'USR-002', shift: 'Noche', team: 'ALNAP',
+      passwordHash: defaultHash, employeeStatus: 'Activo',
+    },
+    {
+      id: 'USR-133', fullName: 'Adelson Rosario Segura', email: '',
+      department: 'Tecnología y Monitoreo', position: 'Operador de Monitoreo',
+      birthday: '05-09', hireDate: '2026-01-16', photoUrl: '', allowedDepartments: ['Tecnología y Monitoreo'],
+      isAdmin: false, reportsTo: 'USR-002', team: 'ALNAP',
+      passwordHash: defaultHash, employeeStatus: 'Activo',
+    },
+    {
+      id: 'USR-134', fullName: 'Diego Guzmán', email: '',
+      department: 'Tecnología y Monitoreo', position: 'Operador de Monitoreo',
+      birthday: '04-28', hireDate: '2022-09-03', photoUrl: '', allowedDepartments: ['Tecnología y Monitoreo'],
+      isAdmin: false, reportsTo: 'USR-002', shift: 'Tarde', team: 'ALNAP',
+      passwordHash: defaultHash, employeeStatus: 'Activo',
+    },
+    {
+      id: 'USR-135', fullName: 'Rusbel Michel', email: '',
+      department: 'Tecnología y Monitoreo', position: 'Operador de Monitoreo',
+      birthday: '10-01', hireDate: '2021-10-16', photoUrl: '', allowedDepartments: ['Tecnología y Monitoreo'],
+      isAdmin: false, reportsTo: 'USR-002', shift: 'Mañana', team: 'ALNAP',
+      passwordHash: defaultHash, employeeStatus: 'Activo',
+    },
+    // Banco Caribe
+    {
+      id: 'USR-140', fullName: 'Yeremy Elías de la Rosa', email: '',
+      department: 'Tecnología y Monitoreo', position: 'Operador de Monitoreo',
+      birthday: '12-21', hireDate: '2026-03-09', photoUrl: '', allowedDepartments: ['Tecnología y Monitoreo'],
+      isAdmin: false, reportsTo: 'USR-002', team: 'Banco Caribe',
+      passwordHash: defaultHash, employeeStatus: 'Activo',
+    },
+    {
+      id: 'USR-141', fullName: 'Euscarlin Eduardo Serrano', email: '',
+      department: 'Tecnología y Monitoreo', position: 'Operador de Monitoreo',
+      birthday: '06-28', hireDate: '2025-10-01', photoUrl: '', allowedDepartments: ['Tecnología y Monitoreo'],
+      isAdmin: false, reportsTo: 'USR-002', shift: 'Turno noche', team: 'Banco Caribe',
+      passwordHash: defaultHash, employeeStatus: 'Activo',
+    },
+    {
+      id: 'USR-142', fullName: 'Junior Manzanillo Peña', email: '',
+      department: 'Tecnología y Monitoreo', position: 'Operador de Monitoreo',
+      birthday: '05-25', hireDate: '2025-12-05', photoUrl: '', allowedDepartments: ['Tecnología y Monitoreo'],
+      isAdmin: false, reportsTo: 'USR-002', shift: 'Turno día', team: 'Banco Caribe',
       passwordHash: defaultHash, employeeStatus: 'Activo',
     },
     {
