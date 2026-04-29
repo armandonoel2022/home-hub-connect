@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { saveOpsReport, getOpsReports, updateOpsReport } from "@/lib/opsReportsStorage";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
