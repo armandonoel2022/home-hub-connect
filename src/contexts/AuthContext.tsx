@@ -544,7 +544,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       (u) =>
         (u.email || "").toLowerCase() === q ||
         u.fullName.toLowerCase() === q ||
-        (u.id || "").toLowerCase() === q
+        (u.id || "").toLowerCase() === q ||
+        (u.employeeCode || "").toLowerCase() === q ||
+        (u.cedula || "").toLowerCase() === q
     );
     if (!found) return false;
 
