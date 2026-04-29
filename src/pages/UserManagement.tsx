@@ -50,8 +50,171 @@ const UserManagementPage = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const csvInputRef = useRef<HTMLInputElement>(null);
   const [birthdayTestUsers, setBirthdayTestUsers] = useState<IntranetUser[]>([]);
   const [showBirthdayTest, setShowBirthdayTest] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [importPreview, setImportPreview] = useState<Partial<IntranetUser>[]>([]);
+  const [importErrors, setImportErrors] = useState<string[]>([]);
+  const [importDept, setImportDept] = useState<string>(DEPARTMENTS[0]);
+
+  // ─── CSV Import ────────────────────────────────────────────
+  const parseCsvLine = (line: string): string[] => {
+    const out: string[] = [];
+    let cur = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (inQuotes) {
+        if (c === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+        else if (c === '"') inQuotes = false;
+        else cur += c;
+      } else {
+        if (c === '"') inQuotes = true;
+        else if (c === "," || c === ";" || c === "\t") { out.push(cur); cur = ""; }
+        else cur += c;
+      }
+    }
+    out.push(cur);
+    return out.map((s) => s.trim());
+  };
+
+  const normalizeHeader = (h: string) =>
+    h.toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]/g, "");
+
+  const HEADER_MAP: Record<string, keyof IntranetUser> = {
+    codigo: "employeeCode",
+    employeecode: "employeeCode",
+    nombre1: "firstName1",
+    primernombre: "firstName1",
+    nombre: "firstName1",
+    nombre2: "firstName2",
+    segundonombre: "firstName2",
+    apellido1: "lastName1",
+    primerapellido: "lastName1",
+    apellido: "lastName1",
+    apellido2: "lastName2",
+    segundoapellido: "lastName2",
+    cedula: "cedula",
+    fechanacimiento: "birthday",
+    nacimiento: "birthday",
+    cumpleanos: "birthday",
+    direccion: "position", // no usado, placeholder
+    telefono: "fleetPhone",
+    celular: "fleetPhone",
+    puesto: "position",
+    cargo: "position",
+    fechaingreso: "hireDate",
+    correo: "email",
+    email: "email",
+  };
+
+  const handleCsvFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+    if (lines.length < 2) {
+      setImportErrors(["El archivo está vacío o no tiene filas de datos."]);
+      setImportPreview([]);
+      return;
+    }
+    const headers = parseCsvLine(lines[0]).map(normalizeHeader);
+    const rows = lines.slice(1).map(parseCsvLine);
+    const errors: string[] = [];
+    const preview: Partial<IntranetUser>[] = [];
+
+    rows.forEach((row, idx) => {
+      const u: Partial<IntranetUser> = {};
+      headers.forEach((h, i) => {
+        const field = HEADER_MAP[h];
+        if (!field) return;
+        const val = row[i] ?? "";
+        if (val === "" || val === "NULL" || val === "null") return;
+        if (field === "birthday") {
+          // Acepta MM-DD, YYYY-MM-DD, DD/MM/YYYY
+          let mmdd = "";
+          const m1 = val.match(/^(\d{4})-(\d{2})-(\d{2})/);
+          const m2 = val.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+          const m3 = val.match(/^(\d{2})-(\d{2})$/);
+          if (m1) mmdd = `${m1[2]}-${m1[3]}`;
+          else if (m2) mmdd = `${m2[2]}-${m2[1]}`;
+          else if (m3) mmdd = `${m3[1]}-${m3[2]}`;
+          if (mmdd) (u as any)[field] = mmdd;
+        } else {
+          (u as any)[field] = val;
+        }
+      });
+
+      // Validación mínima: necesita al menos un nombre
+      const composed = [u.firstName1, u.firstName2, u.lastName1, u.lastName2]
+        .filter(Boolean).join(" ").trim();
+      if (!composed) {
+        errors.push(`Fila ${idx + 2}: sin nombre, omitida.`);
+        return;
+      }
+      u.fullName = composed;
+      // Evitar duplicados por employeeCode
+      if (u.employeeCode && allUsers.some((au) => au.employeeCode === u.employeeCode)) {
+        errors.push(`Fila ${idx + 2}: código ${u.employeeCode} ya existe, omitida.`);
+        return;
+      }
+      preview.push(u);
+    });
+
+    setImportPreview(preview);
+    setImportErrors(errors);
+  };
+
+  const confirmImport = () => {
+    importPreview.forEach((u, i) => {
+      const newUser: IntranetUser = {
+        id: `USR-${String(Date.now() + i).slice(-6)}`,
+        employeeCode: u.employeeCode || "",
+        fullName: u.fullName || "",
+        firstName1: u.firstName1 || "",
+        firstName2: u.firstName2 || "",
+        lastName1: u.lastName1 || "",
+        lastName2: u.lastName2 || "",
+        cedula: u.cedula || "",
+        email: u.email || "",
+        department: importDept,
+        position: u.position || "",
+        birthday: u.birthday || "",
+        photoUrl: "",
+        allowedDepartments: [importDept],
+        isAdmin: false,
+        isDepartmentLeader: false,
+        reportsTo: "",
+        fleetPhone: u.fleetPhone || "",
+        hireDate: u.hireDate || "",
+      };
+      addUser(newUser);
+    });
+    toast({
+      title: "Importación completada",
+      description: `${importPreview.length} empleado(s) agregados al departamento ${importDept}.`,
+    });
+    setShowImport(false);
+    setImportPreview([]);
+    setImportErrors([]);
+    if (csvInputRef.current) csvInputRef.current.value = "";
+  };
+
+  const downloadTemplate = () => {
+    const headers = ["Codigo", "Nombre1", "Nombre2", "Apellido1", "Apellido2", "Cedula", "FechaNacimiento", "Telefono", "Puesto", "FechaIngreso"];
+    const example = ["3751", "Brandon", "", "Diaz", "Perez", "402-3309103-8", "1990-05-15", "(829) 570-8977", "Operador", "2023-01-10"];
+    const csv = [headers.join(","), example.join(",")].join("\n");
+    const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "plantilla-empleados.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const compressImage = (file: File, maxSize = 300): Promise<string> => {
     return new Promise((resolve) => {
