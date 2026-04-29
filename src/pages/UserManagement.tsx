@@ -6,7 +6,7 @@ import { useChatContextSafe } from "@/contexts/ChatContext";
 import { DEPARTMENTS } from "@/lib/types";
 import type { IntranetUser } from "@/lib/types";
 import { generateOnboardingTicketDescription } from "@/lib/assetLinking";
-import { Plus, X, Search, Pencil, Trash2, User, Shield, Mail, Building2, Phone, Upload, Image, KeyRound, Cake } from "lucide-react";
+import { Plus, X, Search, Pencil, Trash2, User, Shield, Mail, Building2, Phone, Upload, Image, KeyRound, Cake, FileSpreadsheet, Download, AlertCircle } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import RegistrationRequests from "@/components/RegistrationRequests";
 import BirthdayOverlay from "@/components/BirthdayOverlay";
