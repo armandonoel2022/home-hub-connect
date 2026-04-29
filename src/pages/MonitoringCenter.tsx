@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { saveOpsReport, getOpsReports, updateOpsReport } from "@/lib/opsReportsStorage";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import Navbar from "@/components/Navbar";
@@ -52,7 +53,24 @@ const MonitoringCenter = () => {
 
   const [activeSection, setActiveSection] = useState<"operadores" | "reportar" | "historial" | null>(null);
   const [activeReport, setActiveReport] = useState<ReportType | null>(null);
-  const [reports, setReports] = useState<MonitoringReport[]>([]);
+  const [reports, setReports] = useState<MonitoringReport[]>(() =>
+    getOpsReports()
+      .filter((r) => r.source === "Monitoreo")
+      .map((r) => ({
+        id: r.id,
+        type: r.type as ReportType,
+        operatorId: r.personId,
+        operatorName: r.personName,
+        date: r.date,
+        hours: r.hours,
+        description: r.description,
+        coveringFor: r.coveringFor,
+        createdBy: r.createdBy,
+        createdAt: r.createdAt,
+        status: r.status,
+        assignedTo: r.assignedTo,
+      }))
+  );
   const [showDetail, setShowDetail] = useState<MonitoringReport | null>(null);
 
   // Form state
@@ -100,6 +118,22 @@ const MonitoringCenter = () => {
     };
 
     setReports((prev) => [newReport, ...prev]);
+    saveOpsReport({
+      id: newReport.id,
+      source: "Monitoreo",
+      type: newReport.type,
+      personId: newReport.operatorId,
+      personName: newReport.operatorName,
+      department: operator.department,
+      team: operator.team,
+      date: newReport.date,
+      hours: newReport.hours,
+      description: newReport.description,
+      coveringFor: newReport.coveringFor,
+      createdBy: newReport.createdBy,
+      createdAt: newReport.createdAt,
+      status: newReport.status,
+    });
 
     // Build notification message
     const typeLabel = reportConfig.find((r) => r.key === activeReport)?.label || activeReport;
