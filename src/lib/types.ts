@@ -151,7 +151,15 @@ export type OffboardingReason = "Renuncia" | "Despido" | "Fin de Contrato" | "Ot
 
 export interface IntranetUser {
   id: string;
+  // Código de empleado (ej. "3751") — distinto del id interno (USR-XXX)
+  employeeCode?: string;
   fullName: string;
+  // Identidad desglosada (opcional, para integración con ERP/contabilidad)
+  firstName1?: string;
+  firstName2?: string;
+  lastName1?: string;
+  lastName2?: string;
+  cedula?: string;
   email: string;
   department: string;
   position: string;
