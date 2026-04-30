@@ -441,6 +441,10 @@ const Training = () => {
   const [allEnrollments, setAllEnrollments] = useState<TrainingEnrollment[]>([]);
   const [allCertificates, setAllCertificates] = useState<TrainingCertificate[]>([]);
   const [adminSearch, setAdminSearch] = useState("");
+  const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
+  const [complianceDeptFilter, setComplianceDeptFilter] = useState("all");
+  const [complianceCourseFilter, setComplianceCourseFilter] = useState("all");
+  const [complianceView, setComplianceView] = useState<"overview" | "by-course" | "by-employee">("overview");
 
   // Course editor state
   const [editingCourse, setEditingCourse] = useState<Partial<TrainingCourse> | null>(null);
