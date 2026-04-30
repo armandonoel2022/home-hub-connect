@@ -52,11 +52,12 @@ interface CourseEditorProps {
   course: Partial<TrainingCourse> | null;
   onSave: (course: TrainingCourse) => void;
   onCancel: () => void;
+  allUsers: any[];
 }
 
 const CATEGORIES: CourseCategory[] = ["Inducción", "BASC", "Operaciones", "Calidad", "Seguridad", "Legal", "Desarrollo", "Medio Ambiente", "Responsabilidad Social", "General"];
 
-function CourseEditor({ course, onSave, onCancel }: CourseEditorProps) {
+function CourseEditor({ course, onSave, onCancel, allUsers }: CourseEditorProps) {
   const isNew = !course?.id;
   const [form, setForm] = useState<Partial<TrainingCourse>>({
     title: "", description: "", code: "", durationMinutes: 60, category: "General",
@@ -69,6 +70,7 @@ function CourseEditor({ course, onSave, onCancel }: CourseEditorProps) {
     ...course,
   });
   const [sectionIdx, setSectionIdx] = useState(0);
+  const [userSearch, setUserSearch] = useState("");
 
   const set = (key: string, val: any) => setForm(prev => ({ ...prev, [key]: val }));
 
@@ -189,9 +191,99 @@ function CourseEditor({ course, onSave, onCancel }: CourseEditorProps) {
             <Label>Duración (minutos)</Label>
             <Input type="number" value={form.durationMinutes || ""} onChange={e => set("durationMinutes", +e.target.value)} />
           </div>
-          <div>
-            <Label>Dirigido a</Label>
-            <Input value={form.targetAudience || ""} onChange={e => set("targetAudience", e.target.value)} placeholder="Ej: Todos, Supervisores" />
+          <div className="md:col-span-2 border border-border rounded-lg p-3 space-y-3">
+            <Label className="font-semibold">Dirigido a</Label>
+            <Select value={form.targetType || "all"} onValueChange={v => {
+              set("targetType", v);
+              if (v === "all") { set("targetAudience", "Todos"); set("targetDepartments", []); set("targetUserIds", []); }
+              if (v === "departments") { set("targetUserIds", []); }
+              if (v === "specific") { set("targetDepartments", []); }
+            }}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los empleados</SelectItem>
+                <SelectItem value="departments">Por departamento</SelectItem>
+                <SelectItem value="roles">Por rol / grupo</SelectItem>
+                <SelectItem value="specific">Personal específico</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {form.targetType === "roles" && (
+              <div>
+                <Label className="text-xs text-muted-foreground">Describe el grupo (ej: Supervisores Operaciones, Gerentes)</Label>
+                <Input value={form.targetAudience || ""} onChange={e => set("targetAudience", e.target.value)} placeholder="Ej: Supervisores Operaciones, Vigilantes" />
+              </div>
+            )}
+
+            {form.targetType === "departments" && (
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Selecciona los departamentos</Label>
+                <div className="flex flex-wrap gap-2">
+                  {Array.from(new Set((allUsers || []).map(u => u.department).filter(Boolean))).sort().map(dept => {
+                    const selected = (form.targetDepartments || []).includes(dept);
+                    return (
+                      <button
+                        key={dept}
+                        type="button"
+                        onClick={() => {
+                          const current = form.targetDepartments || [];
+                          set("targetDepartments", selected ? current.filter(d => d !== dept) : [...current, dept]);
+                          set("targetAudience", selected
+                            ? (form.targetDepartments || []).filter(d => d !== dept).join(", ")
+                            : [...current, dept].join(", "));
+                        }}
+                        className={`px-3 py-1 rounded-full text-xs border transition-colors ${selected ? "bg-gold text-charcoal border-gold" : "border-border text-muted-foreground hover:border-gold/50"}`}
+                      >
+                        {dept}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {form.targetType === "specific" && (
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Busca y selecciona empleados</Label>
+                <Input
+                  placeholder="Buscar por nombre..."
+                  onChange={e => {
+                    const q = e.target.value.toLowerCase();
+                    setUserSearch(q);
+                  }}
+                />
+                <div className="max-h-40 overflow-y-auto border border-border rounded space-y-0.5 p-1">
+                  {(allUsers || [])
+                    .filter(u => !userSearch || u.fullName.toLowerCase().includes(userSearch))
+                    .slice(0, 50)
+                    .map(u => {
+                      const selected = (form.targetUserIds || []).includes(u.id);
+                      return (
+                        <button
+                          key={u.id}
+                          type="button"
+                          onClick={() => {
+                            const current = form.targetUserIds || [];
+                            const updated = selected ? current.filter(id => id !== u.id) : [...current, u.id];
+                            set("targetUserIds", updated);
+                            set("targetAudience", updated.map(id => (allUsers || []).find(x => x.id === id)?.fullName || id).join(", "));
+                          }}
+                          className={`w-full text-left flex items-center gap-2 px-2 py-1 rounded text-xs transition-colors ${selected ? "bg-gold/20 text-foreground" : "hover:bg-muted/50 text-muted-foreground"}`}
+                        >
+                          <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${selected ? "bg-gold border-gold" : "border-border"}`}>
+                            {selected && <CheckCircle2 className="h-3 w-3 text-charcoal" />}
+                          </div>
+                          <span className="truncate">{u.fullName}</span>
+                          <span className="text-[10px] text-muted-foreground ml-auto shrink-0">{u.department}</span>
+                        </button>
+                      );
+                    })}
+                </div>
+                {(form.targetUserIds?.length || 0) > 0 && (
+                  <p className="text-[10px] text-muted-foreground">{form.targetUserIds!.length} empleado(s) seleccionado(s)</p>
+                )}
+              </div>
+            )}
           </div>
           <div>
             <Label>Mes programado</Label>
@@ -953,6 +1045,7 @@ const Training = () => {
                 course={editingCourse}
                 onSave={handleSaveCourse}
                 onCancel={() => { setShowEditor(false); setEditingCourse(null); }}
+                allUsers={allUsers || []}
               />
             )}
 
