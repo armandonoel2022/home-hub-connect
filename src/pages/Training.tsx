@@ -4,7 +4,7 @@ import Navbar from "@/components/Navbar";
 import { useAuth } from "@/contexts/AuthContext";
 import { getAllCourses, loadCustomCourses, saveCustomCourses, DEFAULT_COURSES } from "@/lib/trainingCourses";
 import type { TrainingCertificate, TrainingCourse, TrainingEnrollment, CourseCategory, CourseSection, QuizQuestion } from "@/lib/trainingTypes";
-import { trainingApi, isApiConfigured } from "@/lib/api";
+import { trainingApi, isApiConfigured, employeesApi, type Employee } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
