@@ -936,6 +936,7 @@ const Training = () => {
 
             {adminTab === "courses" && showEditor && (
               <CourseEditor
+                key={editingCourse?.id || "new-course"}
                 course={editingCourse}
                 onSave={handleSaveCourse}
                 onCancel={() => { setShowEditor(false); setEditingCourse(null); }}
