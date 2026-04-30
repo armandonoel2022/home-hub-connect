@@ -70,6 +70,7 @@ function CourseEditor({ course, onSave, onCancel, allUsers }: CourseEditorProps)
     ...course,
   });
   const [sectionIdx, setSectionIdx] = useState(0);
+  const [userSearch, setUserSearch] = useState("");
 
   const set = (key: string, val: any) => setForm(prev => ({ ...prev, [key]: val }));
 
