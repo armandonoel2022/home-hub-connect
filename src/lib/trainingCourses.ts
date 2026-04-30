@@ -1,12 +1,54 @@
 /**
- * Contenido completo de los cursos BASC iniciales.
- * Material elaborado a partir de los documentos enviados por
- * Dilia Aguasvivas (Gerente de RRHH): Breve Historia, Misión/Visión/Valores,
- * y procedimiento PO-G-01 Política General de Seguridad.
+ * Contenido completo de los cursos de capacitación SafeOne.
+ * Incluye cursos BASC, operacionales, legales, medio ambiente, etc.
+ * RRHH puede agregar/editar/eliminar cursos desde la UI de administración.
  */
 import type { TrainingCourse } from "./trainingTypes";
 
-export const TRAINING_COURSES: TrainingCourse[] = [
+// ─── Local storage for HR-managed courses ────────────────────────────────
+const LS_COURSES_KEY = "safeone_custom_courses_v1";
+
+export function loadCustomCourses(): TrainingCourse[] {
+  try { return JSON.parse(localStorage.getItem(LS_COURSES_KEY) || "[]"); }
+  catch { return []; }
+}
+
+export function saveCustomCourses(courses: TrainingCourse[]) {
+  localStorage.setItem(LS_COURSES_KEY, JSON.stringify(courses));
+}
+
+/** All courses: hardcoded defaults + HR custom ones */
+export function getAllCourses(): TrainingCourse[] {
+  const custom = loadCustomCourses();
+  // Custom courses can override defaults by ID
+  const customIds = new Set(custom.map(c => c.id));
+  const defaults = DEFAULT_COURSES.filter(c => !customIds.has(c.id));
+  return [...defaults, ...custom];
+}
+
+export const TRAINING_COURSES: TrainingCourse[] = []; // legacy compat – use getAllCourses()
+
+// Helper function
+function makeSimpleCourse(opts: {
+  id: string; code: string; title: string; description: string;
+  durationMinutes: number; category: TrainingCourse["category"];
+  mandatory: boolean; bascRelated: boolean;
+  participants?: number; hoursPerSession?: number; totalHH?: number;
+  targetAudience?: string; scheduledMonth?: string; executionDate?: string;
+  provider?: string; instructor?: string;
+}): TrainingCourse {
+  return {
+    ...opts,
+    sections: [{
+      id: "s1", title: "Contenido del curso",
+      content: `Bienvenido al curso **${opts.title}**.\n\nEste material será impartido por ${opts.instructor || opts.provider || "el instructor asignado"}.\n\nEl contenido detallado de esta capacitación será proporcionado por el instructor durante la sesión.`,
+    }],
+    quiz: [],
+    confirmStatement: `He asistido y comprendido el contenido de la capacitación "${opts.title}".`,
+  };
+}
+
+export const DEFAULT_COURSES: TrainingCourse[] = [
   // ════════════════════════════════════════
   // 1. INDUCCIÓN SAFEONE
   // ════════════════════════════════════════
@@ -430,6 +472,33 @@ export const TRAINING_COURSES: TrainingCourse[] = [
       },
     ],
   },
+
+  // ════════════════════════════════════════
+  // CURSOS ADICIONALES (Plan de Capacitación Anual)
+  // ════════════════════════════════════════
+  makeSimpleCourse({ id: "CRS-AUD-INT", code: "CAP-003", title: "Capacitación de Auditor Interno BASC", description: "Formación para auditores internos del SGCS BASC.", durationMinutes: 2400, category: "BASC", mandatory: true, bascRelated: true, participants: 2, hoursPerSession: 40, totalHH: 80, targetAudience: "Gerente RH, Gerente Op", scheduledMonth: "TBD", provider: "BASC" }),
+  makeSimpleCourse({ id: "CRS-REQ-BASC", code: "CAP-004", title: "Requisitos del Sistema de Gestión BASC", description: "Charla sobre los requisitos del sistema de gestión BASC.", durationMinutes: 60, category: "BASC", mandatory: true, bascRelated: true, participants: 11, hoursPerSession: 1, totalHH: 11, targetAudience: "Personal puestos crítico", scheduledMonth: "Abril", provider: "Basc", instructor: "Jose Abreu" }),
+  makeSimpleCourse({ id: "CRS-GEST-RIESG", code: "CAP-005", title: "Charla Gestión de Riesgos", description: "Identificación y gestión de riesgos en la operación.", durationMinutes: 60, category: "BASC", mandatory: true, bascRelated: true, participants: 8, hoursPerSession: 1, totalHH: 8, targetAudience: "Personal puestos crítico", scheduledMonth: "Julio", provider: "Basc", instructor: "Jose Abreu" }),
+  makeSimpleCourse({ id: "CRS-AMENAZAS", code: "CAP-006", title: "Charla Concientización sobre Amenazas", description: "Concientización sobre amenazas a la seguridad.", durationMinutes: 60, category: "BASC", mandatory: true, bascRelated: true, participants: 8, hoursPerSession: 1, totalHH: 8, targetAudience: "Personal puestos crítico", scheduledMonth: "Junio", provider: "Basc", instructor: "Jose Abreu" }),
+  makeSimpleCourse({ id: "CRS-REQ-LEG", code: "CAP-007", title: "Charla Requisitos Legales BASC", description: "Requisitos legales aplicables al SGCS BASC.", durationMinutes: 60, category: "BASC", mandatory: true, bascRelated: true, participants: 10, hoursPerSession: 1, totalHH: 10, targetAudience: "Personal puestos crítico", scheduledMonth: "Octubre", provider: "Basc", instructor: "Jose Abreu" }),
+  makeSimpleCourse({ id: "CRS-CIBER", code: "CAP-008", title: "Charla sobre Ciberseguridad", description: "Concientización en ciberseguridad y protección de datos.", durationMinutes: 60, category: "BASC", mandatory: true, bascRelated: true, participants: 12, hoursPerSession: 1, totalHH: 12, targetAudience: "Personal puestos crítico", scheduledMonth: "Octubre", provider: "Basc", instructor: "Jose Abreu" }),
+  makeSimpleCourse({ id: "CRS-ANTISOB", code: "CAP-009", title: "Charla Antisoborno y Corrupción", description: "Prevención del soborno y la corrupción.", durationMinutes: 60, category: "BASC", mandatory: true, bascRelated: true, participants: 11, hoursPerSession: 1, totalHH: 11, targetAudience: "Personal puestos crítico", scheduledMonth: "Septiembre", provider: "Basc", instructor: "Jose Abreu" }),
+  makeSimpleCourse({ id: "CRS-COD-LAB", code: "CAP-010", title: "Introducción al Código Laboral", description: "Fundamentos del código laboral dominicano.", durationMinutes: 60, category: "Legal", mandatory: false, bascRelated: false, participants: 12, hoursPerSession: 1, targetAudience: "Supervisores Operaciones", scheduledMonth: "Mayo", provider: "Joel Perez-Abogado", instructor: "Joel Perez-Abogado" }),
+  makeSimpleCourse({ id: "CRS-DEF-PERS", code: "CAP-011", title: "Manejo y Defensa Personal", description: "Técnicas de manejo y defensa personal.", durationMinutes: 240, category: "Seguridad", mandatory: false, bascRelated: false, participants: 10, hoursPerSession: 4, targetAudience: "Supervisores Operaciones", scheduledMonth: "Junio", provider: "Infotep" }),
+  makeSimpleCourse({ id: "CRS-COM-ASERT", code: "CAP-012", title: "Comunicación Asertiva", description: "Desarrollo de habilidades de comunicación asertiva.", durationMinutes: 60, category: "Desarrollo", mandatory: false, bascRelated: false, participants: 6, hoursPerSession: 1, totalHH: 6, targetAudience: "Todos", scheduledMonth: "Abril", provider: "Infotep" }),
+  makeSimpleCourse({ id: "CRS-REFOREST", code: "CAP-013", title: "Jornada de Reforestación", description: "Actividad de responsabilidad ambiental.", durationMinutes: 240, category: "Medio Ambiente", mandatory: false, bascRelated: false, participants: 25, hoursPerSession: 4, targetAudience: "Todos", scheduledMonth: "Abril", provider: "Medio Ambiente" }),
+  makeSimpleCourse({ id: "CRS-ATEN-CLI", code: "CAP-014", title: "Atención y Servicio al Cliente", description: "Mejora de la atención y servicio al cliente.", durationMinutes: 240, category: "Desarrollo", mandatory: false, bascRelated: false, participants: 25, hoursPerSession: 4, targetAudience: "Todos", scheduledMonth: "Noviembre", provider: "Infotep" }),
+  makeSimpleCourse({ id: "CRS-INCENDIOS", code: "CAP-015", title: "Prevención y Manejo de Incendios", description: "Técnicas de prevención y manejo de incendios.", durationMinutes: 240, category: "Seguridad", mandatory: false, bascRelated: false, participants: 25, hoursPerSession: 4, targetAudience: "Todos", scheduledMonth: "Noviembre", provider: "Infotep" }),
+  makeSimpleCourse({ id: "CRS-ADICCIONES", code: "CAP-016", title: "Charla Prevención de Adicciones", description: "Prevención del uso de sustancias.", durationMinutes: 60, category: "General", mandatory: false, bascRelated: false, participants: 25, hoursPerSession: 1, targetAudience: "Todos", scheduledMonth: "Diciembre", provider: "Infotep" }),
+  makeSimpleCourse({ id: "CRS-PRIM-AUX", code: "CAP-017", title: "Primeros Auxilios", description: "Técnicas básicas de primeros auxilios.", durationMinutes: 240, category: "Seguridad", mandatory: false, bascRelated: false, participants: 25, hoursPerSession: 4, targetAudience: "Todos", scheduledMonth: "Diciembre", provider: "Infotep" }),
+  makeSimpleCourse({ id: "CRS-SIMULACRO", code: "CAP-018", title: "Simulacro Evacuación de Emergencias", description: "Práctica de evacuación ante emergencias.", durationMinutes: 60, category: "Seguridad", mandatory: true, bascRelated: false, participants: 25, hoursPerSession: 1, totalHH: 18, targetAudience: "Todos", scheduledMonth: "Mayo" }),
+  makeSimpleCourse({ id: "CRS-RSE", code: "CAP-019", title: "Charla Responsabilidad Social Empresarial", description: "Responsabilidad social empresarial y BASC.", durationMinutes: 60, category: "BASC", mandatory: false, bascRelated: true, participants: 13, hoursPerSession: 1, totalHH: 13, targetAudience: "Todos", scheduledMonth: "Abril", executionDate: "10-abr", provider: "Basc", instructor: "Jose Abreu" }),
+  makeSimpleCourse({ id: "CRS-COSTAS", code: "CAP-020", title: "Jornada de Limpieza de Costas", description: "Actividad ambiental de limpieza de costas.", durationMinutes: 240, category: "Medio Ambiente", mandatory: false, bascRelated: false, participants: 25, hoursPerSession: 4, targetAudience: "Todos", scheduledMonth: "Octubre", provider: "Medio Ambiente" }),
+  makeSimpleCourse({ id: "CRS-DELITOS-COM", code: "CAP-021", title: "Charla Prevención de Delitos en el Comercio Internacional", description: "Prevención de delitos en el comercio internacional.", durationMinutes: 60, category: "BASC", mandatory: true, bascRelated: true, participants: 25, hoursPerSession: 1, totalHH: 9, targetAudience: "Todos", scheduledMonth: "Septiembre", provider: "Basc", instructor: "Jose Abreu" }),
+  makeSimpleCourse({ id: "CRS-LAVADO", code: "CAP-022", title: "Charla Prevención Lavado de Activos", description: "Prevención del lavado de activos.", durationMinutes: 60, category: "BASC", mandatory: true, bascRelated: true, participants: 25, hoursPerSession: 1, totalHH: 9, targetAudience: "Todos", scheduledMonth: "Septiembre", provider: "Basc", instructor: "Jose Abreu" }),
+  makeSimpleCourse({ id: "CRS-PARQUE", code: "CAP-023", title: "Limpieza de Parque Comunitario Las Praderas", description: "Actividad de responsabilidad social.", durationMinutes: 240, category: "Medio Ambiente", mandatory: false, bascRelated: false, participants: 25, hoursPerSession: 4, targetAudience: "Todos", scheduledMonth: "TBD", provider: "Medio Ambiente" }),
+  makeSimpleCourse({ id: "CRS-CIEGOS", code: "CAP-024", title: "Visita Asociación Dominicana de Ciegos", description: "Actividad de responsabilidad social.", durationMinutes: 240, category: "Responsabilidad Social", mandatory: false, bascRelated: false, participants: 25, hoursPerSession: 4, targetAudience: "Todos", scheduledMonth: "TBD", provider: "Responsabilidad Social" }),
+  makeSimpleCourse({ id: "CRS-ARMAS", code: "CAP-025", title: "Manejo de Armas de Fuego", description: "Capacitación en manejo seguro de armas de fuego.", durationMinutes: 60, category: "Seguridad", mandatory: false, bascRelated: false, participants: 10, targetAudience: "Vigilantes, supervisores, coordinadores", scheduledMonth: "TBD", provider: "Superintendencia Seguridad Privada" }),
 ];
 
-export const getCourseById = (id: string) => TRAINING_COURSES.find((c) => c.id === id);
+export const getCourseById = (id: string) => getAllCourses().find((c) => c.id === id);

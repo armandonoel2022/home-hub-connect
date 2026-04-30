@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import AppLayout from "@/components/AppLayout";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/contexts/AuthContext";
-import { TRAINING_COURSES, getCourseById } from "@/lib/trainingCourses";
-import type { TrainingCertificate, TrainingCourse, TrainingEnrollment } from "@/lib/trainingTypes";
+import { getAllCourses, loadCustomCourses, saveCustomCourses, DEFAULT_COURSES } from "@/lib/trainingCourses";
+import type { TrainingCertificate, TrainingCourse, TrainingEnrollment, CourseCategory, CourseSection, QuizQuestion } from "@/lib/trainingTypes";
 import { trainingApi, isApiConfigured } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,11 +16,14 @@ import { toast } from "sonner";
 import {
   GraduationCap, Award, CheckCircle2, Clock, FileText, Printer, Download,
   ChevronLeft, ChevronRight, ShieldCheck, BookOpen, KeyRound, Users as UsersIcon,
+  Plus, Pencil, Trash2, Save, X,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { downloadCertificatePdf, printCertificatePdf } from "@/lib/trainingCertificate";
 
-// ─── Local storage fallback (cuando API no está configurada) ──────────────
+// ─── Local storage fallback ──────────────
 const LS_KEY = "safeone_training_state_v1";
 type LocalState = { enrollments: TrainingEnrollment[]; certificates: TrainingCertificate[] };
 const loadLocal = (): LocalState => {
@@ -29,7 +32,6 @@ const loadLocal = (): LocalState => {
 };
 const saveLocal = (s: LocalState) => localStorage.setItem(LS_KEY, JSON.stringify(s));
 
-// ─── Helper: simple **bold** renderer ──────────────────────────────────────
 function renderRich(text: string) {
   return text.split(/\n\n+/).map((para, i) => {
     const parts = para.split(/(\*\*[^*]+\*\*)/g);
@@ -45,10 +47,283 @@ function renderRich(text: string) {
   });
 }
 
+// ─── Course Editor Component ──────────────────────────────────────
+interface CourseEditorProps {
+  course: Partial<TrainingCourse> | null;
+  onSave: (course: TrainingCourse) => void;
+  onCancel: () => void;
+}
+
+const CATEGORIES: CourseCategory[] = ["Inducción", "BASC", "Operaciones", "Calidad", "Seguridad", "Legal", "Desarrollo", "Medio Ambiente", "Responsabilidad Social", "General"];
+
+function CourseEditor({ course, onSave, onCancel }: CourseEditorProps) {
+  const isNew = !course?.id;
+  const [form, setForm] = useState<Partial<TrainingCourse>>({
+    title: "", description: "", code: "", durationMinutes: 60, category: "General",
+    mandatory: false, bascRelated: false, participants: 25, hoursPerSession: 1,
+    targetAudience: "Todos", scheduledMonth: "", provider: "", instructor: "",
+    executionDate: "", totalHH: 0,
+    sections: [{ id: "s1", title: "Contenido del curso", content: "" }],
+    quiz: [],
+    confirmStatement: "",
+    ...course,
+  });
+  const [sectionIdx, setSectionIdx] = useState(0);
+
+  const set = (key: string, val: any) => setForm(prev => ({ ...prev, [key]: val }));
+
+  const handleSave = () => {
+    if (!form.title?.trim()) { toast.error("El título es obligatorio"); return; }
+    const id = form.id || `CRS-CUSTOM-${Date.now()}`;
+    const code = form.code?.trim() || `CAP-${Date.now().toString(36).toUpperCase()}`;
+    const sections = (form.sections?.length ? form.sections : [{
+      id: "s1", title: "Contenido del curso",
+      content: `Bienvenido al curso **${form.title}**.`,
+    }]) as CourseSection[];
+    const confirmStatement = form.confirmStatement?.trim() ||
+      `He asistido y comprendido el contenido de la capacitación "${form.title}".`;
+
+    onSave({
+      ...form,
+      id,
+      code,
+      title: form.title!.trim(),
+      description: form.description?.trim() || form.title!.trim(),
+      durationMinutes: form.durationMinutes || 60,
+      category: (form.category || "General") as CourseCategory,
+      mandatory: !!form.mandatory,
+      bascRelated: !!form.bascRelated,
+      sections,
+      quiz: form.quiz || [],
+      confirmStatement,
+      isCustom: true,
+    } as TrainingCourse);
+  };
+
+  const currentSections = form.sections || [];
+
+  const addSection = () => {
+    const newSections = [...currentSections, { id: `s${currentSections.length + 1}`, title: "", content: "" }];
+    set("sections", newSections);
+    setSectionIdx(newSections.length - 1);
+  };
+
+  const updateSection = (idx: number, field: string, val: string) => {
+    const updated = [...currentSections];
+    updated[idx] = { ...updated[idx], [field]: val };
+    set("sections", updated);
+  };
+
+  const removeSection = (idx: number) => {
+    if (currentSections.length <= 1) return;
+    const updated = currentSections.filter((_, i) => i !== idx);
+    set("sections", updated);
+    if (sectionIdx >= updated.length) setSectionIdx(updated.length - 1);
+  };
+
+  // Quiz management
+  const currentQuiz = form.quiz || [];
+  const addQuestion = () => {
+    set("quiz", [...currentQuiz, { id: `q${currentQuiz.length + 1}`, question: "", options: ["", "", "", ""], correctIndex: 0 }]);
+  };
+  const updateQuestion = (idx: number, field: string, val: any) => {
+    const updated = [...currentQuiz];
+    updated[idx] = { ...updated[idx], [field]: val };
+    set("quiz", updated);
+  };
+  const updateOption = (qIdx: number, oIdx: number, val: string) => {
+    const updated = [...currentQuiz];
+    const opts = [...updated[qIdx].options];
+    opts[oIdx] = val;
+    updated[qIdx] = { ...updated[qIdx], options: opts };
+    set("quiz", updated);
+  };
+  const removeQuestion = (idx: number) => {
+    set("quiz", currentQuiz.filter((_, i) => i !== idx));
+  };
+
+  const [tab, setTab] = useState<"general" | "content" | "quiz">("general");
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2 border-b border-border pb-2">
+        <Button size="sm" variant={tab === "general" ? "default" : "outline"} onClick={() => setTab("general")}>General</Button>
+        <Button size="sm" variant={tab === "content" ? "default" : "outline"} onClick={() => setTab("content")}>Contenido</Button>
+        <Button size="sm" variant={tab === "quiz" ? "default" : "outline"} onClick={() => setTab("quiz")}>Evaluación</Button>
+      </div>
+
+      {tab === "general" && (
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <Label>Título *</Label>
+            <Input value={form.title || ""} onChange={e => set("title", e.target.value)} placeholder="Ej: Charla sobre Ciberseguridad" />
+          </div>
+          <div className="md:col-span-2">
+            <Label>Descripción</Label>
+            <Textarea value={form.description || ""} onChange={e => set("description", e.target.value)} rows={2} />
+          </div>
+          <div>
+            <Label>Código</Label>
+            <Input value={form.code || ""} onChange={e => set("code", e.target.value)} placeholder="CAP-XXX" />
+          </div>
+          <div>
+            <Label>Categoría</Label>
+            <Select value={form.category || "General"} onValueChange={v => set("category", v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Participantes</Label>
+            <Input type="number" value={form.participants || ""} onChange={e => set("participants", +e.target.value)} />
+          </div>
+          <div>
+            <Label>Horas por sesión</Label>
+            <Input type="number" value={form.hoursPerSession || ""} onChange={e => set("hoursPerSession", +e.target.value)} />
+          </div>
+          <div>
+            <Label>Total H/H</Label>
+            <Input type="number" value={form.totalHH || ""} onChange={e => set("totalHH", +e.target.value)} />
+          </div>
+          <div>
+            <Label>Duración (minutos)</Label>
+            <Input type="number" value={form.durationMinutes || ""} onChange={e => set("durationMinutes", +e.target.value)} />
+          </div>
+          <div>
+            <Label>Dirigido a</Label>
+            <Input value={form.targetAudience || ""} onChange={e => set("targetAudience", e.target.value)} placeholder="Ej: Todos, Supervisores" />
+          </div>
+          <div>
+            <Label>Mes programado</Label>
+            <Input value={form.scheduledMonth || ""} onChange={e => set("scheduledMonth", e.target.value)} placeholder="Ej: Abril" />
+          </div>
+          <div>
+            <Label>Fecha de ejecución</Label>
+            <Input value={form.executionDate || ""} onChange={e => set("executionDate", e.target.value)} placeholder="Ej: 10-abr" />
+          </div>
+          <div>
+            <Label>Proveedor</Label>
+            <Input value={form.provider || ""} onChange={e => set("provider", e.target.value)} placeholder="Ej: Infotep, BASC" />
+          </div>
+          <div>
+            <Label>Instructor</Label>
+            <Input value={form.instructor || ""} onChange={e => set("instructor", e.target.value)} placeholder="Ej: Jose Abreu" />
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Checkbox checked={!!form.mandatory} onCheckedChange={v => set("mandatory", v === true)} id="ed-mandatory" />
+              <Label htmlFor="ed-mandatory">Obligatorio</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox checked={!!form.bascRelated} onCheckedChange={v => set("bascRelated", v === true)} id="ed-basc" />
+              <Label htmlFor="ed-basc">Relacionado a BASC</Label>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === "content" && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            {currentSections.map((s, i) => (
+              <Button key={i} size="sm" variant={sectionIdx === i ? "default" : "outline"} onClick={() => setSectionIdx(i)}>
+                {i + 1}. {s.title || "Sin título"}
+              </Button>
+            ))}
+            <Button size="sm" variant="ghost" onClick={addSection}><Plus className="h-4 w-4" /></Button>
+          </div>
+          {currentSections[sectionIdx] && (
+            <div className="space-y-2 border border-border rounded-lg p-3">
+              <div className="flex items-center gap-2">
+                <Input
+                  value={currentSections[sectionIdx].title}
+                  onChange={e => updateSection(sectionIdx, "title", e.target.value)}
+                  placeholder="Título de la sección"
+                  className="flex-1"
+                />
+                {currentSections.length > 1 && (
+                  <Button size="sm" variant="ghost" onClick={() => removeSection(sectionIdx)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                )}
+              </div>
+              <Textarea
+                value={currentSections[sectionIdx].content}
+                onChange={e => updateSection(sectionIdx, "content", e.target.value)}
+                rows={8}
+                placeholder="Contenido de la sección. Usa **texto** para negrita y líneas vacías para párrafos."
+              />
+            </div>
+          )}
+          <div>
+            <Label>Frase de confirmación (modo kiosko)</Label>
+            <Input
+              value={form.confirmStatement || ""}
+              onChange={e => set("confirmStatement", e.target.value)}
+              placeholder="He leído y comprendido..."
+            />
+          </div>
+        </div>
+      )}
+
+      {tab === "quiz" && (
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">Agrega preguntas de opción múltiple. El empleado necesita al menos 80% para aprobar.</p>
+          {currentQuiz.map((q, qi) => (
+            <div key={qi} className="border border-border rounded-lg p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-muted-foreground">{qi + 1}.</span>
+                <Input
+                  value={q.question}
+                  onChange={e => updateQuestion(qi, "question", e.target.value)}
+                  placeholder="Pregunta"
+                  className="flex-1"
+                />
+                <Button size="sm" variant="ghost" onClick={() => removeQuestion(qi)}>
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
+              {q.options.map((opt, oi) => (
+                <div key={oi} className="flex items-center gap-2 pl-6">
+                  <input
+                    type="radio"
+                    name={`correct-${qi}`}
+                    checked={q.correctIndex === oi}
+                    onChange={() => updateQuestion(qi, "correctIndex", oi)}
+                  />
+                  <Input
+                    value={opt}
+                    onChange={e => updateOption(qi, oi, e.target.value)}
+                    placeholder={`Opción ${oi + 1}`}
+                    className="flex-1"
+                  />
+                </div>
+              ))}
+              <p className="text-[10px] text-muted-foreground pl-6">Selecciona el radio de la respuesta correcta.</p>
+            </div>
+          ))}
+          <Button size="sm" variant="outline" onClick={addQuestion}>
+            <Plus className="h-4 w-4 mr-1" /> Agregar pregunta
+          </Button>
+        </div>
+      )}
+
+      <div className="flex justify-end gap-2 pt-2 border-t border-border">
+        <Button variant="outline" onClick={onCancel}><X className="h-4 w-4 mr-1" /> Cancelar</Button>
+        <Button onClick={handleSave}><Save className="h-4 w-4 mr-1" /> {isNew ? "Crear curso" : "Guardar cambios"}</Button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MAIN COMPONENT
+// ═══════════════════════════════════════════════════════════════════
 const Training = () => {
   const { user, allUsers } = useAuth();
   const apiMode = isApiConfigured();
 
+  const [courses, setCourses] = useState<TrainingCourse[]>(() => getAllCourses());
   const [enrollments, setEnrollments] = useState<TrainingEnrollment[]>([]);
   const [certificates, setCertificates] = useState<TrainingCertificate[]>([]);
   const [activeCourse, setActiveCourse] = useState<TrainingCourse | null>(null);
@@ -62,12 +337,20 @@ const Training = () => {
   // Admin panel state
   const isAdminOrHR = !!user && (user.isAdmin || user.department === "Recursos Humanos");
   const [adminOpen, setAdminOpen] = useState(false);
-  const [adminTab, setAdminTab] = useState<"pins" | "compliance">("pins");
+  const [adminTab, setAdminTab] = useState<"courses" | "pins" | "compliance">("courses");
   const [pins, setPins] = useState<Record<string, string>>({});
   const [pinDrafts, setPinDrafts] = useState<Record<string, string>>({});
   const [allEnrollments, setAllEnrollments] = useState<TrainingEnrollment[]>([]);
   const [allCertificates, setAllCertificates] = useState<TrainingCertificate[]>([]);
   const [adminSearch, setAdminSearch] = useState("");
+
+  // Course editor state
+  const [editingCourse, setEditingCourse] = useState<Partial<TrainingCourse> | null>(null);
+  const [showEditor, setShowEditor] = useState(false);
+
+  const refreshCourses = useCallback(() => setCourses(getAllCourses()), []);
+
+  const defaultMode: "quiz" | "confirm" = "quiz";
 
   // Load data
   const refresh = async () => {
@@ -92,30 +375,24 @@ const Training = () => {
   };
   useEffect(() => { refresh(); /* eslint-disable-next-line */ }, [user?.id]);
 
-  // ─── Determinar modo de evaluación: agentes en kiosko = confirm; resto = quiz
-  // Aquí asumimos que si el usuario es operador de seguridad / monitoreo en puesto
-  // (sin email corporativo ó cargo "Operador") usa modo confirm. Por simplicidad,
-  // todos los que tienen sesión web usan quiz; el kiosko fuerza confirm desde su ruta.
-  const defaultMode: "quiz" | "confirm" = "quiz";
-
   const enrollmentFor = (cId: string) => enrollments.find(e => e.courseId === cId);
   const certificateFor = (cId: string) => certificates.find(c => c.courseId === cId);
 
-  // Un curso se considera completado si tiene status 'completado' O si existe
-  // un certificado emitido para ese curso (recuperación frente a estados perdidos).
   const isCourseCompleted = (cId: string) => {
     const enr = enrollmentFor(cId);
     if (enr?.status === "completado") return true;
     return !!certificateFor(cId);
   };
 
-  // Stats
-  const completedCount = TRAINING_COURSES.filter(c => isCourseCompleted(c.id)).length;
-  const totalCourses = TRAINING_COURSES.length;
-  const completionPct = Math.round((completedCount / totalCourses) * 100);
+  const completedCount = courses.filter(c => isCourseCompleted(c.id)).length;
+  const totalCourses = courses.length;
+  const completionPct = totalCourses > 0 ? Math.round((completedCount / totalCourses) * 100) : 0;
 
-  // ─── Open course
   const openCourse = (c: TrainingCourse) => {
+    if (!c.sections?.length) {
+      toast.info("Este curso aún no tiene contenido. RRHH puede agregar el material desde Administración.");
+      return;
+    }
     setActiveCourse(c);
     const enr = enrollmentFor(c.id);
     setSection(enr?.currentSection ?? 0);
@@ -123,10 +400,7 @@ const Training = () => {
   };
 
   const closeCourse = async () => {
-    if (activeCourse && user) {
-      // Persist progress
-      await persistProgress();
-    }
+    if (activeCourse && user) await persistProgress();
     setActiveCourse(null);
   };
 
@@ -138,7 +412,6 @@ const Training = () => {
       userId: user.id, courseId: activeCourse.id,
       currentSection: section,
       sectionsRead: Array.from(readSections),
-      // Preservar 'completado' si el usuario sólo está repasando.
       status: alreadyCompleted ? "completado" : "en-progreso",
     };
     if (apiMode) {
@@ -163,9 +436,7 @@ const Training = () => {
     }
   };
 
-  const markSectionRead = (idx: number) => {
-    setReadSections(prev => new Set(prev).add(idx));
-  };
+  const markSectionRead = (idx: number) => setReadSections(prev => new Set(prev).add(idx));
 
   const goNext = () => {
     if (!activeCourse) return;
@@ -173,9 +444,8 @@ const Training = () => {
     if (section < activeCourse.sections.length - 1) {
       setSection(section + 1);
     } else {
-      // Llegamos al final → abrir evaluación
       persistProgress();
-      setEvalMode(defaultMode);
+      setEvalMode(activeCourse.quiz?.length ? "quiz" : "confirm");
       setAnswers({});
       setConfirmChecked(false);
       setEvalOpen(true);
@@ -184,18 +454,15 @@ const Training = () => {
 
   const goPrev = () => { if (section > 0) setSection(section - 1); };
 
-  // ─── Submit evaluation
   const submitEval = async () => {
     if (!activeCourse || !user) return;
     let passed = false;
     let score: number | null = null;
 
-    if (evalMode === "quiz") {
+    if (evalMode === "quiz" && activeCourse.quiz?.length) {
       const total = activeCourse.quiz.length;
       let correct = 0;
-      activeCourse.quiz.forEach(q => {
-        if (answers[q.id] === q.correctIndex) correct++;
-      });
+      activeCourse.quiz.forEach(q => { if (answers[q.id] === q.correctIndex) correct++; });
       score = Math.round((correct / total) * 100);
       passed = score >= 80;
     } else {
@@ -205,7 +472,7 @@ const Training = () => {
 
     if (!passed) {
       if (evalMode === "quiz") {
-        toast.error(`Calificación ${score}%. Necesitas al menos 80% para aprobar. Repasa el material e inténtalo de nuevo.`);
+        toast.error(`Calificación ${score}%. Necesitas al menos 80% para aprobar.`);
       } else {
         toast.error("Debes confirmar la lectura del material.");
       }
@@ -224,12 +491,9 @@ const Training = () => {
       try {
         const result = await trainingApi.submitAttempt(payload);
         cert = result.certificate;
-      } catch (e) {
-        toast.error("Error guardando en servidor, usando modo local.");
-      }
+      } catch { /* fallback below */ }
     }
     if (!cert) {
-      // Local fallback
       const local = loadLocal();
       const seq = local.certificates.length + 1;
       const year = new Date().getFullYear();
@@ -239,7 +503,7 @@ const Training = () => {
         department: user.department || "",
         courseId: activeCourse.id, courseName: activeCourse.title, courseCode: activeCourse.code,
         score, issuedAt: new Date().toISOString(),
-        verificationCode: `SSC-${year}-${Math.random().toString(36).slice(2,8).toUpperCase()}`,
+        verificationCode: `SSC-${year}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
       };
       local.certificates = local.certificates.filter(c => !(c.userId === user.id && c.courseId === activeCourse.id));
       local.certificates.push(cert);
@@ -252,25 +516,22 @@ const Training = () => {
     setEvalOpen(false);
     setActiveCourse(null);
     await refresh();
-
-    // Auto-descargar certificado
     if (cert) await downloadCertificatePdf(cert);
   };
 
-  // ─── Admin: load PINs + global compliance
+  // ─── Admin data loading
   const loadAdminData = async () => {
     if (!isAdminOrHR) return;
     try {
       const [p, allEnrs] = await Promise.all([
         trainingApi.getPins(),
-        // Reuse enrollments endpoint without userId → returns all
         trainingApi.getEnrollments(),
       ]);
       setPins(p || {});
       setAllEnrollments(allEnrs || []);
       const allCerts = await trainingApi.getCertificates();
       setAllCertificates(allCerts || []);
-    } catch (e: any) {
+    } catch {
       toast.error("No se pudieron cargar datos de administración");
     }
   };
@@ -288,7 +549,42 @@ const Training = () => {
     }
   };
 
-  // ─── Render
+  // ─── Course management (HR)
+  const handleSaveCourse = (course: TrainingCourse) => {
+    const custom = loadCustomCourses();
+    const idx = custom.findIndex(c => c.id === course.id);
+    if (idx >= 0) {
+      custom[idx] = course;
+    } else {
+      custom.push(course);
+    }
+    saveCustomCourses(custom);
+    refreshCourses();
+    setShowEditor(false);
+    setEditingCourse(null);
+    toast.success(idx >= 0 ? "Curso actualizado" : "Curso creado");
+  };
+
+  const handleDeleteCourse = (courseId: string) => {
+    if (!confirm("¿Eliminar este curso? Esta acción no se puede deshacer.")) return;
+    const custom = loadCustomCourses().filter(c => c.id !== courseId);
+    saveCustomCourses(custom);
+    refreshCourses();
+    toast.success("Curso eliminado");
+  };
+
+  const handleEditCourse = (course: TrainingCourse) => {
+    // If it's a default course, clone it as custom for editing
+    const isDefault = DEFAULT_COURSES.some(d => d.id === course.id);
+    if (isDefault) {
+      // Copy to custom courses for overriding
+      setEditingCourse({ ...course, isCustom: true });
+    } else {
+      setEditingCourse(course);
+    }
+    setShowEditor(true);
+  };
+
   if (!user) return null;
 
   return (
@@ -301,17 +597,17 @@ const Training = () => {
             <div>
               <h1 className="font-heading text-3xl font-bold text-foreground flex items-center gap-3">
                 <GraduationCap className="h-8 w-8 text-gold" />
-                Capacitaciones BASC
+                Capacitaciones
               </h1>
               <p className="text-muted-foreground mt-1 text-sm">
-                Completa los cursos obligatorios para mantener el cumplimiento BASC.
+                Completa los cursos obligatorios y participa en las capacitaciones programadas.
                 Recibirás un certificado oficial al aprobar cada uno.
               </p>
             </div>
             {isAdminOrHR && (
               <Button
                 variant="outline"
-                onClick={() => { setAdminOpen(true); loadAdminData(); }}
+                onClick={() => { setAdminOpen(true); setAdminTab("courses"); loadAdminData(); }}
                 className="shrink-0"
               >
                 <KeyRound className="h-4 w-4 mr-2" />
@@ -358,31 +654,44 @@ const Training = () => {
           {/* Course list */}
           <h2 className="font-heading text-xl font-bold text-foreground mb-3">Mis cursos</h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {TRAINING_COURSES.map((c) => {
+            {courses.map((c) => {
               const enr = enrollmentFor(c.id);
               const cert = certificateFor(c.id);
-              const completed = enr?.status === "completado" || !!cert;
-              const progress = enr ? Math.round(((enr.sectionsRead?.length || 0) / c.sections.length) * 100) : 0;
+              const completed = isCourseCompleted(c.id);
+              const progress = enr && c.sections?.length ? Math.round(((enr.sectionsRead?.length || 0) / c.sections.length) * 100) : 0;
+              const hasContent = c.sections?.length > 0 && c.sections[0]?.content?.trim();
               return (
                 <Card key={c.id} className={`transition-all hover:shadow-lg ${completed ? "border-green-500/40" : ""}`}>
                   <CardHeader>
                     <div className="flex items-start justify-between gap-2">
-                      <div>
+                      <div className="flex flex-wrap gap-1">
                         <Badge variant={c.bascRelated ? "default" : "secondary"} className={c.bascRelated ? "bg-gold text-charcoal" : ""}>
-                          {c.code}
+                          {c.category}
                         </Badge>
-                        {c.mandatory && <Badge variant="outline" className="ml-2 text-xs">Obligatorio</Badge>}
+                        {c.mandatory && <Badge variant="outline" className="text-xs">Obligatorio</Badge>}
+                        {c.scheduledMonth && <Badge variant="outline" className="text-xs">{c.scheduledMonth}</Badge>}
                       </div>
                       {completed && <CheckCircle2 className="h-6 w-6 text-green-600 shrink-0" />}
                     </div>
                     <CardTitle className="text-base mt-2">{c.title}</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-xs text-muted-foreground mb-3">{c.description}</p>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
-                      <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{c.durationMinutes} min</span>
-                      <span className="flex items-center gap-1"><BookOpen className="h-3 w-3" />{c.sections.length} secciones</span>
+                    <p className="text-xs text-muted-foreground mb-2">{c.description}</p>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground mb-1 flex-wrap">
+                      {c.durationMinutes && <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{c.hoursPerSession ? `${c.hoursPerSession}h` : `${c.durationMinutes} min`}</span>}
+                      {c.sections?.length > 0 && <span className="flex items-center gap-1"><BookOpen className="h-3 w-3" />{c.sections.length} secciones</span>}
+                      {c.participants && <span className="flex items-center gap-1"><UsersIcon className="h-3 w-3" />{c.participants}</span>}
                     </div>
+                    {(c.instructor || c.provider) && (
+                      <p className="text-[10px] text-muted-foreground mb-2">
+                        {c.instructor && <>Instructor: {c.instructor}</>}
+                        {c.instructor && c.provider && " · "}
+                        {c.provider && <>Proveedor: {c.provider}</>}
+                      </p>
+                    )}
+                    {c.targetAudience && (
+                      <p className="text-[10px] text-muted-foreground mb-2">Dirigido a: {c.targetAudience}</p>
+                    )}
                     {enr && (
                       <div className="mb-3">
                         <Progress value={completed ? 100 : progress} className="h-1.5" />
@@ -392,8 +701,8 @@ const Training = () => {
                       </div>
                     )}
                     <div className="flex gap-2">
-                      <Button size="sm" onClick={() => openCourse(c)} className="flex-1">
-                        {completed ? "Repasar" : enr ? "Continuar" : "Iniciar"}
+                      <Button size="sm" onClick={() => openCourse(c)} className="flex-1" disabled={!hasContent}>
+                        {!hasContent ? "Sin contenido" : completed ? "Repasar" : enr ? "Continuar" : "Iniciar"}
                       </Button>
                       {cert && (
                         <>
@@ -499,13 +808,13 @@ const Training = () => {
                   Evaluación: {activeCourse.title}
                 </DialogTitle>
                 <p className="text-xs text-muted-foreground">
-                  {evalMode === "quiz"
+                  {evalMode === "quiz" && activeCourse.quiz?.length
                     ? `Responde correctamente al menos 80% (${Math.ceil(activeCourse.quiz.length * 0.8)} de ${activeCourse.quiz.length} preguntas).`
                     : "Confirma que has leído y comprendido el material."}
                 </p>
               </DialogHeader>
               <div className="flex-1 overflow-y-auto pr-2 py-2 space-y-4">
-                {evalMode === "quiz" ? (
+                {evalMode === "quiz" && activeCourse.quiz?.length ? (
                   activeCourse.quiz.map((q, i) => (
                     <div key={q.id} className="border border-border rounded-lg p-3">
                       <p className="font-medium text-sm mb-2">{i + 1}. {q.question}</p>
@@ -544,14 +853,7 @@ const Training = () => {
               </div>
               <DialogFooter className="gap-2">
                 <Button variant="outline" onClick={() => setEvalOpen(false)}>Cancelar</Button>
-                {evalMode === "quiz" && (
-                  <Button variant="outline" onClick={() => setEvalMode("confirm")} title="Modo confirmación (kiosko)">
-                    Cambiar a confirmación
-                  </Button>
-                )}
-                <Button onClick={submitEval}>
-                  Enviar evaluación
-                </Button>
+                <Button onClick={submitEval}>Enviar evaluación</Button>
               </DialogFooter>
             </>
           )}
@@ -560,13 +862,16 @@ const Training = () => {
 
       {/* ═══ Admin Panel ═══ */}
       <Dialog open={adminOpen} onOpenChange={setAdminOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+        <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <KeyRound className="h-5 w-5 text-gold" />
               Administración de Capacitaciones
             </DialogTitle>
             <div className="flex gap-2 mt-2">
+              <Button size="sm" variant={adminTab === "courses" ? "default" : "outline"} onClick={() => setAdminTab("courses")}>
+                <GraduationCap className="h-4 w-4 mr-1" /> Gestión de Cursos
+              </Button>
               <Button size="sm" variant={adminTab === "pins" ? "default" : "outline"} onClick={() => setAdminTab("pins")}>
                 <KeyRound className="h-4 w-4 mr-1" /> PINs Kiosko
               </Button>
@@ -574,20 +879,74 @@ const Training = () => {
                 <ShieldCheck className="h-4 w-4 mr-1" /> Compliance
               </Button>
             </div>
-            <Input
-              placeholder="Buscar empleado..."
-              value={adminSearch}
-              onChange={(e) => setAdminSearch(e.target.value)}
-              className="mt-2"
-            />
+            {adminTab !== "courses" && (
+              <Input
+                placeholder="Buscar empleado..."
+                value={adminSearch}
+                onChange={(e) => setAdminSearch(e.target.value)}
+                className="mt-2"
+              />
+            )}
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto pr-2">
+            {/* ─── Courses management tab ─── */}
+            {adminTab === "courses" && !showEditor && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    Gestiona los cursos y capacitaciones. Puedes agregar, editar o eliminar cursos, modificar el contenido, instructor y fechas.
+                  </p>
+                  <Button size="sm" onClick={() => { setEditingCourse(null); setShowEditor(true); }}>
+                    <Plus className="h-4 w-4 mr-1" /> Nuevo curso
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {courses.map(c => {
+                    const isDefault = DEFAULT_COURSES.some(d => d.id === c.id) && !c.isCustom;
+                    return (
+                      <div key={c.id} className="flex items-center gap-3 p-3 border border-border rounded-lg hover:bg-muted/30">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium truncate">{c.title}</p>
+                            <Badge variant="outline" className="text-[10px] shrink-0">{c.category}</Badge>
+                            {c.bascRelated && <Badge className="bg-gold text-charcoal text-[10px] shrink-0">BASC</Badge>}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground truncate">
+                            {c.code} · {c.instructor || c.provider || "Sin instructor"} · {c.scheduledMonth || "Sin fecha"} · {c.targetAudience || "Sin audiencia"}
+                            {c.sections?.length > 0 ? ` · ${c.sections.length} secciones` : " · Sin contenido"}
+                            {c.quiz?.length > 0 ? ` · ${c.quiz.length} preguntas` : ""}
+                          </p>
+                        </div>
+                        <Button size="sm" variant="outline" onClick={() => handleEditCourse(c)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => handleDeleteCourse(c.id)}
+                          className="text-destructive hover:text-destructive"
+                          disabled={isDefault && !loadCustomCourses().some(cc => cc.id === c.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {adminTab === "courses" && showEditor && (
+              <CourseEditor
+                course={editingCourse}
+                onSave={handleSaveCourse}
+                onCancel={() => { setShowEditor(false); setEditingCourse(null); }}
+              />
+            )}
+
+            {/* ─── PINs tab ─── */}
             {adminTab === "pins" && (
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground mb-2">
-                  Asigna un PIN de 4 dígitos a cada empleado para que pueda acceder al kiosko en su puesto.
-                  El acceso es por <strong>código de empleado + PIN</strong> en <code>/kiosko</code>.
+                  Asigna un PIN de 4 dígitos a cada empleado para que pueda acceder al kiosko.
                 </p>
                 {(allUsers || [])
                   .filter(u => !adminSearch ||
@@ -597,18 +956,13 @@ const Training = () => {
                     <div key={u.id} className="flex items-center gap-2 p-2 border border-border rounded">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{u.fullName}</p>
-                        <p className="text-[10px] text-muted-foreground truncate">
-                          {u.id} · {u.position} · {u.department}
-                        </p>
+                        <p className="text-[10px] text-muted-foreground truncate">{u.id} · {u.position} · {u.department}</p>
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {pins[u.id] ? <Badge variant="secondary">PIN: ••••</Badge> : <Badge variant="outline">Sin PIN</Badge>}
                       </div>
                       <Input
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={4}
-                        placeholder="0000"
+                        type="text" inputMode="numeric" maxLength={4} placeholder="0000"
                         value={pinDrafts[u.id] || ""}
                         onChange={(e) => setPinDrafts({ ...pinDrafts, [u.id]: e.target.value.replace(/\D/g, "").slice(0, 4) })}
                         className="w-20 text-center"
@@ -618,6 +972,8 @@ const Training = () => {
                   ))}
               </div>
             )}
+
+            {/* ─── Compliance tab ─── */}
             {adminTab === "compliance" && (
               <div>
                 <p className="text-xs text-muted-foreground mb-3">
@@ -630,15 +986,13 @@ const Training = () => {
                     .map(u => {
                       const myEnrs = allEnrollments.filter(e => e.userId === u.id);
                       const myCerts = allCertificates.filter(c => c.userId === u.id);
-                      // Un curso cuenta como completado si hay enrollment 'completado'
-                      // o si existe certificado para ese curso (recupera estados perdidos).
                       const completedCourseIds = new Set<string>([
                         ...myEnrs.filter(e => e.status === "completado").map(e => e.courseId),
                         ...myCerts.map(c => c.courseId),
                       ]);
-                      const completed = TRAINING_COURSES.filter(c => completedCourseIds.has(c.id)).length;
-                      const total = TRAINING_COURSES.length;
-                      const pct = Math.round((completed / total) * 100);
+                      const completed = courses.filter(c => completedCourseIds.has(c.id)).length;
+                      const total = courses.length;
+                      const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
                       return (
                         <div key={u.id} className="flex items-center gap-3 p-2 border border-border rounded">
                           <div className="flex-1 min-w-0">

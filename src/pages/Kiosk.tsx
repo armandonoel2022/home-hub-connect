@@ -15,7 +15,7 @@ import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { trainingApi, isApiConfigured } from "@/lib/api";
-import { TRAINING_COURSES } from "@/lib/trainingCourses";
+import { getAllCourses } from "@/lib/trainingCourses";
 import type { TrainingCertificate, TrainingCourse, TrainingEnrollment } from "@/lib/trainingTypes";
 import { downloadCertificatePdf, printCertificatePdf } from "@/lib/trainingCertificate";
 import { toast } from "sonner";
@@ -219,7 +219,7 @@ const Kiosk = () => {
   // RENDER: Course list
   // ═══════════════════════════════════════
   const completedCount = enrollments.filter(e => e.status === "completado").length;
-  const totalCourses = TRAINING_COURSES.length;
+  const totalCourses = getAllCourses().length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -263,7 +263,7 @@ const Kiosk = () => {
         {/* Courses */}
         <h2 className="font-heading text-xl font-bold mb-3">Mis cursos</h2>
         <div className="grid gap-4 md:grid-cols-2">
-          {TRAINING_COURSES.map((c) => {
+          {getAllCourses().map((c) => {
             const enr = enrollmentFor(c.id);
             const cert = certificateFor(c.id);
             const completed = enr?.status === "completado";

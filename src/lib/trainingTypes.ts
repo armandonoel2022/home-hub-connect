@@ -2,7 +2,7 @@
  * Tipos para el módulo de Capacitaciones BASC.
  */
 
-export type CourseCategory = "Inducción" | "BASC" | "Operaciones" | "Calidad";
+export type CourseCategory = "Inducción" | "BASC" | "Operaciones" | "Calidad" | "Seguridad" | "Legal" | "Desarrollo" | "Medio Ambiente" | "Responsabilidad Social" | "General";
 export type EvaluationMode = "quiz" | "confirm";
 export type EnrollmentStatus = "no-iniciado" | "en-progreso" | "completado";
 
@@ -36,6 +36,17 @@ export interface TrainingCourse {
   quiz: QuizQuestion[];
   /** Frase a confirmar en modo kiosko. */
   confirmStatement: string;
+  /** Campos extendidos de planificación */
+  participants?: number;
+  hoursPerSession?: number;
+  totalHH?: number;
+  targetAudience?: string;
+  scheduledMonth?: string;
+  executionDate?: string;
+  provider?: string;
+  instructor?: string;
+  /** Flag: curso creado por HR (editable) vs hardcoded */
+  isCustom?: boolean;
 }
 
 export interface TrainingAttempt {

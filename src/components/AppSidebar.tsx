@@ -51,7 +51,7 @@ const navItems = [
   { title: "Solicitudes Compra", url: "/solicitudes-compra", icon: ShoppingCart },
   { title: "Solicitudes Personal", url: "/solicitudes-personal", icon: Users },
   { title: "BASC", url: "/basc", icon: FileCheck },
-  { title: "Capacitaciones BASC", url: "/capacitaciones", icon: GraduationCap },
+  { title: "Capacitaciones", url: "/capacitaciones", icon: GraduationCap },
   { title: "Archivos", url: "/archivos", icon: FolderOpen },
   { title: "Procedimientos", url: "/procedimientos", icon: BookOpen },
   { title: "Wiki", url: "/wiki", icon: BookMarked },

@@ -5,10 +5,11 @@ import HeroBanner from "@/components/HeroBanner";
 import DepartmentGrid from "@/components/DepartmentGrid";
 import QuickLinks from "@/components/QuickLinks";
 import Announcements from "@/components/Announcements";
+import { GraduationCap } from "lucide-react";
 import DashboardMetrics from "@/components/DashboardMetrics";
 import Footer from "@/components/Footer";
 import { LifeBuoy, Users } from "lucide-react";
-
+ 
 const Index = () => {
   const navigate = useNavigate();
 
@@ -27,6 +28,13 @@ const Index = () => {
       to: "/rrhh/formularios",
       gradient: "linear-gradient(135deg, hsl(42 95% 50%), hsl(30 90% 40%))",
     },
+    {
+      label: "Capacitaciones",
+      sublabel: "Cursos, charlas y entrenamientos",
+      icon: GraduationCap,
+      to: "/capacitaciones",
+      gradient: "linear-gradient(135deg, hsl(160 60% 40%), hsl(160 60% 28%))",
+    },
   ];
 
   return (
@@ -37,7 +45,7 @@ const Index = () => {
 
         {/* Quick Request Buttons */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 w-full pt-8 pb-2">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {requestButtons.map((b) => {
               const Icon = b.icon;
               return (
