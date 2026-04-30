@@ -28,6 +28,13 @@ const Index = () => {
       to: "/rrhh/formularios",
       gradient: "linear-gradient(135deg, hsl(42 95% 50%), hsl(30 90% 40%))",
     },
+    {
+      label: "Capacitaciones",
+      sublabel: "Cursos, charlas y entrenamientos",
+      icon: GraduationCap,
+      to: "/capacitaciones",
+      gradient: "linear-gradient(135deg, hsl(160 60% 40%), hsl(160 60% 28%))",
+    },
   ];
 
   return (
