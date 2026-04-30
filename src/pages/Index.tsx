@@ -45,7 +45,7 @@ const Index = () => {
 
         {/* Quick Request Buttons */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 w-full pt-8 pb-2">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {requestButtons.map((b) => {
               const Icon = b.icon;
               return (
