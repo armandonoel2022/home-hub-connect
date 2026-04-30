@@ -625,14 +625,16 @@ const Training = () => {
   const loadAdminData = async () => {
     if (!isAdminOrHR) return;
     try {
-      const [p, allEnrs] = await Promise.all([
+      const [p, allEnrs, allCerts, emps] = await Promise.all([
         trainingApi.getPins(),
         trainingApi.getEnrollments(),
+        trainingApi.getCertificates(),
+        employeesApi.getAll({ status: "Activo" }).catch(() => [] as Employee[]),
       ]);
       setPins(p || {});
       setAllEnrollments(allEnrs || []);
-      const allCerts = await trainingApi.getCertificates();
       setAllCertificates(allCerts || []);
+      setAllEmployees(emps || []);
     } catch {
       toast.error("No se pudieron cargar datos de administración");
     }
