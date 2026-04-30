@@ -1087,48 +1087,193 @@ const Training = () => {
             )}
 
             {/* ─── Compliance tab ─── */}
-            {adminTab === "compliance" && (
-              <div>
-                <p className="text-xs text-muted-foreground mb-3">
-                  Estado de cumplimiento por empleado. Verde = todos los cursos completados.
-                </p>
-                <div className="space-y-1">
-                  {(allUsers || [])
-                    .filter(u => !adminSearch ||
-                      u.fullName.toLowerCase().includes(adminSearch.toLowerCase()))
-                    .map(u => {
-                      const myEnrs = allEnrollments.filter(e => e.userId === u.id);
-                      const myCerts = allCertificates.filter(c => c.userId === u.id);
-                      const completedCourseIds = new Set<string>([
-                        ...myEnrs.filter(e => e.status === "completado").map(e => e.courseId),
-                        ...myCerts.map(c => c.courseId),
-                      ]);
-                      const completed = courses.filter(c => completedCourseIds.has(c.id)).length;
-                      const total = courses.length;
-                      const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
-                      return (
-                        <div key={u.id} className="flex items-center gap-3 p-2 border border-border rounded">
+            {adminTab === "compliance" && (() => {
+              // Use employees from API if available, else fall back to allUsers
+              const people = allEmployees.length > 0
+                ? allEmployees.map(e => ({ id: e.employeeCode, fullName: e.fullName, department: e.department, position: e.position }))
+                : (allUsers || []).map(u => ({ id: u.id, fullName: u.fullName, department: u.department, position: u.position }));
+
+              const mandatoryCourses = courses.filter(c => c.mandatory);
+              const allRelevantCourses = courses;
+
+              // Department list
+              const deptList = [...new Set(people.map(p => p.department).filter(Boolean))].sort();
+
+              // Filter people
+              const filteredPeople = people.filter(p => {
+                if (complianceDeptFilter !== "all" && p.department !== complianceDeptFilter) return false;
+                if (adminSearch && !p.fullName.toLowerCase().includes(adminSearch.toLowerCase())) return false;
+                return true;
+              });
+
+              // Per-person compliance
+              const personCompliance = filteredPeople.map(p => {
+                const myEnrs = allEnrollments.filter(e => e.userId === p.id);
+                const myCerts = allCertificates.filter(c => c.userId === p.id);
+                const completedIds = new Set([
+                  ...myEnrs.filter(e => e.status === "completado").map(e => e.courseId),
+                  ...myCerts.map(c => c.courseId),
+                ]);
+                const mandatory = mandatoryCourses.filter(c => !completedIds.has(c.id));
+                const total = allRelevantCourses.length;
+                const completed = allRelevantCourses.filter(c => completedIds.has(c.id)).length;
+                return { ...p, completed, total, pct: total > 0 ? Math.round((completed / total) * 100) : 0, missingMandatory: mandatory, certCount: myCerts.length };
+              });
+
+              // Department summary
+              const deptSummary = deptList.map(dept => {
+                const deptPeople = personCompliance.filter(p => p.department === dept);
+                const fullyCompliant = deptPeople.filter(p => p.completed === p.total).length;
+                const totalPeople = deptPeople.length;
+                return { dept, totalPeople, fullyCompliant, pct: totalPeople > 0 ? Math.round((fullyCompliant / totalPeople) * 100) : 0 };
+              });
+
+              // Per-course summary
+              const courseSummary = allRelevantCourses.map(c => {
+                const completed = personCompliance.filter(p => {
+                  const myEnrs = allEnrollments.filter(e => e.userId === p.id && e.courseId === c.id && e.status === "completado");
+                  const myCerts = allCertificates.filter(cert => cert.userId === p.id && cert.courseId === c.id);
+                  return myEnrs.length > 0 || myCerts.length > 0;
+                }).length;
+                return { course: c, completed, total: filteredPeople.length, pct: filteredPeople.length > 0 ? Math.round((completed / filteredPeople.length) * 100) : 0 };
+              });
+
+              const overallPct = personCompliance.length > 0
+                ? Math.round(personCompliance.filter(p => p.completed === p.total).length / personCompliance.length * 100) : 0;
+
+              const exportComplianceReport = () => {
+                const headers = ["Código", "Nombre", "Departamento", "Puesto", "Completados", "Total", "%", "Cursos Faltantes"];
+                const rows = personCompliance.map(p => [
+                  p.id, p.fullName, p.department, p.position,
+                  p.completed, p.total, p.pct + "%",
+                  p.missingMandatory.map(c => c.title).join("; "),
+                ]);
+                const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(",")).join("\n");
+                const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(blob);
+                a.download = `compliance_report_${new Date().toISOString().slice(0, 10)}.csv`;
+                a.click();
+              };
+
+              return (
+                <div className="space-y-4">
+                  {/* Controls */}
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <Button size="sm" variant={complianceView === "overview" ? "default" : "outline"} onClick={() => setComplianceView("overview")}>Resumen</Button>
+                    <Button size="sm" variant={complianceView === "by-course" ? "default" : "outline"} onClick={() => setComplianceView("by-course")}>Por Curso</Button>
+                    <Button size="sm" variant={complianceView === "by-employee" ? "default" : "outline"} onClick={() => setComplianceView("by-employee")}>Por Empleado</Button>
+                    <div className="flex-1" />
+                    <Select value={complianceDeptFilter} onValueChange={setComplianceDeptFilter}>
+                      <SelectTrigger className="w-[180px] h-8 text-xs"><SelectValue placeholder="Departamento" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        {deptList.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Button size="sm" variant="outline" onClick={exportComplianceReport}>
+                      <Download className="h-3.5 w-3.5 mr-1" /> Exportar
+                    </Button>
+                  </div>
+
+                  {/* KPI cards */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="border rounded-lg p-3 text-center">
+                      <p className="text-2xl font-bold text-foreground">{filteredPeople.length}</p>
+                      <p className="text-[10px] text-muted-foreground">Empleados</p>
+                    </div>
+                    <div className="border rounded-lg p-3 text-center">
+                      <p className="text-2xl font-bold text-foreground">{allRelevantCourses.length}</p>
+                      <p className="text-[10px] text-muted-foreground">Cursos</p>
+                    </div>
+                    <div className="border rounded-lg p-3 text-center">
+                      <p className={`text-2xl font-bold ${overallPct >= 80 ? "text-green-600" : overallPct >= 50 ? "text-amber-600" : "text-red-600"}`}>{overallPct}%</p>
+                      <p className="text-[10px] text-muted-foreground">Compliance General</p>
+                    </div>
+                    <div className="border rounded-lg p-3 text-center">
+                      <p className="text-2xl font-bold text-gold">{personCompliance.filter(p => p.completed === p.total).length}</p>
+                      <p className="text-[10px] text-muted-foreground">100% Compliant</p>
+                    </div>
+                  </div>
+
+                  {/* Overview: by department */}
+                  {complianceView === "overview" && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase">Cumplimiento por Departamento</p>
+                      {deptSummary.map(d => (
+                        <div key={d.dept} className="flex items-center gap-3 p-2.5 border border-border rounded-lg">
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{u.fullName}</p>
-                            <p className="text-[10px] text-muted-foreground truncate">{u.position} · {u.department}</p>
+                            <p className="text-sm font-medium">{d.dept}</p>
+                            <p className="text-[10px] text-muted-foreground">{d.fullyCompliant} de {d.totalPeople} empleados al 100%</p>
                           </div>
-                          <div className="w-32">
-                            <Progress value={pct} className="h-1.5" />
+                          <div className="w-28">
+                            <Progress value={d.pct} className="h-2" />
                           </div>
-                          <Badge className={completed === total ? "bg-green-600" : ""}>
-                            {completed}/{total}
+                          <Badge className={d.pct >= 80 ? "bg-green-600" : d.pct >= 50 ? "bg-amber-600" : "bg-red-600"}>
+                            {d.pct}%
                           </Badge>
-                          {myCerts.length > 0 && (
-                            <Badge variant="outline">
-                              <Award className="h-3 w-3 mr-1" />{myCerts.length}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* By Course */}
+                  {complianceView === "by-course" && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase">Cumplimiento por Curso</p>
+                      {courseSummary.map(cs => (
+                        <div key={cs.course.id} className="flex items-center gap-3 p-2.5 border border-border rounded-lg">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{cs.course.title}</p>
+                            <p className="text-[10px] text-muted-foreground">{cs.course.code} · {cs.completed} de {cs.total} completaron</p>
+                          </div>
+                          <div className="w-28">
+                            <Progress value={cs.pct} className="h-2" />
+                          </div>
+                          <Badge className={cs.pct >= 80 ? "bg-green-600" : cs.pct >= 50 ? "bg-amber-600" : "bg-red-600"}>
+                            {cs.pct}%
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* By Employee */}
+                  {complianceView === "by-employee" && (
+                    <div className="space-y-1">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase">Detalle por Empleado</p>
+                      {personCompliance.map(p => (
+                        <div key={p.id} className="border border-border rounded p-2">
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{p.fullName}</p>
+                              <p className="text-[10px] text-muted-foreground truncate">{p.position} · {p.department}</p>
+                            </div>
+                            <div className="w-24">
+                              <Progress value={p.pct} className="h-1.5" />
+                            </div>
+                            <Badge className={p.completed === p.total ? "bg-green-600" : ""}>
+                              {p.completed}/{p.total}
                             </Badge>
+                            {p.certCount > 0 && (
+                              <Badge variant="outline"><Award className="h-3 w-3 mr-1" />{p.certCount}</Badge>
+                            )}
+                          </div>
+                          {p.missingMandatory.length > 0 && (
+                            <div className="mt-1.5 flex flex-wrap gap-1">
+                              <span className="text-[10px] text-red-500 font-medium">Faltantes:</span>
+                              {p.missingMandatory.map(c => (
+                                <Badge key={c.id} variant="outline" className="text-[9px] text-red-500 border-red-300">{c.title}</Badge>
+                              ))}
+                            </div>
                           )}
                         </div>
-                      );
-                    })}
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
         </DialogContent>
       </Dialog>
