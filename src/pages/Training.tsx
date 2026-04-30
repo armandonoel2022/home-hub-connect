@@ -52,6 +52,7 @@ interface CourseEditorProps {
   course: Partial<TrainingCourse> | null;
   onSave: (course: TrainingCourse) => void;
   onCancel: () => void;
+  allUsers: any[];
 }
 
 const CATEGORIES: CourseCategory[] = ["Inducción", "BASC", "Operaciones", "Calidad", "Seguridad", "Legal", "Desarrollo", "Medio Ambiente", "Responsabilidad Social", "General"];
