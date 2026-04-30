@@ -677,7 +677,14 @@ const Training = () => {
                         {c.mandatory && <Badge variant="outline" className="text-xs">Obligatorio</Badge>}
                         {c.scheduledMonth && <Badge variant="outline" className="text-xs">{c.scheduledMonth}</Badge>}
                       </div>
-                      {completed && <CheckCircle2 className="h-6 w-6 text-green-600 shrink-0" />}
+                      <div className="flex items-center gap-1 shrink-0">
+                        {completed && <CheckCircle2 className="h-6 w-6 text-green-600" />}
+                        {canEditTraining && (
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleEditCourse(c)} title="Editar curso">
+                            <Pencil className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     <CardTitle className="text-base mt-2">{c.title}</CardTitle>
                   </CardHeader>
