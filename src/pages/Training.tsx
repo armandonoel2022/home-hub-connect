@@ -335,7 +335,13 @@ const Training = () => {
   const [confirmChecked, setConfirmChecked] = useState(false);
 
   // Admin panel state
-  const isAdminOrHR = !!user && (user.isAdmin || user.department === "Recursos Humanos");
+  const TRAINING_EDITORS = ["anoel@safeone.com.do", "rlopez@safeone.com.do", "admin@safeone.com.do"];
+  const canEditTraining = !!user && (
+    user.isAdmin ||
+    user.department === "Recursos Humanos" ||
+    TRAINING_EDITORS.includes((user.email || "").toLowerCase())
+  );
+  const isAdminOrHR = canEditTraining;
   const [adminOpen, setAdminOpen] = useState(false);
   const [adminTab, setAdminTab] = useState<"courses" | "pins" | "compliance">("courses");
   const [pins, setPins] = useState<Record<string, string>>({});
@@ -574,15 +580,15 @@ const Training = () => {
   };
 
   const handleEditCourse = (course: TrainingCourse) => {
-    // If it's a default course, clone it as custom for editing
     const isDefault = DEFAULT_COURSES.some(d => d.id === course.id);
     if (isDefault) {
-      // Copy to custom courses for overriding
       setEditingCourse({ ...course, isCustom: true });
     } else {
       setEditingCourse(course);
     }
     setShowEditor(true);
+    setAdminOpen(true);
+    setAdminTab("courses");
   };
 
   if (!user) return null;
@@ -671,7 +677,14 @@ const Training = () => {
                         {c.mandatory && <Badge variant="outline" className="text-xs">Obligatorio</Badge>}
                         {c.scheduledMonth && <Badge variant="outline" className="text-xs">{c.scheduledMonth}</Badge>}
                       </div>
-                      {completed && <CheckCircle2 className="h-6 w-6 text-green-600 shrink-0" />}
+                      <div className="flex items-center gap-1 shrink-0">
+                        {completed && <CheckCircle2 className="h-6 w-6 text-green-600" />}
+                        {canEditTraining && (
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleEditCourse(c)} title="Editar curso">
+                            <Pencil className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     <CardTitle className="text-base mt-2">{c.title}</CardTitle>
                   </CardHeader>
