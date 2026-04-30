@@ -505,5 +505,39 @@ export const trainingApi = {
     ),
 };
 
+// ─── Employees API (HR Directory) ───
+export interface Employee {
+  employeeCode: string;
+  fullName: string;
+  status: string;
+  payrollType: string;
+  department: string;
+  position: string;
+  bank: string;
+  salary: number;
+  hourlyRate: number;
+  hireDate?: string;
+  birthday?: string;
+  updatedAt?: string;
+}
+
+export const employeesApi = {
+  getAll: (params?: { department?: string; status?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.department) qs.set("department", params.department);
+    if (params?.status) qs.set("status", params.status);
+    const q = qs.toString();
+    return apiFetch<Employee[]>(`/employees${q ? `?${q}` : ""}`);
+  },
+  getStats: () => apiFetch<{ total: number; byDepartment: Record<string, number>; byPayrollType: Record<string, number> }>("/employees/stats"),
+  getOne: (code: string) => apiFetch<Employee>(`/employees/${encodeURIComponent(code)}`),
+  update: (code: string, data: Partial<Employee>) =>
+    apiFetch<Employee>(`/employees/${encodeURIComponent(code)}`, { method: "PUT", body: JSON.stringify(data) }),
+  create: (data: Partial<Employee>) =>
+    apiFetch<Employee>("/employees", { method: "POST", body: JSON.stringify(data) }),
+  remove: (code: string) =>
+    apiFetch<{}>(`/employees/${encodeURIComponent(code)}`, { method: "DELETE" }),
+};
+
 export default apiFetch;
 
