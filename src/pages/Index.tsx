@@ -5,10 +5,11 @@ import HeroBanner from "@/components/HeroBanner";
 import DepartmentGrid from "@/components/DepartmentGrid";
 import QuickLinks from "@/components/QuickLinks";
 import Announcements from "@/components/Announcements";
+import { GraduationCap } from "lucide-react";
 import DashboardMetrics from "@/components/DashboardMetrics";
 import Footer from "@/components/Footer";
 import { LifeBuoy, Users } from "lucide-react";
-
+ 
 const Index = () => {
   const navigate = useNavigate();
 
