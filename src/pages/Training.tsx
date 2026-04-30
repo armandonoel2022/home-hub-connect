@@ -335,7 +335,13 @@ const Training = () => {
   const [confirmChecked, setConfirmChecked] = useState(false);
 
   // Admin panel state
-  const isAdminOrHR = !!user && (user.isAdmin || user.department === "Recursos Humanos");
+  const TRAINING_EDITORS = ["anoel@safeone.com.do", "rlopez@safeone.com.do", "admin@safeone.com.do"];
+  const canEditTraining = !!user && (
+    user.isAdmin ||
+    user.department === "Recursos Humanos" ||
+    TRAINING_EDITORS.includes((user.email || "").toLowerCase())
+  );
+  const isAdminOrHR = canEditTraining;
   const [adminOpen, setAdminOpen] = useState(false);
   const [adminTab, setAdminTab] = useState<"courses" | "pins" | "compliance">("courses");
   const [pins, setPins] = useState<Record<string, string>>({});
