@@ -74,7 +74,6 @@ const departmentsMeta: DepartmentMeta[] = [
 // Departamentos cuyo header del recuadro es un enlace directo a un módulo.
 // Administración tiene control de acceso (solo el propio dpto + admins); el resto es libre.
 const DEPT_ROUTES: Record<string, string> = {
-  "Recursos Humanos": "/rrhh/formularios",
   "Administración": "/admin/hub",
   "Contabilidad": "/gastos-menores",
 };
@@ -83,6 +82,11 @@ const DEPT_ROUTES: Record<string, string> = {
 const RESTRICTED_DEPT_ROUTES = new Set<string>(["Administración"]);
 
 const DEPT_MULTI_ROUTES: Record<string, { label: string; route: string; icon: any }[]> = {
+  "Recursos Humanos": [
+    { label: "Solicitudes", route: "/rrhh/formularios", icon: FileText },
+    { label: "Empleados", route: "/rrhh/empleados", icon: Users },
+    { label: "Nómina", route: "/rrhh/consolidado-nomina", icon: DollarSign },
+  ],
   "Tecnología y Monitoreo": [
     { label: "Tecnología", route: "/tickets", icon: Settings },
     { label: "Monitoreo", route: "/monitoreo", icon: Monitor },
