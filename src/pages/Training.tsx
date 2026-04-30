@@ -580,15 +580,15 @@ const Training = () => {
   };
 
   const handleEditCourse = (course: TrainingCourse) => {
-    // If it's a default course, clone it as custom for editing
     const isDefault = DEFAULT_COURSES.some(d => d.id === course.id);
     if (isDefault) {
-      // Copy to custom courses for overriding
       setEditingCourse({ ...course, isCustom: true });
     } else {
       setEditingCourse(course);
     }
     setShowEditor(true);
+    setAdminOpen(true);
+    setAdminTab("courses");
   };
 
   if (!user) return null;
