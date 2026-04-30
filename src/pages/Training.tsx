@@ -57,7 +57,7 @@ interface CourseEditorProps {
 
 const CATEGORIES: CourseCategory[] = ["Inducción", "BASC", "Operaciones", "Calidad", "Seguridad", "Legal", "Desarrollo", "Medio Ambiente", "Responsabilidad Social", "General"];
 
-function CourseEditor({ course, onSave, onCancel }: CourseEditorProps) {
+function CourseEditor({ course, onSave, onCancel, allUsers }: CourseEditorProps) {
   const isNew = !course?.id;
   const [form, setForm] = useState<Partial<TrainingCourse>>({
     title: "", description: "", code: "", durationMinutes: 60, category: "General",
@@ -954,6 +954,7 @@ const Training = () => {
                 course={editingCourse}
                 onSave={handleSaveCourse}
                 onCancel={() => { setShowEditor(false); setEditingCourse(null); }}
+                allUsers={allUsers || []}
               />
             )}
 
