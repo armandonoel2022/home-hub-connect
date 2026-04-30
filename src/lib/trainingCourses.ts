@@ -1,12 +1,54 @@
 /**
- * Contenido completo de los cursos BASC iniciales.
- * Material elaborado a partir de los documentos enviados por
- * Dilia Aguasvivas (Gerente de RRHH): Breve Historia, Misión/Visión/Valores,
- * y procedimiento PO-G-01 Política General de Seguridad.
+ * Contenido completo de los cursos de capacitación SafeOne.
+ * Incluye cursos BASC, operacionales, legales, medio ambiente, etc.
+ * RRHH puede agregar/editar/eliminar cursos desde la UI de administración.
  */
 import type { TrainingCourse } from "./trainingTypes";
 
-export const TRAINING_COURSES: TrainingCourse[] = [
+// ─── Local storage for HR-managed courses ────────────────────────────────
+const LS_COURSES_KEY = "safeone_custom_courses_v1";
+
+export function loadCustomCourses(): TrainingCourse[] {
+  try { return JSON.parse(localStorage.getItem(LS_COURSES_KEY) || "[]"); }
+  catch { return []; }
+}
+
+export function saveCustomCourses(courses: TrainingCourse[]) {
+  localStorage.setItem(LS_COURSES_KEY, JSON.stringify(courses));
+}
+
+/** All courses: hardcoded defaults + HR custom ones */
+export function getAllCourses(): TrainingCourse[] {
+  const custom = loadCustomCourses();
+  // Custom courses can override defaults by ID
+  const customIds = new Set(custom.map(c => c.id));
+  const defaults = DEFAULT_COURSES.filter(c => !customIds.has(c.id));
+  return [...defaults, ...custom];
+}
+
+export const TRAINING_COURSES: TrainingCourse[] = []; // legacy compat – use getAllCourses()
+
+// Helper function
+function makeSimpleCourse(opts: {
+  id: string; code: string; title: string; description: string;
+  durationMinutes: number; category: TrainingCourse["category"];
+  mandatory: boolean; bascRelated: boolean;
+  participants?: number; hoursPerSession?: number; totalHH?: number;
+  targetAudience?: string; scheduledMonth?: string; executionDate?: string;
+  provider?: string; instructor?: string;
+}): TrainingCourse {
+  return {
+    ...opts,
+    sections: [{
+      id: "s1", title: "Contenido del curso",
+      content: `Bienvenido al curso **${opts.title}**.\n\nEste material será impartido por ${opts.instructor || opts.provider || "el instructor asignado"}.\n\nEl contenido detallado de esta capacitación será proporcionado por el instructor durante la sesión.`,
+    }],
+    quiz: [],
+    confirmStatement: `He asistido y comprendido el contenido de la capacitación "${opts.title}".`,
+  };
+}
+
+export const DEFAULT_COURSES: TrainingCourse[] = [
   // ════════════════════════════════════════
   // 1. INDUCCIÓN SAFEONE
   // ════════════════════════════════════════
