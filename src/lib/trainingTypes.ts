@@ -41,6 +41,10 @@ export interface TrainingCourse {
   hoursPerSession?: number;
   totalHH?: number;
   targetAudience?: string;
+  /** Targeting granular: a quién va dirigido */
+  targetType?: "all" | "departments" | "roles" | "specific";
+  targetDepartments?: string[];
+  targetUserIds?: string[];
   scheduledMonth?: string;
   executionDate?: string;
   provider?: string;
