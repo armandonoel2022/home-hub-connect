@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -562,6 +563,11 @@ const MinorPurchases = () => {
   const [repositionDialogOpen, setRepositionDialogOpen] = useState(false);
   const [repositionMonth, setRepositionMonth] = useState<string>(getPreviousYearMonth());
   const [otherMonthDialogOpen, setOtherMonthDialogOpen] = useState(false);
+  // Selección masiva de reposiciones (aprobar/aplicar en lote)
+  const [selectedRepIds, setSelectedRepIds] = useState<Set<string>>(new Set());
+  const [repMonthFilter, setRepMonthFilter] = useState<string>("all");
+  const [repStatusFilter, setRepStatusFilter] = useState<string>("all");
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [denominationsDialogOpen, setDenominationsDialogOpen] = useState(false);
   const [editingDenominations, setEditingDenominations] = useState<Denomination[]>([]);
   const [showAlert, setShowAlert] = useState(false);
@@ -1117,6 +1123,95 @@ const MinorPurchases = () => {
       title: "💰 Reposición aplicada correctamente",
       description: `Se ha repuesto RD$ ${reposition.amountReposed.toLocaleString("es-DO")} a la Caja Chica.`,
     });
+  };
+
+  // ───── Acciones en lote para reposiciones (aprobar/aplicar múltiples) ─────
+  const handleBulkApproveRepositions = async (ids: string[]) => {
+    if (!user || !canApproveReposition) {
+      toast({ title: "Permiso denegado", description: "No tiene permisos para aprobar.", variant: "destructive" });
+      return;
+    }
+    const targets = repositions.filter((r) => ids.includes(r.id) && r.status === "pendiente");
+    if (targets.length === 0) {
+      toast({ title: "Sin elementos", description: "No hay reposiciones pendientes en la selección.", variant: "destructive" });
+      return;
+    }
+    const total = targets.reduce((s, r) => s + r.amountReposed, 0);
+    if (!confirm(`¿Aprobar ${targets.length} reposición(es) por un total de RD$ ${total.toLocaleString("es-DO")}?`)) return;
+
+    setBulkBusy(true);
+    try {
+      const updates = new Map<string, MonthlyReposition>();
+      for (const r of targets) {
+        let updated: MonthlyReposition = {
+          ...r,
+          status: "aprobado",
+          approvedBy: user.fullName,
+          approvedAt: new Date().toISOString(),
+        };
+        if (apiMode) {
+          try {
+            updated = await pettyCashApi.approveReposition(r.id, user.fullName);
+          } catch (e: any) {
+            toast({ title: `Error en ${r.id}`, description: e.message, variant: "destructive" });
+            continue;
+          }
+        }
+        updates.set(r.id, updated);
+      }
+      persistRepositions(repositions.map((r) => updates.get(r.id) || r));
+      setSelectedRepIds(new Set());
+      toast({
+        title: "✅ Reposiciones aprobadas",
+        description: `${updates.size} aprobada(s) por RD$ ${total.toLocaleString("es-DO")}. Ahora puede APLICARLAS.`,
+      });
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const handleBulkApplyRepositions = async (ids: string[]) => {
+    if (!user || !canApplyReposition) {
+      toast({ title: "Permiso denegado", description: "No tiene permisos para aplicar.", variant: "destructive" });
+      return;
+    }
+    const targets = repositions.filter((r) => ids.includes(r.id) && r.status === "aprobado");
+    if (targets.length === 0) {
+      toast({ title: "Sin elementos", description: "No hay reposiciones aprobadas en la selección.", variant: "destructive" });
+      return;
+    }
+    const total = targets.reduce((s, r) => s + r.amountReposed, 0);
+    if (!confirm(`¿Aplicar ${targets.length} reposición(es) por un total de RD$ ${total.toLocaleString("es-DO")}? Esto sumará al disponible del mes correspondiente.`)) return;
+
+    setBulkBusy(true);
+    try {
+      const updates = new Map<string, MonthlyReposition>();
+      for (const r of targets) {
+        let updated: MonthlyReposition = {
+          ...r,
+          status: "aplicado",
+          appliedBy: user.fullName,
+          appliedAt: new Date().toISOString(),
+        };
+        if (apiMode) {
+          try {
+            updated = await pettyCashApi.applyReposition(r.id, user.fullName);
+          } catch (e: any) {
+            toast({ title: `Error en ${r.id}`, description: e.message, variant: "destructive" });
+            continue;
+          }
+        }
+        updates.set(r.id, updated);
+      }
+      persistRepositions(repositions.map((r) => updates.get(r.id) || r));
+      setSelectedRepIds(new Set());
+      toast({
+        title: "💰 Reposiciones aplicadas",
+        description: `${updates.size} reposición(es) aplicadas por RD$ ${total.toLocaleString("es-DO")}.`,
+      });
+    } finally {
+      setBulkBusy(false);
+    }
   };
 
   const handleOpenDenominationsDialog = () => {
@@ -2840,91 +2935,273 @@ const MinorPurchases = () => {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {repositions.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-8">
-                        No hay solicitudes de reposición.
-                      </p>
-                    ) : (
-                      <div className="space-y-3">
-                        {repositions.map((r) => (
-                          <div
-                            key={r.id}
-                            className="flex items-center justify-between gap-3 p-4 border border-border rounded-lg flex-wrap"
-                          >
+                    {(() => {
+                      // Meses únicos disponibles (ordenados desc)
+                      const monthsAvailable = Array.from(new Set(repositions.map((r) => r.yearMonth))).sort().reverse();
+
+                      // Filtros aplicados
+                      const filtered = repositions.filter((r) => {
+                        if (repMonthFilter !== "all" && r.yearMonth !== repMonthFilter) return false;
+                        if (repStatusFilter !== "all" && r.status !== repStatusFilter) return false;
+                        return true;
+                      });
+
+                      // Subconjuntos accionables (dentro del filtro actual)
+                      const filteredPending = filtered.filter((r) => r.status === "pendiente");
+                      const filteredApproved = filtered.filter((r) => r.status === "aprobado");
+
+                      // Selección efectiva (solo IDs visibles)
+                      const visibleIds = new Set(filtered.map((r) => r.id));
+                      const selectedVisible = filtered.filter((r) => selectedRepIds.has(r.id));
+                      const selectedTotal = selectedVisible.reduce((s, r) => s + r.amountReposed, 0);
+                      const selectedPending = selectedVisible.filter((r) => r.status === "pendiente");
+                      const selectedApproved = selectedVisible.filter((r) => r.status === "aprobado");
+                      const selectedPendingTotal = selectedPending.reduce((s, r) => s + r.amountReposed, 0);
+                      const selectedApprovedTotal = selectedApproved.reduce((s, r) => s + r.amountReposed, 0);
+
+                      const allVisibleSelected = filtered.length > 0 && filtered.every((r) => selectedRepIds.has(r.id));
+                      const someVisibleSelected = filtered.some((r) => selectedRepIds.has(r.id));
+
+                      const toggleAllVisible = () => {
+                        const next = new Set(selectedRepIds);
+                        if (allVisibleSelected) {
+                          filtered.forEach((r) => next.delete(r.id));
+                        } else {
+                          filtered.forEach((r) => next.add(r.id));
+                        }
+                        setSelectedRepIds(next);
+                      };
+
+                      const toggleOne = (id: string) => {
+                        const next = new Set(selectedRepIds);
+                        if (next.has(id)) next.delete(id);
+                        else next.add(id);
+                        setSelectedRepIds(next);
+                      };
+
+                      const selectAllPendingInFilter = () => {
+                        const next = new Set(selectedRepIds);
+                        filteredPending.forEach((r) => next.add(r.id));
+                        setSelectedRepIds(next);
+                      };
+                      const selectAllApprovedInFilter = () => {
+                        const next = new Set(selectedRepIds);
+                        filteredApproved.forEach((r) => next.add(r.id));
+                        setSelectedRepIds(next);
+                      };
+
+                      return (
+                        <>
+                          {/* ─── Barra de filtros + selección ─── */}
+                          <div className="flex flex-wrap items-end gap-3 mb-4 pb-4 border-b border-border">
                             <div className="space-y-1">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <p className="font-medium">{getMonthDisplay(r.yearMonth)}</p>
-                                {r.kind === "transaccion" ? (
-                                  <Badge variant="outline" className="text-[10px] border-gold text-gold">
-                                    Por transacción {r.purchaseId ? `· ${r.purchaseId}` : ""}
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className="text-[10px]">Mensual</Badge>
-                                )}
-                              </div>
-                              {r.purchaseDescription && (
-                                <p className="text-xs text-muted-foreground italic">
-                                  "{r.purchaseDescription}"
-                                </p>
-                              )}
-                              <p className="text-sm">
-                                Monto: <strong>{fmt(r.amountReposed)}</strong>
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                Solicitado por: {r.requestedBy} · {fmtDate(r.requestedAt)}
-                              </p>
-                              {r.approvedBy && (
-                                <p className="text-xs text-muted-foreground">
-                                  Aprobado por: {r.approvedBy} · {fmtDate(r.approvedAt || "")}
-                                </p>
-                              )}
-                              {r.appliedBy && (
-                                <p className="text-xs text-green-600">
-                                  ✓ Aplicado por: {r.appliedBy} · {fmtDate(r.appliedAt || "")}
-                                </p>
-                              )}
+                              <Label className="text-xs">Filtrar por mes</Label>
+                              <Select value={repMonthFilter} onValueChange={(v) => { setRepMonthFilter(v); setSelectedRepIds(new Set()); }}>
+                                <SelectTrigger className="w-[200px] h-9"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="all">Todos los meses</SelectItem>
+                                  {monthsAvailable.map((m) => (
+                                    <SelectItem key={m} value={m}>{getMonthDisplay(m)}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Badge
-                                variant={
-                                  r.status === "pendiente"
-                                    ? "outline"
-                                    : r.status === "aprobado"
-                                      ? "default"
-                                      : "secondary"
-                                }
-                              >
-                                {r.status === "pendiente"
-                                  ? "Pendiente"
-                                  : r.status === "aprobado"
-                                    ? "Aprobada (pendiente aplicar)"
-                                    : "Aplicada ✓"}
-                              </Badge>
-                              {r.status === "pendiente" && canApproveReposition && (
-                                <Button size="sm" onClick={() => handleApproveReposition(r.id)}>
-                                  Aprobar
+                            <div className="space-y-1">
+                              <Label className="text-xs">Estado</Label>
+                              <Select value={repStatusFilter} onValueChange={(v) => { setRepStatusFilter(v); setSelectedRepIds(new Set()); }}>
+                                <SelectTrigger className="w-[180px] h-9"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="all">Todos</SelectItem>
+                                  <SelectItem value="pendiente">Pendientes</SelectItem>
+                                  <SelectItem value="aprobado">Aprobadas</SelectItem>
+                                  <SelectItem value="aplicado">Aplicadas</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="ml-auto flex flex-wrap items-center gap-2">
+                              {filteredPending.length > 0 && canApproveReposition && (
+                                <Button size="sm" variant="outline" onClick={selectAllPendingInFilter}>
+                                  Seleccionar pendientes ({filteredPending.length})
                                 </Button>
                               )}
-                              {r.status === "aprobado" && canApplyReposition && (
-                                <Button size="sm" variant="default" onClick={() => handleApplyReposition(r.id)}>
-                                  <CheckCheck className="h-3 w-3 mr-1" /> Aplicar Reposición
+                              {filteredApproved.length > 0 && canApplyReposition && (
+                                <Button size="sm" variant="outline" onClick={selectAllApprovedInFilter}>
+                                  Seleccionar aprobadas ({filteredApproved.length})
                                 </Button>
                               )}
-                              {user?.isAdmin && (
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  onClick={() => handleDeleteReposition(r.id)}
-                                  title="Eliminar reposición (requiere justificación, queda registrado en auditoría)"
-                                >
-                                  <Trash2 className="h-3 w-3 mr-1" /> Eliminar
+                              {selectedRepIds.size > 0 && (
+                                <Button size="sm" variant="ghost" onClick={() => setSelectedRepIds(new Set())}>
+                                  Limpiar selección
                                 </Button>
                               )}
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    )}
+
+                          {/* ─── Resumen de selección + acciones en lote ─── */}
+                          {selectedVisible.length > 0 && (
+                            <div className="mb-4 p-4 rounded-lg border-2 border-primary/40 bg-primary/5 flex flex-wrap items-center gap-4">
+                              <div className="flex-1 min-w-[200px]">
+                                <p className="text-sm font-medium">
+                                  {selectedVisible.length} reposición(es) seleccionada(s)
+                                </p>
+                                <p className="text-2xl font-bold text-primary">
+                                  Total: {fmt(selectedTotal)}
+                                </p>
+                                <div className="text-xs text-muted-foreground mt-1 space-x-3">
+                                  {selectedPending.length > 0 && (
+                                    <span>Pendientes: <strong>{selectedPending.length}</strong> · {fmt(selectedPendingTotal)}</span>
+                                  )}
+                                  {selectedApproved.length > 0 && (
+                                    <span>Aprobadas: <strong>{selectedApproved.length}</strong> · {fmt(selectedApprovedTotal)}</span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {selectedPending.length > 0 && canApproveReposition && (
+                                  <Button
+                                    size="sm"
+                                    disabled={bulkBusy}
+                                    onClick={() => handleBulkApproveRepositions(selectedPending.map((r) => r.id))}
+                                  >
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    Aprobar {selectedPending.length} · {fmt(selectedPendingTotal)}
+                                  </Button>
+                                )}
+                                {selectedApproved.length > 0 && canApplyReposition && (
+                                  <Button
+                                    size="sm"
+                                    variant="default"
+                                    disabled={bulkBusy}
+                                    onClick={() => handleBulkApplyRepositions(selectedApproved.map((r) => r.id))}
+                                  >
+                                    <CheckCheck className="h-3 w-3 mr-1" />
+                                    Aplicar {selectedApproved.length} · {fmt(selectedApprovedTotal)}
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {filtered.length === 0 ? (
+                            <p className="text-sm text-muted-foreground text-center py-8">
+                              No hay reposiciones con los filtros actuales.
+                            </p>
+                          ) : (
+                            <div className="space-y-3">
+                              {/* Cabecera "seleccionar todo visible" */}
+                              <div className="flex items-center gap-2 px-2 text-xs text-muted-foreground">
+                                <Checkbox
+                                  checked={allVisibleSelected}
+                                  onCheckedChange={toggleAllVisible}
+                                  aria-label="Seleccionar todo lo visible"
+                                />
+                                <span>
+                                  {allVisibleSelected
+                                    ? "Todas seleccionadas"
+                                    : someVisibleSelected
+                                      ? "Algunas seleccionadas"
+                                      : "Seleccionar todas las visibles"}
+                                  {" · "}{filtered.length} reposición(es)
+                                </span>
+                              </div>
+
+                              {filtered.map((r) => {
+                                const checked = selectedRepIds.has(r.id);
+                                const selectable = r.status === "pendiente" || r.status === "aprobado";
+                                return (
+                                  <div
+                                    key={r.id}
+                                    className={`flex items-center justify-between gap-3 p-4 border rounded-lg flex-wrap transition-colors ${
+                                      checked ? "border-primary bg-primary/5" : "border-border"
+                                    }`}
+                                  >
+                                    <div className="flex items-start gap-3 flex-1 min-w-[260px]">
+                                      <Checkbox
+                                        checked={checked}
+                                        onCheckedChange={() => toggleOne(r.id)}
+                                        disabled={!selectable}
+                                        className="mt-1"
+                                        aria-label={`Seleccionar reposición ${r.id}`}
+                                      />
+                                      <div className="space-y-1">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <p className="font-medium">{getMonthDisplay(r.yearMonth)}</p>
+                                          {r.kind === "transaccion" ? (
+                                            <Badge variant="outline" className="text-[10px] border-gold text-gold">
+                                              Por transacción {r.purchaseId ? `· ${r.purchaseId}` : ""}
+                                            </Badge>
+                                          ) : (
+                                            <Badge variant="outline" className="text-[10px]">Mensual</Badge>
+                                          )}
+                                        </div>
+                                        {r.purchaseDescription && (
+                                          <p className="text-xs text-muted-foreground italic">
+                                            "{r.purchaseDescription}"
+                                          </p>
+                                        )}
+                                        <p className="text-sm">
+                                          Monto: <strong>{fmt(r.amountReposed)}</strong>
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                          Solicitado por: {r.requestedBy} · {fmtDate(r.requestedAt)}
+                                        </p>
+                                        {r.approvedBy && (
+                                          <p className="text-xs text-muted-foreground">
+                                            Aprobado por: {r.approvedBy} · {fmtDate(r.approvedAt || "")}
+                                          </p>
+                                        )}
+                                        {r.appliedBy && (
+                                          <p className="text-xs text-green-600">
+                                            ✓ Aplicado por: {r.appliedBy} · {fmtDate(r.appliedAt || "")}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Badge
+                                        variant={
+                                          r.status === "pendiente"
+                                            ? "outline"
+                                            : r.status === "aprobado"
+                                              ? "default"
+                                              : "secondary"
+                                        }
+                                      >
+                                        {r.status === "pendiente"
+                                          ? "Pendiente"
+                                          : r.status === "aprobado"
+                                            ? "Aprobada (pendiente aplicar)"
+                                            : "Aplicada ✓"}
+                                      </Badge>
+                                      {r.status === "pendiente" && canApproveReposition && (
+                                        <Button size="sm" onClick={() => handleApproveReposition(r.id)}>
+                                          Aprobar
+                                        </Button>
+                                      )}
+                                      {r.status === "aprobado" && canApplyReposition && (
+                                        <Button size="sm" variant="default" onClick={() => handleApplyReposition(r.id)}>
+                                          <CheckCheck className="h-3 w-3 mr-1" /> Aplicar Reposición
+                                        </Button>
+                                      )}
+                                      {user?.isAdmin && (
+                                        <Button
+                                          size="sm"
+                                          variant="destructive"
+                                          onClick={() => handleDeleteReposition(r.id)}
+                                          title="Eliminar reposición (requiere justificación, queda registrado en auditoría)"
+                                        >
+                                          <Trash2 className="h-3 w-3 mr-1" /> Eliminar
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </CardContent>
                 </Card>
               </TabsContent>
