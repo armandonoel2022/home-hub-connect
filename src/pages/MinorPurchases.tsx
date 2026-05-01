@@ -918,7 +918,72 @@ const MinorPurchases = () => {
     });
   };
 
-  const handleApproveReposition = async (id: string) => {
+  // Reposición individual por transacción (desde el Historial)
+  const handleRequestRepositionForPurchase = async (purchase: MinorPurchase) => {
+    if (!user) return;
+    if (purchase.paymentMethod !== "Caja Chica") {
+      toast({
+        title: "No aplica",
+        description: "Solo los gastos pagados con Caja Chica pueden ser repuestos.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (purchase.status !== "Aprobado" || purchase.voided) {
+      toast({
+        title: "Transacción no elegible",
+        description: "Solo gastos aprobados y no anulados pueden reponerse.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const dup = repositions.find(
+      (r) => r.purchaseId === purchase.id && r.status !== "rechazado",
+    );
+    if (dup) {
+      toast({
+        title: "Ya solicitada",
+        description: `Esta transacción ya tiene una reposición ${dup.status}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!confirm(`¿Solicitar reposición de RD$ ${purchase.amount.toLocaleString("es-DO")} por la transacción ${purchase.id}?`)) return;
+
+    const targetMonth = getYearMonth(purchase.expenseDate || purchase.requestedAt);
+    let newReposition: MonthlyReposition = {
+      id: `REP-${Date.now()}`,
+      yearMonth: targetMonth,
+      amountReposed: purchase.amount,
+      requestedBy: user.fullName,
+      requestedAt: new Date().toISOString(),
+      status: "pendiente",
+      purchaseId: purchase.id,
+      purchaseDescription: purchase.description,
+      kind: "transaccion",
+    };
+
+    if (apiMode) {
+      try {
+        newReposition = await pettyCashApi.createReposition({
+          yearMonth: targetMonth,
+          amountReposed: purchase.amount,
+          requestedBy: user.fullName,
+          purchaseId: purchase.id,
+          purchaseDescription: purchase.description,
+        });
+      } catch (e: any) {
+        toast({ title: "Error", description: e.message || "No se pudo registrar.", variant: "destructive" });
+        return;
+      }
+    }
+
+    persistRepositions([newReposition, ...repositions]);
+    toast({
+      title: "Reposición solicitada",
+      description: `RD$ ${purchase.amount.toLocaleString("es-DO")} · ${purchase.id}`,
+    });
+  };
     if (!user) return;
     if (!canApproveReposition) {
       toast({ title: "Permiso denegado", description: "No tiene permisos para aprobar.", variant: "destructive" });
