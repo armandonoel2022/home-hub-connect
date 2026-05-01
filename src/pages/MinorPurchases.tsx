@@ -158,6 +158,10 @@ interface MonthlyReposition {
   appliedBy?: string;
   appliedAt?: string;
   status: "pendiente" | "aprobado" | "aplicado";
+  purchaseId?: string;
+  purchaseDescription?: string;
+  kind?: "mensual" | "transaccion";
+  note?: string;
 }
 
 interface Denomination {
@@ -911,6 +915,73 @@ const MinorPurchases = () => {
     toast({
       title: "Solicitud de reposición registrada",
       description: `Monto a reponer: RD$ ${spent.toLocaleString("es-DO")} para ${getMonthDisplay(targetMonth)}.`,
+    });
+  };
+
+  // Reposición individual por transacción (desde el Historial)
+  const handleRequestRepositionForPurchase = async (purchase: MinorPurchase) => {
+    if (!user) return;
+    if (purchase.paymentMethod !== "Caja Chica") {
+      toast({
+        title: "No aplica",
+        description: "Solo los gastos pagados con Caja Chica pueden ser repuestos.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (purchase.status !== "Aprobado" || purchase.voided) {
+      toast({
+        title: "Transacción no elegible",
+        description: "Solo gastos aprobados y no anulados pueden reponerse.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const dup = repositions.find(
+      (r) => r.purchaseId === purchase.id,
+    );
+    if (dup) {
+      toast({
+        title: "Ya solicitada",
+        description: `Esta transacción ya tiene una reposición ${dup.status}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!confirm(`¿Solicitar reposición de RD$ ${purchase.amount.toLocaleString("es-DO")} por la transacción ${purchase.id}?`)) return;
+
+    const targetMonth = getYearMonth(purchase.expenseDate || purchase.requestedAt);
+    let newReposition: MonthlyReposition = {
+      id: `REP-${Date.now()}`,
+      yearMonth: targetMonth,
+      amountReposed: purchase.amount,
+      requestedBy: user.fullName,
+      requestedAt: new Date().toISOString(),
+      status: "pendiente",
+      purchaseId: purchase.id,
+      purchaseDescription: purchase.description,
+      kind: "transaccion",
+    };
+
+    if (apiMode) {
+      try {
+        newReposition = await pettyCashApi.createReposition({
+          yearMonth: targetMonth,
+          amountReposed: purchase.amount,
+          requestedBy: user.fullName,
+          purchaseId: purchase.id,
+          purchaseDescription: purchase.description,
+        });
+      } catch (e: any) {
+        toast({ title: "Error", description: e.message || "No se pudo registrar.", variant: "destructive" });
+        return;
+      }
+    }
+
+    persistRepositions([newReposition, ...repositions]);
+    toast({
+      title: "Reposición solicitada",
+      description: `RD$ ${purchase.amount.toLocaleString("es-DO")} · ${purchase.id}`,
     });
   };
 
@@ -2547,6 +2618,22 @@ const MinorPurchases = () => {
                                       <Ban className="h-4 w-4" />
                                     </Button>
                                   )}
+                                  {p.paymentMethod === "Caja Chica" &&
+                                    p.status === "Aprobado" &&
+                                    !p.voided &&
+                                    !repositions.some(
+                                      (r) => r.purchaseId === p.id,
+                                    ) && (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7 text-gold"
+                                        onClick={() => handleRequestRepositionForPurchase(p)}
+                                        title="Solicitar reposición de esta transacción"
+                                      >
+                                        <RefreshCw className="h-4 w-4" />
+                                      </Button>
+                                    )}
                                   {canManage && (
                                     <Button
                                       variant="ghost"
@@ -2659,7 +2746,21 @@ const MinorPurchases = () => {
                             className="flex items-center justify-between gap-3 p-4 border border-border rounded-lg flex-wrap"
                           >
                             <div className="space-y-1">
-                              <p className="font-medium">{getMonthDisplay(r.yearMonth)}</p>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="font-medium">{getMonthDisplay(r.yearMonth)}</p>
+                                {r.kind === "transaccion" ? (
+                                  <Badge variant="outline" className="text-[10px] border-gold text-gold">
+                                    Por transacción {r.purchaseId ? `· ${r.purchaseId}` : ""}
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-[10px]">Mensual</Badge>
+                                )}
+                              </div>
+                              {r.purchaseDescription && (
+                                <p className="text-xs text-muted-foreground italic">
+                                  "{r.purchaseDescription}"
+                                </p>
+                              )}
                               <p className="text-sm">
                                 Monto: <strong>{fmt(r.amountReposed)}</strong>
                               </p>
