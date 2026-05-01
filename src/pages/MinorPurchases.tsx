@@ -203,24 +203,29 @@ const getTotalSpentInMonth = (purchases: MinorPurchase[], yearMonth: string): nu
     .reduce((s, p) => s + p.amount, 0);
 };
 
+const getRepositionsAppliedInMonth = (
+  repositions: MonthlyReposition[],
+  yearMonth: string,
+): number => {
+  return repositions
+    .filter((r) => {
+      if (r.status !== "aplicado") return false;
+      // Una reposición suma al disponible del mes en que se APLICA, no del mes que repone.
+      const appliedMonth = r.appliedAt ? getYearMonth(r.appliedAt) : r.yearMonth;
+      return appliedMonth === yearMonth;
+    })
+    .reduce((sum, r) => sum + r.amountReposed, 0);
+};
+
 const getAvailableForMonth = (
   purchases: MinorPurchase[],
   yearMonth: string,
   repositions: MonthlyReposition[],
 ): number => {
   const spent = getTotalSpentInMonth(purchases, yearMonth);
-
-  // Si es el mes actual y la reposición del mes anterior fue aplicada, el límite se reinicia
-  if (yearMonth === getCurrentYearMonth()) {
-    const prevMonth = getPreviousYearMonth();
-    const prevMonthReposition = repositions.find((r) => r.yearMonth === prevMonth && r.status === "aplicado");
-    if (prevMonthReposition) {
-      // La reposición fue aplicada, el límite es completo nuevamente
-      return Math.max(0, CAJA_CHICA_LIMIT - spent);
-    }
-  }
-
-  return Math.max(0, CAJA_CHICA_LIMIT - spent);
+  const reposed = getRepositionsAppliedInMonth(repositions, yearMonth);
+  // Disponible = límite mensual + reposiciones aplicadas este mes − gastos del mes
+  return Math.max(0, CAJA_CHICA_LIMIT + reposed - spent);
 };
 
 const canAddExpenseInMonth = (
@@ -235,7 +240,8 @@ const canAddExpenseInMonth = (
     const excludedAmount = purchases.find((p) => p.id === excludeId)?.amount || 0;
     totalSpent -= excludedAmount;
   }
-  return totalSpent + amount <= CAJA_CHICA_LIMIT;
+  const reposed = getRepositionsAppliedInMonth(repositions, yearMonth);
+  return totalSpent + amount <= CAJA_CHICA_LIMIT + reposed;
 };
 
 const getPendingReposition = (repositions: MonthlyReposition[]): MonthlyReposition | null => {
