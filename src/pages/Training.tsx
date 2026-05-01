@@ -709,14 +709,28 @@ const Training = () => {
               </p>
             </div>
             {isAdminOrHR && (
-              <Button
-                variant="outline"
-                onClick={() => { setAdminOpen(true); setAdminTab("courses"); loadAdminData(); }}
-                className="shrink-0"
-              >
-                <KeyRound className="h-4 w-4 mr-2" />
-                Administración
-              </Button>
+              <div className="flex gap-2 shrink-0">
+                <Button
+                  onClick={() => {
+                    setEditingCourse(null);
+                    setShowEditor(true);
+                    setAdminOpen(true);
+                    setAdminTab("courses");
+                    loadAdminData();
+                  }}
+                  className="bg-gold text-charcoal hover:bg-gold/90"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nueva capacitación
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => { setAdminOpen(true); setAdminTab("courses"); loadAdminData(); }}
+                >
+                  <KeyRound className="h-4 w-4 mr-2" />
+                  Administración
+                </Button>
+              </div>
             )}
           </div>
 

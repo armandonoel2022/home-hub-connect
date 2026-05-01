@@ -81,6 +81,9 @@ const DEPT_ROUTES: Record<string, string> = {
 // Departamentos que requieren pertenecer al área (o ser admin) para acceder al enlace del header.
 const RESTRICTED_DEPT_ROUTES = new Set<string>(["Administración"]);
 
+// Emails con acceso especial a módulos restringidos por departamento (además del propio dpto y admins).
+const HR_EXTRA_ACCESS = new Set<string>(["anoel@safeone.com.do", "admin@safeone.com.do"]);
+
 const DEPT_MULTI_ROUTES: Record<string, { label: string; route: string; icon: any }[]> = {
   "Recursos Humanos": [
     { label: "Solicitudes", route: "/rrhh/formularios", icon: FileText },
@@ -97,6 +100,9 @@ const DEPT_MULTI_ROUTES: Record<string, { label: string; route: string; icon: an
     { label: "Centro de Operaciones", route: "/centro-operaciones", icon: Users },
   ],
 };
+
+// Departamentos cuyos sub-módulos (DEPT_MULTI_ROUTES) requieren pertenecer al área.
+const RESTRICTED_DEPT_MULTI = new Set<string>(["Recursos Humanos"]);
 
 const DepartmentGrid = () => {
   const { user, allUsers, activeUsers, inactiveUsers, offboardUser, reactivateUser } = useAuth();
@@ -386,7 +392,24 @@ const DepartmentGrid = () => {
                         return (
                           <button
                             key={r.route}
-                            onClick={(e) => { e.stopPropagation(); navigate(r.route); setShowDeptMenu(null); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Restricción: solo personal del dpto, admins, o accesos extra (Armando)
+                              if (RESTRICTED_DEPT_MULTI.has(dept.name)) {
+                                const email = (user?.email || "").toLowerCase();
+                                const allowed = user?.isAdmin || user?.department === dept.name || HR_EXTRA_ACCESS.has(email);
+                                if (!allowed) {
+                                  toast({
+                                    title: "🔒 Acceso restringido",
+                                    description: `Este módulo es exclusivo del equipo de ${dept.name}. Contacta a Dilia Aguasvivas si necesitas acceso.`,
+                                    variant: "destructive",
+                                  });
+                                  return;
+                                }
+                              }
+                              navigate(r.route);
+                              setShowDeptMenu(null);
+                            }}
                             className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-card border border-border text-card-foreground text-xs font-semibold hover:bg-muted transition-colors shadow-lg"
                           >
                             <RIcon className="h-4 w-4" />
