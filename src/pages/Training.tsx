@@ -427,7 +427,7 @@ const Training = () => {
   const [confirmChecked, setConfirmChecked] = useState(false);
 
   // Admin panel state
-  const TRAINING_EDITORS = ["anoel@safeone.com.do", "rlopez@safeone.com.do", "admin@safeone.com.do"];
+  const TRAINING_EDITORS = ["anoel@safeone.com.do", "rlopez@safeone.com.do", "tecnologia@safeone.com.do"];
   const canEditTraining = !!user && (
     user.isAdmin ||
     user.department === "Recursos Humanos" ||
