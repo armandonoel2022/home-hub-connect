@@ -511,6 +511,7 @@ export interface Employee {
   fullName: string;
   status: string;
   payrollType: string;
+  category?: string; // Administrativo | Supervisor | Vigilante | Operador
   department: string;
   position: string;
   bank: string;
