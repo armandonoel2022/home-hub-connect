@@ -387,6 +387,50 @@ const DepartmentGrid = () => {
                 </div>
               </div>
               <div className="p-6">
+                {/* Sub-módulos del departamento (expandible al click en el título) */}
+                {DEPT_MULTI_ROUTES[dept.name] && showDeptMenu === dept.name && (
+                  <div className="mb-4 grid grid-cols-1 gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold px-1">
+                      Módulos del departamento
+                    </p>
+                    {DEPT_MULTI_ROUTES[dept.name].map((r) => {
+                      const RIcon = r.icon;
+                      return (
+                        <button
+                          key={r.route}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (RESTRICTED_DEPT_MULTI.has(dept.name)) {
+                              const email = (user?.email || "").toLowerCase();
+                              const allowed = user?.isAdmin || user?.department === dept.name || HR_EXTRA_ACCESS.has(email);
+                              if (!allowed) {
+                                toast({
+                                  title: "🔒 Acceso restringido",
+                                  description: `Este módulo es exclusivo del equipo de ${dept.name}. Contacta a Dilia Aguasvivas si necesitas acceso.`,
+                                  variant: "destructive",
+                                });
+                                return;
+                              }
+                            }
+                            navigate(r.route);
+                            setShowDeptMenu(null);
+                          }}
+                          className="group/sub flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-gold/10 to-transparent border border-gold/30 hover:border-gold hover:from-gold/20 hover:shadow-md transition-all text-left"
+                        >
+                          <div className="p-2 rounded-lg bg-gold/20 group-hover/sub:bg-gold/30 transition-colors">
+                            <RIcon className="h-4 w-4 text-gold" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-card-foreground">{r.label}</p>
+                            <p className="text-[10px] text-muted-foreground">Acceder al módulo</p>
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground group-hover/sub:text-gold group-hover/sub:translate-x-0.5 transition-all" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
                 <div></div>
 
                 {/* Action buttons */}
