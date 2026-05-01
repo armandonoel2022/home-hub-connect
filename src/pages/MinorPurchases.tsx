@@ -693,8 +693,17 @@ const MinorPurchases = () => {
     return adminOrders.filter((o) => o.formType === target);
   }, [form.linkedDocType, adminOrders]);
 
-  const currentYearMonth = getCurrentYearMonth();
-  const previousYearMonth = getPreviousYearMonth();
+  // Mes que se está visualizando/editando en el dashboard. Por defecto = mes real actual.
+  // Permite navegar a meses pasados para completar registros y aplicar reposiciones.
+  const [viewYearMonth, setViewYearMonth] = useState<string>(getCurrentYearMonth());
+  const currentYearMonth = viewYearMonth;
+  const previousYearMonth = useMemo(() => {
+    const [y, m] = viewYearMonth.split("-").map(Number);
+    const d = new Date(y, m - 2, 1);
+    return getYearMonth(d);
+  }, [viewYearMonth]);
+  const realCurrentYearMonth = getCurrentYearMonth();
+  const isViewingPastMonth = viewYearMonth < realCurrentYearMonth;
 
   const currentMonthSpent = useMemo(
     () => getTotalSpentInMonth(purchases, currentYearMonth),
