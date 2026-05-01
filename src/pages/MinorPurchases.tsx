@@ -2044,6 +2044,94 @@ const MinorPurchases = () => {
             </Alert>
           )}
 
+          {/* Selector de mes para visualizar/operar sobre cualquier mes */}
+          <Card className={cn("border-2", isViewingPastMonth ? "border-amber-400 bg-amber-50/40 dark:bg-amber-950/20" : "border-primary/30")}>
+            <CardContent className="py-3">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <CalendarIcon className={cn("h-5 w-5", isViewingPastMonth ? "text-amber-600" : "text-primary")} />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Operando sobre el mes de</p>
+                    <p className="font-heading font-bold text-base capitalize">
+                      {getMonthDisplay(viewYearMonth)}
+                      {isViewingPastMonth && (
+                        <Badge variant="outline" className="ml-2 text-[10px] border-amber-500 text-amber-700 bg-amber-100/60">
+                          Mes pasado
+                        </Badge>
+                      )}
+                      {viewYearMonth === realCurrentYearMonth && (
+                        <Badge variant="outline" className="ml-2 text-[10px] border-primary text-primary">
+                          Actual
+                        </Badge>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 px-2"
+                    onClick={() => {
+                      const [y, m] = viewYearMonth.split("-").map(Number);
+                      setViewYearMonth(getYearMonth(new Date(y, m - 2, 1)));
+                    }}
+                    title="Mes anterior"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Select value={viewYearMonth} onValueChange={setViewYearMonth}>
+                    <SelectTrigger className="h-8 w-[180px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 13 }).map((_, i) => {
+                        const d = new Date();
+                        d.setDate(1);
+                        d.setMonth(d.getMonth() - i);
+                        const ym = getYearMonth(d);
+                        return (
+                          <SelectItem key={ym} value={ym} className="capitalize">
+                            {getMonthDisplay(ym)}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 px-2"
+                    onClick={() => {
+                      const [y, m] = viewYearMonth.split("-").map(Number);
+                      const next = getYearMonth(new Date(y, m, 1));
+                      if (next <= realCurrentYearMonth) setViewYearMonth(next);
+                    }}
+                    disabled={viewYearMonth >= realCurrentYearMonth}
+                    title="Mes siguiente"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  {isViewingPastMonth && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 px-2 text-xs"
+                      onClick={() => setViewYearMonth(realCurrentYearMonth)}
+                    >
+                      Volver al actual
+                    </Button>
+                  )}
+                </div>
+              </div>
+              {isViewingPastMonth && (
+                <p className="text-xs text-amber-700 dark:text-amber-400 mt-2">
+                  ⚠️ Estás viendo un mes pasado. Los gastos y reposiciones que registres se aplicarán a <strong>{getMonthDisplay(viewYearMonth)}</strong>.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Dashboard con indicadores mensuales + resumen anual */}
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
             <Card>
