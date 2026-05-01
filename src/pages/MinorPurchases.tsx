@@ -2618,6 +2618,22 @@ const MinorPurchases = () => {
                                       <Ban className="h-4 w-4" />
                                     </Button>
                                   )}
+                                  {p.paymentMethod === "Caja Chica" &&
+                                    p.status === "Aprobado" &&
+                                    !p.voided &&
+                                    !repositions.some(
+                                      (r) => r.purchaseId === p.id,
+                                    ) && (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7 text-gold"
+                                        onClick={() => handleRequestRepositionForPurchase(p)}
+                                        title="Solicitar reposición de esta transacción"
+                                      >
+                                        <RefreshCw className="h-4 w-4" />
+                                      </Button>
+                                    )}
                                   {canManage && (
                                     <Button
                                       variant="ghost"
