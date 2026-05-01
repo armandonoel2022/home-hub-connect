@@ -85,6 +85,7 @@ const EmployeeDirectory = () => {
     return employees.filter(e => {
       if (deptFilter !== "all" && e.department !== deptFilter) return false;
       if (payrollFilter !== "all" && e.payrollType !== payrollFilter) return false;
+      if (categoryFilter !== "all" && (e.category || "") !== categoryFilter) return false;
       if (search) {
         const s = search.toLowerCase();
         return e.fullName.toLowerCase().includes(s) ||
@@ -93,7 +94,7 @@ const EmployeeDirectory = () => {
       }
       return true;
     });
-  }, [employees, search, deptFilter, payrollFilter]);
+  }, [employees, search, deptFilter, payrollFilter, categoryFilter]);
 
   const stats = useMemo(() => {
     const active = employees.filter(e => e.status === "Activo").length;
