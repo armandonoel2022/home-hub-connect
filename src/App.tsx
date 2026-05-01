@@ -23,6 +23,7 @@ import PurchaseRequests from "./pages/PurchaseRequests";
 import HiringRequests from "./pages/HiringRequests";
 import HRForms from "./pages/HRForms";
 import HRPayrollReport from "./pages/HRPayrollReport";
+import HRBenefits from "./pages/HRBenefits";
 import AdminForms from "./pages/AdminForms";
 import UserManagement from "./pages/UserManagement";
 import Directory from "./pages/Directory";
@@ -107,6 +108,7 @@ function ProtectedRoutes() {
         <Route path="/rrhh/formularios" element={<HRForms />} />
         <Route path="/rrhh/consolidado-nomina" element={<HRPayrollReport />} />
         <Route path="/rrhh/empleados" element={<EmployeeDirectory />} />
+        <Route path="/rrhh/beneficios" element={<HRBenefits />} />
         <Route path="/admin/formularios" element={<AdminForms />} />
         <Route path="/admin/hub" element={<AdminHub />} />
         <Route path="/admin/flotilla-mantenimiento" element={<FleetMaintenance />} />
