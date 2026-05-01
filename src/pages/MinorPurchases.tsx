@@ -563,6 +563,11 @@ const MinorPurchases = () => {
   const [repositionDialogOpen, setRepositionDialogOpen] = useState(false);
   const [repositionMonth, setRepositionMonth] = useState<string>(getPreviousYearMonth());
   const [otherMonthDialogOpen, setOtherMonthDialogOpen] = useState(false);
+  // Selección masiva de reposiciones (aprobar/aplicar en lote)
+  const [selectedRepIds, setSelectedRepIds] = useState<Set<string>>(new Set());
+  const [repMonthFilter, setRepMonthFilter] = useState<string>("all");
+  const [repStatusFilter, setRepStatusFilter] = useState<string>("all");
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [denominationsDialogOpen, setDenominationsDialogOpen] = useState(false);
   const [editingDenominations, setEditingDenominations] = useState<Denomination[]>([]);
   const [showAlert, setShowAlert] = useState(false);
