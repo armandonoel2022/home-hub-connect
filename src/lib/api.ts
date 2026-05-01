@@ -381,6 +381,17 @@ export const kpisApi = {
     apiFetch<void>(`/kpis/department/${id}`, { method: "DELETE" }),
 };
 
+// ─── Benefits API (RRHH) ───
+export const benefitsApi = {
+  getAll: () => apiFetch<any[]>("/benefits"),
+  create: (benefit: any) =>
+    apiFetch<any>("/benefits", { method: "POST", body: JSON.stringify(benefit) }),
+  update: (id: string, data: any) =>
+    apiFetch<any>(`/benefits/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  delete: (id: string) =>
+    apiFetch<void>(`/benefits/${id}`, { method: "DELETE" }),
+};
+
 // ─── Tasks API ───
 export const tasksApi = {
   getAll: () => apiFetch<any[]>("/tasks"),

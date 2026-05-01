@@ -41,6 +41,7 @@ import {
   RotateCcw,
   Package,
   AlertTriangle,
+  Gift,
 } from "lucide-react";
 
 interface DeptFolder {
@@ -89,6 +90,7 @@ const DEPT_MULTI_ROUTES: Record<string, { label: string; route: string; icon: an
     { label: "Solicitudes", route: "/rrhh/formularios", icon: FileText },
     { label: "Empleados", route: "/rrhh/empleados", icon: Users },
     { label: "Nómina", route: "/rrhh/consolidado-nomina", icon: DollarSign },
+    { label: "Beneficios", route: "/rrhh/beneficios", icon: Gift },
   ],
   "Tecnología y Monitoreo": [
     { label: "Tecnología", route: "/tickets", icon: Settings },
