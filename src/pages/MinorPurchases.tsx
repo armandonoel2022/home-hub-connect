@@ -938,7 +938,7 @@ const MinorPurchases = () => {
       return;
     }
     const dup = repositions.find(
-      (r) => r.purchaseId === purchase.id && r.status !== "rechazado",
+      (r) => r.purchaseId === purchase.id,
     );
     if (dup) {
       toast({
