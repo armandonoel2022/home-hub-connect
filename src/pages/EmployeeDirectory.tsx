@@ -256,7 +256,8 @@ const EmployeeDirectory = () => {
                     <TableRow>
                       <TableHead>Código</TableHead>
                       <TableHead>Nombre</TableHead>
-                      <TableHead>Departamento</TableHead>
+                      <TableHead>Categoría</TableHead>
+                      <TableHead>Departamento / Área</TableHead>
                       <TableHead>Puesto</TableHead>
                       <TableHead>Nómina</TableHead>
                       <TableHead>Estatus</TableHead>
@@ -266,14 +267,23 @@ const EmployeeDirectory = () => {
                   <TableBody>
                     {filtered.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={canEdit ? 7 : 6} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={canEdit ? 8 : 7} className="text-center text-muted-foreground py-8">
                           No se encontraron empleados
                         </TableCell>
                       </TableRow>
-                    ) : filtered.map(emp => (
+                    ) : filtered.map(emp => {
+                      const catColor =
+                        emp.category === "Administrativo" ? "bg-gold/20 text-gold-foreground border-gold" :
+                        emp.category === "Supervisor" ? "bg-blue-500/20 text-blue-700 border-blue-500" :
+                        emp.category === "Operador" ? "bg-purple-500/20 text-purple-700 border-purple-500" :
+                        "bg-slate-500/20 text-slate-700 border-slate-500";
+                      return (
                       <TableRow key={emp.employeeCode}>
                         <TableCell className="font-mono text-xs">{emp.employeeCode}</TableCell>
                         <TableCell className="font-medium">{emp.fullName}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={`text-xs ${catColor}`}>{emp.category || "—"}</Badge>
+                        </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="text-xs">{emp.department}</Badge>
                         </TableCell>
