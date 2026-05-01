@@ -74,6 +74,8 @@ import {
   Filter,
   Hash,
   Trash2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
