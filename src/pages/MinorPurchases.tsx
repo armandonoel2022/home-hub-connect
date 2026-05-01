@@ -1125,7 +1125,96 @@ const MinorPurchases = () => {
     });
   };
 
-  const handleOpenDenominationsDialog = () => {
+  // ───── Acciones en lote para reposiciones (aprobar/aplicar múltiples) ─────
+  const handleBulkApproveRepositions = async (ids: string[]) => {
+    if (!user || !canApproveReposition) {
+      toast({ title: "Permiso denegado", description: "No tiene permisos para aprobar.", variant: "destructive" });
+      return;
+    }
+    const targets = repositions.filter((r) => ids.includes(r.id) && r.status === "pendiente");
+    if (targets.length === 0) {
+      toast({ title: "Sin elementos", description: "No hay reposiciones pendientes en la selección.", variant: "destructive" });
+      return;
+    }
+    const total = targets.reduce((s, r) => s + r.amountReposed, 0);
+    if (!confirm(`¿Aprobar ${targets.length} reposición(es) por un total de RD$ ${total.toLocaleString("es-DO")}?`)) return;
+
+    setBulkBusy(true);
+    try {
+      const updates = new Map<string, MonthlyReposition>();
+      for (const r of targets) {
+        let updated: MonthlyReposition = {
+          ...r,
+          status: "aprobado",
+          approvedBy: user.fullName,
+          approvedAt: new Date().toISOString(),
+        };
+        if (apiMode) {
+          try {
+            updated = await pettyCashApi.approveReposition(r.id, user.fullName);
+          } catch (e: any) {
+            toast({ title: `Error en ${r.id}`, description: e.message, variant: "destructive" });
+            continue;
+          }
+        }
+        updates.set(r.id, updated);
+      }
+      persistRepositions(repositions.map((r) => updates.get(r.id) || r));
+      setSelectedRepIds(new Set());
+      toast({
+        title: "✅ Reposiciones aprobadas",
+        description: `${updates.size} aprobada(s) por RD$ ${total.toLocaleString("es-DO")}. Ahora puede APLICARLAS.`,
+      });
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const handleBulkApplyRepositions = async (ids: string[]) => {
+    if (!user || !canApplyReposition) {
+      toast({ title: "Permiso denegado", description: "No tiene permisos para aplicar.", variant: "destructive" });
+      return;
+    }
+    const targets = repositions.filter((r) => ids.includes(r.id) && r.status === "aprobado");
+    if (targets.length === 0) {
+      toast({ title: "Sin elementos", description: "No hay reposiciones aprobadas en la selección.", variant: "destructive" });
+      return;
+    }
+    const total = targets.reduce((s, r) => s + r.amountReposed, 0);
+    if (!confirm(`¿Aplicar ${targets.length} reposición(es) por un total de RD$ ${total.toLocaleString("es-DO")}? Esto sumará al disponible del mes correspondiente.`)) return;
+
+    setBulkBusy(true);
+    try {
+      const updates = new Map<string, MonthlyReposition>();
+      for (const r of targets) {
+        let updated: MonthlyReposition = {
+          ...r,
+          status: "aplicado",
+          appliedBy: user.fullName,
+          appliedAt: new Date().toISOString(),
+        };
+        if (apiMode) {
+          try {
+            updated = await pettyCashApi.applyReposition(r.id, user.fullName);
+          } catch (e: any) {
+            toast({ title: `Error en ${r.id}`, description: e.message, variant: "destructive" });
+            continue;
+          }
+        }
+        updates.set(r.id, updated);
+      }
+      persistRepositions(repositions.map((r) => updates.get(r.id) || r));
+      setSelectedRepIds(new Set());
+      toast({
+        title: "💰 Reposiciones aplicadas",
+        description: `${updates.size} reposición(es) aplicadas por RD$ ${total.toLocaleString("es-DO")}.`,
+      });
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+
     setEditingDenominations([...denominations]);
     setDenominationsDialogOpen(true);
   };
