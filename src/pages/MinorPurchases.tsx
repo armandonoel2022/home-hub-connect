@@ -158,6 +158,10 @@ interface MonthlyReposition {
   appliedBy?: string;
   appliedAt?: string;
   status: "pendiente" | "aprobado" | "aplicado";
+  purchaseId?: string;
+  purchaseDescription?: string;
+  kind?: "mensual" | "transaccion";
+  note?: string;
 }
 
 interface Denomination {
