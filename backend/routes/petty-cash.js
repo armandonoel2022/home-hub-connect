@@ -50,13 +50,23 @@ router.get('/', auth, (req, res) => {
 // ─── Repositions ───
 router.post('/repositions', auth, (req, res) => {
   const state = loadState();
-  const { yearMonth, amountReposed, requestedBy } = req.body || {};
+  const { yearMonth, amountReposed, requestedBy, purchaseId, purchaseDescription, note } = req.body || {};
   if (!yearMonth || !amountReposed || !requestedBy) {
     return res.status(400).json({ message: 'yearMonth, amountReposed y requestedBy requeridos' });
   }
-  // No duplicar pendientes/aplicados para el mismo mes
-  const exists = state.repositions.find(r => r.yearMonth === yearMonth && r.status !== 'rechazado');
-  if (exists) return res.status(400).json({ message: 'Ya existe una reposición para ese mes' });
+  // Per-transaction repositions (purchaseId presente) NO chequean duplicado mensual.
+  if (!purchaseId) {
+    const exists = state.repositions.find(
+      r => r.yearMonth === yearMonth && r.status !== 'rechazado' && !r.purchaseId
+    );
+    if (exists) return res.status(400).json({ message: 'Ya existe una reposición mensual para ese mes' });
+  } else {
+    // Evitar reposición duplicada de la misma transacción (excepto si la anterior fue rechazada)
+    const dup = state.repositions.find(
+      r => r.purchaseId === purchaseId && r.status !== 'rechazado'
+    );
+    if (dup) return res.status(400).json({ message: 'Ya existe una reposición para esta transacción' });
+  }
 
   const reposition = {
     id: `REP-${Date.now()}`,
@@ -65,6 +75,8 @@ router.post('/repositions', auth, (req, res) => {
     requestedBy,
     requestedAt: new Date().toISOString(),
     status: 'pendiente',
+    ...(purchaseId ? { purchaseId, purchaseDescription: purchaseDescription || '', kind: 'transaccion' } : { kind: 'mensual' }),
+    ...(note ? { note } : {}),
   };
   state.repositions = [reposition, ...state.repositions];
   saveState(state);
