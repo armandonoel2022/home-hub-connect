@@ -2139,7 +2139,7 @@ const MinorPurchases = () => {
                     <DollarSign className="h-5 w-5 text-primary" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs text-muted-foreground truncate">Consumo anual {currentYear}</p>
+                    <p className="text-xs text-muted-foreground truncate">Consumo actual {currentYear}</p>
                     <p className="text-base lg:text-lg font-heading font-bold truncate">{fmt(yearlyStats.totalSpent)}</p>
                     <p className="text-[10px] text-muted-foreground truncate">
                       YTD: {fmt(yearlyStats.yearlyAssigned)} ({yearlyStats.monthIndex} {yearlyStats.monthIndex === 1 ? "mes" : "meses"} × {fmt(CAJA_CHICA_LIMIT)})
