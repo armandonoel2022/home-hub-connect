@@ -392,7 +392,24 @@ const DepartmentGrid = () => {
                         return (
                           <button
                             key={r.route}
-                            onClick={(e) => { e.stopPropagation(); navigate(r.route); setShowDeptMenu(null); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Restricción: solo personal del dpto, admins, o accesos extra (Armando)
+                              if (RESTRICTED_DEPT_MULTI.has(dept.name)) {
+                                const email = (user?.email || "").toLowerCase();
+                                const allowed = user?.isAdmin || user?.department === dept.name || HR_EXTRA_ACCESS.has(email);
+                                if (!allowed) {
+                                  toast({
+                                    title: "🔒 Acceso restringido",
+                                    description: `Este módulo es exclusivo del equipo de ${dept.name}. Contacta a Dilia Aguasvivas si necesitas acceso.`,
+                                    variant: "destructive",
+                                  });
+                                  return;
+                                }
+                              }
+                              navigate(r.route);
+                              setShowDeptMenu(null);
+                            }}
                             className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-card border border-border text-card-foreground text-xs font-semibold hover:bg-muted transition-colors shadow-lg"
                           >
                             <RIcon className="h-4 w-4" />
