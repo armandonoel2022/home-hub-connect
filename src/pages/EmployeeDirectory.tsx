@@ -223,6 +223,18 @@ const EmployeeDirectory = () => {
                 {payrollTypes.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
               </SelectContent>
             </Select>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Categoría" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas las categorías</SelectItem>
+                <SelectItem value="Administrativo">Administrativo</SelectItem>
+                <SelectItem value="Supervisor">Supervisor</SelectItem>
+                <SelectItem value="Operador">Operador</SelectItem>
+                <SelectItem value="Vigilante">Vigilante</SelectItem>
+              </SelectContent>
+            </Select>
             <Button variant="outline" onClick={exportCSV}>
               <Download className="h-4 w-4 mr-1" /> Exportar
             </Button>
