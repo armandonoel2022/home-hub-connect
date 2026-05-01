@@ -307,7 +307,8 @@ const EmployeeDirectory = () => {
                           </TableCell>
                         )}
                       </TableRow>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               )}
