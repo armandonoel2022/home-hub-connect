@@ -52,6 +52,7 @@ app.use('/api/petty-cash', require('./routes/petty-cash'));
 app.use('/api/corporate-cards', require('./routes/corporate-cards'));
 app.use('/api/training', require('./routes/training'));
 app.use('/api/employees', require('./routes/employees'));
+app.use('/api/benefits', require('./routes/benefits'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({
