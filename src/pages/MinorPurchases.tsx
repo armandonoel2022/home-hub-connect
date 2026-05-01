@@ -212,9 +212,10 @@ const getRepositionsAppliedInMonth = (
   return repositions
     .filter((r) => {
       if (r.status !== "aplicado") return false;
-      // Una reposición suma al disponible del mes en que se APLICA, no del mes que repone.
-      const appliedMonth = r.appliedAt ? getYearMonth(r.appliedAt) : r.yearMonth;
-      return appliedMonth === yearMonth;
+      // La reposición suma al disponible del MES QUE REPONE (r.yearMonth),
+      // no del mes calendario en que se aplicó. Así, reponer abril en mayo
+      // restaura el disponible de abril, no el de mayo.
+      return r.yearMonth === yearMonth;
     })
     .reduce((sum, r) => sum + r.amountReposed, 0);
 };
