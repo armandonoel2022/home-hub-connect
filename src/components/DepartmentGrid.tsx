@@ -81,6 +81,9 @@ const DEPT_ROUTES: Record<string, string> = {
 // Departamentos que requieren pertenecer al área (o ser admin) para acceder al enlace del header.
 const RESTRICTED_DEPT_ROUTES = new Set<string>(["Administración"]);
 
+// Emails con acceso especial a módulos restringidos por departamento (además del propio dpto y admins).
+const HR_EXTRA_ACCESS = new Set<string>(["anoel@safeone.com.do", "admin@safeone.com.do"]);
+
 const DEPT_MULTI_ROUTES: Record<string, { label: string; route: string; icon: any }[]> = {
   "Recursos Humanos": [
     { label: "Solicitudes", route: "/rrhh/formularios", icon: FileText },
@@ -97,6 +100,9 @@ const DEPT_MULTI_ROUTES: Record<string, { label: string; route: string; icon: an
     { label: "Centro de Operaciones", route: "/centro-operaciones", icon: Users },
   ],
 };
+
+// Departamentos cuyos sub-módulos (DEPT_MULTI_ROUTES) requieren pertenecer al área.
+const RESTRICTED_DEPT_MULTI = new Set<string>(["Recursos Humanos"]);
 
 const DepartmentGrid = () => {
   const { user, allUsers, activeUsers, inactiveUsers, offboardUser, reactivateUser } = useAuth();
