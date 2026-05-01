@@ -8,7 +8,8 @@
     "position": "Gerente General",
     "bank": "BHD Leon",
     "salary": 110000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "532",
@@ -19,7 +20,8 @@
     "position": "Gerente Administrativo",
     "bank": "BHD Leon",
     "salary": 80000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "538",
@@ -30,7 +32,8 @@
     "position": "Coordinador Operaciones nocturno",
     "bank": "BHD Leon",
     "salary": 30000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "539",
@@ -41,7 +44,8 @@
     "position": "Mensajero",
     "bank": "BHD Leon",
     "salary": 27500.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "1520",
@@ -52,7 +56,8 @@
     "position": "Encargada Cuentas por pagar y facturacion",
     "bank": "BHD Leon",
     "salary": 55000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "1923",
@@ -63,7 +68,8 @@
     "position": "Gerente Comercial",
     "bank": "BHD Leon",
     "salary": 80000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "1967",
@@ -74,7 +80,8 @@
     "position": "Encargada Contabilidad",
     "bank": "BHD Leon",
     "salary": 60000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "2413",
@@ -85,7 +92,8 @@
     "position": "Conserje",
     "bank": "BHD Leon",
     "salary": 27500.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3029",
@@ -96,7 +104,8 @@
     "position": "Analista Calidad y Cumplimiento",
     "bank": "BHD Leon",
     "salary": 35000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3696",
@@ -107,7 +116,8 @@
     "position": "Asistente Administrativa",
     "bank": "BHD Leon",
     "salary": 37500.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3760",
@@ -118,7 +128,8 @@
     "position": "Representante Servicio Al Cliente",
     "bank": "BHD Leon",
     "salary": 35000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3868",
@@ -129,7 +140,8 @@
     "position": "Gerente Recursos Humanos",
     "bank": "BHD Leon",
     "salary": 80000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3895",
@@ -140,7 +152,8 @@
     "position": "Gerente de Operaciones",
     "bank": "BHD Leon",
     "salary": 80000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3898",
@@ -151,7 +164,8 @@
     "position": "Coordinador Técnologia y Monitoreo",
     "bank": "BHD Leon",
     "salary": 65000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3904",
@@ -162,7 +176,8 @@
     "position": "Coordinadora Relaciones Laborales",
     "bank": "BHD Leon",
     "salary": 40000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3905",
@@ -173,7 +188,8 @@
     "position": "Coordinadora Reclutamiento y Seleccion",
     "bank": "BHD Leon",
     "salary": 40000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3908",
@@ -184,7 +200,8 @@
     "position": "Coordinador Seguridad Electrónica",
     "bank": "BHD Leon",
     "salary": 45000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3942",
@@ -195,7 +212,8 @@
     "position": "Coordinador Operaciones Diurno",
     "bank": "BHD Leon",
     "salary": 50000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3951",
@@ -206,7 +224,8 @@
     "position": "Pasante administrativo",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3983",
@@ -217,7 +236,8 @@
     "position": "Recepcionista",
     "bank": "LA NACIONAL",
     "salary": 25000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "4007",
@@ -228,7 +248,8 @@
     "position": "Pasante administrativo",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "4032",
@@ -239,7 +260,8 @@
     "position": "Asistente Operaciones",
     "bank": "BHD Leon",
     "salary": 31000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "1536",
@@ -250,7 +272,8 @@
     "position": "Operador Central Monitoreo",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1745",
@@ -261,7 +284,8 @@
     "position": "Operador ALNAP",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1846",
@@ -272,7 +296,8 @@
     "position": "Operador ALNAP",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2173",
@@ -283,7 +308,8 @@
     "position": "Operador ALNAP",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2979",
@@ -294,7 +320,8 @@
     "position": "Operador ALNAP",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3351",
@@ -305,7 +332,8 @@
     "position": "Supervisor Auxiliar Dia",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3374",
@@ -316,7 +344,8 @@
     "position": "Operador Central Monitoreo",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3599",
@@ -327,7 +356,8 @@
     "position": "Doctor Técnico (laboratorio & Estándares)",
     "bank": "BHD Leon",
     "salary": 30000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3650",
@@ -338,7 +368,8 @@
     "position": "Líder de Brigada",
     "bank": "LA NACIONAL",
     "salary": 37500.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3674",
@@ -349,7 +380,8 @@
     "position": "Supervisor Zona DN Este Dia",
     "bank": "BHD Leon",
     "salary": 31000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3686",
@@ -360,7 +392,8 @@
     "position": "Operador Central Monitoreo",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3751",
@@ -371,7 +404,8 @@
     "position": "Operador Central Monitoreo",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3792",
@@ -382,7 +416,8 @@
     "position": "Auxiliar de Brigada",
     "bank": "BHD Leon",
     "salary": 30000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3811",
@@ -393,7 +428,8 @@
     "position": "Operador de Monitoreo",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3876",
@@ -404,7 +440,8 @@
     "position": "Operador ALNAP",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3889",
@@ -415,7 +452,8 @@
     "position": "Operador de Monitoreo",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3890",
@@ -426,7 +464,8 @@
     "position": "Analista control operativo",
     "bank": "LA NACIONAL",
     "salary": 31000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3922",
@@ -437,7 +476,8 @@
     "position": "Operador ALNAP",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3986",
@@ -448,7 +488,8 @@
     "position": "Auxiliar de Brigada",
     "bank": "BHD Leon",
     "salary": 30000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3987",
@@ -459,7 +500,8 @@
     "position": "Operador de Monitoreo",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3988",
@@ -470,7 +512,8 @@
     "position": "Auxiliar de Brigada",
     "bank": "BHD Leon",
     "salary": 30000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "1079",
@@ -481,7 +524,8 @@
     "position": "Supervisor Zona SD Este Dia",
     "bank": "LA NACIONAL",
     "salary": 31000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "1283",
@@ -492,7 +536,8 @@
     "position": "Supervisor Zona Este",
     "bank": "BHD Leon",
     "salary": 31000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "2124",
@@ -503,7 +548,8 @@
     "position": "Supervisor Zona Sur",
     "bank": "LA NACIONAL",
     "salary": 31000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "2549",
@@ -514,7 +560,8 @@
     "position": "Supervisor Zona SD Este Noche",
     "bank": "BHD Leon",
     "salary": 31000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3107",
@@ -525,7 +572,8 @@
     "position": "Supervisor Zona SD Oeste Noche",
     "bank": "BHD Leon",
     "salary": 31000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3267",
@@ -536,7 +584,8 @@
     "position": "Supervisor Zona Santiago",
     "bank": "BHD Leon",
     "salary": 31000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3410",
@@ -547,7 +596,8 @@
     "position": "Supervisor Zona DN Oeste Noche",
     "bank": "BHD Leon",
     "salary": 31000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3510",
@@ -558,7 +608,8 @@
     "position": "Supervisor Zona Monte Cristi",
     "bank": "BHD Leon",
     "salary": 31000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3664",
@@ -569,7 +620,8 @@
     "position": "Supervisor Operaciones",
     "bank": "BHD Leon",
     "salary": 31000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3746",
@@ -580,7 +632,8 @@
     "position": "Supervisor Zona DN Este Dia",
     "bank": "BHD Leon",
     "salary": 31000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3802",
@@ -591,7 +644,8 @@
     "position": "Supervisor Auxiliar Noche",
     "bank": "BHD Leon",
     "salary": 31000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3881",
@@ -602,7 +656,8 @@
     "position": "Supervisor Zona SD Oeste Dia",
     "bank": "BHD Leon",
     "salary": 31000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3959",
@@ -613,7 +668,8 @@
     "position": "Supervisor Auxiliar Dia",
     "bank": "BHD Leon",
     "salary": 31000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3973",
@@ -624,7 +680,8 @@
     "position": "Supervisor Zona Galeria 360 Dia",
     "bank": "LA NACIONAL",
     "salary": 31000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "4003",
@@ -635,7 +692,8 @@
     "position": "Supervisor San Francisco de Macoris",
     "bank": "LA NACIONAL",
     "salary": 31000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "4033",
@@ -646,7 +704,8 @@
     "position": "Supervisor Auxiliar Noche",
     "bank": "",
     "salary": 31000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "4042",
@@ -657,7 +716,8 @@
     "position": "Vigilante",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "17",
@@ -668,18 +728,20 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "51",
     "fullName": "Juan Grullon Fernandez",
     "status": "Activo",
     "payrollType": "Vgilantes Horas",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "79",
@@ -690,18 +752,20 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "80",
     "fullName": "Freddy Ramirez De Los Santos",
     "status": "Activo",
     "payrollType": "Vgilantes Horas",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "84",
@@ -712,7 +776,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "94",
@@ -723,7 +788,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "95",
@@ -734,7 +800,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "102",
@@ -745,7 +812,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "106",
@@ -756,7 +824,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "111",
@@ -767,7 +836,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "112",
@@ -778,7 +848,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "114",
@@ -789,7 +860,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "123",
@@ -800,7 +872,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "124",
@@ -811,7 +884,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "128",
@@ -822,7 +896,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "129",
@@ -833,7 +908,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "131",
@@ -844,7 +920,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "218",
@@ -855,7 +932,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "223",
@@ -866,7 +944,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "249",
@@ -877,7 +956,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "281",
@@ -888,7 +968,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "282",
@@ -899,18 +980,20 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "345",
     "fullName": "Guillermo Ramos Taveras",
     "status": "Activo",
     "payrollType": "Vgilantes Horas",
-    "department": "Superintendencia de Bancos ",
+    "department": "Superintendencia de Bancos",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "412",
@@ -921,7 +1004,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "419",
@@ -932,7 +1016,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "421",
@@ -943,7 +1028,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "422",
@@ -954,7 +1040,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "425",
@@ -965,7 +1052,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "427",
@@ -976,7 +1064,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "439",
@@ -987,7 +1076,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "445",
@@ -998,7 +1088,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "448",
@@ -1009,7 +1100,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "460",
@@ -1020,7 +1112,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "465",
@@ -1031,7 +1124,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "470",
@@ -1042,7 +1136,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "476",
@@ -1053,7 +1148,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "477",
@@ -1064,7 +1160,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "481",
@@ -1075,7 +1172,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "484",
@@ -1086,7 +1184,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "485",
@@ -1097,7 +1196,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "489",
@@ -1108,7 +1208,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "491",
@@ -1119,18 +1220,20 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "508",
     "fullName": "Martin Montero Peña",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Juancito Sport ",
+    "department": "Juancito Sport",
     "position": "Vigilante B-Zona Este",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "606",
@@ -1141,7 +1244,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "653",
@@ -1152,7 +1256,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "655",
@@ -1163,7 +1268,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "684",
@@ -1174,7 +1280,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "696",
@@ -1185,7 +1292,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "755",
@@ -1196,7 +1304,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "757",
@@ -1207,7 +1316,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "779",
@@ -1218,7 +1328,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "802",
@@ -1229,7 +1340,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "861",
@@ -1240,7 +1352,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "985",
@@ -1251,7 +1364,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1000",
@@ -1262,7 +1376,8 @@
     "position": "Vigilante Monte Cristi Dia",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1033",
@@ -1273,7 +1388,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1037",
@@ -1284,7 +1400,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1046",
@@ -1295,7 +1412,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1116",
@@ -1306,7 +1424,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1117",
@@ -1317,7 +1436,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1184",
@@ -1328,7 +1448,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1214",
@@ -1339,7 +1460,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1221",
@@ -1350,7 +1472,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1256",
@@ -1361,7 +1484,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1259",
@@ -1372,7 +1496,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1264",
@@ -1383,7 +1508,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1271",
@@ -1394,18 +1520,20 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1276",
     "fullName": "Antonio Hernandez Peguero",
     "status": "Activo",
     "payrollType": "Vgilantes Horas",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1319",
@@ -1416,7 +1544,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1402",
@@ -1427,7 +1556,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1462",
@@ -1438,7 +1568,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1509",
@@ -1449,7 +1580,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1548",
@@ -1460,7 +1592,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1557",
@@ -1471,7 +1604,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1598",
@@ -1482,18 +1616,20 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1668",
     "fullName": "Romelio Galva Aquino",
     "status": "Activo",
     "payrollType": "Vgilantes Horas",
-    "department": "Superintendencia de Bancos ",
+    "department": "Superintendencia de Bancos",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1702",
@@ -1504,7 +1640,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1720",
@@ -1515,7 +1652,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1727",
@@ -1526,18 +1664,20 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1742",
     "fullName": "Carlos Miguel Liriano Rudecindo",
     "status": "Activo",
     "payrollType": "Vgilantes Horas",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1744",
@@ -1548,7 +1688,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1764",
@@ -1559,7 +1700,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1790",
@@ -1570,7 +1712,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1812",
@@ -1581,7 +1724,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1818",
@@ -1592,7 +1736,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1830",
@@ -1603,29 +1748,32 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1866",
     "fullName": "Esmelin Sanchez Perez",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Operaciones Interior ",
+    "department": "Operaciones Interior",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1873",
     "fullName": "Jhonny Alberto Guzman Lizardo",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Operaciones Interior ",
+    "department": "Operaciones Interior",
     "position": "Operador Monte Cristi",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1887",
@@ -1636,7 +1784,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1896",
@@ -1647,7 +1796,8 @@
     "position": "Vigilante Monte Cristi Dia",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1900",
@@ -1658,7 +1808,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "1918",
@@ -1669,7 +1820,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2130",
@@ -1680,7 +1832,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2136",
@@ -1691,7 +1844,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2139",
@@ -1702,7 +1856,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2147",
@@ -1713,7 +1868,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2153",
@@ -1724,7 +1880,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2181",
@@ -1735,7 +1892,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2200",
@@ -1746,7 +1904,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2215",
@@ -1757,7 +1916,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2230",
@@ -1768,18 +1928,20 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2241",
     "fullName": "Joselito Turbi Herrera",
     "status": "Activo",
     "payrollType": "Vgilantes Horas",
-    "department": "Operaciones Interior ",
+    "department": "Operaciones Interior",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2262",
@@ -1790,29 +1952,32 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2298",
     "fullName": "Francisco Javier Garcia Casado",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2308",
     "fullName": "Rafael Bolivar Tejada",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Juancito Sport ",
+    "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2309",
@@ -1823,7 +1988,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2310",
@@ -1834,29 +2000,32 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2318",
     "fullName": "Anatacio Sanchez Mesa",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Operaciones Interior ",
-    "position": "Vigilante-J-Bavaro ",
+    "department": "Operaciones Interior",
+    "position": "Vigilante-J-Bavaro",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2332",
     "fullName": "Walker Fenerys Ferreras Mendez",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2335",
@@ -1867,18 +2036,20 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2345",
     "fullName": "Welinton Soto Arias",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2351",
@@ -1889,7 +2060,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2355",
@@ -1900,7 +2072,8 @@
     "position": "Oficial de Seguridad VIP B-Bavaro",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2360",
@@ -1911,7 +2084,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2369",
@@ -1922,7 +2096,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2386",
@@ -1933,18 +2108,20 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2398",
     "fullName": "Rafael Antonio Segura Coplin",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Juancito Sport ",
+    "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2412",
@@ -1955,7 +2132,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2418",
@@ -1966,7 +2144,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2467",
@@ -1977,7 +2156,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2472",
@@ -1988,7 +2168,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2475",
@@ -1999,40 +2180,44 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2492",
     "fullName": "Jerson Alvarez Rodriguez",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Juancito Sport ",
+    "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2515",
     "fullName": "Jose Rafael Guzman Duran",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Operaciones Interior ",
+    "department": "Operaciones Interior",
     "position": "Vigilante Bavaro",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2517",
     "fullName": "Ramon Ramirez Garcia",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Operaciones Interior ",
+    "department": "Operaciones Interior",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2539",
@@ -2043,18 +2228,20 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2540",
     "fullName": "Nicolas Hipolito Rodriguez Inoa",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Operaciones Interior ",
+    "department": "Operaciones Interior",
     "position": "Vigilante Santiago Noche",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2543",
@@ -2065,7 +2252,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2551",
@@ -2076,7 +2264,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2554",
@@ -2087,7 +2276,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2565",
@@ -2098,7 +2288,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2567",
@@ -2109,18 +2300,20 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2591",
     "fullName": "Juan Antonio Severino Ureña",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Juancito Sport ",
+    "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2616",
@@ -2131,7 +2324,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2645",
@@ -2142,18 +2336,20 @@
     "position": "Vigilante B-San Cristobal",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2658",
     "fullName": "Suani Amador",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Operaciones Interior ",
+    "department": "Operaciones Interior",
     "position": "Vigilante B-Higuey",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2665",
@@ -2164,7 +2360,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2688",
@@ -2175,7 +2372,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2725",
@@ -2186,7 +2384,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2734",
@@ -2197,7 +2396,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2741",
@@ -2208,62 +2408,68 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2757",
     "fullName": "Carlos Manuel Arias Arias",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2760",
     "fullName": "Domingo Vargas Marrero",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Macrotech ",
-    "position": "Vigilante-M-Azua ",
+    "department": "Macrotech",
+    "position": "Vigilante-M-Azua",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2777",
     "fullName": "Andres Paulino Rodriguez Torres",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Superintendencia de Bancos ",
+    "department": "Superintendencia de Bancos",
     "position": "Vigilante Santiago Dia",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2788",
     "fullName": "Juan Jimenez Pimentel",
     "status": "Activo",
     "payrollType": "Vgilantes Horas",
-    "department": "Superintendencia de Bancos ",
+    "department": "Superintendencia de Bancos",
     "position": "Vigilante Santiago Dia",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2791",
     "fullName": "Domingo Reyes Fañas",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Macrotech ",
-    "position": "Vigilante-M-San Francisco ",
+    "department": "Macrotech",
+    "position": "Vigilante-M-San Francisco",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2802",
@@ -2274,7 +2480,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2820",
@@ -2285,62 +2492,68 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2839",
     "fullName": "Jose Maria Espinal Payamps",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Vigilante Santiago Noche",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2857",
     "fullName": "Johan Gonzalez Jimenez",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Vigilante B-San Cristobal",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2864",
     "fullName": "Juan Carlos Basilio Jimenez",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Cubre Turno",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2875",
     "fullName": "Fermin Confesor Aguilera Lami",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Superintendencia de Bancos ",
+    "department": "Superintendencia de Bancos",
     "position": "Vigilante Santiago Noche",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2880",
     "fullName": "Nelson Vasquez Bastardo",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Macrotech ",
-    "position": "Vigilante-M-San Pedro ",
+    "department": "Macrotech",
+    "position": "Vigilante-M-San Pedro",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2893",
@@ -2351,7 +2564,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2906",
@@ -2362,7 +2576,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2926",
@@ -2373,18 +2588,20 @@
     "position": "Operador Monte Cristi",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2932",
     "fullName": "Jorge Luis Nova Sanchez",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Juancito Sport ",
+    "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2937",
@@ -2395,7 +2612,8 @@
     "position": "Vigilante",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2942",
@@ -2406,7 +2624,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2969",
@@ -2417,7 +2636,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "2988",
@@ -2428,7 +2648,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3013",
@@ -2439,18 +2660,20 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3017",
     "fullName": "Kelvin Junior Muñoz Polanco",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3027",
@@ -2461,7 +2684,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3036",
@@ -2472,7 +2696,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3056",
@@ -2483,7 +2708,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3076",
@@ -2494,7 +2720,8 @@
     "position": "Vigilante Monte Cristi Noche",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3089",
@@ -2505,7 +2732,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3114",
@@ -2516,18 +2744,20 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3125",
     "fullName": "Braulio  Emiliano  Morales",
     "status": "Activo",
     "payrollType": "Vgilantes Horas",
-    "department": "Superintendencia de Bancos ",
+    "department": "Superintendencia de Bancos",
     "position": "Vigilante Santiago Noche",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3131",
@@ -2538,7 +2768,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3140",
@@ -2549,7 +2780,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3151",
@@ -2560,7 +2792,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3153",
@@ -2571,7 +2804,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3157",
@@ -2582,40 +2816,44 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3172",
     "fullName": "Roberto Corona",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3195",
     "fullName": "Dionicio Baez Martinez",
     "status": "Activo",
     "payrollType": "Vgilantes Horas",
-    "department": "Juancito Sport ",
+    "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3196",
     "fullName": "Ricardo Abreu Capellan",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3210",
@@ -2626,18 +2864,20 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3214",
     "fullName": "Jose Victor Correa Aquino",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Juancito Sport ",
+    "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3215",
@@ -2648,7 +2888,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3225",
@@ -2659,7 +2900,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3228",
@@ -2670,18 +2912,20 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3268",
     "fullName": "Carlos Bienvenido Corona Rodriguez",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Juancito Sport ",
+    "department": "Juancito Sport",
     "position": "Vigilante Santiago Cubre Noche",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3285",
@@ -2692,7 +2936,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3331",
@@ -2703,7 +2948,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3334",
@@ -2714,29 +2960,32 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3338",
     "fullName": "Cristian Bido Alcantara",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Vigilante Bavaro",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3343",
     "fullName": "Servio Tulio Radhames Vargas Tejada",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3350",
@@ -2747,7 +2996,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3352",
@@ -2758,7 +3008,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3368",
@@ -2769,7 +3020,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3371",
@@ -2780,18 +3032,20 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3415",
     "fullName": "Oscar Florentino Brito",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3416",
@@ -2802,7 +3056,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3423",
@@ -2813,7 +3068,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3436",
@@ -2824,7 +3080,8 @@
     "position": "Vigilante B-Bani",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3439",
@@ -2835,51 +3092,56 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3478",
     "fullName": "Cristian Alexander Mendez Diaz",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Operaciones Interior ",
+    "department": "Operaciones Interior",
     "position": "Operador de Monitoreo",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3488",
     "fullName": "Kelvin Miguel Lopez Ulloa",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Juancito Sport ",
+    "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3502",
     "fullName": "Miguel Sisa Marrero",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Macrotech ",
-    "position": "Vigilante-M-Azua ",
+    "department": "Macrotech",
+    "position": "Vigilante-M-Azua",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3503",
     "fullName": "Javiel Antonio Beltre Garcia",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Macrotech ",
-    "position": "Vigilante-M-Azua ",
+    "department": "Macrotech",
+    "position": "Vigilante-M-Azua",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3523",
@@ -2890,7 +3152,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3540",
@@ -2901,7 +3164,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3541",
@@ -2912,7 +3176,8 @@
     "position": "Oficial de Seguridad VIP",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3545",
@@ -2923,7 +3188,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3546",
@@ -2934,7 +3200,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3557",
@@ -2945,18 +3212,20 @@
     "position": "Vigilante Monte Cristi Noche",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3560",
     "fullName": "Anneurys Vargas Hernandez",
     "status": "Activo",
     "payrollType": "Vgilantes Horas",
-    "department": "Juancito Sport ",
+    "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3565",
@@ -2967,18 +3236,20 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3585",
     "fullName": "Andres Martinez Arias",
     "status": "Activo",
     "payrollType": "Vgilantes Horas",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3592",
@@ -2989,7 +3260,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3596",
@@ -3000,7 +3272,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3605",
@@ -3011,18 +3284,20 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3609",
     "fullName": "Vicente Caraballo Ramos",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Operaciones Interior ",
+    "department": "Operaciones Interior",
     "position": "Vigilante Bavaro",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3615",
@@ -3033,7 +3308,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3637",
@@ -3044,18 +3320,20 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3639",
     "fullName": "Guillermo Angel Jimenez Alcantara",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3641",
@@ -3066,7 +3344,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3666",
@@ -3077,7 +3356,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3669",
@@ -3088,18 +3368,20 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3671",
     "fullName": "Bolivar Antonio Jaquez Espinal",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Vigilante Santiago Dia",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3679",
@@ -3110,18 +3392,20 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3700",
     "fullName": "Jose Altagracia Valdez Valdez",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Juancito Sport ",
+    "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3711",
@@ -3132,7 +3416,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3726",
@@ -3143,40 +3428,44 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3729",
     "fullName": "Joaquin Andres Santos Fermin",
     "status": "Activo",
     "payrollType": "Vgilantes Horas",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3736",
     "fullName": "Esteban Apolinar Alcantara",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Macrotech ",
-    "position": "Vigilante-San Juan ",
+    "department": "Macrotech",
+    "position": "Vigilante-San Juan",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3747",
     "fullName": "Dannys Josefina Perez De la Cruz",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3750",
@@ -3187,7 +3476,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3754",
@@ -3198,7 +3488,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3758",
@@ -3209,7 +3500,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3759",
@@ -3220,29 +3512,32 @@
     "position": "Recepcionista",
     "bank": "LA NACIONAL",
     "salary": 35000.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "3765",
     "fullName": "Eykel Elian Nuñez Mendez",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3768",
     "fullName": "Julio Cesar Fuencio Tejeda",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Juancito Sport ",
+    "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3777",
@@ -3253,29 +3548,32 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3779",
     "fullName": "Franklin Santiago Novas Heredia",
     "status": "Activo",
     "payrollType": "Vgilantes Horas",
-    "department": "Juancito Sport ",
+    "department": "Juancito Sport",
     "position": "Vigilante Bavaro",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3785",
     "fullName": "Eddy Antonio Reynoso Lopez",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Juancito Sport ",
+    "department": "Juancito Sport",
     "position": "Vigilante-J-San Francisco",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3794",
@@ -3286,18 +3584,20 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3796",
     "fullName": "Esmeraldo Antonio Mendez",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Vigilante-J-San Francisco",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3797",
@@ -3308,7 +3608,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3800",
@@ -3319,7 +3620,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3801",
@@ -3330,7 +3632,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3806",
@@ -3341,7 +3644,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3814",
@@ -3352,29 +3656,32 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3822",
     "fullName": "Yeremy Castro Morales",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Superintendencia de Bancos ",
+    "department": "Superintendencia de Bancos",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3835",
     "fullName": "Osvaldo Yillen Garcia",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Vigilante-Hato Mayor",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3838",
@@ -3385,7 +3692,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3842",
@@ -3396,18 +3704,20 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3845",
     "fullName": "Jose Ignacio Jimenez Estevez",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Juancito Sport ",
+    "department": "Juancito Sport",
     "position": "Vigilante-J-San Francisco",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3853",
@@ -3418,7 +3728,8 @@
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3860",
@@ -3429,7 +3740,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3864",
@@ -3440,7 +3752,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3870",
@@ -3451,7 +3764,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3884",
@@ -3462,40 +3776,44 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3888",
     "fullName": "Hamel Silverio De La Rosa",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Superintendencia de Bancos ",
+    "department": "Superintendencia de Bancos",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3891",
     "fullName": "Jessica Rosario Ogando",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3892",
     "fullName": "Berenisse Feliz Montero",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3896",
@@ -3506,18 +3824,20 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3901",
     "fullName": "Elison Alexander Quezada Ballenilla",
     "status": "Activo",
     "payrollType": "Vgilantes Horas",
-    "department": "Juancito Sport ",
+    "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3906",
@@ -3528,29 +3848,32 @@
     "position": "Vigilante Monte Cristi Dia",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3910",
     "fullName": "Saul Toribio Fernandez",
     "status": "Activo",
     "payrollType": "Vgilantes Horas",
-    "department": "Superintendencia de Bancos ",
+    "department": "Superintendencia de Bancos",
     "position": "Vigilante Santiago Noche",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3914",
     "fullName": "Angel Augusto Cruz  Contrera",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Juancito Sport ",
+    "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3923",
@@ -3561,7 +3884,8 @@
     "position": "Operador Monte Cristi",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3924",
@@ -3572,7 +3896,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3925",
@@ -3583,7 +3908,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3931",
@@ -3594,18 +3920,20 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3934",
     "fullName": "Cristian  Miguel  Montero  Vasquez",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Juancito Sport ",
+    "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3936",
@@ -3616,7 +3944,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3943",
@@ -3627,7 +3956,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3947",
@@ -3638,7 +3968,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3950",
@@ -3649,7 +3980,8 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3958",
@@ -3660,29 +3992,32 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3961",
     "fullName": "Francis  Paula",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Superintendencia de Bancos ",
+    "department": "Superintendencia de Bancos",
     "position": "Vigilante Santiago Cubre Dia",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3965",
     "fullName": "Nolis Santos Gomez",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Juancito Sport ",
+    "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3968",
@@ -3693,18 +4028,20 @@
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3970",
     "fullName": "Junior  Antonio  Santos Dominguez",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Vigilante Santiago Dia",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3974",
@@ -3715,7 +4052,8 @@
     "position": "Vigilante B-San Cristobal",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3975",
@@ -3726,18 +4064,20 @@
     "position": "Vigilante",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3979",
     "fullName": "Erick Luis Amezquita Nuñez",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Operaciones Interior ",
+    "department": "Operaciones Interior",
     "position": "Vigilante-J-San Francisco",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3980",
@@ -3748,18 +4088,20 @@
     "position": "Vigilante",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3984",
     "fullName": "Yudelis  Feliz Reyes",
     "status": "Activo",
     "payrollType": "Vgilantes Horas",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Vigilante",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3985",
@@ -3770,18 +4112,20 @@
     "position": "Vigilante",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3992",
     "fullName": "Duban  Antonio  Batista",
     "status": "Activo",
     "payrollType": "Vgilantes Horas",
-    "department": "Juancito Sport ",
+    "department": "Juancito Sport",
     "position": "Vigilante",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3998",
@@ -3792,7 +4136,8 @@
     "position": "Vigilante",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "3999",
@@ -3803,7 +4148,8 @@
     "position": "Vigilante",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "4001",
@@ -3814,7 +4160,8 @@
     "position": "Vigilante",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "4004",
@@ -3825,7 +4172,8 @@
     "position": "Vigilante",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "4005",
@@ -3836,7 +4184,8 @@
     "position": "Vigilante",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "4006",
@@ -3847,7 +4196,8 @@
     "position": "Vigilante",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "4008",
@@ -3858,7 +4208,8 @@
     "position": "Vigilante",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "4012",
@@ -3869,7 +4220,8 @@
     "position": "Vigilante",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "4013",
@@ -3880,7 +4232,8 @@
     "position": "Vigilante",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "4016",
@@ -3891,7 +4244,8 @@
     "position": "Vigilante",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "4019",
@@ -3902,40 +4256,44 @@
     "position": "Vigilante B-San Fco. M.",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "4020",
     "fullName": "Leonel  Antonio Mendez Florian",
     "status": "Activo",
     "payrollType": "Vgilantes Horas",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Vigilante",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "4021",
     "fullName": "Edward  Manuel Almonte",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Macrotech ",
+    "department": "Macrotech",
     "position": "Vigilante Santiago Dia",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "4022",
     "fullName": "Felipe Mariano Mirabal Cepeda",
     "status": "Activo",
     "payrollType": "Operaciones",
-    "department": "Superintendencia de Bancos ",
+    "department": "Superintendencia de Bancos",
     "position": "Vigilante Santiago Dia",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "4024",
@@ -3946,7 +4304,8 @@
     "position": "Vigilante",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "4025",
@@ -3957,7 +4316,8 @@
     "position": "Vigilante",
     "bank": "",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "4026",
@@ -3968,7 +4328,8 @@
     "position": "Vigilante",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "4027",
@@ -3979,7 +4340,8 @@
     "position": "Vigilante",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "4028",
@@ -3990,7 +4352,8 @@
     "position": "Vigilante",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "4030",
@@ -4001,7 +4364,8 @@
     "position": "Vigilante",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "4031",
@@ -4012,18 +4376,20 @@
     "position": "Vigilante",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "4035",
     "fullName": "Carlos manuel Romero Mateo",
     "status": "Activo",
     "payrollType": "Vgilantes Horas",
-    "department": "Juancito Sport ",
+    "department": "Juancito Sport",
     "position": "Vigilante",
     "bank": "LA NACIONAL",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "4036",
@@ -4034,7 +4400,8 @@
     "position": "Vigilante",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "4037",
@@ -4045,7 +4412,8 @@
     "position": "Oficial de Seguridad VIP",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "4038",
@@ -4056,7 +4424,8 @@
     "position": "Vigilante Higuey",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "4039",
@@ -4067,7 +4436,8 @@
     "position": "Oficial de Seguridad VIP",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 0
+    "hourlyRate": 0.0,
+    "tss": ""
   },
   {
     "employeeCode": "4040",
@@ -4078,7 +4448,8 @@
     "position": "Vigilante",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "4041",
@@ -4089,7 +4460,8 @@
     "position": "Oficial de Seguridad",
     "bank": "",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   },
   {
     "employeeCode": "4043",
@@ -4100,6 +4472,7 @@
     "position": "Vigilante",
     "bank": "BHD Leon",
     "salary": 24633.0,
-    "hourlyRate": 78.95
+    "hourlyRate": 78.95,
+    "tss": ""
   }
 ]
