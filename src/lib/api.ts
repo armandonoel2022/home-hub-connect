@@ -285,6 +285,10 @@ export interface MonthlyReposition {
   appliedBy?: string;
   appliedAt?: string;
   status: "pendiente" | "aprobado" | "aplicado";
+  purchaseId?: string;
+  purchaseDescription?: string;
+  kind?: "mensual" | "transaccion";
+  note?: string;
 }
 export interface PettyCashState {
   repositions: MonthlyReposition[];
@@ -292,7 +296,14 @@ export interface PettyCashState {
 }
 export const pettyCashApi = {
   getState: () => apiFetch<PettyCashState>("/petty-cash"),
-  createReposition: (data: { yearMonth: string; amountReposed: number; requestedBy: string }) =>
+  createReposition: (data: {
+    yearMonth: string;
+    amountReposed: number;
+    requestedBy: string;
+    purchaseId?: string;
+    purchaseDescription?: string;
+    note?: string;
+  }) =>
     apiFetch<MonthlyReposition>("/petty-cash/repositions", { method: "POST", body: JSON.stringify(data) }),
   approveReposition: (id: string, by: string) =>
     apiFetch<MonthlyReposition>(`/petty-cash/repositions/${id}/approve`, { method: "POST", body: JSON.stringify({ by }) }),
