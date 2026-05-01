@@ -7,9 +7,10 @@
     "department": "Gerencia General",
     "position": "Gerente General",
     "bank": "BHD Leon",
-    "salary": 110000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 110000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Administrativo"
   },
   {
     "employeeCode": "532",
@@ -19,9 +20,10 @@
     "department": "Administracion y Finanzas",
     "position": "Gerente Administrativo",
     "bank": "BHD Leon",
-    "salary": 80000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 80000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Administrativo"
   },
   {
     "employeeCode": "538",
@@ -31,9 +33,10 @@
     "department": "Operaciones",
     "position": "Coordinador Operaciones nocturno",
     "bank": "BHD Leon",
-    "salary": 30000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 30000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Administrativo"
   },
   {
     "employeeCode": "539",
@@ -43,9 +46,10 @@
     "department": "Administracion y Finanzas",
     "position": "Mensajero",
     "bank": "BHD Leon",
-    "salary": 27500.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 27500,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Administrativo"
   },
   {
     "employeeCode": "1520",
@@ -55,9 +59,10 @@
     "department": "Administracion y Finanzas",
     "position": "Encargada Cuentas por pagar y facturacion",
     "bank": "BHD Leon",
-    "salary": 55000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 55000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Administrativo"
   },
   {
     "employeeCode": "1923",
@@ -67,9 +72,10 @@
     "department": "Gerencia Comercial",
     "position": "Gerente Comercial",
     "bank": "BHD Leon",
-    "salary": 80000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 80000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Administrativo"
   },
   {
     "employeeCode": "1967",
@@ -79,9 +85,10 @@
     "department": "Administracion y Finanzas",
     "position": "Encargada Contabilidad",
     "bank": "BHD Leon",
-    "salary": 60000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 60000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Administrativo"
   },
   {
     "employeeCode": "2413",
@@ -91,9 +98,10 @@
     "department": "Administracion y Finanzas",
     "position": "Conserje",
     "bank": "BHD Leon",
-    "salary": 27500.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 27500,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Administrativo"
   },
   {
     "employeeCode": "3029",
@@ -103,9 +111,10 @@
     "department": "Gerencia Comercial",
     "position": "Analista Calidad y Cumplimiento",
     "bank": "BHD Leon",
-    "salary": 35000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 35000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Administrativo"
   },
   {
     "employeeCode": "3696",
@@ -115,9 +124,10 @@
     "department": "Gerencia Comercial",
     "position": "Asistente Administrativa",
     "bank": "BHD Leon",
-    "salary": 37500.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 37500,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Administrativo"
   },
   {
     "employeeCode": "3760",
@@ -127,9 +137,10 @@
     "department": "Gerencia Comercial",
     "position": "Representante Servicio Al Cliente",
     "bank": "BHD Leon",
-    "salary": 35000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 35000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Administrativo"
   },
   {
     "employeeCode": "3868",
@@ -139,9 +150,10 @@
     "department": "Recursos Humanos",
     "position": "Gerente Recursos Humanos",
     "bank": "BHD Leon",
-    "salary": 80000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 80000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Administrativo"
   },
   {
     "employeeCode": "3895",
@@ -151,9 +163,10 @@
     "department": "Operaciones",
     "position": "Gerente de Operaciones",
     "bank": "BHD Leon",
-    "salary": 80000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 80000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Administrativo"
   },
   {
     "employeeCode": "3898",
@@ -163,9 +176,10 @@
     "department": "Tecnologia y Monitoreo",
     "position": "Coordinador Técnologia y Monitoreo",
     "bank": "BHD Leon",
-    "salary": 65000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 65000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Administrativo"
   },
   {
     "employeeCode": "3904",
@@ -175,9 +189,10 @@
     "department": "Recursos Humanos",
     "position": "Coordinadora Relaciones Laborales",
     "bank": "BHD Leon",
-    "salary": 40000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 40000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Administrativo"
   },
   {
     "employeeCode": "3905",
@@ -187,9 +202,10 @@
     "department": "Recursos Humanos",
     "position": "Coordinadora Reclutamiento y Seleccion",
     "bank": "BHD Leon",
-    "salary": 40000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 40000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Administrativo"
   },
   {
     "employeeCode": "3908",
@@ -199,9 +215,10 @@
     "department": "Seguridad Electronica",
     "position": "Coordinador Seguridad Electrónica",
     "bank": "BHD Leon",
-    "salary": 45000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 45000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Administrativo"
   },
   {
     "employeeCode": "3942",
@@ -211,9 +228,10 @@
     "department": "Operaciones",
     "position": "Coordinador Operaciones Diurno",
     "bank": "BHD Leon",
-    "salary": 50000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 50000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Administrativo"
   },
   {
     "employeeCode": "3951",
@@ -223,9 +241,10 @@
     "department": "Tecnologia y Monitoreo",
     "position": "Pasante administrativo",
     "bank": "BHD Leon",
-    "salary": 24633.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 24633,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Administrativo"
   },
   {
     "employeeCode": "3983",
@@ -235,9 +254,10 @@
     "department": "Operaciones",
     "position": "Recepcionista",
     "bank": "LA NACIONAL",
-    "salary": 25000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 25000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Administrativo"
   },
   {
     "employeeCode": "4007",
@@ -247,9 +267,10 @@
     "department": "Recursos Humanos",
     "position": "Pasante administrativo",
     "bank": "BHD Leon",
-    "salary": 24633.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 24633,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Administrativo"
   },
   {
     "employeeCode": "4032",
@@ -259,9 +280,10 @@
     "department": "Operaciones",
     "position": "Asistente Operaciones",
     "bank": "BHD Leon",
-    "salary": 31000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 31000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Administrativo"
   },
   {
     "employeeCode": "1536",
@@ -271,9 +293,10 @@
     "department": "Tecnologia y Monitoreo",
     "position": "Operador Central Monitoreo",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Operador"
   },
   {
     "employeeCode": "1745",
@@ -283,9 +306,10 @@
     "department": "Tecnologia y Monitoreo",
     "position": "Operador ALNAP",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Operador"
   },
   {
     "employeeCode": "1846",
@@ -295,9 +319,10 @@
     "department": "Tecnologia y Monitoreo",
     "position": "Operador ALNAP",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Operador"
   },
   {
     "employeeCode": "2173",
@@ -307,9 +332,10 @@
     "department": "Tecnologia y Monitoreo",
     "position": "Operador ALNAP",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Operador"
   },
   {
     "employeeCode": "2979",
@@ -319,9 +345,10 @@
     "department": "Tecnologia y Monitoreo",
     "position": "Operador ALNAP",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Operador"
   },
   {
     "employeeCode": "3351",
@@ -331,9 +358,10 @@
     "department": "Operaciones",
     "position": "Supervisor Auxiliar Dia",
     "bank": "BHD Leon",
-    "salary": 24633.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 24633,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Supervisor"
   },
   {
     "employeeCode": "3374",
@@ -343,9 +371,10 @@
     "department": "Tecnologia y Monitoreo",
     "position": "Operador Central Monitoreo",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Operador"
   },
   {
     "employeeCode": "3599",
@@ -355,9 +384,10 @@
     "department": "Seguridad Electronica",
     "position": "Doctor Técnico (laboratorio & Estándares)",
     "bank": "BHD Leon",
-    "salary": 30000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 30000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3650",
@@ -367,9 +397,10 @@
     "department": "Seguridad Electronica",
     "position": "Líder de Brigada",
     "bank": "LA NACIONAL",
-    "salary": 37500.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 37500,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Supervisor"
   },
   {
     "employeeCode": "3674",
@@ -379,9 +410,10 @@
     "department": "Supervisores",
     "position": "Supervisor Zona DN Este Dia",
     "bank": "BHD Leon",
-    "salary": 31000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 31000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Supervisor"
   },
   {
     "employeeCode": "3686",
@@ -391,9 +423,10 @@
     "department": "Tecnologia y Monitoreo",
     "position": "Operador Central Monitoreo",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Operador"
   },
   {
     "employeeCode": "3751",
@@ -403,9 +436,10 @@
     "department": "Tecnologia y Monitoreo",
     "position": "Operador Central Monitoreo",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Operador"
   },
   {
     "employeeCode": "3792",
@@ -415,9 +449,10 @@
     "department": "Seguridad Electronica",
     "position": "Auxiliar de Brigada",
     "bank": "BHD Leon",
-    "salary": 30000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 30000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3811",
@@ -427,9 +462,10 @@
     "department": "Tecnologia y Monitoreo",
     "position": "Operador de Monitoreo",
     "bank": "BHD Leon",
-    "salary": 24633.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 24633,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Operador"
   },
   {
     "employeeCode": "3876",
@@ -439,9 +475,10 @@
     "department": "Tecnologia y Monitoreo",
     "position": "Operador ALNAP",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Operador"
   },
   {
     "employeeCode": "3889",
@@ -451,9 +488,10 @@
     "department": "Tecnologia y Monitoreo",
     "position": "Operador de Monitoreo",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 24633,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Operador"
   },
   {
     "employeeCode": "3890",
@@ -463,9 +501,10 @@
     "department": "Operaciones",
     "position": "Analista control operativo",
     "bank": "LA NACIONAL",
-    "salary": 31000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 31000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3922",
@@ -475,9 +514,10 @@
     "department": "Tecnologia y Monitoreo",
     "position": "Operador ALNAP",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Operador"
   },
   {
     "employeeCode": "3986",
@@ -487,9 +527,10 @@
     "department": "Seguridad Electronica",
     "position": "Auxiliar de Brigada",
     "bank": "BHD Leon",
-    "salary": 30000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 30000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3987",
@@ -499,9 +540,10 @@
     "department": "Tecnologia y Monitoreo",
     "position": "Operador de Monitoreo",
     "bank": "BHD Leon",
-    "salary": 24633.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 24633,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Operador"
   },
   {
     "employeeCode": "3988",
@@ -511,9 +553,10 @@
     "department": "Seguridad Electronica",
     "position": "Auxiliar de Brigada",
     "bank": "BHD Leon",
-    "salary": 30000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 30000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1079",
@@ -523,9 +566,10 @@
     "department": "Supervisores",
     "position": "Supervisor Zona SD Este Dia",
     "bank": "LA NACIONAL",
-    "salary": 31000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 31000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Supervisor"
   },
   {
     "employeeCode": "1283",
@@ -535,9 +579,10 @@
     "department": "Supervisores",
     "position": "Supervisor Zona Este",
     "bank": "BHD Leon",
-    "salary": 31000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 31000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Supervisor"
   },
   {
     "employeeCode": "2124",
@@ -547,9 +592,10 @@
     "department": "Supervisores",
     "position": "Supervisor Zona Sur",
     "bank": "LA NACIONAL",
-    "salary": 31000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 31000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Supervisor"
   },
   {
     "employeeCode": "2549",
@@ -559,9 +605,10 @@
     "department": "Supervisores",
     "position": "Supervisor Zona SD Este Noche",
     "bank": "BHD Leon",
-    "salary": 31000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 31000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Supervisor"
   },
   {
     "employeeCode": "3107",
@@ -571,9 +618,10 @@
     "department": "Supervisores",
     "position": "Supervisor Zona SD Oeste Noche",
     "bank": "BHD Leon",
-    "salary": 31000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 31000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Supervisor"
   },
   {
     "employeeCode": "3267",
@@ -583,9 +631,10 @@
     "department": "Supervisores",
     "position": "Supervisor Zona Santiago",
     "bank": "BHD Leon",
-    "salary": 31000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 31000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Supervisor"
   },
   {
     "employeeCode": "3410",
@@ -595,9 +644,10 @@
     "department": "Supervisores",
     "position": "Supervisor Zona DN Oeste Noche",
     "bank": "BHD Leon",
-    "salary": 31000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 31000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Supervisor"
   },
   {
     "employeeCode": "3510",
@@ -607,9 +657,10 @@
     "department": "Supervisores",
     "position": "Supervisor Zona Monte Cristi",
     "bank": "BHD Leon",
-    "salary": 31000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 31000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Supervisor"
   },
   {
     "employeeCode": "3664",
@@ -619,9 +670,10 @@
     "department": "Supervisores",
     "position": "Supervisor Operaciones",
     "bank": "BHD Leon",
-    "salary": 31000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 31000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Supervisor"
   },
   {
     "employeeCode": "3746",
@@ -631,9 +683,10 @@
     "department": "Supervisores",
     "position": "Supervisor Zona DN Este Dia",
     "bank": "BHD Leon",
-    "salary": 31000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 31000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Supervisor"
   },
   {
     "employeeCode": "3802",
@@ -643,9 +696,10 @@
     "department": "Supervisores",
     "position": "Supervisor Auxiliar Noche",
     "bank": "BHD Leon",
-    "salary": 31000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 31000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Supervisor"
   },
   {
     "employeeCode": "3881",
@@ -655,9 +709,10 @@
     "department": "Supervisores",
     "position": "Supervisor Zona SD Oeste Dia",
     "bank": "BHD Leon",
-    "salary": 31000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 31000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Supervisor"
   },
   {
     "employeeCode": "3959",
@@ -667,9 +722,10 @@
     "department": "Supervisores",
     "position": "Supervisor Auxiliar Dia",
     "bank": "BHD Leon",
-    "salary": 31000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 31000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Supervisor"
   },
   {
     "employeeCode": "3973",
@@ -679,9 +735,10 @@
     "department": "Supervisores",
     "position": "Supervisor Zona Galeria 360 Dia",
     "bank": "LA NACIONAL",
-    "salary": 31000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 31000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Supervisor"
   },
   {
     "employeeCode": "4003",
@@ -691,9 +748,10 @@
     "department": "Supervisores",
     "position": "Supervisor San Francisco de Macoris",
     "bank": "LA NACIONAL",
-    "salary": 31000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 31000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Supervisor"
   },
   {
     "employeeCode": "4033",
@@ -703,9 +761,10 @@
     "department": "Supervisores",
     "position": "Supervisor Auxiliar Noche",
     "bank": "",
-    "salary": 31000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 31000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Supervisor"
   },
   {
     "employeeCode": "4042",
@@ -715,9 +774,10 @@
     "department": "Safeone",
     "position": "Vigilante",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "17",
@@ -727,9 +787,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "51",
@@ -739,9 +800,10 @@
     "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "79",
@@ -751,9 +813,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "80",
@@ -763,9 +826,10 @@
     "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "84",
@@ -775,9 +839,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "94",
@@ -787,9 +852,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "95",
@@ -799,9 +865,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "102",
@@ -811,9 +878,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "106",
@@ -823,9 +891,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "111",
@@ -835,9 +904,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "112",
@@ -847,9 +917,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "114",
@@ -859,9 +930,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "123",
@@ -871,9 +943,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "124",
@@ -883,9 +956,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "128",
@@ -895,9 +969,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "129",
@@ -907,9 +982,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "131",
@@ -919,9 +995,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "218",
@@ -931,9 +1008,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "223",
@@ -943,9 +1021,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "249",
@@ -955,9 +1034,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "281",
@@ -967,9 +1047,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "282",
@@ -979,9 +1060,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "345",
@@ -991,9 +1073,10 @@
     "department": "Superintendencia de Bancos",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "412",
@@ -1003,9 +1086,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "419",
@@ -1015,9 +1099,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "421",
@@ -1027,9 +1112,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "422",
@@ -1039,9 +1125,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "425",
@@ -1051,9 +1138,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "427",
@@ -1063,9 +1151,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "439",
@@ -1075,9 +1164,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "445",
@@ -1087,9 +1177,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "448",
@@ -1099,9 +1190,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "460",
@@ -1111,9 +1203,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "465",
@@ -1123,9 +1216,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "470",
@@ -1135,9 +1229,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "476",
@@ -1147,9 +1242,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "477",
@@ -1159,9 +1255,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "481",
@@ -1171,9 +1268,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "484",
@@ -1183,9 +1281,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "485",
@@ -1195,9 +1294,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "489",
@@ -1207,9 +1307,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "491",
@@ -1219,9 +1320,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "508",
@@ -1231,9 +1333,10 @@
     "department": "Juancito Sport",
     "position": "Vigilante B-Zona Este",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "606",
@@ -1243,9 +1346,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "653",
@@ -1255,9 +1359,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "655",
@@ -1267,9 +1372,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "684",
@@ -1279,9 +1385,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "696",
@@ -1291,9 +1398,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "755",
@@ -1303,9 +1411,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "757",
@@ -1315,9 +1424,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "779",
@@ -1327,9 +1437,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "802",
@@ -1339,9 +1450,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "861",
@@ -1351,9 +1463,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "985",
@@ -1363,9 +1476,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1000",
@@ -1375,9 +1489,10 @@
     "department": "Safeone",
     "position": "Vigilante Monte Cristi Dia",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1033",
@@ -1387,9 +1502,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1037",
@@ -1399,9 +1515,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1046",
@@ -1411,9 +1528,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1116",
@@ -1423,9 +1541,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1117",
@@ -1435,9 +1554,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1184",
@@ -1447,9 +1567,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1214",
@@ -1459,9 +1580,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1221",
@@ -1471,9 +1593,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1256",
@@ -1483,9 +1606,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1259",
@@ -1495,9 +1619,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1264",
@@ -1507,9 +1632,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1271",
@@ -1519,9 +1645,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1276",
@@ -1531,9 +1658,10 @@
     "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1319",
@@ -1543,9 +1671,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1402",
@@ -1555,9 +1684,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1462",
@@ -1567,9 +1697,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1509",
@@ -1579,9 +1710,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1548",
@@ -1591,9 +1723,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1557",
@@ -1603,9 +1736,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1598",
@@ -1615,9 +1749,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1668",
@@ -1627,9 +1762,10 @@
     "department": "Superintendencia de Bancos",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1702",
@@ -1639,9 +1775,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1720",
@@ -1651,9 +1788,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1727",
@@ -1663,9 +1801,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1742",
@@ -1675,9 +1814,10 @@
     "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1744",
@@ -1687,9 +1827,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1764",
@@ -1699,9 +1840,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1790",
@@ -1711,9 +1853,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1812",
@@ -1723,9 +1866,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1818",
@@ -1735,9 +1879,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1830",
@@ -1747,9 +1892,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1866",
@@ -1759,9 +1905,10 @@
     "department": "Operaciones Interior",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1873",
@@ -1771,9 +1918,10 @@
     "department": "Operaciones Interior",
     "position": "Operador Monte Cristi",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Operador"
   },
   {
     "employeeCode": "1887",
@@ -1783,9 +1931,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1896",
@@ -1795,9 +1944,10 @@
     "department": "Safeone",
     "position": "Vigilante Monte Cristi Dia",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1900",
@@ -1807,9 +1957,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "1918",
@@ -1819,9 +1970,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2130",
@@ -1831,9 +1983,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2136",
@@ -1843,9 +1996,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2139",
@@ -1855,9 +2009,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2147",
@@ -1867,9 +2022,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2153",
@@ -1879,9 +2035,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2181",
@@ -1891,9 +2048,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2200",
@@ -1903,9 +2061,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2215",
@@ -1915,9 +2074,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2230",
@@ -1927,9 +2087,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2241",
@@ -1939,9 +2100,10 @@
     "department": "Operaciones Interior",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2262",
@@ -1951,9 +2113,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2298",
@@ -1963,9 +2126,10 @@
     "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2308",
@@ -1975,9 +2139,10 @@
     "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2309",
@@ -1987,9 +2152,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2310",
@@ -1999,9 +2165,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2318",
@@ -2011,9 +2178,10 @@
     "department": "Operaciones Interior",
     "position": "Vigilante-J-Bavaro",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2332",
@@ -2023,9 +2191,10 @@
     "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2335",
@@ -2035,9 +2204,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2345",
@@ -2047,9 +2217,10 @@
     "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2351",
@@ -2059,9 +2230,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2355",
@@ -2071,9 +2243,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad VIP B-Bavaro",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2360",
@@ -2083,9 +2256,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2369",
@@ -2095,9 +2269,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2386",
@@ -2107,9 +2282,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2398",
@@ -2119,9 +2295,10 @@
     "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2412",
@@ -2131,9 +2308,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2418",
@@ -2143,9 +2321,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2467",
@@ -2155,9 +2334,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2472",
@@ -2167,9 +2347,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2475",
@@ -2179,9 +2360,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2492",
@@ -2191,9 +2373,10 @@
     "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2515",
@@ -2203,9 +2386,10 @@
     "department": "Operaciones Interior",
     "position": "Vigilante Bavaro",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2517",
@@ -2215,9 +2399,10 @@
     "department": "Operaciones Interior",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2539",
@@ -2227,9 +2412,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2540",
@@ -2239,9 +2425,10 @@
     "department": "Operaciones Interior",
     "position": "Vigilante Santiago Noche",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2543",
@@ -2251,9 +2438,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2551",
@@ -2263,9 +2451,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2554",
@@ -2275,9 +2464,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2565",
@@ -2287,9 +2477,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2567",
@@ -2299,9 +2490,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2591",
@@ -2311,9 +2503,10 @@
     "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2616",
@@ -2323,9 +2516,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2645",
@@ -2335,9 +2529,10 @@
     "department": "Safeone",
     "position": "Vigilante B-San Cristobal",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2658",
@@ -2347,9 +2542,10 @@
     "department": "Operaciones Interior",
     "position": "Vigilante B-Higuey",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2665",
@@ -2359,9 +2555,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2688",
@@ -2371,9 +2568,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2725",
@@ -2383,9 +2581,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2734",
@@ -2395,9 +2594,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2741",
@@ -2407,9 +2607,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2757",
@@ -2419,9 +2620,10 @@
     "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2760",
@@ -2431,9 +2633,10 @@
     "department": "Macrotech",
     "position": "Vigilante-M-Azua",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2777",
@@ -2443,9 +2646,10 @@
     "department": "Superintendencia de Bancos",
     "position": "Vigilante Santiago Dia",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2788",
@@ -2455,9 +2659,10 @@
     "department": "Superintendencia de Bancos",
     "position": "Vigilante Santiago Dia",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2791",
@@ -2467,9 +2672,10 @@
     "department": "Macrotech",
     "position": "Vigilante-M-San Francisco",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2802",
@@ -2479,9 +2685,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2820",
@@ -2491,9 +2698,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2839",
@@ -2503,9 +2711,10 @@
     "department": "Macrotech",
     "position": "Vigilante Santiago Noche",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2857",
@@ -2515,9 +2724,10 @@
     "department": "Macrotech",
     "position": "Vigilante B-San Cristobal",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2864",
@@ -2527,9 +2737,10 @@
     "department": "Macrotech",
     "position": "Cubre Turno",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2875",
@@ -2539,9 +2750,10 @@
     "department": "Superintendencia de Bancos",
     "position": "Vigilante Santiago Noche",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2880",
@@ -2551,9 +2763,10 @@
     "department": "Macrotech",
     "position": "Vigilante-M-San Pedro",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2893",
@@ -2563,9 +2776,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2906",
@@ -2575,9 +2789,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2926",
@@ -2587,9 +2802,10 @@
     "department": "Safeone",
     "position": "Operador Monte Cristi",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Operador"
   },
   {
     "employeeCode": "2932",
@@ -2599,9 +2815,10 @@
     "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2937",
@@ -2611,9 +2828,10 @@
     "department": "Asoc. Nacional",
     "position": "Vigilante",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2942",
@@ -2623,9 +2841,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2969",
@@ -2635,9 +2854,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "2988",
@@ -2647,9 +2867,10 @@
     "department": "Operaciones",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3013",
@@ -2659,9 +2880,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3017",
@@ -2671,9 +2893,10 @@
     "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3027",
@@ -2683,9 +2906,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3036",
@@ -2695,9 +2919,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3056",
@@ -2707,9 +2932,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3076",
@@ -2719,9 +2945,10 @@
     "department": "Safeone",
     "position": "Vigilante Monte Cristi Noche",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3089",
@@ -2731,9 +2958,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3114",
@@ -2743,9 +2971,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3125",
@@ -2755,9 +2984,10 @@
     "department": "Superintendencia de Bancos",
     "position": "Vigilante Santiago Noche",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3131",
@@ -2767,9 +2997,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3140",
@@ -2779,9 +3010,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3151",
@@ -2791,9 +3023,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3153",
@@ -2803,9 +3036,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3157",
@@ -2815,9 +3049,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3172",
@@ -2827,9 +3062,10 @@
     "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3195",
@@ -2839,9 +3075,10 @@
     "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3196",
@@ -2851,9 +3088,10 @@
     "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3210",
@@ -2863,9 +3101,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3214",
@@ -2875,9 +3114,10 @@
     "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3215",
@@ -2887,9 +3127,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3225",
@@ -2899,9 +3140,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3228",
@@ -2911,9 +3153,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3268",
@@ -2923,9 +3166,10 @@
     "department": "Juancito Sport",
     "position": "Vigilante Santiago Cubre Noche",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3285",
@@ -2935,9 +3179,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3331",
@@ -2947,9 +3192,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3334",
@@ -2959,9 +3205,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3338",
@@ -2971,9 +3218,10 @@
     "department": "Macrotech",
     "position": "Vigilante Bavaro",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3343",
@@ -2983,9 +3231,10 @@
     "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3350",
@@ -2995,9 +3244,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3352",
@@ -3007,9 +3257,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3368",
@@ -3019,9 +3270,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3371",
@@ -3031,9 +3283,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3415",
@@ -3043,9 +3296,10 @@
     "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3416",
@@ -3055,9 +3309,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3423",
@@ -3067,9 +3322,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3436",
@@ -3079,9 +3335,10 @@
     "department": "Asoc. Nacional",
     "position": "Vigilante B-Bani",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3439",
@@ -3091,9 +3348,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3478",
@@ -3103,9 +3361,10 @@
     "department": "Operaciones Interior",
     "position": "Operador de Monitoreo",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Operador"
   },
   {
     "employeeCode": "3488",
@@ -3115,9 +3374,10 @@
     "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3502",
@@ -3127,9 +3387,10 @@
     "department": "Macrotech",
     "position": "Vigilante-M-Azua",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3503",
@@ -3139,9 +3400,10 @@
     "department": "Macrotech",
     "position": "Vigilante-M-Azua",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3523",
@@ -3151,9 +3413,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3540",
@@ -3163,9 +3426,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3541",
@@ -3175,9 +3439,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad VIP",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3545",
@@ -3187,9 +3452,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3546",
@@ -3199,9 +3465,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3557",
@@ -3211,9 +3478,10 @@
     "department": "Safeone",
     "position": "Vigilante Monte Cristi Noche",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3560",
@@ -3223,9 +3491,10 @@
     "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3565",
@@ -3235,9 +3504,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3585",
@@ -3247,9 +3517,10 @@
     "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3592",
@@ -3259,9 +3530,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3596",
@@ -3271,9 +3543,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3605",
@@ -3283,9 +3556,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3609",
@@ -3295,9 +3569,10 @@
     "department": "Operaciones Interior",
     "position": "Vigilante Bavaro",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3615",
@@ -3307,9 +3582,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3637",
@@ -3319,9 +3595,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3639",
@@ -3331,9 +3608,10 @@
     "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3641",
@@ -3343,9 +3621,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3666",
@@ -3355,9 +3634,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3669",
@@ -3367,9 +3647,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3671",
@@ -3379,9 +3660,10 @@
     "department": "Macrotech",
     "position": "Vigilante Santiago Dia",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3679",
@@ -3391,9 +3673,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3700",
@@ -3403,9 +3686,10 @@
     "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3711",
@@ -3415,9 +3699,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3726",
@@ -3427,9 +3712,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3729",
@@ -3439,9 +3725,10 @@
     "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3736",
@@ -3451,9 +3738,10 @@
     "department": "Macrotech",
     "position": "Vigilante-San Juan",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3747",
@@ -3463,9 +3751,10 @@
     "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3750",
@@ -3475,9 +3764,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3754",
@@ -3487,9 +3777,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3758",
@@ -3499,9 +3790,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3759",
@@ -3511,9 +3803,10 @@
     "department": "Asoc. Nacional",
     "position": "Recepcionista",
     "bank": "LA NACIONAL",
-    "salary": 35000.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 35000,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3765",
@@ -3523,9 +3816,10 @@
     "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3768",
@@ -3535,9 +3829,10 @@
     "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3777",
@@ -3547,9 +3842,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3779",
@@ -3559,9 +3855,10 @@
     "department": "Juancito Sport",
     "position": "Vigilante Bavaro",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3785",
@@ -3571,9 +3868,10 @@
     "department": "Juancito Sport",
     "position": "Vigilante-J-San Francisco",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3794",
@@ -3583,9 +3881,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3796",
@@ -3595,9 +3894,10 @@
     "department": "Macrotech",
     "position": "Vigilante-J-San Francisco",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3797",
@@ -3607,9 +3907,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3800",
@@ -3619,9 +3920,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3801",
@@ -3631,9 +3933,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3806",
@@ -3643,9 +3946,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3814",
@@ -3655,9 +3959,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3822",
@@ -3667,9 +3972,10 @@
     "department": "Superintendencia de Bancos",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3835",
@@ -3679,9 +3985,10 @@
     "department": "Macrotech",
     "position": "Vigilante-Hato Mayor",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3838",
@@ -3691,9 +3998,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3842",
@@ -3703,9 +4011,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3845",
@@ -3715,9 +4024,10 @@
     "department": "Juancito Sport",
     "position": "Vigilante-J-San Francisco",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3853",
@@ -3727,9 +4037,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3860",
@@ -3739,9 +4050,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3864",
@@ -3751,9 +4063,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3870",
@@ -3763,9 +4076,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3884",
@@ -3775,9 +4089,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3888",
@@ -3787,9 +4102,10 @@
     "department": "Superintendencia de Bancos",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3891",
@@ -3799,9 +4115,10 @@
     "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3892",
@@ -3811,9 +4128,10 @@
     "department": "Macrotech",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3896",
@@ -3823,9 +4141,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3901",
@@ -3835,9 +4154,10 @@
     "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3906",
@@ -3847,9 +4167,10 @@
     "department": "Safeone",
     "position": "Vigilante Monte Cristi Dia",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3910",
@@ -3859,9 +4180,10 @@
     "department": "Superintendencia de Bancos",
     "position": "Vigilante Santiago Noche",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3914",
@@ -3871,9 +4193,10 @@
     "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3923",
@@ -3883,9 +4206,10 @@
     "department": "Safeone",
     "position": "Operador Monte Cristi",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Operador"
   },
   {
     "employeeCode": "3924",
@@ -3895,9 +4219,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3925",
@@ -3907,9 +4232,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3931",
@@ -3919,9 +4245,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3934",
@@ -3931,9 +4258,10 @@
     "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3936",
@@ -3943,9 +4271,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3943",
@@ -3955,9 +4284,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3947",
@@ -3967,9 +4297,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3950",
@@ -3979,9 +4310,10 @@
     "department": "Safeone",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3958",
@@ -3991,9 +4323,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3961",
@@ -4003,9 +4336,10 @@
     "department": "Superintendencia de Bancos",
     "position": "Vigilante Santiago Cubre Dia",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3965",
@@ -4015,9 +4349,10 @@
     "department": "Juancito Sport",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3968",
@@ -4027,9 +4362,10 @@
     "department": "Galeria 360",
     "position": "Oficial de Seguridad",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3970",
@@ -4039,9 +4375,10 @@
     "department": "Macrotech",
     "position": "Vigilante Santiago Dia",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3974",
@@ -4051,9 +4388,10 @@
     "department": "Safeone",
     "position": "Vigilante B-San Cristobal",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3975",
@@ -4063,9 +4401,10 @@
     "department": "Galeria 360",
     "position": "Vigilante",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3979",
@@ -4075,9 +4414,10 @@
     "department": "Operaciones Interior",
     "position": "Vigilante-J-San Francisco",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3980",
@@ -4087,9 +4427,10 @@
     "department": "Safeone",
     "position": "Vigilante",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3984",
@@ -4099,9 +4440,10 @@
     "department": "Macrotech",
     "position": "Vigilante",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3985",
@@ -4111,9 +4453,10 @@
     "department": "Safeone",
     "position": "Vigilante",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3992",
@@ -4123,9 +4466,10 @@
     "department": "Juancito Sport",
     "position": "Vigilante",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3998",
@@ -4135,9 +4479,10 @@
     "department": "Galeria 360",
     "position": "Vigilante",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "3999",
@@ -4147,9 +4492,10 @@
     "department": "Galeria 360",
     "position": "Vigilante",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "4001",
@@ -4159,9 +4505,10 @@
     "department": "Galeria 360",
     "position": "Vigilante",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "4004",
@@ -4171,9 +4518,10 @@
     "department": "Galeria 360",
     "position": "Vigilante",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "4005",
@@ -4183,9 +4531,10 @@
     "department": "Galeria 360",
     "position": "Vigilante",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "4006",
@@ -4195,9 +4544,10 @@
     "department": "Galeria 360",
     "position": "Vigilante",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "4008",
@@ -4207,9 +4557,10 @@
     "department": "Asoc. Nacional",
     "position": "Vigilante",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "4012",
@@ -4219,9 +4570,10 @@
     "department": "Safeone",
     "position": "Vigilante",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "4013",
@@ -4231,9 +4583,10 @@
     "department": "Safeone",
     "position": "Vigilante",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "4016",
@@ -4243,9 +4596,10 @@
     "department": "Galeria 360",
     "position": "Vigilante",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "4019",
@@ -4255,9 +4609,10 @@
     "department": "Safeone",
     "position": "Vigilante B-San Fco. M.",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "4020",
@@ -4267,9 +4622,10 @@
     "department": "Macrotech",
     "position": "Vigilante",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "4021",
@@ -4279,9 +4635,10 @@
     "department": "Macrotech",
     "position": "Vigilante Santiago Dia",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "4022",
@@ -4291,9 +4648,10 @@
     "department": "Superintendencia de Bancos",
     "position": "Vigilante Santiago Dia",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "4024",
@@ -4303,9 +4661,10 @@
     "department": "Galeria 360",
     "position": "Vigilante",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "4025",
@@ -4315,9 +4674,10 @@
     "department": "Safeone",
     "position": "Vigilante",
     "bank": "",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "4026",
@@ -4327,9 +4687,10 @@
     "department": "Safeone",
     "position": "Vigilante",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "4027",
@@ -4339,9 +4700,10 @@
     "department": "Galeria 360",
     "position": "Vigilante",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "4028",
@@ -4351,9 +4713,10 @@
     "department": "Safeone",
     "position": "Vigilante",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "4030",
@@ -4363,9 +4726,10 @@
     "department": "Galeria 360",
     "position": "Vigilante",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "4031",
@@ -4375,9 +4739,10 @@
     "department": "Safeone",
     "position": "Vigilante",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "4035",
@@ -4387,9 +4752,10 @@
     "department": "Juancito Sport",
     "position": "Vigilante",
     "bank": "LA NACIONAL",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "4036",
@@ -4399,9 +4765,10 @@
     "department": "Asoc. Nacional",
     "position": "Vigilante",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "4037",
@@ -4411,9 +4778,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad VIP",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "4038",
@@ -4423,9 +4791,10 @@
     "department": "Safeone",
     "position": "Vigilante Higuey",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "4039",
@@ -4435,9 +4804,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad VIP",
     "bank": "BHD Leon",
-    "salary": 24633.0,
-    "hourlyRate": 0.0,
-    "tss": ""
+    "salary": 24633,
+    "hourlyRate": 0,
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "4040",
@@ -4447,9 +4817,10 @@
     "department": "Galeria 360",
     "position": "Vigilante",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "4041",
@@ -4459,9 +4830,10 @@
     "department": "Asoc. Nacional",
     "position": "Oficial de Seguridad",
     "bank": "",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   },
   {
     "employeeCode": "4043",
@@ -4471,8 +4843,9 @@
     "department": "Safeone",
     "position": "Vigilante",
     "bank": "BHD Leon",
-    "salary": 24633.0,
+    "salary": 24633,
     "hourlyRate": 78.95,
-    "tss": ""
+    "tss": "",
+    "category": "Vigilante"
   }
 ]
