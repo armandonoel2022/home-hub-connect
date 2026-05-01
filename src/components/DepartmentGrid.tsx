@@ -41,6 +41,7 @@ import {
   RotateCcw,
   Package,
   AlertTriangle,
+  Gift,
 } from "lucide-react";
 
 interface DeptFolder {
