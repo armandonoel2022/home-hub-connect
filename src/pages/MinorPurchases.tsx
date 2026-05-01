@@ -2746,7 +2746,21 @@ const MinorPurchases = () => {
                             className="flex items-center justify-between gap-3 p-4 border border-border rounded-lg flex-wrap"
                           >
                             <div className="space-y-1">
-                              <p className="font-medium">{getMonthDisplay(r.yearMonth)}</p>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="font-medium">{getMonthDisplay(r.yearMonth)}</p>
+                                {r.kind === "transaccion" ? (
+                                  <Badge variant="outline" className="text-[10px] border-gold text-gold">
+                                    Por transacción {r.purchaseId ? `· ${r.purchaseId}` : ""}
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-[10px]">Mensual</Badge>
+                                )}
+                              </div>
+                              {r.purchaseDescription && (
+                                <p className="text-xs text-muted-foreground italic">
+                                  "{r.purchaseDescription}"
+                                </p>
+                              )}
                               <p className="text-sm">
                                 Monto: <strong>{fmt(r.amountReposed)}</strong>
                               </p>
