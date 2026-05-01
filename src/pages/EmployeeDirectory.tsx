@@ -27,6 +27,7 @@ const EmployeeDirectory = () => {
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("all");
   const [payrollFilter, setPayrollFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [editing, setEditing] = useState<Employee | null>(null);
   const [creating, setCreating] = useState(false);
   const [formData, setFormData] = useState<Partial<Employee>>({});
