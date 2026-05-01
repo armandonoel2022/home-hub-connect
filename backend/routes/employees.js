@@ -11,11 +11,35 @@ const SEED = require('../helpers/employeesSeed.json');
 const FILE = 'employees.json';
 const router = express.Router();
 
+// Versión del seed: incrementar cuando se actualice employeesSeed.json
+// para forzar refresco del archivo persistido sin perder ediciones manuales.
+const SEED_VERSION = 'v2-2026-04';
+const META_FILE = 'employees.meta.json';
+
 function load() {
   const raw = readData(FILE);
-  if (!Array.isArray(raw) || raw.length === 0) {
-    writeData(FILE, SEED);
-    return SEED;
+  const meta = readData(META_FILE);
+  const currentVersion = (meta && !Array.isArray(meta) && meta.seedVersion) || null;
+  const isEmpty = !Array.isArray(raw) || raw.length === 0;
+  const versionChanged = currentVersion !== SEED_VERSION;
+
+  if (isEmpty || versionChanged) {
+    // Merge: conservar ediciones por employeeCode si existían
+    const existing = Array.isArray(raw) ? raw : [];
+    const byCode = new Map(existing.map(e => [String(e.employeeCode), e]));
+    const merged = SEED.map(s => {
+      const prev = byCode.get(String(s.employeeCode));
+      // Si el usuario editó manualmente, mantener su versión pero garantizar campos del seed
+      return prev ? { ...s, ...prev } : s;
+    });
+    // Mantener empleados creados manualmente (no presentes en seed)
+    const seedCodes = new Set(SEED.map(s => String(s.employeeCode)));
+    existing.forEach(e => {
+      if (!seedCodes.has(String(e.employeeCode))) merged.push(e);
+    });
+    writeData(FILE, merged);
+    writeData(META_FILE, { seedVersion: SEED_VERSION, seededAt: new Date().toISOString(), count: merged.length });
+    return merged;
   }
   return raw;
 }
