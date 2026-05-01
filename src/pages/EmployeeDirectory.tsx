@@ -36,16 +36,33 @@ const EmployeeDirectory = () => {
     user.department === "Recursos Humanos"
   );
 
+  const loadFromSeedFallback = async () => {
+    try {
+      const res = await fetch("/data/employees_seed.json");
+      if (!res.ok) throw new Error("Seed no disponible");
+      const seed = await res.json();
+      setEmployees(seed);
+    } catch (e: any) {
+      toast.error("No se pudo cargar el directorio: " + e.message);
+    }
+  };
+
   const loadEmployees = async () => {
     if (!isApiConfigured()) {
+      await loadFromSeedFallback();
       setLoading(false);
       return;
     }
     try {
       const data = await employeesApi.getAll();
-      setEmployees(data);
+      if (!data || data.length === 0) {
+        await loadFromSeedFallback();
+      } else {
+        setEmployees(data);
+      }
     } catch (e: any) {
-      toast.error("Error cargando empleados: " + e.message);
+      // API caída → cargar seed estático
+      await loadFromSeedFallback();
     } finally {
       setLoading(false);
     }
