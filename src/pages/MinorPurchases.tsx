@@ -1214,7 +1214,7 @@ const MinorPurchases = () => {
     }
   };
 
-
+  const handleOpenDenominationsDialog = () => {
     setEditingDenominations([...denominations]);
     setDenominationsDialogOpen(true);
   };
