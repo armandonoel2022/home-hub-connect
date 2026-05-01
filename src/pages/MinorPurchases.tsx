@@ -984,6 +984,8 @@ const MinorPurchases = () => {
       description: `RD$ ${purchase.amount.toLocaleString("es-DO")} · ${purchase.id}`,
     });
   };
+
+  const handleApproveReposition = async (id: string) => {
     if (!user) return;
     if (!canApproveReposition) {
       toast({ title: "Permiso denegado", description: "No tiene permisos para aprobar.", variant: "destructive" });
