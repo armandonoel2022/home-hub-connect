@@ -83,7 +83,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { isApiConfigured, minorPurchasesApi, getFileUrl, pettyCashApi, auditApi, authApi } from "@/lib/api";
-import { Info, ShieldCheck, ArrowLeft } from "lucide-react";
+import { Info, ShieldCheck, ArrowLeft, ChevronDown, FileSpreadsheet } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import type { MinorPurchase, PaymentMethod, MinorPurchaseStatus, LinkedDocType } from "@/lib/types";
@@ -337,7 +337,31 @@ const fmtDate = (iso: string) => {
 };
 
 // ==================== GENERADOR DE REPORTE EXCEL CON FORMATO EXACTO ====================
-const generateExcelReport = (purchases: MinorPurchase[], denominations: Denomination[], selectedMonth: string) => {
+// Construye los datos de un mes (gastos + reposiciones aplicadas) para reporte tipo cuenta contable
+const buildMonthAccountData = (
+  purchases: MinorPurchase[],
+  repositions: MonthlyReposition[],
+  yearMonth: string,
+) => {
+  const approvedPurchases = purchases.filter(
+    (p) =>
+      p.status === "Aprobado" &&
+      !p.voided &&
+      p.paymentMethod === "Caja Chica" &&
+      getYearMonth(p.expenseDate || p.requestedAt) === yearMonth,
+  );
+  const appliedReps = repositions.filter((r) => r.status === "aplicado" && r.yearMonth === yearMonth);
+  const totalDebitos = approvedPurchases.reduce((s, p) => s + p.amount, 0);
+  const totalCreditos = appliedReps.reduce((s, r) => s + r.amountReposed, 0);
+  return { approvedPurchases, appliedReps, totalDebitos, totalCreditos };
+};
+
+const generateExcelReport = (
+  purchases: MinorPurchase[],
+  denominations: Denomination[],
+  selectedMonth: string,
+  repositions: MonthlyReposition[] = [],
+) => {
   // Filtrar gastos por el mes seleccionado
   const approvedPurchases = purchases.filter(
     (p) =>
@@ -346,6 +370,10 @@ const generateExcelReport = (purchases: MinorPurchase[], denominations: Denomina
       p.paymentMethod === "Caja Chica" &&
       getYearMonth(p.expenseDate || p.requestedAt) === selectedMonth,
   );
+  const appliedRepositions = repositions.filter(
+    (r) => r.status === "aplicado" && r.yearMonth === selectedMonth,
+  );
+  const totalReposiciones = appliedRepositions.reduce((s, r) => s + r.amountReposed, 0);
 
   const sortedPurchases = [...approvedPurchases].sort(
     (a, b) => new Date(a.expenseDate || a.requestedAt).getTime() - new Date(b.expenseDate || b.requestedAt).getTime(),
@@ -496,6 +524,72 @@ const generateExcelReport = (purchases: MinorPurchase[], denominations: Denomina
   setCell(r, 3, CAJA_CHICA_LIMIT, moneyBoldStyle);
   r++;
 
+  // ===== Sección Cuenta Contable: Débitos (gastos) y Créditos (reposiciones aplicadas) =====
+  aoa.push(["", "", "", ""]);
+  r++;
+
+  aoa.push(["MOVIMIENTOS DE CUENTA — CAJA CHICA", "", "", ""]);
+  merges.push({ s: { r, c: 0 }, e: { r, c: 3 } });
+  setCell(r, 0, "MOVIMIENTOS DE CUENTA — CAJA CHICA", titleStyle);
+  r++;
+
+  // Encabezado de cuenta contable
+  aoa.push(["Fecha", "Concepto", "Débito (Gasto)", "Crédito (Reposición)"]);
+  setCell(r, 0, "Fecha", denomHeaderStyle);
+  setCell(r, 1, "Concepto", denomHeaderStyle);
+  setCell(r, 2, "Débito (Gasto)", denomHeaderStyle);
+  setCell(r, 3, "Crédito (Reposición)", denomHeaderStyle);
+  r++;
+
+  // Combinar y ordenar por fecha
+  type Movement = { date: string; concept: string; debito: number; credito: number };
+  const movements: Movement[] = [
+    ...sortedPurchases.map((p) => ({
+      date: p.expenseDate || p.requestedAt,
+      concept: `Gasto: ${p.description}`,
+      debito: p.amount,
+      credito: 0,
+    })),
+    ...appliedRepositions.map((rep) => ({
+      date: rep.appliedAt || rep.requestedAt,
+      concept: `Reposición ${rep.id}${rep.purchaseDescription ? ` — ${rep.purchaseDescription}` : rep.kind === "mensual" ? " (mensual)" : ""}`,
+      debito: 0,
+      credito: rep.amountReposed,
+    })),
+  ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  if (movements.length === 0) {
+    aoa.push(["", "Sin movimientos", "", ""]);
+    setCell(r, 0, "", cellStyle);
+    setCell(r, 1, "Sin movimientos", cellStyle);
+    setCell(r, 2, "", moneyStyle);
+    setCell(r, 3, "", moneyStyle);
+    r++;
+  } else {
+    movements.forEach((m) => {
+      aoa.push([fmtDate(m.date), m.concept, m.debito || "", m.credito || ""]);
+      setCell(r, 0, fmtDate(m.date), dateStyle);
+      setCell(r, 1, m.concept, cellStyle);
+      setCell(r, 2, m.debito || "", moneyStyle);
+      setCell(r, 3, m.credito || "", moneyStyle);
+      r++;
+    });
+  }
+
+  // Totales de la cuenta
+  const balance = totalReposiciones - totalGeneral;
+  aoa.push(["", "TOTALES", totalGeneral, totalReposiciones]);
+  setCell(r, 0, "", cellStyle);
+  setCell(r, 1, "TOTALES", labelRightBold);
+  setCell(r, 2, totalGeneral, moneyBoldStyle);
+  setCell(r, 3, totalReposiciones, moneyBoldStyle);
+  r++;
+
+  aoa.push(["", "", "BALANCE (Créditos − Débitos)", balance]);
+  setCell(r, 2, "BALANCE (Créditos − Débitos)", labelRightBold);
+  setCell(r, 3, balance, moneyBoldStyle);
+  r++;
+
   // Fila vacia
   aoa.push(["", "", "", ""]);
   r++;
@@ -541,6 +635,221 @@ const generateExcelReport = (purchases: MinorPurchase[], denominations: Denomina
   XLSX.writeFile(wb, `reposicion_caja_chica_${selectedMonth}.xlsx`);
 
   toast({ title: "Reporte generado", description: `Reporte de ${getMonthDisplay(selectedMonth)} descargado.` });
+};
+
+// ============ Reporte Consolidado (todos los meses trabajados) ============
+const generateConsolidatedReport = (
+  purchases: MinorPurchase[],
+  repositions: MonthlyReposition[],
+) => {
+  const monthSet = new Set<string>();
+  purchases.forEach((p) => {
+    if (p.status === "Aprobado" && !p.voided && p.paymentMethod === "Caja Chica") {
+      monthSet.add(getYearMonth(p.expenseDate || p.requestedAt));
+    }
+  });
+  repositions.forEach((r) => {
+    if (r.status === "aplicado") monthSet.add(r.yearMonth);
+  });
+  const months = Array.from(monthSet).sort();
+
+  if (months.length === 0) {
+    toast({ title: "Sin datos", description: "No hay meses con movimientos para consolidar.", variant: "destructive" });
+    return;
+  }
+
+  const borderAll = {
+    top: { style: "thin", color: { rgb: "000000" } },
+    bottom: { style: "thin", color: { rgb: "000000" } },
+    left: { style: "thin", color: { rgb: "000000" } },
+    right: { style: "thin", color: { rgb: "000000" } },
+  };
+  const titleStyle = {
+    font: { bold: true, sz: 14, color: { rgb: "FFFFFF" } },
+    fill: { patternType: "solid", fgColor: { rgb: "2A2A36" } },
+    alignment: { horizontal: "center", vertical: "center" },
+    border: borderAll,
+  };
+  const headerStyle = {
+    font: { bold: true },
+    fill: { patternType: "solid", fgColor: { rgb: "FFD700" } },
+    alignment: { horizontal: "center", vertical: "center" },
+    border: borderAll,
+  };
+  const cellStyle = { border: borderAll, alignment: { vertical: "center" } };
+  const moneyStyle = { ...cellStyle, numFmt: '"$"#,##0.00;[Red]("$"#,##0.00);"$"\\ -' };
+  const moneyBold = { ...moneyStyle, font: { bold: true } };
+  const totalRowStyle = { ...moneyBold, fill: { patternType: "solid", fgColor: { rgb: "E8F0FE" } } };
+  const totalLabelStyle = {
+    ...cellStyle,
+    font: { bold: true },
+    fill: { patternType: "solid", fgColor: { rgb: "E8F0FE" } },
+    alignment: { horizontal: "right", vertical: "center" },
+  };
+
+  // ---- Hoja Resumen ----
+  const aoa: any[][] = [];
+  const styles: Record<string, any> = {};
+  const merges: any[] = [];
+  const set = (r: number, c: number, v: any, s?: any) => {
+    styles[XLSX.utils.encode_cell({ r, c })] = { value: v, style: s };
+  };
+
+  aoa.push(["SAFEONE SECURITY COMPANY — REPORTE CONSOLIDADO DE CAJA CHICA", "", "", "", "", ""]);
+  merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } });
+  set(0, 0, "SAFEONE SECURITY COMPANY — REPORTE CONSOLIDADO DE CAJA CHICA", titleStyle);
+
+  const periodo = `${getMonthDisplay(months[0])} — ${getMonthDisplay(months[months.length - 1])}`;
+  aoa.push([`Período: ${periodo}    ·    Generado: ${new Date().toLocaleString("es-DO")}`, "", "", "", "", ""]);
+  merges.push({ s: { r: 1, c: 0 }, e: { r: 1, c: 5 } });
+  set(1, 0, `Período: ${periodo}    ·    Generado: ${new Date().toLocaleString("es-DO")}`, {
+    ...cellStyle,
+    font: { italic: true, sz: 10 },
+    alignment: { horizontal: "center", vertical: "center" },
+  });
+
+  aoa.push(["", "", "", "", "", ""]);
+
+  const headers = ["Mes", "Límite", "Débitos (Gastos)", "Créditos (Reposiciones)", "Balance del Mes", "Disponible al Cierre"];
+  aoa.push(headers);
+  headers.forEach((h, i) => set(3, i, h, headerStyle));
+
+  let totalDeb = 0;
+  let totalCred = 0;
+  let r = 4;
+
+  months.forEach((ym) => {
+    const { totalDebitos, totalCreditos } = buildMonthAccountData(purchases, repositions, ym);
+    const balance = totalCreditos - totalDebitos;
+    const disponible = Math.max(0, CAJA_CHICA_LIMIT + totalCreditos - totalDebitos);
+    totalDeb += totalDebitos;
+    totalCred += totalCreditos;
+
+    aoa.push([getMonthDisplay(ym), CAJA_CHICA_LIMIT, totalDebitos, totalCreditos, balance, disponible]);
+    set(r, 0, getMonthDisplay(ym), { ...cellStyle, font: { bold: true } });
+    set(r, 1, CAJA_CHICA_LIMIT, moneyStyle);
+    set(r, 2, totalDebitos, moneyStyle);
+    set(r, 3, totalCreditos, moneyStyle);
+    set(r, 4, balance, { ...moneyStyle, font: { bold: balance !== 0 } });
+    set(r, 5, disponible, moneyBold);
+    r++;
+  });
+
+  aoa.push(["TOTAL GENERAL", "", totalDeb, totalCred, totalCred - totalDeb, ""]);
+  set(r, 0, "TOTAL GENERAL", totalLabelStyle);
+  set(r, 1, "", totalRowStyle);
+  set(r, 2, totalDeb, totalRowStyle);
+  set(r, 3, totalCred, totalRowStyle);
+  set(r, 4, totalCred - totalDeb, totalRowStyle);
+  set(r, 5, "", totalRowStyle);
+  r++;
+
+  r += 2;
+  aoa.push(["Nota: incluye únicamente gastos aprobados (no anulados) pagados con Caja Chica y reposiciones en estado APLICADO.", "", "", "", "", ""]);
+  merges.push({ s: { r, c: 0 }, e: { r, c: 5 } });
+  set(r, 0, "Nota: incluye únicamente gastos aprobados (no anulados) pagados con Caja Chica y reposiciones en estado APLICADO.", {
+    ...cellStyle,
+    font: { italic: true, sz: 9, color: { rgb: "666666" } },
+  });
+
+  const wsResumen = XLSX.utils.aoa_to_sheet(aoa);
+  Object.entries(styles).forEach(([addr, info]) => {
+    if (!wsResumen[addr]) wsResumen[addr] = { t: typeof info.value === "number" ? "n" : "s", v: info.value };
+    if (info.style) (wsResumen[addr] as any).s = info.style;
+  });
+  wsResumen["!cols"] = [{ wch: 22 }, { wch: 14 }, { wch: 18 }, { wch: 22 }, { wch: 18 }, { wch: 22 }];
+  wsResumen["!merges"] = merges;
+
+  // ---- Hoja Movimientos ----
+  const movAoa: any[][] = [];
+  const movStyles: Record<string, any> = {};
+  const movMerges: any[] = [];
+  const setM = (r: number, c: number, v: any, s?: any) => {
+    movStyles[XLSX.utils.encode_cell({ r, c })] = { value: v, style: s };
+  };
+
+  movAoa.push(["MOVIMIENTOS DE CUENTA — CAJA CHICA (TODOS LOS MESES)", "", "", "", "", ""]);
+  movMerges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } });
+  setM(0, 0, "MOVIMIENTOS DE CUENTA — CAJA CHICA (TODOS LOS MESES)", titleStyle);
+
+  movAoa.push(["", "", "", "", "", ""]);
+
+  const movHeaders = ["Mes", "Fecha", "Concepto", "Categoría", "Débito (Gasto)", "Crédito (Reposición)"];
+  movAoa.push(movHeaders);
+  movHeaders.forEach((h, i) => setM(2, i, h, headerStyle));
+
+  let mr = 3;
+  let runDeb = 0;
+  let runCred = 0;
+
+  months.forEach((ym) => {
+    const { approvedPurchases, appliedReps, totalDebitos, totalCreditos } = buildMonthAccountData(purchases, repositions, ym);
+    type Mov = { date: string; concept: string; category: string; debito: number; credito: number };
+    const movs: Mov[] = [
+      ...approvedPurchases.map((p) => ({
+        date: p.expenseDate || p.requestedAt,
+        concept: p.description,
+        category: p.category,
+        debito: p.amount,
+        credito: 0,
+      })),
+      ...appliedReps.map((rep) => ({
+        date: rep.appliedAt || rep.requestedAt,
+        concept: `Reposición ${rep.id}${rep.purchaseDescription ? ` — ${rep.purchaseDescription}` : rep.kind === "mensual" ? " (mensual)" : ""}`,
+        category: "REPOSICIÓN",
+        debito: 0,
+        credito: rep.amountReposed,
+      })),
+    ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    movs.forEach((m) => {
+      movAoa.push([getMonthDisplay(ym), fmtDate(m.date), m.concept, m.category, m.debito || "", m.credito || ""]);
+      setM(mr, 0, getMonthDisplay(ym), cellStyle);
+      setM(mr, 1, fmtDate(m.date), { ...cellStyle, alignment: { horizontal: "center", vertical: "center" } });
+      setM(mr, 2, m.concept, cellStyle);
+      setM(mr, 3, m.category, cellStyle);
+      setM(mr, 4, m.debito || "", moneyStyle);
+      setM(mr, 5, m.credito || "", moneyStyle);
+      mr++;
+    });
+
+    movAoa.push(["", "", `Subtotal ${getMonthDisplay(ym)}`, "", totalDebitos, totalCreditos]);
+    setM(mr, 2, `Subtotal ${getMonthDisplay(ym)}`, totalLabelStyle);
+    setM(mr, 3, "", totalRowStyle);
+    setM(mr, 4, totalDebitos, totalRowStyle);
+    setM(mr, 5, totalCreditos, totalRowStyle);
+    mr++;
+    runDeb += totalDebitos;
+    runCred += totalCreditos;
+  });
+
+  movAoa.push(["", "", "TOTAL GENERAL", "", runDeb, runCred]);
+  setM(mr, 2, "TOTAL GENERAL", { ...totalLabelStyle, font: { bold: true, sz: 12 } });
+  setM(mr, 4, runDeb, { ...totalRowStyle, font: { bold: true, sz: 12 } });
+  setM(mr, 5, runCred, { ...totalRowStyle, font: { bold: true, sz: 12 } });
+  mr++;
+  movAoa.push(["", "", "BALANCE (Créditos − Débitos)", "", "", runCred - runDeb]);
+  setM(mr, 2, "BALANCE (Créditos − Débitos)", totalLabelStyle);
+  setM(mr, 5, runCred - runDeb, totalRowStyle);
+
+  const wsMov = XLSX.utils.aoa_to_sheet(movAoa);
+  Object.entries(movStyles).forEach(([addr, info]) => {
+    if (!wsMov[addr]) wsMov[addr] = { t: typeof info.value === "number" ? "n" : "s", v: info.value };
+    if (info.style) (wsMov[addr] as any).s = info.style;
+  });
+  wsMov["!cols"] = [{ wch: 18 }, { wch: 12 }, { wch: 50 }, { wch: 22 }, { wch: 16 }, { wch: 20 }];
+  wsMov["!merges"] = movMerges;
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen");
+  XLSX.utils.book_append_sheet(wb, wsMov, "Movimientos");
+  const stamp = new Date().toISOString().split("T")[0];
+  XLSX.writeFile(wb, `caja_chica_consolidado_${stamp}.xlsx`);
+
+  toast({
+    title: "Reporte consolidado generado",
+    description: `${months.length} mes(es) · Débitos: RD$ ${totalDeb.toLocaleString("es-DO")} · Créditos: RD$ ${totalCred.toLocaleString("es-DO")}`,
+  });
 };
 
 const MinorPurchases = () => {
@@ -1800,35 +2109,52 @@ const MinorPurchases = () => {
               </div>
             </div>
             <div className="flex gap-2 flex-wrap">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="gap-2">
-                    <Download className="h-4 w-4" /> Reporte Excel
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>Exportar reporte</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => generateExcelReport(purchases, denominations, getCurrentYearMonth())}
-                  >
-                    Exportar mes actual ({getMonthDisplay(getCurrentYearMonth())})
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="text-xs text-muted-foreground">Otros meses</DropdownMenuLabel>
-                  {availableMonthsForReport
-                    .filter((m) => m !== getCurrentYearMonth())
-                    .slice(0, 12)
-                    .map((month) => (
-                      <DropdownMenuItem key={month} onClick={() => generateExcelReport(purchases, denominations, month)}>
-                        {getMonthDisplay(month)}
-                      </DropdownMenuItem>
-                    ))}
-                  {availableMonthsForReport.filter((m) => m !== getCurrentYearMonth()).length === 0 && (
-                    <DropdownMenuItem disabled>Sin otros meses registrados</DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <div className="flex">
+                <Button
+                  variant="outline"
+                  className="gap-2 rounded-r-none border-r-0"
+                  onClick={() => generateConsolidatedReport(purchases, repositions)}
+                  title="Descarga un reporte consolidado con todos los meses trabajados (Resumen + Movimientos)"
+                >
+                  <Download className="h-4 w-4" /> Reporte Excel (Consolidado)
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="rounded-l-none px-2" title="Más opciones de exportación">
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-64">
+                    <DropdownMenuLabel>Exportar reporte</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => generateConsolidatedReport(purchases, repositions)}>
+                      <FileSpreadsheet className="h-4 w-4 mr-2 text-green-600" />
+                      Consolidado (todos los meses)
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-xs text-muted-foreground">Reporte mensual</DropdownMenuLabel>
+                    <DropdownMenuItem
+                      onClick={() => generateExcelReport(purchases, denominations, getCurrentYearMonth(), repositions)}
+                    >
+                      Mes actual ({getMonthDisplay(getCurrentYearMonth())})
+                    </DropdownMenuItem>
+                    {availableMonthsForReport
+                      .filter((m) => m !== getCurrentYearMonth())
+                      .slice(0, 12)
+                      .map((month) => (
+                        <DropdownMenuItem
+                          key={month}
+                          onClick={() => generateExcelReport(purchases, denominations, month, repositions)}
+                        >
+                          {getMonthDisplay(month)}
+                        </DropdownMenuItem>
+                      ))}
+                    {availableMonthsForReport.filter((m) => m !== getCurrentYearMonth()).length === 0 && (
+                      <DropdownMenuItem disabled>Sin otros meses registrados</DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
               <Button variant="outline" onClick={() => setPolicyDialogOpen(true)} className="gap-2">
                 <Info className="h-4 w-4" /> Política y cálculos
               </Button>
