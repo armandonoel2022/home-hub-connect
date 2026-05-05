@@ -83,7 +83,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { isApiConfigured, minorPurchasesApi, getFileUrl, pettyCashApi, auditApi, authApi } from "@/lib/api";
-import { Info, ShieldCheck, ArrowLeft } from "lucide-react";
+import { Info, ShieldCheck, ArrowLeft, ChevronDown, FileSpreadsheet } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import type { MinorPurchase, PaymentMethod, MinorPurchaseStatus, LinkedDocType } from "@/lib/types";
