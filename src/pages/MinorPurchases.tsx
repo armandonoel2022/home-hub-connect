@@ -1161,6 +1161,10 @@ const generateConsolidatedReport = (
 
   XLSX.utils.book_append_sheet(wb, ws2, "Detalle Reposiciones");
 
+  // ============= HOJA 3: REPOSICIONES APLICADAS (todos los meses) =============
+  const wsApplied = buildAppliedRepositionsSheet(repositions);
+  XLSX.utils.book_append_sheet(wb, wsApplied, "Reposiciones Aplicadas");
+
   const stamp = new Date().toISOString().split("T")[0];
   XLSX.writeFile(wb, `caja_chica_consolidado_${stamp}.xlsx`);
 
