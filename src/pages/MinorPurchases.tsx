@@ -1244,7 +1244,7 @@ const MinorPurchases = () => {
   const emptyForm = {
     description: "",
     amount: "",
-    paymentMethod: "" as PaymentMethod | "",
+    paymentMethod: "Caja Chica" as PaymentMethod | "",
     category: "",
     notes: "",
     expenseDate: todayISO(),
@@ -2557,19 +2557,11 @@ const MinorPurchases = () => {
                         />
                       </div>
                       <div>
-                        <Label>Método de Pago *</Label>
-                        <Select
-                          value={form.paymentMethod}
-                          onValueChange={(v) => setForm({ ...form, paymentMethod: v as PaymentMethod })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Caja Chica">Caja Chica (RD$20K/mes)</SelectItem>
-                            <SelectItem value="Tarjeta Corporativa">Tarjeta Corporativa (sin límite)</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <Label>Método de Pago</Label>
+                        <Input value="Caja Chica" readOnly disabled />
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          Las compras con Tarjeta Corporativa se registran en su propio módulo.
+                        </p>
                       </div>
                       <div>
                         <Label>Fecha del gasto *</Label>
@@ -3386,7 +3378,6 @@ const MinorPurchases = () => {
                         <SelectContent>
                           <SelectItem value="__all">Todos</SelectItem>
                           <SelectItem value="Caja Chica">Caja Chica</SelectItem>
-                          <SelectItem value="Tarjeta Corporativa">Tarjeta Corporativa</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
