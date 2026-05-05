@@ -158,17 +158,22 @@ const EmployeeDirectory = () => {
       <div className="flex flex-col min-h-screen">
         <Navbar />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 w-full py-6 flex-1">
-          <div className="mb-6">
-            <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="mb-2">
-              <ArrowLeft className="h-4 w-4 mr-1" /> Volver
+          <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="mb-2">
+                <ArrowLeft className="h-4 w-4 mr-1" /> Volver
+              </Button>
+              <h1 className="font-heading text-3xl font-bold text-foreground flex items-center gap-3">
+                <Users className="h-8 w-8 text-gold" />
+                Directorio de Empleados
+              </h1>
+              <p className="text-muted-foreground mt-1 text-sm">
+                {stats.total} empleados registrados · {stats.active} activos · {stats.depts} departamentos
+              </p>
+            </div>
+            <Button onClick={() => navigate("/rrhh/nomina")} className="bg-gold text-black hover:bg-gold/90">
+              <Briefcase className="h-4 w-4 mr-2" /> Nómina y Cumplimiento TSS
             </Button>
-            <h1 className="font-heading text-3xl font-bold text-foreground flex items-center gap-3">
-              <Users className="h-8 w-8 text-gold" />
-              Directorio de Empleados
-            </h1>
-            <p className="text-muted-foreground mt-1 text-sm">
-              {stats.total} empleados registrados · {stats.active} activos · {stats.depts} departamentos
-            </p>
           </div>
 
           {/* Stats cards */}
