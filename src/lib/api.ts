@@ -546,6 +546,19 @@ export interface Employee {
   hireDate?: string;
   birthday?: string;
   updatedAt?: string;
+  // ─── Cumplimiento TSS (gestión manual) ───
+  /** ¿Está registrado en la TSS con descuentos de ley? */
+  tssRegistered?: boolean;
+  /** Salario reportado a la TSS (puede diferir del salario interno) */
+  tssReportedSalary?: number;
+  /** Fecha en que se confirmó el registro TSS */
+  tssRegisteredAt?: string;
+  /** Notas internas del estado TSS */
+  tssNotes?: string;
+  /** Solicitud pendiente de baja en TSS (cuando empleado dejó de ser activo) */
+  tssPendingUnregister?: boolean;
+  tssPendingUnregisterAt?: string;
+  tssPendingUnregisterReason?: string;
 }
 
 export const employeesApi = {
