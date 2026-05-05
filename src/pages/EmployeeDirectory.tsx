@@ -296,6 +296,15 @@ const EmployeeDirectory = () => {
                         <TableCell className="text-sm">{emp.position}</TableCell>
                         <TableCell className="text-xs">{emp.payrollType}</TableCell>
                         <TableCell>
+                          {(emp as any).tssRegistered ? (
+                            <Badge className="bg-green-600 text-xs">✓ TSS</Badge>
+                          ) : emp.status === "Activo" ? (
+                            <Badge className="bg-red-600 text-xs">Sin TSS</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs">—</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
                           <Badge className={emp.status === "Activo" ? "bg-green-600" : "bg-red-600"}>
                             {emp.status}
                           </Badge>
