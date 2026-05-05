@@ -273,7 +273,7 @@ const EmployeeDirectory = () => {
                   <TableBody>
                     {filtered.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={canEdit ? 8 : 7} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={canEdit ? 9 : 8} className="text-center text-muted-foreground py-8">
                           No se encontraron empleados
                         </TableCell>
                       </TableRow>
