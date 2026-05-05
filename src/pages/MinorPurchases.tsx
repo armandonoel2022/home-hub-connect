@@ -337,7 +337,31 @@ const fmtDate = (iso: string) => {
 };
 
 // ==================== GENERADOR DE REPORTE EXCEL CON FORMATO EXACTO ====================
-const generateExcelReport = (purchases: MinorPurchase[], denominations: Denomination[], selectedMonth: string) => {
+// Construye los datos de un mes (gastos + reposiciones aplicadas) para reporte tipo cuenta contable
+const buildMonthAccountData = (
+  purchases: MinorPurchase[],
+  repositions: MonthlyReposition[],
+  yearMonth: string,
+) => {
+  const approvedPurchases = purchases.filter(
+    (p) =>
+      p.status === "Aprobado" &&
+      !p.voided &&
+      p.paymentMethod === "Caja Chica" &&
+      getYearMonth(p.expenseDate || p.requestedAt) === yearMonth,
+  );
+  const appliedReps = repositions.filter((r) => r.status === "aplicado" && r.yearMonth === yearMonth);
+  const totalDebitos = approvedPurchases.reduce((s, p) => s + p.amount, 0);
+  const totalCreditos = appliedReps.reduce((s, r) => s + r.amountReposed, 0);
+  return { approvedPurchases, appliedReps, totalDebitos, totalCreditos };
+};
+
+const generateExcelReport = (
+  purchases: MinorPurchase[],
+  denominations: Denomination[],
+  selectedMonth: string,
+  repositions: MonthlyReposition[] = [],
+) => {
   // Filtrar gastos por el mes seleccionado
   const approvedPurchases = purchases.filter(
     (p) =>
@@ -346,6 +370,10 @@ const generateExcelReport = (purchases: MinorPurchase[], denominations: Denomina
       p.paymentMethod === "Caja Chica" &&
       getYearMonth(p.expenseDate || p.requestedAt) === selectedMonth,
   );
+  const appliedRepositions = repositions.filter(
+    (r) => r.status === "aplicado" && r.yearMonth === selectedMonth,
+  );
+  const totalReposiciones = appliedRepositions.reduce((s, r) => s + r.amountReposed, 0);
 
   const sortedPurchases = [...approvedPurchases].sort(
     (a, b) => new Date(a.expenseDate || a.requestedAt).getTime() - new Date(b.expenseDate || b.requestedAt).getTime(),
