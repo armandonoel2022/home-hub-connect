@@ -572,6 +572,11 @@ const generateExcelReport = (
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, `Reporte_${selectedMonth}`);
+
+  // Hoja "Reposiciones Aplicadas" (solo del mes)
+  const wsApplied = buildAppliedRepositionsSheet(repositions, selectedMonth);
+  XLSX.utils.book_append_sheet(wb, wsApplied, "Reposiciones Aplicadas");
+
   XLSX.writeFile(wb, `reposicion_caja_chica_${selectedMonth}.xlsx`);
 
   toast({ title: "Reporte generado", description: `Reporte de ${getMonthDisplay(selectedMonth)} descargado.` });
