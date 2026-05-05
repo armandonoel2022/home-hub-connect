@@ -265,6 +265,7 @@ const EmployeeDirectory = () => {
                       <TableHead>Departamento / Área</TableHead>
                       <TableHead>Puesto</TableHead>
                       <TableHead>Nómina</TableHead>
+                      <TableHead>TSS</TableHead>
                       <TableHead>Estatus</TableHead>
                       {canEdit && <TableHead className="w-20">Acciones</TableHead>}
                     </TableRow>
