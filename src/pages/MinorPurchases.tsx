@@ -572,9 +572,186 @@ const generateExcelReport = (
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, `Reporte_${selectedMonth}`);
+
+  // Hoja "Reposiciones Aplicadas" (solo del mes)
+  const wsApplied = buildAppliedRepositionsSheet(repositions, selectedMonth);
+  XLSX.utils.book_append_sheet(wb, wsApplied, "Reposiciones Aplicadas");
+
   XLSX.writeFile(wb, `reposicion_caja_chica_${selectedMonth}.xlsx`);
 
   toast({ title: "Reporte generado", description: `Reporte de ${getMonthDisplay(selectedMonth)} descargado.` });
+};
+
+// ============ Hoja "Reposiciones Aplicadas" (reusable) ============
+// Construye una hoja XLSX que solo contiene reposiciones con status 'aplicado'.
+// Si se pasa `singleMonth`, solo incluye las de ese yearMonth.
+const buildAppliedRepositionsSheet = (
+  repositions: MonthlyReposition[],
+  singleMonth?: string,
+) => {
+  const borderAll = {
+    top: { style: "thin", color: { rgb: "000000" } },
+    bottom: { style: "thin", color: { rgb: "000000" } },
+    left: { style: "thin", color: { rgb: "000000" } },
+    right: { style: "thin", color: { rgb: "000000" } },
+  };
+  const titleStyle = {
+    font: { bold: true, sz: 12 },
+    alignment: { horizontal: "center", vertical: "center" },
+    border: borderAll,
+  };
+  const monthBannerStyle = {
+    font: { bold: true, sz: 12, color: { rgb: "FFFFFF" } },
+    fill: { patternType: "solid", fgColor: { rgb: "1F6F43" } },
+    alignment: { horizontal: "center", vertical: "center" },
+    border: borderAll,
+  };
+  const headerStyle = {
+    font: { bold: true, sz: 11, color: { rgb: "FFFFFF" } },
+    fill: { patternType: "solid", fgColor: { rgb: "2A2A36" } },
+    alignment: { horizontal: "center", vertical: "center" },
+    border: borderAll,
+  };
+  const cellStyle = { border: borderAll, alignment: { vertical: "center" } };
+  const dateStyle = { ...cellStyle, alignment: { horizontal: "center", vertical: "center" } };
+  const moneyStyle = { ...cellStyle, numFmt: '"$"#,##0.00;[Red]("$"#,##0.00);"$"\\ -' };
+  const moneyBoldStyle = { ...moneyStyle, font: { bold: true } };
+  const labelRightBold = { ...cellStyle, font: { bold: true }, alignment: { horizontal: "right", vertical: "center" } };
+  const grandTotalLabel = {
+    ...cellStyle,
+    font: { bold: true, sz: 12 },
+    fill: { patternType: "solid", fgColor: { rgb: "FFD700" } },
+    alignment: { horizontal: "right", vertical: "center" },
+  };
+  const grandTotalValue = {
+    ...moneyStyle,
+    font: { bold: true, sz: 12 },
+    fill: { patternType: "solid", fgColor: { rgb: "FFD700" } },
+  };
+
+  // Solo aplicadas
+  let applied = repositions.filter((r) => r.status === "aplicado");
+  if (singleMonth) applied = applied.filter((r) => r.yearMonth === singleMonth);
+  applied = applied.sort((a, b) => {
+    const cmp = a.yearMonth.localeCompare(b.yearMonth);
+    if (cmp !== 0) return cmp;
+    return new Date(a.appliedAt || a.requestedAt).getTime() - new Date(b.appliedAt || b.requestedAt).getTime();
+  });
+
+  const monthsInData = Array.from(new Set(applied.map((r) => r.yearMonth))).sort();
+
+  const aoa: any[][] = [];
+  const styles: Record<string, any> = {};
+  const merges: any[] = [];
+  let r = 0;
+  const set = (row: number, c: number, v: any, s?: any) => {
+    styles[XLSX.utils.encode_cell({ r: row, c })] = { value: v, style: s };
+  };
+  const push = (row: any[]) => { aoa.push(row); };
+
+  // Encabezado
+  push(["SAFEONE SECURITY COMPANY", "", "", "", "", "", ""]);
+  merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+  set(r, 0, "SAFEONE SECURITY COMPANY", titleStyle);
+  r++;
+
+  push(["REPOSICIONES APLICADAS DE CAJA CHICA", "", "", "", "", "", ""]);
+  merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+  set(r, 0, "REPOSICIONES APLICADAS DE CAJA CHICA", titleStyle);
+  r++;
+
+  const periodo = singleMonth
+    ? getMonthDisplay(singleMonth).toUpperCase()
+    : monthsInData.length > 0
+      ? `${getMonthDisplay(monthsInData[0]).toUpperCase()} — ${getMonthDisplay(monthsInData[monthsInData.length - 1]).toUpperCase()}`
+      : "SIN DATOS";
+  push([periodo, "", "", "", "", "", ""]);
+  merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+  set(r, 0, periodo, titleStyle);
+  r++;
+
+  push(["", "", "", "", "", "", ""]); r++;
+
+  if (applied.length === 0) {
+    push(["Sin reposiciones aplicadas en el periodo.", "", "", "", "", "", ""]);
+    merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+    set(r, 0, "Sin reposiciones aplicadas en el periodo.", { ...cellStyle, alignment: { horizontal: "center", vertical: "center" }, font: { italic: true } });
+    r++;
+  } else {
+    let granTotal = 0;
+    let granCount = 0;
+
+    monthsInData.forEach((ym) => {
+      const monthReps = applied.filter((rep) => rep.yearMonth === ym);
+      if (monthReps.length === 0) return;
+
+      // Banner del mes (solo si consolidado o si hay datos)
+      if (!singleMonth) {
+        push([`${getMonthDisplay(ym).toUpperCase()}`, "", "", "", "", "", ""]);
+        merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+        set(r, 0, `${getMonthDisplay(ym).toUpperCase()}`, monthBannerStyle);
+        r++;
+      }
+
+      const headers = ["ID", "Tipo", "Fecha Aplicada", "Descripción / Gasto vinculado", "Solicitado por", "Aplicado por", "Monto"];
+      push(headers);
+      headers.forEach((h, c) => set(r, c, h, headerStyle));
+      r++;
+
+      let monthTotal = 0;
+      monthReps.forEach((rep) => {
+        const tipo = rep.kind === "transaccion" ? "Transacción" : "Mensual";
+        const desc = rep.purchaseId
+          ? `${rep.purchaseId} — ${rep.purchaseDescription || ""}`
+          : rep.note || "Reposición mensual";
+        const fechaApl = fmtDate(rep.appliedAt || rep.requestedAt);
+        push([rep.id, tipo, fechaApl, desc, rep.requestedBy, rep.appliedBy || "—", rep.amountReposed]);
+        set(r, 0, rep.id, cellStyle);
+        set(r, 1, tipo, { ...cellStyle, alignment: { horizontal: "center", vertical: "center" } });
+        set(r, 2, fechaApl, dateStyle);
+        set(r, 3, desc, cellStyle);
+        set(r, 4, rep.requestedBy, cellStyle);
+        set(r, 5, rep.appliedBy || "—", cellStyle);
+        set(r, 6, rep.amountReposed, moneyStyle);
+        r++;
+        monthTotal += rep.amountReposed;
+        granTotal += rep.amountReposed;
+        granCount++;
+      });
+
+      push(["", "", "", "", "", `TOTAL APLICADO ${getMonthDisplay(ym).toUpperCase()}`, monthTotal]);
+      set(r, 5, `TOTAL APLICADO ${getMonthDisplay(ym).toUpperCase()}`, labelRightBold);
+      set(r, 6, monthTotal, moneyBoldStyle);
+      r++;
+
+      push(["", "", "", "", "", "", ""]); r++;
+    });
+
+    // Totales generales
+    push(["TOTALES", "", "", "", "", "", ""]);
+    merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+    set(r, 0, "TOTALES", monthBannerStyle);
+    r++;
+
+    push(["", "", "", "", "", "TOTAL REPOSICIONES APLICADAS RD$", granTotal]);
+    set(r, 5, "TOTAL REPOSICIONES APLICADAS RD$", grandTotalLabel);
+    set(r, 6, granTotal, grandTotalValue);
+    r++;
+
+    push(["", "", "", "", "", "CANTIDAD DE REPOSICIONES", granCount]);
+    set(r, 5, "CANTIDAD DE REPOSICIONES", labelRightBold);
+    set(r, 6, granCount, { ...cellStyle, font: { bold: true }, alignment: { horizontal: "center", vertical: "center" } });
+    r++;
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  Object.entries(styles).forEach(([addr, info]) => {
+    if (!ws[addr]) ws[addr] = { t: typeof info.value === "number" ? "n" : "s", v: info.value };
+    if (info.style) (ws[addr] as any).s = info.style;
+  });
+  ws["!cols"] = [{ wch: 22 }, { wch: 14 }, { wch: 14 }, { wch: 50 }, { wch: 22 }, { wch: 22 }, { wch: 16 }];
+  ws["!merges"] = merges;
+  return ws;
 };
 
 // ============ Reporte Consolidado (todos los meses trabajados) ============
@@ -988,6 +1165,10 @@ const generateConsolidatedReport = (
   ws2["!merges"] = merges2;
 
   XLSX.utils.book_append_sheet(wb, ws2, "Detalle Reposiciones");
+
+  // ============= HOJA 3: REPOSICIONES APLICADAS (todos los meses) =============
+  const wsApplied = buildAppliedRepositionsSheet(repositions);
+  XLSX.utils.book_append_sheet(wb, wsApplied, "Reposiciones Aplicadas");
 
   const stamp = new Date().toISOString().split("T")[0];
   XLSX.writeFile(wb, `caja_chica_consolidado_${stamp}.xlsx`);
@@ -2187,8 +2368,25 @@ const MinorPurchases = () => {
         if (filterMethod !== "__all" && p.paymentMethod !== filterMethod) return false;
         return true;
       })
-      .sort((a, b) => (b.expenseDate || b.requestedAt).localeCompare(a.expenseDate || a.requestedAt));
+      // Orden por defecto: último gasto cargado al sistema primero (createdAt desc)
+      .sort((a, b) => {
+        const ta = new Date((a as any).createdAt || a.requestedAt).getTime();
+        const tb = new Date((b as any).createdAt || b.requestedAt).getTime();
+        return tb - ta;
+      });
   }, [purchases, filterFrom, filterTo, filterCategory, filterMethod, showVoided]);
+
+  // Totales del historial filtrado: total general, por categoría y por método
+  const historyTotals = useMemo(() => {
+    const total = filteredHistory.reduce((s, p) => s + (p.amount || 0), 0);
+    const byCategory: Record<string, number> = {};
+    const byMethod: Record<string, number> = {};
+    filteredHistory.forEach((p) => {
+      byCategory[p.category] = (byCategory[p.category] || 0) + (p.amount || 0);
+      byMethod[p.paymentMethod] = (byMethod[p.paymentMethod] || 0) + (p.amount || 0);
+    });
+    return { total, byCategory, byMethod, count: filteredHistory.length };
+  }, [filteredHistory]);
 
   const statusBadge = (p: MinorPurchase) => {
     if (p.voided || p.status === "Anulado")
@@ -3330,6 +3528,43 @@ const MinorPurchases = () => {
                       </TableBody>
                     </Table>
                   </div>
+
+                  {/* Totales del historial filtrado */}
+                  {filteredHistory.length > 0 && (
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="rounded-lg border border-border bg-muted/40 p-3">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Total general</p>
+                        <p className="text-xl font-heading font-bold text-foreground">{fmt(historyTotals.total)}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{historyTotals.count} gasto(s)</p>
+                      </div>
+                      <div className="rounded-lg border border-border bg-muted/40 p-3">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Por categoría</p>
+                        <div className="space-y-0.5 max-h-32 overflow-y-auto">
+                          {Object.entries(historyTotals.byCategory)
+                            .sort((a, b) => b[1] - a[1])
+                            .map(([cat, val]) => (
+                              <div key={cat} className="flex items-center justify-between text-xs">
+                                <span className="text-foreground truncate mr-2">{cat}</span>
+                                <span className="font-semibold whitespace-nowrap">{fmt(val)}</span>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-border bg-muted/40 p-3">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Por método</p>
+                        <div className="space-y-0.5">
+                          {Object.entries(historyTotals.byMethod)
+                            .sort((a, b) => b[1] - a[1])
+                            .map(([m, val]) => (
+                              <div key={m} className="flex items-center justify-between text-xs">
+                                <span className="text-foreground truncate mr-2">{m}</span>
+                                <span className="font-semibold whitespace-nowrap">{fmt(val)}</span>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
