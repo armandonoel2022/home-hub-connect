@@ -2368,8 +2368,25 @@ const MinorPurchases = () => {
         if (filterMethod !== "__all" && p.paymentMethod !== filterMethod) return false;
         return true;
       })
-      .sort((a, b) => (b.expenseDate || b.requestedAt).localeCompare(a.expenseDate || a.requestedAt));
+      // Orden por defecto: último gasto cargado al sistema primero (createdAt desc)
+      .sort((a, b) => {
+        const ta = new Date((a as any).createdAt || a.requestedAt).getTime();
+        const tb = new Date((b as any).createdAt || b.requestedAt).getTime();
+        return tb - ta;
+      });
   }, [purchases, filterFrom, filterTo, filterCategory, filterMethod, showVoided]);
+
+  // Totales del historial filtrado: total general, por categoría y por método
+  const historyTotals = useMemo(() => {
+    const total = filteredHistory.reduce((s, p) => s + (p.amount || 0), 0);
+    const byCategory: Record<string, number> = {};
+    const byMethod: Record<string, number> = {};
+    filteredHistory.forEach((p) => {
+      byCategory[p.category] = (byCategory[p.category] || 0) + (p.amount || 0);
+      byMethod[p.paymentMethod] = (byMethod[p.paymentMethod] || 0) + (p.amount || 0);
+    });
+    return { total, byCategory, byMethod, count: filteredHistory.length };
+  }, [filteredHistory]);
 
   const statusBadge = (p: MinorPurchase) => {
     if (p.voided || p.status === "Anulado")
