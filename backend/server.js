@@ -53,6 +53,7 @@ app.use('/api/corporate-cards', require('./routes/corporate-cards'));
 app.use('/api/training', require('./routes/training'));
 app.use('/api/employees', require('./routes/employees'));
 app.use('/api/benefits', require('./routes/benefits'));
+app.use('/api/payroll', require('./routes/payroll'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({

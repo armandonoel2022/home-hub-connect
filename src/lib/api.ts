@@ -539,6 +539,10 @@ export interface Employee {
   bank: string;
   salary: number;
   hourlyRate: number;
+  /** Cédula (campo histórico llamado tss en el seed) */
+  tss?: string;
+  /** Email corporativo opcional para envío de volante */
+  email?: string;
   hireDate?: string;
   birthday?: string;
   updatedAt?: string;
@@ -560,6 +564,80 @@ export const employeesApi = {
     apiFetch<Employee>("/employees", { method: "POST", body: JSON.stringify(data) }),
   remove: (code: string) =>
     apiFetch<{}>(`/employees/${encodeURIComponent(code)}`, { method: "DELETE" }),
+};
+
+// ─── Payroll & TSS Compliance ───
+export interface TssImportMeta {
+  id: string;
+  period: string;
+  importedAt: string;
+  importedBy: string;
+  rowCount: number;
+}
+export interface TssCompareSummary {
+  activeEmployees: number;
+  tssReported: number;
+  matched: number;
+  missingTss: number;
+  ghostTss: number;
+  salaryMismatch: number;
+}
+export interface TssCompareResult {
+  period: string;
+  importedAt: string;
+  summary: TssCompareSummary;
+  matched: any[];
+  missingTss: any[];
+  ghostTss: any[];
+  salaryMismatch: any[];
+}
+export interface PayrollItem {
+  employeeCode: string;
+  fullName: string;
+  cedula: string;
+  department: string;
+  position: string;
+  bank: string;
+  category: string;
+  grossMonthly: number;
+  grossPeriod: number;
+  sfs: number;
+  afp: number;
+  isr: number;
+  totalDeductions: number;
+  net: number;
+}
+export interface PayrollRun {
+  id: string;
+  period: string;
+  payDate: string;
+  schedule: "admin" | "ops";
+  frequency: "monthly" | "quincenal";
+  scope: "all" | "category" | "selected";
+  createdAt: string;
+  createdBy: string;
+  closed: boolean;
+  closedAt?: string;
+  items: PayrollItem[];
+  totals: { gross: number; sfs: number; afp: number; isr: number; deductions: number; net: number; count: number };
+}
+
+export const payrollApi = {
+  importTss: (data: { period: string; rows: any[] }) =>
+    apiFetch<{ ok: boolean; period: string; count: number }>("/payroll/tss/import", { method: "POST", body: JSON.stringify(data) }),
+  listTss: () => apiFetch<TssImportMeta[]>("/payroll/tss"),
+  getTss: (period: string) => apiFetch<any>(`/payroll/tss/${encodeURIComponent(period)}`),
+  deleteTss: (period: string) => apiFetch<void>(`/payroll/tss/${encodeURIComponent(period)}`, { method: "DELETE" }),
+  compareTss: (period: string) => apiFetch<TssCompareResult>(`/payroll/tss/${encodeURIComponent(period)}/compare`),
+  generateRun: (data: { period: string; payDate: string; schedule: "admin" | "ops"; scope: "all" | "category" | "selected"; selectedCodes?: string[]; frequency: "monthly" | "quincenal" }) =>
+    apiFetch<PayrollRun>("/payroll/runs/generate", { method: "POST", body: JSON.stringify(data) }),
+  listRuns: () => apiFetch<(Omit<PayrollRun, "items"> & { itemCount: number })[]>("/payroll/runs"),
+  getRun: (id: string) => apiFetch<PayrollRun>(`/payroll/runs/${id}`),
+  closeRun: (id: string) => apiFetch<PayrollRun>(`/payroll/runs/${id}/close`, { method: "POST" }),
+  deleteRun: (id: string) => apiFetch<void>(`/payroll/runs/${id}`, { method: "DELETE" }),
+  sendPayslip: (data: { runId: string; employeeCode: string; recipientEmail?: string }) =>
+    apiFetch<{ ok: boolean; log: any }>("/payroll/payslips/send", { method: "POST", body: JSON.stringify(data) }),
+  getPayslipLog: () => apiFetch<any[]>("/payroll/payslips/log"),
 };
 
 export default apiFetch;

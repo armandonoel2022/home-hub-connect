@@ -51,6 +51,7 @@ import FleetMaintenance from "./pages/FleetMaintenance";
 import Training from "./pages/Training";
 import Kiosk from "./pages/Kiosk";
 import EmployeeDirectory from "./pages/EmployeeDirectory";
+import Payroll from "./pages/Payroll";
 import NotFound from "./pages/NotFound";
 
 
@@ -108,6 +109,7 @@ function ProtectedRoutes() {
         <Route path="/rrhh/formularios" element={<HRForms />} />
         <Route path="/rrhh/consolidado-nomina" element={<HRPayrollReport />} />
         <Route path="/rrhh/empleados" element={<EmployeeDirectory />} />
+        <Route path="/rrhh/nomina" element={<Payroll />} />
         <Route path="/rrhh/beneficios" element={<HRBenefits />} />
         <Route path="/admin/formularios" element={<AdminForms />} />
         <Route path="/admin/hub" element={<AdminHub />} />
