@@ -577,6 +577,178 @@ const generateExcelReport = (
   toast({ title: "Reporte generado", description: `Reporte de ${getMonthDisplay(selectedMonth)} descargado.` });
 };
 
+// ============ Hoja "Reposiciones Aplicadas" (reusable) ============
+// Construye una hoja XLSX que solo contiene reposiciones con status 'aplicado'.
+// Si se pasa `singleMonth`, solo incluye las de ese yearMonth.
+const buildAppliedRepositionsSheet = (
+  repositions: MonthlyReposition[],
+  singleMonth?: string,
+) => {
+  const borderAll = {
+    top: { style: "thin", color: { rgb: "000000" } },
+    bottom: { style: "thin", color: { rgb: "000000" } },
+    left: { style: "thin", color: { rgb: "000000" } },
+    right: { style: "thin", color: { rgb: "000000" } },
+  };
+  const titleStyle = {
+    font: { bold: true, sz: 12 },
+    alignment: { horizontal: "center", vertical: "center" },
+    border: borderAll,
+  };
+  const monthBannerStyle = {
+    font: { bold: true, sz: 12, color: { rgb: "FFFFFF" } },
+    fill: { patternType: "solid", fgColor: { rgb: "1F6F43" } },
+    alignment: { horizontal: "center", vertical: "center" },
+    border: borderAll,
+  };
+  const headerStyle = {
+    font: { bold: true, sz: 11, color: { rgb: "FFFFFF" } },
+    fill: { patternType: "solid", fgColor: { rgb: "2A2A36" } },
+    alignment: { horizontal: "center", vertical: "center" },
+    border: borderAll,
+  };
+  const cellStyle = { border: borderAll, alignment: { vertical: "center" } };
+  const dateStyle = { ...cellStyle, alignment: { horizontal: "center", vertical: "center" } };
+  const moneyStyle = { ...cellStyle, numFmt: '"$"#,##0.00;[Red]("$"#,##0.00);"$"\\ -' };
+  const moneyBoldStyle = { ...moneyStyle, font: { bold: true } };
+  const labelRightBold = { ...cellStyle, font: { bold: true }, alignment: { horizontal: "right", vertical: "center" } };
+  const grandTotalLabel = {
+    ...cellStyle,
+    font: { bold: true, sz: 12 },
+    fill: { patternType: "solid", fgColor: { rgb: "FFD700" } },
+    alignment: { horizontal: "right", vertical: "center" },
+  };
+  const grandTotalValue = {
+    ...moneyStyle,
+    font: { bold: true, sz: 12 },
+    fill: { patternType: "solid", fgColor: { rgb: "FFD700" } },
+  };
+
+  // Solo aplicadas
+  let applied = repositions.filter((r) => r.status === "aplicado");
+  if (singleMonth) applied = applied.filter((r) => r.yearMonth === singleMonth);
+  applied = applied.sort((a, b) => {
+    const cmp = a.yearMonth.localeCompare(b.yearMonth);
+    if (cmp !== 0) return cmp;
+    return new Date(a.appliedAt || a.requestedAt).getTime() - new Date(b.appliedAt || b.requestedAt).getTime();
+  });
+
+  const monthsInData = Array.from(new Set(applied.map((r) => r.yearMonth))).sort();
+
+  const aoa: any[][] = [];
+  const styles: Record<string, any> = {};
+  const merges: any[] = [];
+  let r = 0;
+  const set = (row: number, c: number, v: any, s?: any) => {
+    styles[XLSX.utils.encode_cell({ r: row, c })] = { value: v, style: s };
+  };
+  const push = (row: any[]) => { aoa.push(row); };
+
+  // Encabezado
+  push(["SAFEONE SECURITY COMPANY", "", "", "", "", "", ""]);
+  merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+  set(r, 0, "SAFEONE SECURITY COMPANY", titleStyle);
+  r++;
+
+  push(["REPOSICIONES APLICADAS DE CAJA CHICA", "", "", "", "", "", ""]);
+  merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+  set(r, 0, "REPOSICIONES APLICADAS DE CAJA CHICA", titleStyle);
+  r++;
+
+  const periodo = singleMonth
+    ? getMonthDisplay(singleMonth).toUpperCase()
+    : monthsInData.length > 0
+      ? `${getMonthDisplay(monthsInData[0]).toUpperCase()} — ${getMonthDisplay(monthsInData[monthsInData.length - 1]).toUpperCase()}`
+      : "SIN DATOS";
+  push([periodo, "", "", "", "", "", ""]);
+  merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+  set(r, 0, periodo, titleStyle);
+  r++;
+
+  push(["", "", "", "", "", "", ""]); r++;
+
+  if (applied.length === 0) {
+    push(["Sin reposiciones aplicadas en el periodo.", "", "", "", "", "", ""]);
+    merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+    set(r, 0, "Sin reposiciones aplicadas en el periodo.", { ...cellStyle, alignment: { horizontal: "center", vertical: "center" }, font: { italic: true } });
+    r++;
+  } else {
+    let granTotal = 0;
+    let granCount = 0;
+
+    monthsInData.forEach((ym) => {
+      const monthReps = applied.filter((rep) => rep.yearMonth === ym);
+      if (monthReps.length === 0) return;
+
+      // Banner del mes (solo si consolidado o si hay datos)
+      if (!singleMonth) {
+        push([`${getMonthDisplay(ym).toUpperCase()}`, "", "", "", "", "", ""]);
+        merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+        set(r, 0, `${getMonthDisplay(ym).toUpperCase()}`, monthBannerStyle);
+        r++;
+      }
+
+      const headers = ["ID", "Tipo", "Fecha Aplicada", "Descripción / Gasto vinculado", "Solicitado por", "Aplicado por", "Monto"];
+      push(headers);
+      headers.forEach((h, c) => set(r, c, h, headerStyle));
+      r++;
+
+      let monthTotal = 0;
+      monthReps.forEach((rep) => {
+        const tipo = rep.kind === "transaccion" ? "Transacción" : "Mensual";
+        const desc = rep.purchaseId
+          ? `${rep.purchaseId} — ${rep.purchaseDescription || ""}`
+          : rep.note || "Reposición mensual";
+        const fechaApl = fmtDate(rep.appliedAt || rep.requestedAt);
+        push([rep.id, tipo, fechaApl, desc, rep.requestedBy, rep.appliedBy || "—", rep.amountReposed]);
+        set(r, 0, rep.id, cellStyle);
+        set(r, 1, tipo, { ...cellStyle, alignment: { horizontal: "center", vertical: "center" } });
+        set(r, 2, fechaApl, dateStyle);
+        set(r, 3, desc, cellStyle);
+        set(r, 4, rep.requestedBy, cellStyle);
+        set(r, 5, rep.appliedBy || "—", cellStyle);
+        set(r, 6, rep.amountReposed, moneyStyle);
+        r++;
+        monthTotal += rep.amountReposed;
+        granTotal += rep.amountReposed;
+        granCount++;
+      });
+
+      push(["", "", "", "", "", `TOTAL APLICADO ${getMonthDisplay(ym).toUpperCase()}`, monthTotal]);
+      set(r, 5, `TOTAL APLICADO ${getMonthDisplay(ym).toUpperCase()}`, labelRightBold);
+      set(r, 6, monthTotal, moneyBoldStyle);
+      r++;
+
+      push(["", "", "", "", "", "", ""]); r++;
+    });
+
+    // Totales generales
+    push(["TOTALES", "", "", "", "", "", ""]);
+    merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+    set(r, 0, "TOTALES", monthBannerStyle);
+    r++;
+
+    push(["", "", "", "", "", "TOTAL REPOSICIONES APLICADAS RD$", granTotal]);
+    set(r, 5, "TOTAL REPOSICIONES APLICADAS RD$", grandTotalLabel);
+    set(r, 6, granTotal, grandTotalValue);
+    r++;
+
+    push(["", "", "", "", "", "CANTIDAD DE REPOSICIONES", granCount]);
+    set(r, 5, "CANTIDAD DE REPOSICIONES", labelRightBold);
+    set(r, 6, granCount, { ...cellStyle, font: { bold: true }, alignment: { horizontal: "center", vertical: "center" } });
+    r++;
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  Object.entries(styles).forEach(([addr, info]) => {
+    if (!ws[addr]) ws[addr] = { t: typeof info.value === "number" ? "n" : "s", v: info.value };
+    if (info.style) (ws[addr] as any).s = info.style;
+  });
+  ws["!cols"] = [{ wch: 22 }, { wch: 14 }, { wch: 14 }, { wch: 50 }, { wch: 22 }, { wch: 22 }, { wch: 16 }];
+  ws["!merges"] = merges;
+  return ws;
+};
+
 // ============ Reporte Consolidado (todos los meses trabajados) ============
 // Replica exactamente el formato de la plantilla mensual, pero en una única
 // hoja que incluye un bloque por cada mes registrado y un GRAN TOTAL al final.
