@@ -390,6 +390,38 @@ const EmployeeDirectory = () => {
               <Label>Fecha nacimiento</Label>
               <Input type="date" value={formData.birthday || ""} onChange={e => setFormData({ ...formData, birthday: e.target.value })} />
             </div>
+            <div>
+              <Label>Cédula</Label>
+              <Input value={(formData as any).tss || ""} onChange={e => setFormData({ ...formData, tss: e.target.value } as any)} />
+            </div>
+            <div>
+              <Label>Email corporativo</Label>
+              <Input type="email" value={(formData as any).email || ""} onChange={e => setFormData({ ...formData, email: e.target.value } as any)} />
+            </div>
+
+            {/* ─── TSS Compliance ─── */}
+            <div className="md:col-span-2 mt-2 p-3 border rounded bg-muted/30">
+              <div className="flex items-center justify-between mb-2">
+                <Label className="font-semibold">Cumplimiento TSS</Label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input type="checkbox" checked={!!(formData as any).tssRegistered}
+                    onChange={e => setFormData({ ...formData, tssRegistered: e.target.checked, tssRegisteredAt: e.target.checked && !(formData as any).tssRegisteredAt ? new Date().toISOString() : (formData as any).tssRegisteredAt } as any)} />
+                  <span>Registrado en TSS con descuentos de ley</span>
+                </label>
+              </div>
+              <div className="grid md:grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs">Salario reportado a TSS</Label>
+                  <Input type="number" value={(formData as any).tssReportedSalary || ""}
+                    onChange={e => setFormData({ ...formData, tssReportedSalary: +e.target.value } as any)} />
+                </div>
+                <div>
+                  <Label className="text-xs">Notas TSS</Label>
+                  <Input value={(formData as any).tssNotes || ""}
+                    onChange={e => setFormData({ ...formData, tssNotes: e.target.value } as any)} />
+                </div>
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setEditing(null); setCreating(false); }}>
