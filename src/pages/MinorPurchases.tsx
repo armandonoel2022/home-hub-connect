@@ -2143,7 +2143,7 @@ const MinorPurchases = () => {
                 <Button
                   variant="outline"
                   className="gap-2 rounded-r-none border-r-0"
-                  onClick={() => generateConsolidatedReport(purchases, repositions)}
+                  onClick={() => generateConsolidatedReport(purchases, repositions, denominations)}
                   title="Descarga un reporte consolidado con todos los meses trabajados (Resumen + Movimientos)"
                 >
                   <Download className="h-4 w-4" /> Reporte Excel (Consolidado)
@@ -2157,7 +2157,7 @@ const MinorPurchases = () => {
                   <DropdownMenuContent align="end" className="w-64">
                     <DropdownMenuLabel>Exportar reporte</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => generateConsolidatedReport(purchases, repositions)}>
+                    <DropdownMenuItem onClick={() => generateConsolidatedReport(purchases, repositions, denominations)}>
                       <FileSpreadsheet className="h-4 w-4 mr-2 text-green-600" />
                       Consolidado (todos los meses)
                     </DropdownMenuItem>
