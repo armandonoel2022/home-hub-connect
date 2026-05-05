@@ -524,6 +524,72 @@ const generateExcelReport = (
   setCell(r, 3, CAJA_CHICA_LIMIT, moneyBoldStyle);
   r++;
 
+  // ===== Sección Cuenta Contable: Débitos (gastos) y Créditos (reposiciones aplicadas) =====
+  aoa.push(["", "", "", ""]);
+  r++;
+
+  aoa.push(["MOVIMIENTOS DE CUENTA — CAJA CHICA", "", "", ""]);
+  merges.push({ s: { r, c: 0 }, e: { r, c: 3 } });
+  setCell(r, 0, "MOVIMIENTOS DE CUENTA — CAJA CHICA", titleStyle);
+  r++;
+
+  // Encabezado de cuenta contable
+  aoa.push(["Fecha", "Concepto", "Débito (Gasto)", "Crédito (Reposición)"]);
+  setCell(r, 0, "Fecha", denomHeaderStyle);
+  setCell(r, 1, "Concepto", denomHeaderStyle);
+  setCell(r, 2, "Débito (Gasto)", denomHeaderStyle);
+  setCell(r, 3, "Crédito (Reposición)", denomHeaderStyle);
+  r++;
+
+  // Combinar y ordenar por fecha
+  type Movement = { date: string; concept: string; debito: number; credito: number };
+  const movements: Movement[] = [
+    ...sortedPurchases.map((p) => ({
+      date: p.expenseDate || p.requestedAt,
+      concept: `Gasto: ${p.description}`,
+      debito: p.amount,
+      credito: 0,
+    })),
+    ...appliedRepositions.map((rep) => ({
+      date: rep.appliedAt || rep.requestedAt,
+      concept: `Reposición ${rep.id}${rep.purchaseDescription ? ` — ${rep.purchaseDescription}` : rep.kind === "mensual" ? " (mensual)" : ""}`,
+      debito: 0,
+      credito: rep.amountReposed,
+    })),
+  ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  if (movements.length === 0) {
+    aoa.push(["", "Sin movimientos", "", ""]);
+    setCell(r, 0, "", cellStyle);
+    setCell(r, 1, "Sin movimientos", cellStyle);
+    setCell(r, 2, "", moneyStyle);
+    setCell(r, 3, "", moneyStyle);
+    r++;
+  } else {
+    movements.forEach((m) => {
+      aoa.push([fmtDate(m.date), m.concept, m.debito || "", m.credito || ""]);
+      setCell(r, 0, fmtDate(m.date), dateStyle);
+      setCell(r, 1, m.concept, cellStyle);
+      setCell(r, 2, m.debito || "", moneyStyle);
+      setCell(r, 3, m.credito || "", moneyStyle);
+      r++;
+    });
+  }
+
+  // Totales de la cuenta
+  const balance = totalReposiciones - totalGeneral;
+  aoa.push(["", "TOTALES", totalGeneral, totalReposiciones]);
+  setCell(r, 0, "", cellStyle);
+  setCell(r, 1, "TOTALES", labelRightBold);
+  setCell(r, 2, totalGeneral, moneyBoldStyle);
+  setCell(r, 3, totalReposiciones, moneyBoldStyle);
+  r++;
+
+  aoa.push(["", "", "BALANCE (Créditos − Débitos)", balance]);
+  setCell(r, 2, "BALANCE (Créditos − Débitos)", labelRightBold);
+  setCell(r, 3, balance, moneyBoldStyle);
+  r++;
+
   // Fila vacia
   aoa.push(["", "", "", ""]);
   r++;
