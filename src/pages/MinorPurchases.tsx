@@ -581,6 +581,7 @@ const generateExcelReport = (
 const generateConsolidatedReport = (
   purchases: MinorPurchase[],
   repositions: MonthlyReposition[],
+  denominations: Denomination[] = [],
 ) => {
   const monthSet = new Set<string>();
   purchases.forEach((p) => {
