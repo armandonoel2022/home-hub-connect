@@ -506,9 +506,10 @@ const generateExcelReport = (
     r++;
   });
 
-  const efectivoEnCaja = Math.max(0, CAJA_CHICA_LIMIT - totalGeneral);
+  const efectivoEnCaja = denominations.reduce((s, d) => s + d.value * d.count, 0);
+  const totalEnCaja = totalGeneral + efectivoEnCaja;
 
-  // Totales
+  // Totales (formato plantilla)
   aoa.push(["", "", "TOTAL GASTOS RD$", totalGeneral]);
   setCell(r, 2, "TOTAL GASTOS RD$", labelRightBold);
   setCell(r, 3, totalGeneral, moneyBoldStyle);
@@ -519,80 +520,19 @@ const generateExcelReport = (
   setCell(r, 3, efectivoEnCaja, moneyBoldStyle);
   r++;
 
-  aoa.push(["", "", "TOTAL EN CAJA RD$", CAJA_CHICA_LIMIT]);
+  aoa.push(["", "", "TOTAL EN CAJA RD$", totalEnCaja]);
   setCell(r, 2, "TOTAL EN CAJA RD$", labelRightBold);
-  setCell(r, 3, CAJA_CHICA_LIMIT, moneyBoldStyle);
+  setCell(r, 3, totalEnCaja, moneyBoldStyle);
   r++;
 
-  // ===== Sección Cuenta Contable: Débitos (gastos) y Créditos (reposiciones aplicadas) =====
+  // Fila vacia separadora
+  aoa.push(["", "", "", ""]);
+  r++;
   aoa.push(["", "", "", ""]);
   r++;
 
-  aoa.push(["MOVIMIENTOS DE CUENTA — CAJA CHICA", "", "", ""]);
-  merges.push({ s: { r, c: 0 }, e: { r, c: 3 } });
-  setCell(r, 0, "MOVIMIENTOS DE CUENTA — CAJA CHICA", titleStyle);
-  r++;
-
-  // Encabezado de cuenta contable
-  aoa.push(["Fecha", "Concepto", "Débito (Gasto)", "Crédito (Reposición)"]);
-  setCell(r, 0, "Fecha", denomHeaderStyle);
-  setCell(r, 1, "Concepto", denomHeaderStyle);
-  setCell(r, 2, "Débito (Gasto)", denomHeaderStyle);
-  setCell(r, 3, "Crédito (Reposición)", denomHeaderStyle);
-  r++;
-
-  // Combinar y ordenar por fecha
-  type Movement = { date: string; concept: string; debito: number; credito: number };
-  const movements: Movement[] = [
-    ...sortedPurchases.map((p) => ({
-      date: p.expenseDate || p.requestedAt,
-      concept: `Gasto: ${p.description}`,
-      debito: p.amount,
-      credito: 0,
-    })),
-    ...appliedRepositions.map((rep) => ({
-      date: rep.appliedAt || rep.requestedAt,
-      concept: `Reposición ${rep.id}${rep.purchaseDescription ? ` — ${rep.purchaseDescription}` : rep.kind === "mensual" ? " (mensual)" : ""}`,
-      debito: 0,
-      credito: rep.amountReposed,
-    })),
-  ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-  if (movements.length === 0) {
-    aoa.push(["", "Sin movimientos", "", ""]);
-    setCell(r, 0, "", cellStyle);
-    setCell(r, 1, "Sin movimientos", cellStyle);
-    setCell(r, 2, "", moneyStyle);
-    setCell(r, 3, "", moneyStyle);
-    r++;
-  } else {
-    movements.forEach((m) => {
-      aoa.push([fmtDate(m.date), m.concept, m.debito || "", m.credito || ""]);
-      setCell(r, 0, fmtDate(m.date), dateStyle);
-      setCell(r, 1, m.concept, cellStyle);
-      setCell(r, 2, m.debito || "", moneyStyle);
-      setCell(r, 3, m.credito || "", moneyStyle);
-      r++;
-    });
-  }
-
-  // Totales de la cuenta
-  const balance = totalReposiciones - totalGeneral;
-  aoa.push(["", "TOTALES", totalGeneral, totalReposiciones]);
-  setCell(r, 0, "", cellStyle);
-  setCell(r, 1, "TOTALES", labelRightBold);
-  setCell(r, 2, totalGeneral, moneyBoldStyle);
-  setCell(r, 3, totalReposiciones, moneyBoldStyle);
-  r++;
-
-  aoa.push(["", "", "BALANCE (Créditos − Débitos)", balance]);
-  setCell(r, 2, "BALANCE (Créditos − Débitos)", labelRightBold);
-  setCell(r, 3, balance, moneyBoldStyle);
-  r++;
-
-  // Fila vacia
-  aoa.push(["", "", "", ""]);
-  r++;
+  // (Variables conservadas para compatibilidad con consumidores aguas abajo)
+  void appliedRepositions; void totalReposiciones;
 
   // Detalle de efectivo (encabezado)
   aoa.push(["Detalle de efectivo en caja", "Denominaciones", "Total", ""]);
@@ -641,6 +581,7 @@ const generateExcelReport = (
 const generateConsolidatedReport = (
   purchases: MinorPurchase[],
   repositions: MonthlyReposition[],
+  denominations: Denomination[] = [],
 ) => {
   const monthSet = new Set<string>();
   purchases.forEach((p) => {
@@ -760,40 +701,9 @@ const generateConsolidatedReport = (
   wsResumen["!cols"] = [{ wch: 22 }, { wch: 14 }, { wch: 18 }, { wch: 22 }, { wch: 18 }, { wch: 22 }];
   wsResumen["!merges"] = merges;
 
-  // ---- Hoja Detalle Mensual (formato Abril replicado por cada mes, con reposición debajo de cada gasto) ----
-  const detAoa: any[][] = [];
-  const detStyles: Record<string, any> = {};
-  const detMerges: any[] = [];
-  const setD = (r: number, c: number, v: any, s?: any) => {
-    detStyles[XLSX.utils.encode_cell({ r, c })] = { value: v, style: s };
-  };
-
-  // Estilos extra para esta hoja
-  const categoryStyleD = {
-    font: { bold: true, sz: 11, color: { rgb: "FFFFFF" } },
-    fill: { patternType: "solid", fgColor: { rgb: "1E3A5F" } },
-    alignment: { horizontal: "left", vertical: "center" },
-    border: borderAll,
-  };
-  const repoLineStyle = {
-    ...cellStyle,
-    font: { italic: true, color: { rgb: "0B6E4F" }, sz: 10 },
-    fill: { patternType: "solid", fgColor: { rgb: "EAF7F0" } },
-  };
-  const repoMoneyStyle = {
-    ...moneyStyle,
-    font: { italic: true, bold: true, color: { rgb: "0B6E4F" } },
-    fill: { patternType: "solid", fgColor: { rgb: "EAF7F0" } },
-  };
-  const monthBannerStyle = {
-    font: { bold: true, sz: 13, color: { rgb: "FFFFFF" } },
-    fill: { patternType: "solid", fgColor: { rgb: "B8860B" } },
-    alignment: { horizontal: "center", vertical: "center" },
-    border: borderAll,
-  };
-  const dateStyleD = { ...cellStyle, alignment: { horizontal: "center", vertical: "center" }, numFmt: "dd/mm/yyyy" };
-  const labelRightBoldD = { ...cellStyle, font: { bold: true }, alignment: { horizontal: "right", vertical: "center" } };
-  const moneyBoldStyleD = { ...moneyStyle, font: { bold: true } };
+  // ---- Una hoja por mes con el formato exacto de la plantilla ----
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen");
 
   const categoryOrder = ["COMBUSTIBLE", "ENVIO,PEAJE Y PARQUEO", "REPARACION", "OTROS"];
   const normalizeCategory = (cat: string) => {
@@ -803,44 +713,35 @@ const generateConsolidatedReport = (
     return "OTROS";
   };
 
-  detAoa.push(["SAFEONE SECURITY COMPANY — DETALLE MENSUAL CONSOLIDADO", "", "", ""]);
-  detMerges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } });
-  setD(0, 0, "SAFEONE SECURITY COMPANY — DETALLE MENSUAL CONSOLIDADO", titleStyle);
-  let dr = 1;
-  detAoa.push(["", "", "", ""]);
-  dr++;
-
-  let runDeb = 0;
-  let runCred = 0;
+  // Estilos para hoja mensual (replica plantilla)
+  const titleStyleM = {
+    font: { bold: true, sz: 12 },
+    alignment: { horizontal: "center", vertical: "center" },
+    border: borderAll,
+  };
+  const categoryStyleM = {
+    font: { bold: true, sz: 11 },
+    fill: { patternType: "solid", fgColor: { rgb: "FFFF00" } },
+    alignment: { horizontal: "center", vertical: "center" },
+    border: borderAll,
+  };
+  const cellStyleM = { border: borderAll, alignment: { vertical: "center" } };
+  const dateStyleM = { ...cellStyleM, alignment: { horizontal: "center", vertical: "center" } };
+  const moneyStyleM = { ...cellStyleM, numFmt: '"$"#,##0.00;[Red]("$"#,##0.00);"$"\\ -' };
+  const moneyBoldStyleM = { ...moneyStyleM, font: { bold: true } };
+  const labelRightBoldM = { ...cellStyleM, font: { bold: true }, alignment: { horizontal: "right", vertical: "center" } };
 
   months.forEach((ym) => {
-    const { approvedPurchases, appliedReps } = buildMonthAccountData(purchases, repositions, ym);
+    const { approvedPurchases } = buildMonthAccountData(purchases, repositions, ym);
     const sortedPurchases = [...approvedPurchases].sort(
       (a, b) => new Date(a.expenseDate || a.requestedAt).getTime() - new Date(b.expenseDate || b.requestedAt).getTime(),
     );
 
-    // Index de reposiciones aplicadas por purchaseId
-    const repsByPurchaseId = new Map<string, typeof appliedReps>();
-    appliedReps.forEach((rep) => {
-      if (rep.purchaseId) {
-        const arr = repsByPurchaseId.get(rep.purchaseId) || [];
-        arr.push(rep);
-        repsByPurchaseId.set(rep.purchaseId, arr);
-      }
-    });
-    const orphanReps = appliedReps.filter((rep) => !rep.purchaseId || !sortedPurchases.find((p) => p.id === rep.purchaseId));
-
-    // Banner del mes
     const [yy, mm] = ym.split("-");
     const firstDay = new Date(parseInt(yy), parseInt(mm) - 1, 1);
     const lastDay = new Date(parseInt(yy), parseInt(mm), 0);
-    const dateRange = `${getMonthDisplay(ym).toUpperCase()} — ${fmtDate(format(firstDay, "yyyy-MM-dd"))} AL ${fmtDate(format(lastDay, "yyyy-MM-dd"))}`;
-    detAoa.push([dateRange, "", "", ""]);
-    detMerges.push({ s: { r: dr, c: 0 }, e: { r: dr, c: 3 } });
-    setD(dr, 0, dateRange, monthBannerStyle);
-    dr++;
+    const dateRange = `${fmtDate(format(firstDay, "yyyy-MM-dd"))} AL ${fmtDate(format(lastDay, "yyyy-MM-dd"))}`;
 
-    // Agrupar por categoría
     const grouped: Record<string, typeof sortedPurchases> = {};
     sortedPurchases.forEach((p) => {
       const k = normalizeCategory(p.category);
@@ -848,140 +749,130 @@ const generateConsolidatedReport = (
       grouped[k].push(p);
     });
 
-    let totalGastosMes = 0;
-    let totalRepoMes = 0;
+    const mAoa: any[][] = [];
+    const mStyles: Record<string, any> = {};
+    const mMerges: any[] = [];
+    const sM = (r: number, c: number, v: any, s?: any) => {
+      mStyles[XLSX.utils.encode_cell({ r, c })] = { value: v, style: s };
+    };
+
+    // Encabezado
+    mAoa.push(["SAFEONE SECURITY COMPANY", "", "", ""]);
+    mMerges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } });
+    sM(0, 0, "SAFEONE SECURITY COMPANY", titleStyleM);
+
+    mAoa.push(["REPOSICION DE CAJA CHICA", "", "", ""]);
+    mMerges.push({ s: { r: 1, c: 0 }, e: { r: 1, c: 3 } });
+    sM(1, 0, "REPOSICION DE CAJA CHICA", titleStyleM);
+
+    mAoa.push([dateRange, "", "", ""]);
+    mMerges.push({ s: { r: 2, c: 0 }, e: { r: 2, c: 3 } });
+    sM(2, 0, dateRange, titleStyleM);
+
+    let mr = 3;
+    let mTotal = 0;
 
     categoryOrder.forEach((category) => {
       const items = grouped[category] || [];
-      if (items.length === 0) return;
+      mAoa.push([category, "", "", ""]);
+      mMerges.push({ s: { r: mr, c: 0 }, e: { r: mr, c: 2 } });
+      sM(mr, 0, category, categoryStyleM);
+      sM(mr, 1, "", categoryStyleM);
+      sM(mr, 2, "", categoryStyleM);
+      sM(mr, 3, "", categoryStyleM);
+      mr++;
 
-      // Encabezado categoría
-      detAoa.push([category, "", "", ""]);
-      detMerges.push({ s: { r: dr, c: 0 }, e: { r: dr, c: 2 } });
-      setD(dr, 0, category, categoryStyleD);
-      setD(dr, 1, "", categoryStyleD);
-      setD(dr, 2, "", categoryStyleD);
-      setD(dr, 3, "", categoryStyleD);
-      dr++;
-
-      let categoryTotal = 0;
-      items.forEach((item) => {
-        detAoa.push([fmtDate(item.expenseDate || item.requestedAt), item.description, item.amount, ""]);
-        setD(dr, 0, fmtDate(item.expenseDate || item.requestedAt), dateStyleD);
-        setD(dr, 1, item.description, cellStyle);
-        setD(dr, 2, item.amount, moneyStyle);
-        setD(dr, 3, "", cellStyle);
-        categoryTotal += item.amount;
-        totalGastosMes += item.amount;
-        dr++;
-
-        // Reposición(es) aplicada(s) debajo de este gasto
-        const reps = repsByPurchaseId.get(item.id) || [];
-        reps.forEach((rep) => {
-          const repLabel = `   ↳ Reposición aplicada (${rep.id})${rep.appliedAt ? ` el ${fmtDate(rep.appliedAt)}` : ""}`;
-          detAoa.push(["", repLabel, "", rep.amountReposed]);
-          setD(dr, 0, "", repoLineStyle);
-          setD(dr, 1, repLabel, repoLineStyle);
-          setD(dr, 2, "", repoLineStyle);
-          setD(dr, 3, rep.amountReposed, repoMoneyStyle);
-          totalRepoMes += rep.amountReposed;
-          dr++;
-        });
-      });
-
-      // Subtotal categoría
-      detAoa.push(["", "", "Subtotal " + category, categoryTotal]);
-      setD(dr, 2, "Subtotal " + category, labelRightBoldD);
-      setD(dr, 3, categoryTotal, moneyBoldStyleD);
-      dr++;
-
-      // Separador
-      detAoa.push(["", "", "", ""]);
-      dr++;
+      let catTotal = 0;
+      const minRows = Math.max(items.length, category === "ENVIO,PEAJE Y PARQUEO" ? 4 : 1);
+      for (let i = 0; i < minRows; i++) {
+        const item = items[i];
+        if (item) {
+          mAoa.push([fmtDate(item.expenseDate || item.requestedAt), item.description, item.amount, ""]);
+          sM(mr, 0, fmtDate(item.expenseDate || item.requestedAt), dateStyleM);
+          sM(mr, 1, item.description, cellStyleM);
+          sM(mr, 2, item.amount, moneyStyleM);
+          sM(mr, 3, "", cellStyleM);
+          catTotal += item.amount;
+          mTotal += item.amount;
+        } else {
+          mAoa.push(["", "", "", ""]);
+          sM(mr, 0, "", cellStyleM);
+          sM(mr, 1, "", cellStyleM);
+          sM(mr, 2, "", cellStyleM);
+          sM(mr, 3, "", cellStyleM);
+        }
+        mr++;
+      }
+      mAoa.push(["", "", "", catTotal]);
+      sM(mr, 0, "", cellStyleM);
+      sM(mr, 1, "", cellStyleM);
+      sM(mr, 2, "", moneyBoldStyleM);
+      sM(mr, 3, catTotal, moneyBoldStyleM);
+      mr++;
+      mAoa.push(["", "", "", ""]);
+      mr++;
     });
 
-    // Reposiciones huérfanas (mensuales o sin gasto vinculado en el mes)
-    if (orphanReps.length > 0) {
-      detAoa.push(["REPOSICIONES ADICIONALES", "", "", ""]);
-      detMerges.push({ s: { r: dr, c: 0 }, e: { r: dr, c: 2 } });
-      setD(dr, 0, "REPOSICIONES ADICIONALES", categoryStyleD);
-      setD(dr, 1, "", categoryStyleD);
-      setD(dr, 2, "", categoryStyleD);
-      setD(dr, 3, "", categoryStyleD);
-      dr++;
+    // Para meses pasados no tenemos snapshot de denominaciones; usamos las actuales solo para el mes vigente.
+    const isCurrent = ym === getCurrentYearMonth();
+    const efectivo = isCurrent ? denominations.reduce((s, d) => s + d.value * d.count, 0) : 0;
+    const totalEnCaja = mTotal + efectivo;
 
-      let orphanTotal = 0;
-      orphanReps.forEach((rep) => {
-        const concept = `Reposición ${rep.id}${rep.kind === "mensual" ? " (mensual)" : rep.purchaseDescription ? ` — ${rep.purchaseDescription}` : ""}`;
-        detAoa.push([fmtDate(rep.appliedAt || rep.requestedAt), concept, "", rep.amountReposed]);
-        setD(dr, 0, fmtDate(rep.appliedAt || rep.requestedAt), dateStyleD);
-        setD(dr, 1, concept, repoLineStyle);
-        setD(dr, 2, "", cellStyle);
-        setD(dr, 3, rep.amountReposed, repoMoneyStyle);
-        orphanTotal += rep.amountReposed;
-        totalRepoMes += rep.amountReposed;
-        dr++;
-      });
-      detAoa.push(["", "", "Subtotal Reposiciones Adicionales", orphanTotal]);
-      setD(dr, 2, "Subtotal Reposiciones Adicionales", labelRightBoldD);
-      setD(dr, 3, orphanTotal, moneyBoldStyleD);
-      dr++;
-      detAoa.push(["", "", "", ""]);
-      dr++;
-    }
+    mAoa.push(["", "", "TOTAL GASTOS RD$", mTotal]);
+    sM(mr, 2, "TOTAL GASTOS RD$", labelRightBoldM);
+    sM(mr, 3, mTotal, moneyBoldStyleM);
+    mr++;
+    mAoa.push(["", "", "TOTAL EFECTIVO EN CAJA", efectivo]);
+    sM(mr, 2, "TOTAL EFECTIVO EN CAJA", labelRightBoldM);
+    sM(mr, 3, efectivo, moneyBoldStyleM);
+    mr++;
+    mAoa.push(["", "", "TOTAL EN CAJA RD$", totalEnCaja]);
+    sM(mr, 2, "TOTAL EN CAJA RD$", labelRightBoldM);
+    sM(mr, 3, totalEnCaja, moneyBoldStyleM);
+    mr++;
 
-    // Totales del mes
-    const efectivoEnCaja = Math.max(0, CAJA_CHICA_LIMIT - totalGastosMes + totalRepoMes);
-    detAoa.push(["", "", "TOTAL GASTOS RD$", totalGastosMes]);
-    setD(dr, 2, "TOTAL GASTOS RD$", { ...labelRightBoldD, fill: { patternType: "solid", fgColor: { rgb: "E8F0FE" } } });
-    setD(dr, 3, totalGastosMes, totalRowStyle);
-    dr++;
-    detAoa.push(["", "", "TOTAL REPOSICIONES RD$", totalRepoMes]);
-    setD(dr, 2, "TOTAL REPOSICIONES RD$", { ...labelRightBoldD, fill: { patternType: "solid", fgColor: { rgb: "EAF7F0" } } });
-    setD(dr, 3, totalRepoMes, { ...totalRowStyle, font: { bold: true, color: { rgb: "0B6E4F" } }, fill: { patternType: "solid", fgColor: { rgb: "EAF7F0" } } });
-    dr++;
-    detAoa.push(["", "", "EFECTIVO ESTIMADO EN CAJA", efectivoEnCaja]);
-    setD(dr, 2, "EFECTIVO ESTIMADO EN CAJA", labelRightBoldD);
-    setD(dr, 3, efectivoEnCaja, moneyBoldStyleD);
-    dr++;
-    detAoa.push(["", "", "LÍMITE CAJA CHICA", CAJA_CHICA_LIMIT]);
-    setD(dr, 2, "LÍMITE CAJA CHICA", labelRightBoldD);
-    setD(dr, 3, CAJA_CHICA_LIMIT, moneyBoldStyleD);
-    dr++;
+    // Detalle de denominaciones (solo significativo en mes vigente)
+    mAoa.push(["", "", "", ""]);
+    mr++;
+    const denomHeaderStyleM = {
+      font: { bold: true },
+      fill: { patternType: "solid", fgColor: { rgb: "D9D9D9" } },
+      alignment: { horizontal: "center", vertical: "center" },
+      border: borderAll,
+    };
+    mAoa.push(["Detalle de efectivo en caja", "Denominaciones", "Total", ""]);
+    sM(mr, 0, "Detalle de efectivo en caja", denomHeaderStyleM);
+    sM(mr, 1, "Denominaciones", denomHeaderStyleM);
+    sM(mr, 2, "Total", denomHeaderStyleM);
+    mr++;
+    let totDenom = 0;
+    const denomList = isCurrent ? denominations : denominations.map((d) => ({ value: d.value, count: 0 }));
+    denomList.forEach((denom) => {
+      const t = denom.value * denom.count;
+      totDenom += t;
+      mAoa.push([denom.value, denom.count || "", t || ""]);
+      sM(mr, 0, denom.value, { ...cellStyleM, numFmt: "#,##0.00", alignment: { horizontal: "right", vertical: "center" } });
+      sM(mr, 1, denom.count || "", { ...cellStyleM, alignment: { horizontal: "center", vertical: "center" } });
+      sM(mr, 2, t || "", moneyStyleM);
+      mr++;
+    });
+    mAoa.push(["", "", totDenom, ""]);
+    sM(mr, 2, totDenom, moneyBoldStyleM);
+    mr++;
 
-    runDeb += totalGastosMes;
-    runCred += totalRepoMes;
+    const wsM = XLSX.utils.aoa_to_sheet(mAoa);
+    Object.entries(mStyles).forEach(([addr, info]) => {
+      if (!wsM[addr]) wsM[addr] = { t: typeof info.value === "number" ? "n" : "s", v: info.value };
+      if (info.style) (wsM[addr] as any).s = info.style;
+    });
+    wsM["!cols"] = [{ wch: 14 }, { wch: 50 }, { wch: 14 }, { wch: 14 }];
+    wsM["!merges"] = mMerges;
 
-    // Espacio entre meses
-    detAoa.push(["", "", "", ""]);
-    detAoa.push(["", "", "", ""]);
-    dr += 2;
+    // Nombre de hoja: MES YYYY (max 31 chars)
+    const sheetName = getMonthDisplay(ym).toUpperCase().slice(0, 31);
+    XLSX.utils.book_append_sheet(wb, wsM, sheetName);
   });
 
-  // Total general final
-  detAoa.push(["", "", "TOTAL GENERAL GASTOS", runDeb]);
-  setD(dr, 2, "TOTAL GENERAL GASTOS", { ...labelRightBoldD, font: { bold: true, sz: 12 } });
-  setD(dr, 3, runDeb, { ...totalRowStyle, font: { bold: true, sz: 12 } });
-  dr++;
-  detAoa.push(["", "", "TOTAL GENERAL REPOSICIONES", runCred]);
-  setD(dr, 2, "TOTAL GENERAL REPOSICIONES", { ...labelRightBoldD, font: { bold: true, sz: 12 } });
-  setD(dr, 3, runCred, { ...totalRowStyle, font: { bold: true, sz: 12, color: { rgb: "0B6E4F" } } });
-  dr++;
-  detAoa.push(["", "", "BALANCE (Reposiciones − Gastos)", runCred - runDeb]);
-  setD(dr, 2, "BALANCE (Reposiciones − Gastos)", { ...labelRightBoldD, font: { bold: true, sz: 12 } });
-  setD(dr, 3, runCred - runDeb, { ...totalRowStyle, font: { bold: true, sz: 12 } });
-
-  const wsDet = XLSX.utils.aoa_to_sheet(detAoa);
-  Object.entries(detStyles).forEach(([addr, info]) => {
-    if (!wsDet[addr]) wsDet[addr] = { t: typeof info.value === "number" ? "n" : "s", v: info.value };
-    if (info.style) (wsDet[addr] as any).s = info.style;
-  });
-  wsDet["!cols"] = [{ wch: 14 }, { wch: 60 }, { wch: 18 }, { wch: 18 }];
-  wsDet["!merges"] = detMerges;
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen");
-  XLSX.utils.book_append_sheet(wb, wsDet, "Detalle Mensual");
   const stamp = new Date().toISOString().split("T")[0];
   XLSX.writeFile(wb, `caja_chica_consolidado_${stamp}.xlsx`);
 
@@ -2252,7 +2143,7 @@ const MinorPurchases = () => {
                 <Button
                   variant="outline"
                   className="gap-2 rounded-r-none border-r-0"
-                  onClick={() => generateConsolidatedReport(purchases, repositions)}
+                  onClick={() => generateConsolidatedReport(purchases, repositions, denominations)}
                   title="Descarga un reporte consolidado con todos los meses trabajados (Resumen + Movimientos)"
                 >
                   <Download className="h-4 w-4" /> Reporte Excel (Consolidado)
@@ -2266,7 +2157,7 @@ const MinorPurchases = () => {
                   <DropdownMenuContent align="end" className="w-64">
                     <DropdownMenuLabel>Exportar reporte</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => generateConsolidatedReport(purchases, repositions)}>
+                    <DropdownMenuItem onClick={() => generateConsolidatedReport(purchases, repositions, denominations)}>
                       <FileSpreadsheet className="h-4 w-4 mr-2 text-green-600" />
                       Consolidado (todos los meses)
                     </DropdownMenuItem>
