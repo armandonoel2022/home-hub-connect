@@ -3528,6 +3528,43 @@ const MinorPurchases = () => {
                       </TableBody>
                     </Table>
                   </div>
+
+                  {/* Totales del historial filtrado */}
+                  {filteredHistory.length > 0 && (
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="rounded-lg border border-border bg-muted/40 p-3">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Total general</p>
+                        <p className="text-xl font-heading font-bold text-foreground">{fmt(historyTotals.total)}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{historyTotals.count} gasto(s)</p>
+                      </div>
+                      <div className="rounded-lg border border-border bg-muted/40 p-3">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Por categoría</p>
+                        <div className="space-y-0.5 max-h-32 overflow-y-auto">
+                          {Object.entries(historyTotals.byCategory)
+                            .sort((a, b) => b[1] - a[1])
+                            .map(([cat, val]) => (
+                              <div key={cat} className="flex items-center justify-between text-xs">
+                                <span className="text-foreground truncate mr-2">{cat}</span>
+                                <span className="font-semibold whitespace-nowrap">{fmt(val)}</span>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-border bg-muted/40 p-3">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Por método</p>
+                        <div className="space-y-0.5">
+                          {Object.entries(historyTotals.byMethod)
+                            .sort((a, b) => b[1] - a[1])
+                            .map(([m, val]) => (
+                              <div key={m} className="flex items-center justify-between text-xs">
+                                <span className="text-foreground truncate mr-2">{m}</span>
+                                <span className="font-semibold whitespace-nowrap">{fmt(val)}</span>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
