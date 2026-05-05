@@ -854,6 +854,141 @@ const generateConsolidatedReport = (
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Consolidado");
 
+  // ============= HOJA 2: DETALLE DE REPOSICIONES =============
+  const aoa2: any[][] = [];
+  const styles2: Record<string, any> = {};
+  const merges2: any[] = [];
+  let r2 = 0;
+  const set2 = (row: number, c: number, v: any, s?: any) => {
+    styles2[XLSX.utils.encode_cell({ r: row, c })] = { value: v, style: s };
+  };
+  const push2 = (row: any[]) => { aoa2.push(row); };
+
+  const repHeaderStyle = {
+    font: { bold: true, sz: 11, color: { rgb: "FFFFFF" } },
+    fill: { patternType: "solid", fgColor: { rgb: "1F6F43" } },
+    alignment: { horizontal: "center", vertical: "center" },
+    border: borderAll,
+  };
+  const statusStyle = (status: string) => {
+    const colors: Record<string, string> = {
+      aplicado: "C6EFCE",
+      aprobado: "FFEB9C",
+      pendiente: "FFC7CE",
+      rechazado: "D9D9D9",
+    };
+    return {
+      ...cellStyle,
+      fill: { patternType: "solid", fgColor: { rgb: colors[status] || "FFFFFF" } },
+      alignment: { horizontal: "center", vertical: "center" },
+      font: { bold: true, sz: 9 },
+    };
+  };
+
+  // Encabezado
+  push2(["SAFEONE SECURITY COMPANY", "", "", "", "", "", ""]);
+  merges2.push({ s: { r: r2, c: 0 }, e: { r: r2, c: 6 } });
+  set2(r2, 0, "SAFEONE SECURITY COMPANY", titleStyle);
+  r2++;
+
+  push2(["DETALLE DE REPOSICIONES DE CAJA CHICA", "", "", "", "", "", ""]);
+  merges2.push({ s: { r: r2, c: 0 }, e: { r: r2, c: 6 } });
+  set2(r2, 0, "DETALLE DE REPOSICIONES DE CAJA CHICA", titleStyle);
+  r2++;
+
+  push2([periodo, "", "", "", "", "", ""]);
+  merges2.push({ s: { r: r2, c: 0 }, e: { r: r2, c: 6 } });
+  set2(r2, 0, periodo, titleStyle);
+  r2++;
+
+  push2(["", "", "", "", "", "", ""]); r2++;
+
+  let granTotalRepsAll = 0;
+  let granCountReps = 0;
+
+  months.forEach((ym) => {
+    const monthReps = repositions
+      .filter((rep) => rep.yearMonth === ym)
+      .sort((a, b) => new Date(a.requestedAt).getTime() - new Date(b.requestedAt).getTime());
+
+    if (monthReps.length === 0) return;
+
+    // Banner del mes
+    push2([`${getMonthDisplay(ym).toUpperCase()}`, "", "", "", "", "", ""]);
+    merges2.push({ s: { r: r2, c: 0 }, e: { r: r2, c: 6 } });
+    set2(r2, 0, `${getMonthDisplay(ym).toUpperCase()}`, monthBannerStyle);
+    r2++;
+
+    // Encabezados de columnas
+    const headers = ["ID", "Tipo", "Fecha Solicitud", "Descripción / Gasto vinculado", "Solicitado por", "Estado", "Monto"];
+    push2(headers);
+    headers.forEach((h, c) => set2(r2, c, h, repHeaderStyle));
+    r2++;
+
+    let monthRepTotal = 0;
+    let monthRepApplied = 0;
+
+    monthReps.forEach((rep) => {
+      const tipo = rep.kind === "transaccion" ? "Transacción" : "Mensual";
+      const desc = rep.purchaseId
+        ? `${rep.purchaseId} — ${rep.purchaseDescription || ""}`
+        : rep.note || "Reposición mensual";
+      push2([rep.id, tipo, fmtDate(rep.requestedAt), desc, rep.requestedBy, rep.status, rep.amountReposed]);
+      set2(r2, 0, rep.id, cellStyle);
+      set2(r2, 1, tipo, { ...cellStyle, alignment: { horizontal: "center", vertical: "center" } });
+      set2(r2, 2, fmtDate(rep.requestedAt), dateStyle);
+      set2(r2, 3, desc, cellStyle);
+      set2(r2, 4, rep.requestedBy, cellStyle);
+      set2(r2, 5, rep.status.toUpperCase(), statusStyle(rep.status));
+      set2(r2, 6, rep.amountReposed, moneyStyle);
+      r2++;
+      monthRepTotal += rep.amountReposed;
+      if (rep.status === "aplicado") monthRepApplied += rep.amountReposed;
+      granCountReps++;
+    });
+
+    granTotalRepsAll += monthRepApplied;
+
+    // Subtotal del mes
+    push2(["", "", "", "", "", `TOTAL APLICADO ${getMonthDisplay(ym).toUpperCase()}`, monthRepApplied]);
+    set2(r2, 5, `TOTAL APLICADO ${getMonthDisplay(ym).toUpperCase()}`, labelRightBold);
+    set2(r2, 6, monthRepApplied, moneyBoldStyle);
+    r2++;
+
+    push2(["", "", "", "", "", `TOTAL SOLICITADO ${getMonthDisplay(ym).toUpperCase()}`, monthRepTotal]);
+    set2(r2, 5, `TOTAL SOLICITADO ${getMonthDisplay(ym).toUpperCase()}`, labelRightBold);
+    set2(r2, 6, monthRepTotal, moneyBoldStyle);
+    r2++;
+
+    push2(["", "", "", "", "", "", ""]); r2++;
+  });
+
+  // Totales generales
+  push2(["TOTALES CONSOLIDADOS", "", "", "", "", "", ""]);
+  merges2.push({ s: { r: r2, c: 0 }, e: { r: r2, c: 6 } });
+  set2(r2, 0, "TOTALES CONSOLIDADOS", monthBannerStyle);
+  r2++;
+
+  push2(["", "", "", "", "", "TOTAL REPOSICIONES APLICADAS RD$", granTotalRepsAll]);
+  set2(r2, 5, "TOTAL REPOSICIONES APLICADAS RD$", grandTotalLabel);
+  set2(r2, 6, granTotalRepsAll, grandTotalValue);
+  r2++;
+
+  push2(["", "", "", "", "", "CANTIDAD DE REPOSICIONES", granCountReps]);
+  set2(r2, 5, "CANTIDAD DE REPOSICIONES", labelRightBold);
+  set2(r2, 6, granCountReps, { ...cellStyle, font: { bold: true }, alignment: { horizontal: "center", vertical: "center" } });
+  r2++;
+
+  const ws2 = XLSX.utils.aoa_to_sheet(aoa2);
+  Object.entries(styles2).forEach(([addr, info]) => {
+    if (!ws2[addr]) ws2[addr] = { t: typeof info.value === "number" ? "n" : "s", v: info.value };
+    if (info.style) (ws2[addr] as any).s = info.style;
+  });
+  ws2["!cols"] = [{ wch: 22 }, { wch: 14 }, { wch: 14 }, { wch: 50 }, { wch: 22 }, { wch: 14 }, { wch: 16 }];
+  ws2["!merges"] = merges2;
+
+  XLSX.utils.book_append_sheet(wb, ws2, "Detalle Reposiciones");
+
   const stamp = new Date().toISOString().split("T")[0];
   XLSX.writeFile(wb, `caja_chica_consolidado_${stamp}.xlsx`);
 
