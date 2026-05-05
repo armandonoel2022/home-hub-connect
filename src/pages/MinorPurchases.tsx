@@ -2109,35 +2109,52 @@ const MinorPurchases = () => {
               </div>
             </div>
             <div className="flex gap-2 flex-wrap">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="gap-2">
-                    <Download className="h-4 w-4" /> Reporte Excel
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>Exportar reporte</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => generateExcelReport(purchases, denominations, getCurrentYearMonth())}
-                  >
-                    Exportar mes actual ({getMonthDisplay(getCurrentYearMonth())})
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="text-xs text-muted-foreground">Otros meses</DropdownMenuLabel>
-                  {availableMonthsForReport
-                    .filter((m) => m !== getCurrentYearMonth())
-                    .slice(0, 12)
-                    .map((month) => (
-                      <DropdownMenuItem key={month} onClick={() => generateExcelReport(purchases, denominations, month)}>
-                        {getMonthDisplay(month)}
-                      </DropdownMenuItem>
-                    ))}
-                  {availableMonthsForReport.filter((m) => m !== getCurrentYearMonth()).length === 0 && (
-                    <DropdownMenuItem disabled>Sin otros meses registrados</DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <div className="flex">
+                <Button
+                  variant="outline"
+                  className="gap-2 rounded-r-none border-r-0"
+                  onClick={() => generateConsolidatedReport(purchases, repositions)}
+                  title="Descarga un reporte consolidado con todos los meses trabajados (Resumen + Movimientos)"
+                >
+                  <Download className="h-4 w-4" /> Reporte Excel (Consolidado)
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="rounded-l-none px-2" title="Más opciones de exportación">
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-64">
+                    <DropdownMenuLabel>Exportar reporte</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => generateConsolidatedReport(purchases, repositions)}>
+                      <FileSpreadsheet className="h-4 w-4 mr-2 text-green-600" />
+                      Consolidado (todos los meses)
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-xs text-muted-foreground">Reporte mensual</DropdownMenuLabel>
+                    <DropdownMenuItem
+                      onClick={() => generateExcelReport(purchases, denominations, getCurrentYearMonth(), repositions)}
+                    >
+                      Mes actual ({getMonthDisplay(getCurrentYearMonth())})
+                    </DropdownMenuItem>
+                    {availableMonthsForReport
+                      .filter((m) => m !== getCurrentYearMonth())
+                      .slice(0, 12)
+                      .map((month) => (
+                        <DropdownMenuItem
+                          key={month}
+                          onClick={() => generateExcelReport(purchases, denominations, month, repositions)}
+                        >
+                          {getMonthDisplay(month)}
+                        </DropdownMenuItem>
+                      ))}
+                    {availableMonthsForReport.filter((m) => m !== getCurrentYearMonth()).length === 0 && (
+                      <DropdownMenuItem disabled>Sin otros meses registrados</DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
               <Button variant="outline" onClick={() => setPolicyDialogOpen(true)} className="gap-2">
                 <Info className="h-4 w-4" /> Política y cálculos
               </Button>
