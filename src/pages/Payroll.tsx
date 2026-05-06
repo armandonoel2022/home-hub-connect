@@ -18,12 +18,20 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import {
   ArrowLeft, AlertTriangle, CheckCircle2, UserX, Calculator, Mail,
-  Download, Search, Save, ShieldCheck, ShieldOff, Briefcase,
+  Download, Search, Save, ShieldCheck, ShieldOff, Briefcase, FileUp, Ghost,
 } from "lucide-react";
 import { employeesApi, isApiConfigured, tasksApi, type Employee } from "@/lib/api";
 import { calcDeductions, fmtRD } from "@/lib/payrollCalc";
 import { generatePayslipPDF } from "@/lib/payslipPdf";
+import { parseTssFile, type TssRow } from "@/lib/tssParser";
 import * as XLSX from "xlsx";
+
+function normalizeCedula(c?: string) { return String(c || "").replace(/\D/g, ""); }
+function normalizeName(n?: string) {
+  return String(n || "").toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[,.]/g, "").replace(/\s+/g, " ").trim();
+}
 
 const TEST_EMAIL = "anoel@safeone.com.do";
 
