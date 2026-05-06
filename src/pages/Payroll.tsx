@@ -603,6 +603,156 @@ export default function Payroll() {
       </div>
       <Footer />
 
+      {/* ─── Dialog Validación contra archivo TSS ─── */}
+      <Dialog open={showValidation} onOpenChange={setShowValidation}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-gold" />
+              Validación TSS — Período {validation?.period}
+            </DialogTitle>
+          </DialogHeader>
+
+          {validation && (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                <Card><CardContent className="pt-4">
+                  <p className="text-xs text-muted-foreground">Registros TSS</p>
+                  <p className="text-2xl font-bold">{validation.rows.length}</p>
+                </CardContent></Card>
+                <Card className="border-green-300"><CardContent className="pt-4">
+                  <p className="text-xs text-muted-foreground">✅ Cumplen</p>
+                  <p className="text-2xl font-bold text-green-600">{validation.matchedActive.length}</p>
+                </CardContent></Card>
+                <Card className="border-red-300"><CardContent className="pt-4">
+                  <p className="text-xs text-muted-foreground">🔴 Activos sin TSS</p>
+                  <p className="text-2xl font-bold text-red-600">{validation.activeNotInTss.length}</p>
+                </CardContent></Card>
+                <Card className="border-amber-300"><CardContent className="pt-4">
+                  <p className="text-xs text-muted-foreground">👻 TSS sin empleado</p>
+                  <p className="text-2xl font-bold text-amber-600">{validation.tssNotActive.length}</p>
+                </CardContent></Card>
+              </div>
+
+              {/* Activos sin TSS (a corregir) */}
+              <Card className="mb-4 border-red-300">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2 text-red-700">
+                    <AlertTriangle className="w-4 h-4" /> Empleados activos NO encontrados en TSS ({validation.activeNotInTss.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader><TableRow>
+                      <TableHead>Código</TableHead><TableHead>Nombre</TableHead>
+                      <TableHead>Cédula</TableHead><TableHead>Departamento</TableHead>
+                      <TableHead>Puesto</TableHead><TableHead className="text-right">Salario</TableHead>
+                    </TableRow></TableHeader>
+                    <TableBody>
+                      {validation.activeNotInTss.length === 0 ? (
+                        <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-4">Todos los activos están en TSS ✓</TableCell></TableRow>
+                      ) : validation.activeNotInTss.map(e => (
+                        <TableRow key={e.employeeCode} className="cursor-pointer hover:bg-accent/40" onClick={() => { setDetail(e); setShowValidation(false); }}>
+                          <TableCell className="font-mono text-xs">{e.employeeCode}</TableCell>
+                          <TableCell className="font-medium">{e.fullName}</TableCell>
+                          <TableCell className="text-xs">{e.tss || "—"}</TableCell>
+                          <TableCell className="text-xs">{e.department}</TableCell>
+                          <TableCell className="text-xs">{e.position}</TableCell>
+                          <TableCell className="text-right text-sm">{fmtRD(Number(e.salary) || 0)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              {/* Pagamos TSS sin ser empleados activos */}
+              <Card className="mb-4 border-amber-300">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2 text-amber-700">
+                    <Ghost className="w-4 h-4" /> Pagamos TSS pero NO son empleados activos ({validation.tssNotActive.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader><TableRow>
+                      <TableHead>Cédula</TableHead><TableHead>Nombre</TableHead>
+                      <TableHead>ID NSS</TableHead>
+                      <TableHead className="text-right">Salario TSS</TableHead>
+                      <TableHead className="text-right">Total pagado</TableHead>
+                    </TableRow></TableHeader>
+                    <TableBody>
+                      {validation.tssNotActive.length === 0 ? (
+                        <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-4">No hay registros fantasma ✓</TableCell></TableRow>
+                      ) : validation.tssNotActive.map(r => (
+                        <TableRow key={r.cedula}>
+                          <TableCell className="font-mono text-xs">{r.cedula}</TableCell>
+                          <TableCell className="font-medium">{r.nombre}</TableCell>
+                          <TableCell className="text-xs">{r.idNss}</TableCell>
+                          <TableCell className="text-right text-sm">{fmtRD(r.salarioReportado)}</TableCell>
+                          <TableCell className="text-right text-sm">{fmtRD(r.total)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              {/* Discrepancias salariales */}
+              {(() => {
+                const mismatch = validation.matchedActive.filter(x => Math.abs(x.salaryDiff) > 100);
+                if (mismatch.length === 0) return null;
+                return (
+                  <Card className="mb-4 border-orange-300">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base flex items-center gap-2 text-orange-700">
+                        <AlertTriangle className="w-4 h-4" /> Discrepancia salario interno vs TSS ({mismatch.length})
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <Table>
+                        <TableHeader><TableRow>
+                          <TableHead>Código</TableHead><TableHead>Nombre</TableHead>
+                          <TableHead className="text-right">Intranet</TableHead>
+                          <TableHead className="text-right">TSS</TableHead>
+                          <TableHead className="text-right">Diferencia</TableHead>
+                        </TableRow></TableHeader>
+                        <TableBody>
+                          {mismatch.map(({ e, tss, salaryDiff }) => (
+                            <TableRow key={e.employeeCode} className="cursor-pointer hover:bg-accent/40" onClick={() => { setDetail(e); setShowValidation(false); }}>
+                              <TableCell className="font-mono text-xs">{e.employeeCode}</TableCell>
+                              <TableCell className="font-medium">{e.fullName}</TableCell>
+                              <TableCell className="text-right text-sm">{fmtRD(Number(e.salary) || 0)}</TableCell>
+                              <TableCell className="text-right text-sm">{fmtRD(tss.salarioReportado)}</TableCell>
+                              <TableCell className={`text-right text-sm font-semibold ${salaryDiff > 0 ? "text-red-600" : "text-amber-600"}`}>
+                                {fmtRD(salaryDiff)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                );
+              })()}
+            </>
+          )}
+
+          <DialogFooter className="gap-2 flex-wrap">
+            <Button variant="ghost" onClick={() => setShowValidation(false)}>Cerrar</Button>
+            <Button variant="outline" onClick={exportValidationExcel}>
+              <Download className="w-4 h-4 mr-2" /> Exportar resultado
+            </Button>
+            {canManage && (
+              <Button onClick={handleReconcile} disabled={saving}>
+                <Save className="w-4 h-4 mr-2" />
+                {saving ? "Aplicando..." : "Aplicar a empleados"}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* ─── Modal de Detalle ─── */}
       <Dialog open={!!detail} onOpenChange={o => { if (!o) setDetail(null); }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
