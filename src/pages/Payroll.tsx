@@ -18,12 +18,20 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import {
   ArrowLeft, AlertTriangle, CheckCircle2, UserX, Calculator, Mail,
-  Download, Search, Save, ShieldCheck, ShieldOff, Briefcase,
+  Download, Search, Save, ShieldCheck, ShieldOff, Briefcase, FileUp, Ghost,
 } from "lucide-react";
 import { employeesApi, isApiConfigured, tasksApi, type Employee } from "@/lib/api";
 import { calcDeductions, fmtRD } from "@/lib/payrollCalc";
 import { generatePayslipPDF } from "@/lib/payslipPdf";
+import { parseTssFile, type TssRow } from "@/lib/tssParser";
 import * as XLSX from "xlsx";
+
+function normalizeCedula(c?: string) { return String(c || "").replace(/\D/g, ""); }
+function normalizeName(n?: string) {
+  return String(n || "").toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[,.]/g, "").replace(/\s+/g, " ").trim();
+}
 
 const TEST_EMAIL = "anoel@safeone.com.do";
 
@@ -76,6 +84,17 @@ export default function Payroll() {
   const [payDate, setPayDate] = useState(new Date().toISOString().slice(0, 10));
   const [payFrequency, setPayFrequency] = useState<"monthly" | "quincenal">("quincenal");
   const [saving, setSaving] = useState(false);
+
+  // Validación contra archivo TSS
+  const [validation, setValidation] = useState<null | {
+    period: string;
+    rows: TssRow[];
+    matchedActive: Array<{ e: Employee; tss: TssRow; salaryDiff: number }>;
+    activeNotInTss: Employee[];      // activos que NO aparecen en archivo TSS
+    tssNotActive: TssRow[];          // en TSS pero no son empleados activos
+  }>(null);
+  const [validating, setValidating] = useState(false);
+  const [showValidation, setShowValidation] = useState(false);
 
   // ─── Load ───
   const loadEmployees = async () => {
@@ -295,6 +314,131 @@ export default function Payroll() {
     XLSX.writeFile(wb, `Cumplimiento_TSS_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
+  // ─── Validación con archivo TSS ───
+  const handleValidateFile = async (file: File) => {
+    setValidating(true);
+    try {
+      const parsed = await parseTssFile(file);
+      const tssByCed = new Map<string, TssRow>();
+      const tssByName = new Map<string, TssRow>();
+      parsed.rows.forEach(r => {
+        if (r.cedula) tssByCed.set(r.cedula, r);
+        if (r.nombre) tssByName.set(normalizeName(r.nombre), r);
+      });
+
+      const matchedActive: Array<{ e: Employee; tss: TssRow; salaryDiff: number }> = [];
+      const activeNotInTss: Employee[] = [];
+      const matchedTssCeds = new Set<string>();
+
+      employees.forEach(e => {
+        if (e.status !== "Activo") return;
+        const ced = normalizeCedula(e.tss);
+        let row = ced ? tssByCed.get(ced) : null;
+        if (!row) row = tssByName.get(normalizeName(e.fullName)) || null;
+        if (row) {
+          matchedTssCeds.add(row.cedula);
+          matchedActive.push({
+            e, tss: row,
+            salaryDiff: (Number(e.salary) || 0) - row.salarioReportado,
+          });
+        } else {
+          activeNotInTss.push(e);
+        }
+      });
+
+      const tssNotActive = parsed.rows.filter(r => !matchedTssCeds.has(r.cedula));
+
+      setValidation({
+        period: parsed.period,
+        rows: parsed.rows,
+        matchedActive,
+        activeNotInTss,
+        tssNotActive,
+      });
+      setShowValidation(true);
+      toast.success(`Archivo TSS procesado: ${parsed.rows.length} registros del período ${parsed.period}`);
+    } catch (e: any) {
+      toast.error(`Error al procesar archivo TSS: ${e.message}`);
+    } finally {
+      setValidating(false);
+    }
+  };
+
+  // Reconciliar: aplicar cambios masivos en empleados según validación
+  const handleReconcile = async () => {
+    if (!validation || !canManage) return;
+    setSaving(true);
+    let updates = 0;
+    try {
+      // Marcar como registrados en TSS los que aparecen en el archivo
+      for (const { e, tss } of validation.matchedActive) {
+        if (e.tssRegistered && Number(e.tssReportedSalary) === tss.salarioReportado) continue;
+        const patch: Partial<Employee> = {
+          tssRegistered: true,
+          tssReportedSalary: tss.salarioReportado,
+          tssRegisteredAt: e.tssRegisteredAt || new Date().toISOString(),
+          tss: e.tss || tss.cedula,
+        };
+        if (isApiConfigured()) {
+          const upd = await employeesApi.update(e.employeeCode, patch);
+          setEmployees(prev => prev.map(x => x.employeeCode === e.employeeCode ? upd : x));
+        } else {
+          setEmployees(prev => prev.map(x => x.employeeCode === e.employeeCode ? { ...x, ...patch } : x));
+        }
+        updates++;
+      }
+      // Marcar como sin TSS los activos que NO aparecen
+      for (const e of validation.activeNotInTss) {
+        if (e.tssRegistered === false) continue;
+        const patch: Partial<Employee> = { tssRegistered: false };
+        if (isApiConfigured()) {
+          const upd = await employeesApi.update(e.employeeCode, patch);
+          setEmployees(prev => prev.map(x => x.employeeCode === e.employeeCode ? upd : x));
+        } else {
+          setEmployees(prev => prev.map(x => x.employeeCode === e.employeeCode ? { ...x, ...patch } : x));
+        }
+        updates++;
+      }
+      toast.success(`${updates} empleados actualizados según el archivo TSS`);
+      setShowValidation(false);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const exportValidationExcel = () => {
+    if (!validation) return;
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
+      validation.matchedActive.map(({ e, tss, salaryDiff }) => ({
+        Codigo: e.employeeCode, Nombre: e.fullName, Cedula: tss.cedula,
+        Departamento: e.department, Puesto: e.position,
+        Salario_Intranet: Number(e.salary) || 0,
+        Salario_TSS_Reportado: tss.salarioReportado,
+        Diferencia: salaryDiff,
+      }))
+    ), "Cumplen TSS");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
+      validation.activeNotInTss.map(e => ({
+        Codigo: e.employeeCode, Nombre: e.fullName, Cedula: e.tss || "",
+        Departamento: e.department, Puesto: e.position,
+        Salario_Intranet: Number(e.salary) || 0,
+        Accion: "Inscribir en TSS",
+      }))
+    ), "Activos sin TSS");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
+      validation.tssNotActive.map(r => ({
+        Cedula: r.cedula, Nombre: r.nombre, ID_NSS: r.idNss,
+        Salario_TSS: r.salarioReportado, Total_Pagado: r.total,
+        Accion: "Solicitar baja TSS",
+      }))
+    ), "Pagamos sin ser empleados");
+    XLSX.writeFile(wb, `Validacion_TSS_${validation.period}.xlsx`);
+  };
+
+
   // ─── Vista detalle: deducciones en vivo ───
   const liveCalc = useMemo(() => {
     if (!detail) return null;
@@ -331,9 +475,28 @@ export default function Payroll() {
               Revisa el cumplimiento TSS de cada empleado, marca su estado y genera comprobantes de pago.
             </p>
           </div>
-          <Button variant="outline" onClick={exportExcel}>
-            <Download className="w-4 h-4 mr-2" /> Exportar Excel
-          </Button>
+          <div className="flex gap-2 flex-wrap">
+            <label htmlFor="tss-validate-input">
+              <input
+                id="tss-validate-input" type="file" accept=".xls,.xlsx" className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleValidateFile(f); e.target.value = ""; }}
+              />
+              <Button variant="default" disabled={validating} asChild>
+                <span className="cursor-pointer">
+                  <FileUp className="w-4 h-4 mr-2" />
+                  {validating ? "Procesando..." : "Validar archivo TSS"}
+                </span>
+              </Button>
+            </label>
+            {validation && (
+              <Button variant="outline" onClick={() => setShowValidation(true)}>
+                <ShieldCheck className="w-4 h-4 mr-2" /> Ver validación ({validation.period})
+              </Button>
+            )}
+            <Button variant="outline" onClick={exportExcel}>
+              <Download className="w-4 h-4 mr-2" /> Exportar Excel
+            </Button>
+          </div>
         </div>
 
         {/* KPIs */}
@@ -439,6 +602,156 @@ export default function Payroll() {
         </Card>
       </div>
       <Footer />
+
+      {/* ─── Dialog Validación contra archivo TSS ─── */}
+      <Dialog open={showValidation} onOpenChange={setShowValidation}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-gold" />
+              Validación TSS — Período {validation?.period}
+            </DialogTitle>
+          </DialogHeader>
+
+          {validation && (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                <Card><CardContent className="pt-4">
+                  <p className="text-xs text-muted-foreground">Registros TSS</p>
+                  <p className="text-2xl font-bold">{validation.rows.length}</p>
+                </CardContent></Card>
+                <Card className="border-green-300"><CardContent className="pt-4">
+                  <p className="text-xs text-muted-foreground">✅ Cumplen</p>
+                  <p className="text-2xl font-bold text-green-600">{validation.matchedActive.length}</p>
+                </CardContent></Card>
+                <Card className="border-red-300"><CardContent className="pt-4">
+                  <p className="text-xs text-muted-foreground">🔴 Activos sin TSS</p>
+                  <p className="text-2xl font-bold text-red-600">{validation.activeNotInTss.length}</p>
+                </CardContent></Card>
+                <Card className="border-amber-300"><CardContent className="pt-4">
+                  <p className="text-xs text-muted-foreground">👻 TSS sin empleado</p>
+                  <p className="text-2xl font-bold text-amber-600">{validation.tssNotActive.length}</p>
+                </CardContent></Card>
+              </div>
+
+              {/* Activos sin TSS (a corregir) */}
+              <Card className="mb-4 border-red-300">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2 text-red-700">
+                    <AlertTriangle className="w-4 h-4" /> Empleados activos NO encontrados en TSS ({validation.activeNotInTss.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader><TableRow>
+                      <TableHead>Código</TableHead><TableHead>Nombre</TableHead>
+                      <TableHead>Cédula</TableHead><TableHead>Departamento</TableHead>
+                      <TableHead>Puesto</TableHead><TableHead className="text-right">Salario</TableHead>
+                    </TableRow></TableHeader>
+                    <TableBody>
+                      {validation.activeNotInTss.length === 0 ? (
+                        <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-4">Todos los activos están en TSS ✓</TableCell></TableRow>
+                      ) : validation.activeNotInTss.map(e => (
+                        <TableRow key={e.employeeCode} className="cursor-pointer hover:bg-accent/40" onClick={() => { setDetail(e); setShowValidation(false); }}>
+                          <TableCell className="font-mono text-xs">{e.employeeCode}</TableCell>
+                          <TableCell className="font-medium">{e.fullName}</TableCell>
+                          <TableCell className="text-xs">{e.tss || "—"}</TableCell>
+                          <TableCell className="text-xs">{e.department}</TableCell>
+                          <TableCell className="text-xs">{e.position}</TableCell>
+                          <TableCell className="text-right text-sm">{fmtRD(Number(e.salary) || 0)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              {/* Pagamos TSS sin ser empleados activos */}
+              <Card className="mb-4 border-amber-300">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2 text-amber-700">
+                    <Ghost className="w-4 h-4" /> Pagamos TSS pero NO son empleados activos ({validation.tssNotActive.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader><TableRow>
+                      <TableHead>Cédula</TableHead><TableHead>Nombre</TableHead>
+                      <TableHead>ID NSS</TableHead>
+                      <TableHead className="text-right">Salario TSS</TableHead>
+                      <TableHead className="text-right">Total pagado</TableHead>
+                    </TableRow></TableHeader>
+                    <TableBody>
+                      {validation.tssNotActive.length === 0 ? (
+                        <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-4">No hay registros fantasma ✓</TableCell></TableRow>
+                      ) : validation.tssNotActive.map(r => (
+                        <TableRow key={r.cedula}>
+                          <TableCell className="font-mono text-xs">{r.cedula}</TableCell>
+                          <TableCell className="font-medium">{r.nombre}</TableCell>
+                          <TableCell className="text-xs">{r.idNss}</TableCell>
+                          <TableCell className="text-right text-sm">{fmtRD(r.salarioReportado)}</TableCell>
+                          <TableCell className="text-right text-sm">{fmtRD(r.total)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              {/* Discrepancias salariales */}
+              {(() => {
+                const mismatch = validation.matchedActive.filter(x => Math.abs(x.salaryDiff) > 100);
+                if (mismatch.length === 0) return null;
+                return (
+                  <Card className="mb-4 border-orange-300">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base flex items-center gap-2 text-orange-700">
+                        <AlertTriangle className="w-4 h-4" /> Discrepancia salario interno vs TSS ({mismatch.length})
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <Table>
+                        <TableHeader><TableRow>
+                          <TableHead>Código</TableHead><TableHead>Nombre</TableHead>
+                          <TableHead className="text-right">Intranet</TableHead>
+                          <TableHead className="text-right">TSS</TableHead>
+                          <TableHead className="text-right">Diferencia</TableHead>
+                        </TableRow></TableHeader>
+                        <TableBody>
+                          {mismatch.map(({ e, tss, salaryDiff }) => (
+                            <TableRow key={e.employeeCode} className="cursor-pointer hover:bg-accent/40" onClick={() => { setDetail(e); setShowValidation(false); }}>
+                              <TableCell className="font-mono text-xs">{e.employeeCode}</TableCell>
+                              <TableCell className="font-medium">{e.fullName}</TableCell>
+                              <TableCell className="text-right text-sm">{fmtRD(Number(e.salary) || 0)}</TableCell>
+                              <TableCell className="text-right text-sm">{fmtRD(tss.salarioReportado)}</TableCell>
+                              <TableCell className={`text-right text-sm font-semibold ${salaryDiff > 0 ? "text-red-600" : "text-amber-600"}`}>
+                                {fmtRD(salaryDiff)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                );
+              })()}
+            </>
+          )}
+
+          <DialogFooter className="gap-2 flex-wrap">
+            <Button variant="ghost" onClick={() => setShowValidation(false)}>Cerrar</Button>
+            <Button variant="outline" onClick={exportValidationExcel}>
+              <Download className="w-4 h-4 mr-2" /> Exportar resultado
+            </Button>
+            {canManage && (
+              <Button onClick={handleReconcile} disabled={saving}>
+                <Save className="w-4 h-4 mr-2" />
+                {saving ? "Aplicando..." : "Aplicar a empleados"}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ─── Modal de Detalle ─── */}
       <Dialog open={!!detail} onOpenChange={o => { if (!o) setDetail(null); }}>
