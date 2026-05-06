@@ -314,6 +314,131 @@ export default function Payroll() {
     XLSX.writeFile(wb, `Cumplimiento_TSS_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
+  // ─── Validación con archivo TSS ───
+  const handleValidateFile = async (file: File) => {
+    setValidating(true);
+    try {
+      const parsed = await parseTssFile(file);
+      const tssByCed = new Map<string, TssRow>();
+      const tssByName = new Map<string, TssRow>();
+      parsed.rows.forEach(r => {
+        if (r.cedula) tssByCed.set(r.cedula, r);
+        if (r.nombre) tssByName.set(normalizeName(r.nombre), r);
+      });
+
+      const matchedActive: Array<{ e: Employee; tss: TssRow; salaryDiff: number }> = [];
+      const activeNotInTss: Employee[] = [];
+      const matchedTssCeds = new Set<string>();
+
+      employees.forEach(e => {
+        if (e.status !== "Activo") return;
+        const ced = normalizeCedula(e.tss);
+        let row = ced ? tssByCed.get(ced) : null;
+        if (!row) row = tssByName.get(normalizeName(e.fullName)) || null;
+        if (row) {
+          matchedTssCeds.add(row.cedula);
+          matchedActive.push({
+            e, tss: row,
+            salaryDiff: (Number(e.salary) || 0) - row.salarioReportado,
+          });
+        } else {
+          activeNotInTss.push(e);
+        }
+      });
+
+      const tssNotActive = parsed.rows.filter(r => !matchedTssCeds.has(r.cedula));
+
+      setValidation({
+        period: parsed.period,
+        rows: parsed.rows,
+        matchedActive,
+        activeNotInTss,
+        tssNotActive,
+      });
+      setShowValidation(true);
+      toast.success(`Archivo TSS procesado: ${parsed.rows.length} registros del período ${parsed.period}`);
+    } catch (e: any) {
+      toast.error(`Error al procesar archivo TSS: ${e.message}`);
+    } finally {
+      setValidating(false);
+    }
+  };
+
+  // Reconciliar: aplicar cambios masivos en empleados según validación
+  const handleReconcile = async () => {
+    if (!validation || !canManage) return;
+    setSaving(true);
+    let updates = 0;
+    try {
+      // Marcar como registrados en TSS los que aparecen en el archivo
+      for (const { e, tss } of validation.matchedActive) {
+        if (e.tssRegistered && Number(e.tssReportedSalary) === tss.salarioReportado) continue;
+        const patch: Partial<Employee> = {
+          tssRegistered: true,
+          tssReportedSalary: tss.salarioReportado,
+          tssRegisteredAt: e.tssRegisteredAt || new Date().toISOString(),
+          tss: e.tss || tss.cedula,
+        };
+        if (isApiConfigured()) {
+          const upd = await employeesApi.update(e.employeeCode, patch);
+          setEmployees(prev => prev.map(x => x.employeeCode === e.employeeCode ? upd : x));
+        } else {
+          setEmployees(prev => prev.map(x => x.employeeCode === e.employeeCode ? { ...x, ...patch } : x));
+        }
+        updates++;
+      }
+      // Marcar como sin TSS los activos que NO aparecen
+      for (const e of validation.activeNotInTss) {
+        if (e.tssRegistered === false) continue;
+        const patch: Partial<Employee> = { tssRegistered: false };
+        if (isApiConfigured()) {
+          const upd = await employeesApi.update(e.employeeCode, patch);
+          setEmployees(prev => prev.map(x => x.employeeCode === e.employeeCode ? upd : x));
+        } else {
+          setEmployees(prev => prev.map(x => x.employeeCode === e.employeeCode ? { ...x, ...patch } : x));
+        }
+        updates++;
+      }
+      toast.success(`${updates} empleados actualizados según el archivo TSS`);
+      setShowValidation(false);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const exportValidationExcel = () => {
+    if (!validation) return;
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
+      validation.matchedActive.map(({ e, tss, salaryDiff }) => ({
+        Codigo: e.employeeCode, Nombre: e.fullName, Cedula: tss.cedula,
+        Departamento: e.department, Puesto: e.position,
+        Salario_Intranet: Number(e.salary) || 0,
+        Salario_TSS_Reportado: tss.salarioReportado,
+        Diferencia: salaryDiff,
+      }))
+    ), "Cumplen TSS");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
+      validation.activeNotInTss.map(e => ({
+        Codigo: e.employeeCode, Nombre: e.fullName, Cedula: e.tss || "",
+        Departamento: e.department, Puesto: e.position,
+        Salario_Intranet: Number(e.salary) || 0,
+        Accion: "Inscribir en TSS",
+      }))
+    ), "Activos sin TSS");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
+      validation.tssNotActive.map(r => ({
+        Cedula: r.cedula, Nombre: r.nombre, ID_NSS: r.idNss,
+        Salario_TSS: r.salarioReportado, Total_Pagado: r.total,
+        Accion: "Solicitar baja TSS",
+      }))
+    ), "Pagamos sin ser empleados");
+    XLSX.writeFile(wb, `Validacion_TSS_${validation.period}.xlsx`);
+  };
+
+
   // ─── Vista detalle: deducciones en vivo ───
   const liveCalc = useMemo(() => {
     if (!detail) return null;
