@@ -85,6 +85,17 @@ export default function Payroll() {
   const [payFrequency, setPayFrequency] = useState<"monthly" | "quincenal">("quincenal");
   const [saving, setSaving] = useState(false);
 
+  // Validación contra archivo TSS
+  const [validation, setValidation] = useState<null | {
+    period: string;
+    rows: TssRow[];
+    matchedActive: Array<{ e: Employee; tss: TssRow; salaryDiff: number }>;
+    activeNotInTss: Employee[];      // activos que NO aparecen en archivo TSS
+    tssNotActive: TssRow[];          // en TSS pero no son empleados activos
+  }>(null);
+  const [validating, setValidating] = useState(false);
+  const [showValidation, setShowValidation] = useState(false);
+
   // ─── Load ───
   const loadEmployees = async () => {
     setLoading(true);
