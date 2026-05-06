@@ -475,9 +475,28 @@ export default function Payroll() {
               Revisa el cumplimiento TSS de cada empleado, marca su estado y genera comprobantes de pago.
             </p>
           </div>
-          <Button variant="outline" onClick={exportExcel}>
-            <Download className="w-4 h-4 mr-2" /> Exportar Excel
-          </Button>
+          <div className="flex gap-2 flex-wrap">
+            <label htmlFor="tss-validate-input">
+              <input
+                id="tss-validate-input" type="file" accept=".xls,.xlsx" className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleValidateFile(f); e.target.value = ""; }}
+              />
+              <Button variant="default" disabled={validating} asChild>
+                <span className="cursor-pointer">
+                  <FileUp className="w-4 h-4 mr-2" />
+                  {validating ? "Procesando..." : "Validar archivo TSS"}
+                </span>
+              </Button>
+            </label>
+            {validation && (
+              <Button variant="outline" onClick={() => setShowValidation(true)}>
+                <ShieldCheck className="w-4 h-4 mr-2" /> Ver validación ({validation.period})
+              </Button>
+            )}
+            <Button variant="outline" onClick={exportExcel}>
+              <Download className="w-4 h-4 mr-2" /> Exportar Excel
+            </Button>
+          </div>
         </div>
 
         {/* KPIs */}
