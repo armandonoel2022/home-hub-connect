@@ -775,6 +775,11 @@ const ClientTracking = () => {
               </Card>
             </TabsContent>
 
+            {/* ── KRONOS ACTIVITY ── */}
+            <TabsContent value="kronos" className="space-y-4">
+              <KronosActivityTab clients={clients} />
+            </TabsContent>
+
             {/* ── REPORTS ── */}
             <TabsContent value="reports" className="space-y-4">
               <div className="flex gap-3 items-center">
