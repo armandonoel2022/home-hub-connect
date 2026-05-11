@@ -1,7 +1,10 @@
 /**
  * Pestaña "Actividad Kronos" para el módulo Seguimiento Clientes Monitoreo.
- * Permite cargar archivos .htm exportados del Kronos NET (filtro Apertura y/o Cierre),
- * detectar cuentas inactivas y cruzar con el catálogo OSM para alertar discrepancias.
+ *
+ * Carga UN único archivo .htm exportado del Kronos NET (las señales de apertura
+ * y cierre vienen mezcladas en el mismo reporte porque dependen del horario que
+ * cada cliente tenga configurado). Calcula la criticidad por cuenta tomando la
+ * última señal disponible y la cruza con el catálogo OSM para alertar discrepancias.
  */
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,12 +14,11 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  FileUp, AlertTriangle, Phone, Download, Search, X, Activity,
-  ShieldAlert, DoorOpen, DoorClosed, Trash2, RefreshCw,
+  FileUp, AlertTriangle, Phone, Download, Search, X, ShieldAlert, RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  parseKronosHtmFile, type KronosParsedReport, type KronosAccountRow, type CriticidadInactividad,
+  parseKronosHtmFile, type KronosParsedReport, type CriticidadInactividad,
 } from "@/lib/kronosHtmParser";
 import type { OSMClient } from "@/lib/osmClientData";
 
@@ -34,24 +36,12 @@ const CRIT_COLOR: Record<CriticidadInactividad, string> = {
 interface CombinedRow {
   accountCode: string;
   accountName: string;
-  aperturaDays: number | null;
-  cierreDays: number | null;
-  worstDays: number | null;
+  estado: string;
+  lastSignal: string | null;
+  daysSince: number | null;
   criticidad: CriticidadInactividad | "ok";
-  lastApertura: string | null;
-  lastCierre: string | null;
-  estadoApertura?: string;
-  estadoCierre?: string;
-  // Cruce OSM
   osm?: OSMClient;
-  discrepancia?: string; // explicación si hay alerta
-}
-
-function worstCriticidad(a?: CriticidadInactividad | "ok", b?: CriticidadInactividad | "ok"): CriticidadInactividad | "ok" {
-  const order: Array<CriticidadInactividad | "ok"> = ["ok", "baja", "media", "alta"];
-  const ai = a ? order.indexOf(a) : 0;
-  const bi = b ? order.indexOf(b) : 0;
-  return order[Math.max(ai, bi)];
+  discrepancia?: string;
 }
 
 function fmtDate(iso: string | null): string {
@@ -64,8 +54,7 @@ interface Props {
 }
 
 export default function KronosActivityTab({ clients }: Props) {
-  const [aperturaReport, setAperturaReport] = useState<KronosParsedReport | null>(null);
-  const [cierreReport, setCierreReport] = useState<KronosParsedReport | null>(null);
+  const [report, setReport] = useState<KronosParsedReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [filterCrit, setFilterCrit] = useState<"all" | CriticidadInactividad | "discrepancia">("all");
@@ -75,20 +64,11 @@ export default function KronosActivityTab({ clients }: Props) {
     try {
       const parsed = await parseKronosHtmFile(file);
       if (parsed.rows.length === 0) {
-        toast.error("No se detectaron cuentas en el archivo. Verifique el formato.");
+        toast.error("No se detectaron cuentas. Verifica que el archivo sea el reporte HTM de Kronos NET.");
         return;
       }
-      if (parsed.filterType === "Apertura") {
-        setAperturaReport(parsed);
-        toast.success(`Reporte de Apertura cargado: ${parsed.rows.length} cuentas`);
-      } else if (parsed.filterType === "Cierre") {
-        setCierreReport(parsed);
-        toast.success(`Reporte de Cierre cargado: ${parsed.rows.length} cuentas`);
-      } else {
-        // Sin filtro detectado: lo mandamos a apertura por defecto
-        setAperturaReport(parsed);
-        toast.warning(`Filtro no detectado; se procesó como Apertura (${parsed.rows.length} cuentas)`);
-      }
+      setReport(parsed);
+      toast.success(`Reporte cargado: ${parsed.rows.length} cuentas únicas (${parsed.rawRowCount} señales)`);
     } catch (e: any) {
       toast.error(`Error al procesar archivo: ${e.message}`);
     } finally {
@@ -96,7 +76,6 @@ export default function KronosActivityTab({ clients }: Props) {
     }
   };
 
-  // Index OSM por código
   const osmByCode = useMemo(() => {
     const m = new Map<string, OSMClient>();
     clients.forEach(c => { if (c.accountCode) m.set(c.accountCode.trim(), c); });
@@ -104,47 +83,19 @@ export default function KronosActivityTab({ clients }: Props) {
   }, [clients]);
 
   const combined = useMemo<CombinedRow[]>(() => {
-    const map = new Map<string, CombinedRow>();
-    const add = (r: KronosAccountRow, kind: "apertura" | "cierre") => {
-      const key = r.accountCode;
-      const cur = map.get(key) || {
-        accountCode: r.accountCode,
-        accountName: r.accountName,
-        aperturaDays: null, cierreDays: null, worstDays: null,
-        criticidad: "ok" as CriticidadInactividad | "ok",
-        lastApertura: null, lastCierre: null,
-      };
-      if (kind === "apertura") {
-        cur.aperturaDays = r.daysSince;
-        cur.lastApertura = r.lastSignal;
-        cur.estadoApertura = r.estado;
-      } else {
-        cur.cierreDays = r.daysSince;
-        cur.lastCierre = r.lastSignal;
-        cur.estadoCierre = r.estado;
-      }
-      cur.worstDays = Math.max(cur.aperturaDays ?? -1, cur.cierreDays ?? -1);
-      if (cur.worstDays < 0) cur.worstDays = null;
-      cur.criticidad = worstCriticidad(
-        cur.aperturaDays === null ? "alta" : cur.aperturaDays < 1 ? "ok" : cur.aperturaDays < 2 ? "baja" : cur.aperturaDays < 3 ? "media" : "alta",
-        cur.cierreDays === null ? (kind === "cierre" || cierreReport ? "alta" : "ok") : cur.cierreDays < 1 ? "ok" : cur.cierreDays < 2 ? "baja" : cur.cierreDays < 3 ? "media" : "alta",
-      );
-      map.set(key, cur);
-    };
-    aperturaReport?.rows.forEach(r => add(r, "apertura"));
-    cierreReport?.rows.forEach(r => add(r, "cierre"));
-
-    // Cruce con OSM
+    if (!report) return [];
     const list: CombinedRow[] = [];
-    map.forEach(row => {
-      const osm = osmByCode.get(row.accountCode);
-      row.osm = osm;
+    const seen = new Set<string>();
+
+    report.rows.forEach(r => {
+      seen.add(r.accountCode);
+      const osm = osmByCode.get(r.accountCode);
       const alertas: string[] = [];
       if (osm) {
-        if (osm.monitoringStatus === "Activo" && row.criticidad === "alta") {
+        if (osm.monitoringStatus === "Activo" && r.criticidad === "alta") {
           alertas.push("Marcado ACTIVO en OSM pero sin señal hace 3+ días");
         }
-        if (osm.hasBilling && row.criticidad === "alta") {
+        if (osm.hasBilling && r.criticidad === "alta") {
           alertas.push("Cliente facturado sin actividad reciente");
         }
         if (osm.systemStatus === "Apagado" || osm.systemStatus === "Suspendido") {
@@ -153,30 +104,36 @@ export default function KronosActivityTab({ clients }: Props) {
       } else {
         alertas.push("Cuenta no existe en catálogo OSM");
       }
-      row.discrepancia = alertas.join(" • ") || undefined;
-      list.push(row);
+      list.push({
+        accountCode: r.accountCode,
+        accountName: r.accountName,
+        estado: r.estado,
+        lastSignal: r.lastSignal,
+        daysSince: r.daysSince,
+        criticidad: r.criticidad,
+        osm,
+        discrepancia: alertas.join(" • ") || undefined,
+      });
     });
 
-    // Cuentas que están en OSM como Activas pero NO aparecen en ningún reporte
-    if (aperturaReport || cierreReport) {
-      const seen = new Set(list.map(r => r.accountCode));
-      clients.forEach(c => {
-        if (!c.accountCode || seen.has(c.accountCode.trim())) return;
-        if (c.monitoringStatus !== "Activo") return;
-        list.push({
-          accountCode: c.accountCode,
-          accountName: c.businessName,
-          aperturaDays: null, cierreDays: null, worstDays: null,
-          criticidad: "alta",
-          lastApertura: null, lastCierre: null,
-          osm: c,
-          discrepancia: "Activo en OSM pero NO aparece en reporte Kronos",
-        });
+    // Cuentas Activas en OSM que NO aparecieron en el reporte
+    clients.forEach(c => {
+      if (!c.accountCode || seen.has(c.accountCode.trim())) return;
+      if (c.monitoringStatus !== "Activo") return;
+      list.push({
+        accountCode: c.accountCode,
+        accountName: c.businessName,
+        estado: "",
+        lastSignal: null,
+        daysSince: null,
+        criticidad: "alta",
+        osm: c,
+        discrepancia: "Activo en OSM pero NO aparece en reporte Kronos",
       });
-    }
+    });
 
-    return list.sort((a, b) => (b.worstDays ?? 9999) - (a.worstDays ?? 9999));
-  }, [aperturaReport, cierreReport, clients, osmByCode]);
+    return list.sort((a, b) => (b.daysSince ?? 9999) - (a.daysSince ?? 9999));
+  }, [report, clients, osmByCode]);
 
   const stats = useMemo(() => {
     const alta = combined.filter(r => r.criticidad === "alta").length;
@@ -208,14 +165,14 @@ export default function KronosActivityTab({ clients }: Props) {
     const toCall = combined.filter(r => r.criticidad === "alta" || r.criticidad === "media");
     if (toCall.length === 0) { toast.info("No hay cuentas para llamar"); return; }
     const csv = [
-      ["Codigo", "Nombre", "Contacto", "Telefono", "Dias sin Apertura", "Dias sin Cierre", "Criticidad", "Discrepancia"].join(","),
+      ["Codigo", "Nombre", "Contacto", "Telefono", "Ultima senal", "Dias", "Criticidad", "Discrepancia"].join(","),
       ...toCall.map(r => [
         r.accountCode,
         `"${(r.osm?.businessName || r.accountName).replace(/"/g, '""')}"`,
         `"${(r.osm?.contact || "").replace(/"/g, '""')}"`,
         r.osm?.phone || "",
-        r.aperturaDays ?? "",
-        r.cierreDays ?? "",
+        r.lastSignal || "",
+        r.daysSince ?? "",
         CRIT_LABEL[r.criticidad as CriticidadInactividad] || r.criticidad,
         `"${(r.discrepancia || "").replace(/"/g, '""')}"`,
       ].join(",")),
@@ -232,34 +189,69 @@ export default function KronosActivityTab({ clients }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* Carga de archivos */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
-            <FileUp className="h-4 w-4 text-primary" /> Cargar reportes Kronos NET (.htm)
+            <FileUp className="h-4 w-4 text-primary" /> Cargar reporte Kronos NET (.htm)
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid md:grid-cols-2 gap-3">
-            <KronosFileSlot
-              label="Reporte Apertura" icon={DoorOpen} report={aperturaReport}
-              onFile={handleFile} onClear={() => setAperturaReport(null)} loading={loading}
-            />
-            <KronosFileSlot
-              label="Reporte Cierre" icon={DoorClosed} report={cierreReport}
-              onFile={handleFile} onClear={() => setCierreReport(null)} loading={loading}
-            />
+          <div className="border border-border rounded-lg p-4 bg-muted/20 flex flex-wrap items-center justify-between gap-3">
+            {report ? (
+              <>
+                <div className="text-xs space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="outline" className="text-emerald-400 border-emerald-500/30">
+                      {report.rows.length} cuentas
+                    </Badge>
+                    <span className="text-muted-foreground">
+                      {report.rawRowCount} señales detectadas · Reporte del{" "}
+                      {report.reportDate ? new Date(report.reportDate).toLocaleString("es-DO") : "—"}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <label>
+                    <input type="file" accept=".htm,.html" className="hidden"
+                      onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }}
+                    />
+                    <Button size="sm" variant="outline" disabled={loading} asChild>
+                      <span className="cursor-pointer">
+                        <RefreshCw className="h-3 w-3 mr-2" /> Cargar otro
+                      </span>
+                    </Button>
+                  </label>
+                  <Button size="sm" variant="ghost" onClick={() => setReport(null)}>
+                    <X className="h-3 w-3 mr-2" /> Limpiar
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-muted-foreground flex-1">
+                  Exporta desde Kronos NET → "Resumen de estados de grupos de señales" sin filtrar por tipo.
+                  El sistema detecta automáticamente la fecha del reporte y la última señal por cuenta
+                  (apertura o cierre, según el horario configurado por cada cliente).
+                </p>
+                <label>
+                  <input type="file" accept=".htm,.html" className="hidden"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }}
+                  />
+                  <Button size="sm" variant="default" disabled={loading} asChild>
+                    <span className="cursor-pointer">
+                      <FileUp className="h-3 w-3 mr-2" />
+                      {loading ? "Procesando..." : "Seleccionar archivo .htm"}
+                    </span>
+                  </Button>
+                </label>
+              </>
+            )}
           </div>
-          <p className="text-xs text-muted-foreground">
-            Exporta desde Kronos NET → "Resumen de estados de grupos de señales" con filtro Apertura y/o Cierre.
-            El sistema detecta automáticamente el tipo de filtro y la fecha del reporte.
-          </p>
         </CardContent>
       </Card>
 
-      {(aperturaReport || cierreReport) && (
+      {report && (
         <>
-          {/* KPIs criticidad */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <KpiCard label="Total cuentas" value={stats.total} color="text-foreground"
               active={filterCrit === "all"} onClick={() => setFilterCrit("all")} />
@@ -273,7 +265,6 @@ export default function KronosActivityTab({ clients }: Props) {
               active={filterCrit === "alta"} onClick={() => setFilterCrit("alta")} />
           </div>
 
-          {/* Banner discrepancias */}
           {stats.discrepancias > 0 && (
             <Card className="border-amber-500/40 bg-amber-500/5">
               <CardContent className="pt-4 flex items-center justify-between flex-wrap gap-3">
@@ -290,7 +281,6 @@ export default function KronosActivityTab({ clients }: Props) {
             </Card>
           )}
 
-          {/* Toolbar */}
           <div className="flex flex-wrap gap-2 items-center">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -312,18 +302,17 @@ export default function KronosActivityTab({ clients }: Props) {
             </Button>
           </div>
 
-          {/* Tabla */}
           <Card>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Cuenta</TableHead>
+                    <TableHead className="w-[90px]">Cuenta</TableHead>
                     <TableHead>Nombre</TableHead>
                     <TableHead>Contacto</TableHead>
                     <TableHead>Teléfono</TableHead>
-                    {aperturaReport && <TableHead className="text-right">Última apertura</TableHead>}
-                    {cierreReport && <TableHead className="text-right">Último cierre</TableHead>}
+                    <TableHead className="text-right">Última señal</TableHead>
+                    <TableHead>Estado</TableHead>
                     <TableHead>Criticidad</TableHead>
                     <TableHead>Estado OSM</TableHead>
                     <TableHead>Alerta</TableHead>
@@ -346,22 +335,13 @@ export default function KronosActivityTab({ clients }: Props) {
                           </a>
                         ) : "—"}
                       </TableCell>
-                      {aperturaReport && (
-                        <TableCell className="text-right text-xs">
-                          <div>{fmtDate(r.lastApertura)}</div>
-                          {r.aperturaDays !== null && (
-                            <div className="text-muted-foreground">{r.aperturaDays}d</div>
-                          )}
-                        </TableCell>
-                      )}
-                      {cierreReport && (
-                        <TableCell className="text-right text-xs">
-                          <div>{fmtDate(r.lastCierre)}</div>
-                          {r.cierreDays !== null && (
-                            <div className="text-muted-foreground">{r.cierreDays}d</div>
-                          )}
-                        </TableCell>
-                      )}
+                      <TableCell className="text-right text-xs">
+                        <div>{fmtDate(r.lastSignal)}</div>
+                        {r.daysSince !== null && (
+                          <div className="text-muted-foreground">{r.daysSince}d</div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs">{r.estado || "—"}</TableCell>
                       <TableCell>
                         {r.criticidad === "ok" ? (
                           <Badge variant="outline" className="text-emerald-400 border-emerald-500/30">Al día</Badge>
@@ -396,53 +376,6 @@ export default function KronosActivityTab({ clients }: Props) {
             </CardContent>
           </Card>
         </>
-      )}
-    </div>
-  );
-}
-
-function KronosFileSlot({ label, icon: Icon, report, onFile, onClear, loading }: {
-  label: string;
-  icon: any;
-  report: KronosParsedReport | null;
-  onFile: (f: File) => void;
-  onClear: () => void;
-  loading: boolean;
-}) {
-  return (
-    <div className="border border-border rounded-lg p-3 bg-muted/20">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2 text-sm font-medium">
-          <Icon className="h-4 w-4 text-primary" /> {label}
-        </div>
-        {report && (
-          <Button size="sm" variant="ghost" onClick={onClear}>
-            <X className="h-3 w-3" />
-          </Button>
-        )}
-      </div>
-      {report ? (
-        <div className="text-xs space-y-1">
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-emerald-400 border-emerald-500/30">{report.filterType}</Badge>
-            <span className="text-muted-foreground">{report.rows.length} cuentas</span>
-          </div>
-          <div className="text-muted-foreground">
-            Reporte del: {report.reportDate ? new Date(report.reportDate).toLocaleString("es-DO") : "—"}
-          </div>
-        </div>
-      ) : (
-        <label className="block">
-          <input type="file" accept=".htm,.html" className="hidden"
-            onChange={e => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }}
-          />
-          <Button size="sm" variant="outline" disabled={loading} asChild>
-            <span className="cursor-pointer w-full">
-              <FileUp className="h-3 w-3 mr-2" />
-              {loading ? "Procesando..." : "Seleccionar archivo .htm"}
-            </span>
-          </Button>
-        </label>
       )}
     </div>
   );
