@@ -34,6 +34,7 @@ import {
   type OSMIncident, type IncidentStatus, type IncidentPriority, type CSRequest as CSRequestType,
 } from "@/lib/osmIncidentData";
 import CustomerServiceOverlay from "@/components/osm/CustomerServiceOverlay";
+import KronosActivityTab from "@/components/osm/KronosActivityTab";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RePieChart, Pie, Cell, Legend } from "recharts";
 import { toast } from "sonner";
 
@@ -246,6 +247,7 @@ const ClientTracking = () => {
               <TabsTrigger value="clients" className="gap-1.5 text-xs"><Activity className="h-3.5 w-3.5" /> Clientes</TabsTrigger>
               <TabsTrigger value="incidents" className="gap-1.5 text-xs"><AlertTriangle className="h-3.5 w-3.5" /> Incidencias</TabsTrigger>
               <TabsTrigger value="billing" className="gap-1.5 text-xs"><DollarSign className="h-3.5 w-3.5" /> Facturación</TabsTrigger>
+              <TabsTrigger value="kronos" className="gap-1.5 text-xs"><Radio className="h-3.5 w-3.5" /> Actividad Kronos</TabsTrigger>
               <TabsTrigger value="reports" className="gap-1.5 text-xs"><FileText className="h-3.5 w-3.5" /> Reportes</TabsTrigger>
               {(isCSUser || canTestCS) && <TabsTrigger value="cs" className="gap-1.5 text-xs"><Phone className="h-3.5 w-3.5" /> {isCSUser ? "Mis Solicitudes" : "Solicitudes CS"}</TabsTrigger>}
             </TabsList>
@@ -771,6 +773,11 @@ const ClientTracking = () => {
                   </div>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            {/* ── KRONOS ACTIVITY ── */}
+            <TabsContent value="kronos" className="space-y-4">
+              <KronosActivityTab clients={clients} />
             </TabsContent>
 
             {/* ── REPORTS ── */}
