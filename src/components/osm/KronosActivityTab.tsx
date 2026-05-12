@@ -128,16 +128,14 @@ export default function KronosActivityTab({ clients }: Props) {
     clients.forEach(c => {
       if (!c.accountCode || seen.has(c.accountCode.trim())) return;
       if (c.monitoringStatus !== "Activo") return;
-
-    // Cuentas Activas en OSM que NO aparecieron en el reporte
-    clients.forEach(c => {
-      if (!c.accountCode || seen.has(c.accountCode.trim())) return;
-      if (c.monitoringStatus !== "Activo") return;
       list.push({
         accountCode: c.accountCode,
         accountName: c.businessName,
         estado: "",
         lastSignal: null,
+        lastOpen: null,
+        lastClose: null,
+        sameDayCycle: false,
         daysSince: null,
         criticidad: "alta",
         osm: c,
