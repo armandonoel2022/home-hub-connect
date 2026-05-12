@@ -440,6 +440,13 @@ export default function KronosActivityTab({ clients }: Props) {
                           </div>
                         )}
                       </TableCell>
+                      <TableCell>
+                        <Button size="icon" variant="ghost" className="h-7 w-7"
+                          onClick={() => openEdit(r.accountCode, r.osm?.businessName || r.accountName)}
+                          title="Editar horario esperado">
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -451,6 +458,40 @@ export default function KronosActivityTab({ clients }: Props) {
           </Card>
         </>
       )}
+
+      <Dialog open={!!editing} onOpenChange={o => !o && setEditing(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Clock className="h-4 w-4" /> Horario esperado
+            </DialogTitle>
+            <DialogDescription>
+              {editing?.name} <span className="font-mono text-xs">({editing?.code})</span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="open" className="text-xs">Hora apertura</Label>
+              <Input id="open" type="time" value={draft.open || ""}
+                onChange={e => setDraft(d => ({ ...d, open: e.target.value }))} />
+            </div>
+            <div>
+              <Label htmlFor="close" className="text-xs">Hora cierre</Label>
+              <Input id="close" type="time" value={draft.close || ""}
+                onChange={e => setDraft(d => ({ ...d, close: e.target.value }))} />
+            </div>
+            <div className="col-span-2">
+              <Label htmlFor="notes" className="text-xs">Notas (opcional)</Label>
+              <Input id="notes" placeholder="Ej: cierra domingos, horario corrido..." value={draft.notes || ""}
+                onChange={e => setDraft(d => ({ ...d, notes: e.target.value }))} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditing(null)}>Cancelar</Button>
+            <Button onClick={saveEdit}>Guardar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
