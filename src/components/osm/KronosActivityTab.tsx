@@ -6,21 +6,34 @@
  * cada cliente tenga configurado). Calcula la criticidad por cuenta tomando la
  * última señal disponible y la cruza con el catálogo OSM para alertar discrepancias.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
-  FileUp, AlertTriangle, Phone, Download, Search, X, ShieldAlert, RefreshCw,
+  FileUp, AlertTriangle, Phone, Download, Search, X, ShieldAlert, RefreshCw, Pencil, Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
   parseKronosHtmFile, type KronosParsedReport, type CriticidadInactividad,
 } from "@/lib/kronosHtmParser";
 import type { OSMClient } from "@/lib/osmClientData";
+
+const SCHEDULE_KEY = "kronos.client.schedules.v1";
+type ClientSchedule = { open?: string; close?: string; notes?: string };
+type SchedulesMap = Record<string, ClientSchedule>;
+
+function loadSchedules(): SchedulesMap {
+  try { return JSON.parse(localStorage.getItem(SCHEDULE_KEY) || "{}"); } catch { return {}; }
+}
+function saveSchedules(m: SchedulesMap) {
+  localStorage.setItem(SCHEDULE_KEY, JSON.stringify(m));
+}
 
 const CRIT_LABEL: Record<CriticidadInactividad, string> = {
   baja: "Baja (1 día)",
@@ -63,6 +76,22 @@ export default function KronosActivityTab({ clients }: Props) {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [filterCrit, setFilterCrit] = useState<FilterKey>("all");
+  const [schedules, setSchedules] = useState<SchedulesMap>(() => loadSchedules());
+  const [editing, setEditing] = useState<{ code: string; name: string } | null>(null);
+  const [draft, setDraft] = useState<ClientSchedule>({});
+
+  useEffect(() => { saveSchedules(schedules); }, [schedules]);
+
+  const openEdit = (code: string, name: string) => {
+    setEditing({ code, name });
+    setDraft(schedules[code] || {});
+  };
+  const saveEdit = () => {
+    if (!editing) return;
+    setSchedules(prev => ({ ...prev, [editing.code]: { ...draft } }));
+    toast.success(`Horario guardado para ${editing.name}`);
+    setEditing(null);
+  };
 
   const handleFile = async (file: File) => {
     setLoading(true);
@@ -324,17 +353,20 @@ export default function KronosActivityTab({ clients }: Props) {
                     <TableHead>Contacto</TableHead>
                     <TableHead>Teléfono</TableHead>
                     <TableHead className="text-right">Última señal</TableHead>
+                    <TableHead className="text-center text-xs">Días s/act.</TableHead>
                     <TableHead className="text-xs">Apertura</TableHead>
                     <TableHead className="text-xs">Cierre</TableHead>
                     <TableHead className="text-xs">Ciclo</TableHead>
+                    <TableHead className="text-xs">Horario esperado</TableHead>
                     <TableHead>Criticidad</TableHead>
                     <TableHead>Estado OSM</TableHead>
                     <TableHead>Alerta</TableHead>
+                    <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filtered.length === 0 ? (
-                    <TableRow><TableCell colSpan={11} className="text-center text-muted-foreground py-8">
+                    <TableRow><TableCell colSpan={15} className="text-center text-muted-foreground py-8">
                       Sin resultados
                     </TableCell></TableRow>
                   ) : filtered.map(r => (
@@ -351,20 +383,38 @@ export default function KronosActivityTab({ clients }: Props) {
                       </TableCell>
                       <TableCell className="text-right text-xs">
                         <div>{fmtDate(r.lastSignal)}</div>
-                        {r.daysSince !== null && (
-                          <div className="text-muted-foreground">{r.daysSince}d</div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {r.daysSince === null ? (
+                          <Badge variant="outline" className="text-red-400 border-red-500/30">s/señal</Badge>
+                        ) : (
+                          <span className={`font-bold text-sm ${
+                            r.daysSince >= 3 ? "text-red-400"
+                            : r.daysSince === 2 ? "text-amber-400"
+                            : r.daysSince === 1 ? "text-blue-400"
+                            : "text-emerald-400"
+                          }`}>{r.daysSince}d</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-xs whitespace-nowrap">{r.lastOpen ? fmtDate(r.lastOpen) : "—"}</TableCell>
-                      <TableCell className="text-xs whitespace-nowrap">{r.lastClose ? fmtDate(r.lastClose) : "—"}</TableCell>
+                      <TableCell className="text-xs whitespace-nowrap">{r.lastOpen ? fmtDate(r.lastOpen) : <span className="text-amber-400">—</span>}</TableCell>
+                      <TableCell className="text-xs whitespace-nowrap">{r.lastClose ? fmtDate(r.lastClose) : <span className="text-amber-400">—</span>}</TableCell>
                       <TableCell className="text-xs">
                         {r.sameDayCycle ? (
                           <Badge variant="outline" className="text-emerald-400 border-emerald-500/30">A↔C</Badge>
                         ) : r.lastOpen && !r.lastClose ? (
-                          <Badge variant="outline" className="text-amber-400 border-amber-500/30">Solo A</Badge>
+                          <Badge variant="outline" className="text-amber-400 border-amber-500/30">Apertura sin cierre</Badge>
                         ) : !r.lastOpen && r.lastClose ? (
-                          <Badge variant="outline" className="text-amber-400 border-amber-500/30">Solo C</Badge>
+                          <Badge variant="outline" className="text-amber-400 border-amber-500/30">Cierre sin apertura</Badge>
                         ) : "—"}
+                      </TableCell>
+                      <TableCell className="text-xs whitespace-nowrap">
+                        {schedules[r.accountCode]?.open || schedules[r.accountCode]?.close ? (
+                          <span className="font-mono">
+                            {schedules[r.accountCode]?.open || "--:--"} → {schedules[r.accountCode]?.close || "--:--"}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground italic">sin definir</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         {r.criticidad === "ok" ? (
@@ -390,6 +440,13 @@ export default function KronosActivityTab({ clients }: Props) {
                           </div>
                         )}
                       </TableCell>
+                      <TableCell>
+                        <Button size="icon" variant="ghost" className="h-7 w-7"
+                          onClick={() => openEdit(r.accountCode, r.osm?.businessName || r.accountName)}
+                          title="Editar horario esperado">
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -401,6 +458,40 @@ export default function KronosActivityTab({ clients }: Props) {
           </Card>
         </>
       )}
+
+      <Dialog open={!!editing} onOpenChange={o => !o && setEditing(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Clock className="h-4 w-4" /> Horario esperado
+            </DialogTitle>
+            <DialogDescription>
+              {editing?.name} <span className="font-mono text-xs">({editing?.code})</span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="open" className="text-xs">Hora apertura</Label>
+              <Input id="open" type="time" value={draft.open || ""}
+                onChange={e => setDraft(d => ({ ...d, open: e.target.value }))} />
+            </div>
+            <div>
+              <Label htmlFor="close" className="text-xs">Hora cierre</Label>
+              <Input id="close" type="time" value={draft.close || ""}
+                onChange={e => setDraft(d => ({ ...d, close: e.target.value }))} />
+            </div>
+            <div className="col-span-2">
+              <Label htmlFor="notes" className="text-xs">Notas (opcional)</Label>
+              <Input id="notes" placeholder="Ej: cierra domingos, horario corrido..." value={draft.notes || ""}
+                onChange={e => setDraft(d => ({ ...d, notes: e.target.value }))} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditing(null)}>Cancelar</Button>
+            <Button onClick={saveEdit}>Guardar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
