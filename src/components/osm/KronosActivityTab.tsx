@@ -62,7 +62,7 @@ export default function KronosActivityTab({ clients }: Props) {
   const [report, setReport] = useState<KronosParsedReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
-  const [filterCrit, setFilterCrit] = useState<"all" | CriticidadInactividad | "discrepancia">("all");
+  const [filterCrit, setFilterCrit] = useState<FilterKey>("all");
 
   const handleFile = async (file: File) => {
     setLoading(true);
