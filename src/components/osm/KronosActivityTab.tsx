@@ -302,9 +302,10 @@ export default function KronosActivityTab({ clients }: Props) {
               <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas las criticidades</SelectItem>
-                <SelectItem value="alta">🔴 Alta</SelectItem>
-                <SelectItem value="media">🟡 Media</SelectItem>
-                <SelectItem value="baja">🔵 Baja</SelectItem>
+                <SelectItem value="ok">🟢 Al día</SelectItem>
+                <SelectItem value="baja">🔵 Baja (1d)</SelectItem>
+                <SelectItem value="media">🟡 Media (2d)</SelectItem>
+                <SelectItem value="alta">🔴 Alta (3+d)</SelectItem>
                 <SelectItem value="discrepancia">⚠️ Solo discrepancias</SelectItem>
               </SelectContent>
             </Select>
