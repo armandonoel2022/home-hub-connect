@@ -6,21 +6,34 @@
  * cada cliente tenga configurado). Calcula la criticidad por cuenta tomando la
  * última señal disponible y la cruza con el catálogo OSM para alertar discrepancias.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
-  FileUp, AlertTriangle, Phone, Download, Search, X, ShieldAlert, RefreshCw,
+  FileUp, AlertTriangle, Phone, Download, Search, X, ShieldAlert, RefreshCw, Pencil, Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
   parseKronosHtmFile, type KronosParsedReport, type CriticidadInactividad,
 } from "@/lib/kronosHtmParser";
 import type { OSMClient } from "@/lib/osmClientData";
+
+const SCHEDULE_KEY = "kronos.client.schedules.v1";
+type ClientSchedule = { open?: string; close?: string; notes?: string };
+type SchedulesMap = Record<string, ClientSchedule>;
+
+function loadSchedules(): SchedulesMap {
+  try { return JSON.parse(localStorage.getItem(SCHEDULE_KEY) || "{}"); } catch { return {}; }
+}
+function saveSchedules(m: SchedulesMap) {
+  localStorage.setItem(SCHEDULE_KEY, JSON.stringify(m));
+}
 
 const CRIT_LABEL: Record<CriticidadInactividad, string> = {
   baja: "Baja (1 día)",
