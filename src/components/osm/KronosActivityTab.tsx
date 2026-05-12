@@ -76,6 +76,22 @@ export default function KronosActivityTab({ clients }: Props) {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [filterCrit, setFilterCrit] = useState<FilterKey>("all");
+  const [schedules, setSchedules] = useState<SchedulesMap>(() => loadSchedules());
+  const [editing, setEditing] = useState<{ code: string; name: string } | null>(null);
+  const [draft, setDraft] = useState<ClientSchedule>({});
+
+  useEffect(() => { saveSchedules(schedules); }, [schedules]);
+
+  const openEdit = (code: string, name: string) => {
+    setEditing({ code, name });
+    setDraft(schedules[code] || {});
+  };
+  const saveEdit = () => {
+    if (!editing) return;
+    setSchedules(prev => ({ ...prev, [editing.code]: { ...draft } }));
+    toast.success(`Horario guardado para ${editing.name}`);
+    setEditing(null);
+  };
 
   const handleFile = async (file: File) => {
     setLoading(true);
