@@ -38,11 +38,16 @@ interface CombinedRow {
   accountName: string;
   estado: string;
   lastSignal: string | null;
+  lastOpen: string | null;
+  lastClose: string | null;
+  sameDayCycle: boolean;
   daysSince: number | null;
   criticidad: CriticidadInactividad | "ok";
   osm?: OSMClient;
   discrepancia?: string;
 }
+
+type FilterKey = "all" | "ok" | CriticidadInactividad | "discrepancia";
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
@@ -57,7 +62,7 @@ export default function KronosActivityTab({ clients }: Props) {
   const [report, setReport] = useState<KronosParsedReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
-  const [filterCrit, setFilterCrit] = useState<"all" | CriticidadInactividad | "discrepancia">("all");
+  const [filterCrit, setFilterCrit] = useState<FilterKey>("all");
 
   const handleFile = async (file: File) => {
     setLoading(true);
@@ -109,6 +114,9 @@ export default function KronosActivityTab({ clients }: Props) {
         accountName: r.accountName,
         estado: r.estado,
         lastSignal: r.lastSignal,
+        lastOpen: r.lastOpen,
+        lastClose: r.lastClose,
+        sameDayCycle: r.sameDayCycle,
         daysSince: r.daysSince,
         criticidad: r.criticidad,
         osm,
@@ -125,6 +133,9 @@ export default function KronosActivityTab({ clients }: Props) {
         accountName: c.businessName,
         estado: "",
         lastSignal: null,
+        lastOpen: null,
+        lastClose: null,
+        sameDayCycle: false,
         daysSince: null,
         criticidad: "alta",
         osm: c,
@@ -256,7 +267,7 @@ export default function KronosActivityTab({ clients }: Props) {
             <KpiCard label="Total cuentas" value={stats.total} color="text-foreground"
               active={filterCrit === "all"} onClick={() => setFilterCrit("all")} />
             <KpiCard label="🟢 Al día" value={stats.ok} color="text-emerald-400"
-              active={false} onClick={() => setFilterCrit("all")} />
+              active={filterCrit === "ok"} onClick={() => setFilterCrit("ok")} />
             <KpiCard label="🔵 Baja (1d)" value={stats.baja} color="text-blue-400"
               active={filterCrit === "baja"} onClick={() => setFilterCrit("baja")} />
             <KpiCard label="🟡 Media (2d)" value={stats.media} color="text-amber-400"
@@ -291,9 +302,10 @@ export default function KronosActivityTab({ clients }: Props) {
               <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas las criticidades</SelectItem>
-                <SelectItem value="alta">🔴 Alta</SelectItem>
-                <SelectItem value="media">🟡 Media</SelectItem>
-                <SelectItem value="baja">🔵 Baja</SelectItem>
+                <SelectItem value="ok">🟢 Al día</SelectItem>
+                <SelectItem value="baja">🔵 Baja (1d)</SelectItem>
+                <SelectItem value="media">🟡 Media (2d)</SelectItem>
+                <SelectItem value="alta">🔴 Alta (3+d)</SelectItem>
                 <SelectItem value="discrepancia">⚠️ Solo discrepancias</SelectItem>
               </SelectContent>
             </Select>
@@ -312,7 +324,9 @@ export default function KronosActivityTab({ clients }: Props) {
                     <TableHead>Contacto</TableHead>
                     <TableHead>Teléfono</TableHead>
                     <TableHead className="text-right">Última señal</TableHead>
-                    <TableHead>Estado</TableHead>
+                    <TableHead className="text-xs">Apertura</TableHead>
+                    <TableHead className="text-xs">Cierre</TableHead>
+                    <TableHead className="text-xs">Ciclo</TableHead>
                     <TableHead>Criticidad</TableHead>
                     <TableHead>Estado OSM</TableHead>
                     <TableHead>Alerta</TableHead>
@@ -320,7 +334,7 @@ export default function KronosActivityTab({ clients }: Props) {
                 </TableHeader>
                 <TableBody>
                   {filtered.length === 0 ? (
-                    <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                    <TableRow><TableCell colSpan={11} className="text-center text-muted-foreground py-8">
                       Sin resultados
                     </TableCell></TableRow>
                   ) : filtered.map(r => (
@@ -341,7 +355,17 @@ export default function KronosActivityTab({ clients }: Props) {
                           <div className="text-muted-foreground">{r.daysSince}d</div>
                         )}
                       </TableCell>
-                      <TableCell className="text-xs">{r.estado || "—"}</TableCell>
+                      <TableCell className="text-xs whitespace-nowrap">{r.lastOpen ? fmtDate(r.lastOpen) : "—"}</TableCell>
+                      <TableCell className="text-xs whitespace-nowrap">{r.lastClose ? fmtDate(r.lastClose) : "—"}</TableCell>
+                      <TableCell className="text-xs">
+                        {r.sameDayCycle ? (
+                          <Badge variant="outline" className="text-emerald-400 border-emerald-500/30">A↔C</Badge>
+                        ) : r.lastOpen && !r.lastClose ? (
+                          <Badge variant="outline" className="text-amber-400 border-amber-500/30">Solo A</Badge>
+                        ) : !r.lastOpen && r.lastClose ? (
+                          <Badge variant="outline" className="text-amber-400 border-amber-500/30">Solo C</Badge>
+                        ) : "—"}
+                      </TableCell>
                       <TableCell>
                         {r.criticidad === "ok" ? (
                           <Badge variant="outline" className="text-emerald-400 border-emerald-500/30">Al día</Badge>
