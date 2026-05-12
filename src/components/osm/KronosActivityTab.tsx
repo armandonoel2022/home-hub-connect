@@ -383,20 +383,38 @@ export default function KronosActivityTab({ clients }: Props) {
                       </TableCell>
                       <TableCell className="text-right text-xs">
                         <div>{fmtDate(r.lastSignal)}</div>
-                        {r.daysSince !== null && (
-                          <div className="text-muted-foreground">{r.daysSince}d</div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {r.daysSince === null ? (
+                          <Badge variant="outline" className="text-red-400 border-red-500/30">s/señal</Badge>
+                        ) : (
+                          <span className={`font-bold text-sm ${
+                            r.daysSince >= 3 ? "text-red-400"
+                            : r.daysSince === 2 ? "text-amber-400"
+                            : r.daysSince === 1 ? "text-blue-400"
+                            : "text-emerald-400"
+                          }`}>{r.daysSince}d</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-xs whitespace-nowrap">{r.lastOpen ? fmtDate(r.lastOpen) : "—"}</TableCell>
-                      <TableCell className="text-xs whitespace-nowrap">{r.lastClose ? fmtDate(r.lastClose) : "—"}</TableCell>
+                      <TableCell className="text-xs whitespace-nowrap">{r.lastOpen ? fmtDate(r.lastOpen) : <span className="text-amber-400">—</span>}</TableCell>
+                      <TableCell className="text-xs whitespace-nowrap">{r.lastClose ? fmtDate(r.lastClose) : <span className="text-amber-400">—</span>}</TableCell>
                       <TableCell className="text-xs">
                         {r.sameDayCycle ? (
                           <Badge variant="outline" className="text-emerald-400 border-emerald-500/30">A↔C</Badge>
                         ) : r.lastOpen && !r.lastClose ? (
-                          <Badge variant="outline" className="text-amber-400 border-amber-500/30">Solo A</Badge>
+                          <Badge variant="outline" className="text-amber-400 border-amber-500/30">Apertura sin cierre</Badge>
                         ) : !r.lastOpen && r.lastClose ? (
-                          <Badge variant="outline" className="text-amber-400 border-amber-500/30">Solo C</Badge>
+                          <Badge variant="outline" className="text-amber-400 border-amber-500/30">Cierre sin apertura</Badge>
                         ) : "—"}
+                      </TableCell>
+                      <TableCell className="text-xs whitespace-nowrap">
+                        {schedules[r.accountCode]?.open || schedules[r.accountCode]?.close ? (
+                          <span className="font-mono">
+                            {schedules[r.accountCode]?.open || "--:--"} → {schedules[r.accountCode]?.close || "--:--"}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground italic">sin definir</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         {r.criticidad === "ok" ? (
