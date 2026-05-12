@@ -355,7 +355,17 @@ export default function KronosActivityTab({ clients }: Props) {
                           <div className="text-muted-foreground">{r.daysSince}d</div>
                         )}
                       </TableCell>
-                      <TableCell className="text-xs">{r.estado || "—"}</TableCell>
+                      <TableCell className="text-xs whitespace-nowrap">{r.lastOpen ? fmtDate(r.lastOpen) : "—"}</TableCell>
+                      <TableCell className="text-xs whitespace-nowrap">{r.lastClose ? fmtDate(r.lastClose) : "—"}</TableCell>
+                      <TableCell className="text-xs">
+                        {r.sameDayCycle ? (
+                          <Badge variant="outline" className="text-emerald-400 border-emerald-500/30">A↔C</Badge>
+                        ) : r.lastOpen && !r.lastClose ? (
+                          <Badge variant="outline" className="text-amber-400 border-amber-500/30">Solo A</Badge>
+                        ) : !r.lastOpen && r.lastClose ? (
+                          <Badge variant="outline" className="text-amber-400 border-amber-500/30">Solo C</Badge>
+                        ) : "—"}
+                      </TableCell>
                       <TableCell>
                         {r.criticidad === "ok" ? (
                           <Badge variant="outline" className="text-emerald-400 border-emerald-500/30">Al día</Badge>
