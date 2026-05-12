@@ -267,7 +267,7 @@ export default function KronosActivityTab({ clients }: Props) {
             <KpiCard label="Total cuentas" value={stats.total} color="text-foreground"
               active={filterCrit === "all"} onClick={() => setFilterCrit("all")} />
             <KpiCard label="🟢 Al día" value={stats.ok} color="text-emerald-400"
-              active={false} onClick={() => setFilterCrit("all")} />
+              active={filterCrit === "ok"} onClick={() => setFilterCrit("ok")} />
             <KpiCard label="🔵 Baja (1d)" value={stats.baja} color="text-blue-400"
               active={filterCrit === "baja"} onClick={() => setFilterCrit("baja")} />
             <KpiCard label="🟡 Media (2d)" value={stats.media} color="text-amber-400"
