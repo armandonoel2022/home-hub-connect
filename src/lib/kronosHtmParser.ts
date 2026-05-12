@@ -61,7 +61,14 @@ function decodeEntities(s: string): string {
 }
 
 function clean(s: string): string {
-  return decodeEntities((s || "").replace(/\u00A0/g, " ").replace(/\s+/g, " ").trim());
+  // Normaliza guiones no-rompibles (U+2011), figure dash (U+2012), en/em dash y minus
+  // a guion ASCII para que las fechas tipo "2026‑05‑11" sean parseables.
+  const normalized = (s || "")
+    .replace(/[\u2010\u2011\u2012\u2013\u2014\u2212]/g, "-")
+    .replace(/\u00A0/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return decodeEntities(normalized);
 }
 
 function parseDateTime(raw: string): string | null {
