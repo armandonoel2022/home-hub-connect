@@ -114,12 +114,20 @@ export default function KronosActivityTab({ clients }: Props) {
         accountName: r.accountName,
         estado: r.estado,
         lastSignal: r.lastSignal,
+        lastOpen: r.lastOpen,
+        lastClose: r.lastClose,
+        sameDayCycle: r.sameDayCycle,
         daysSince: r.daysSince,
         criticidad: r.criticidad,
         osm,
         discrepancia: alertas.join(" • ") || undefined,
       });
     });
+
+    // Cuentas Activas en OSM que NO aparecieron en el reporte
+    clients.forEach(c => {
+      if (!c.accountCode || seen.has(c.accountCode.trim())) return;
+      if (c.monitoringStatus !== "Activo") return;
 
     // Cuentas Activas en OSM que NO aparecieron en el reporte
     clients.forEach(c => {
