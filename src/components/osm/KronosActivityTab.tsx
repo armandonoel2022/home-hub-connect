@@ -353,17 +353,20 @@ export default function KronosActivityTab({ clients }: Props) {
                     <TableHead>Contacto</TableHead>
                     <TableHead>Teléfono</TableHead>
                     <TableHead className="text-right">Última señal</TableHead>
+                    <TableHead className="text-center text-xs">Días s/act.</TableHead>
                     <TableHead className="text-xs">Apertura</TableHead>
                     <TableHead className="text-xs">Cierre</TableHead>
                     <TableHead className="text-xs">Ciclo</TableHead>
+                    <TableHead className="text-xs">Horario esperado</TableHead>
                     <TableHead>Criticidad</TableHead>
                     <TableHead>Estado OSM</TableHead>
                     <TableHead>Alerta</TableHead>
+                    <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filtered.length === 0 ? (
-                    <TableRow><TableCell colSpan={11} className="text-center text-muted-foreground py-8">
+                    <TableRow><TableCell colSpan={15} className="text-center text-muted-foreground py-8">
                       Sin resultados
                     </TableCell></TableRow>
                   ) : filtered.map(r => (
