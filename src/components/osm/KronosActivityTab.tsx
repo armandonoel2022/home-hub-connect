@@ -38,11 +38,16 @@ interface CombinedRow {
   accountName: string;
   estado: string;
   lastSignal: string | null;
+  lastOpen: string | null;
+  lastClose: string | null;
+  sameDayCycle: boolean;
   daysSince: number | null;
   criticidad: CriticidadInactividad | "ok";
   osm?: OSMClient;
   discrepancia?: string;
 }
+
+type FilterKey = "all" | "ok" | CriticidadInactividad | "discrepancia";
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
