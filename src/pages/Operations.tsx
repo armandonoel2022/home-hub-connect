@@ -552,7 +552,7 @@ const OperationsPage = () => {
   const [importPreview, setImportPreview] = useState<ImportRow[] | null>(null);
   const [importError, setImportError] = useState<string>("");
   const [importing, setImporting] = useState(false);
-  const [importProgress, setImportProgress] = useState({ done: 0, total: 0, phase: "" as "delete" | "create" | "" });
+  const [importProgress, setImportProgress] = useState({ done: 0, total: 0, phase: "" as "delete" | "create" | "geo" | "" });
 
   // Deleted log from localStorage
   const [deletedLog, setDeletedLog] = useState<ArmedPersonnel[]>(() => {
