@@ -853,8 +853,10 @@ const OperationsPage = () => {
       setImportProgress({ done: 0, total: importPreview.length, phase: "create" });
       for (let i = 0; i < importPreview.length; i++) {
         const { _rowIndex, ...row } = importPreview[i];
+        const coords = row.coordinates && resolvedUrlMap[row.coordinates] ? resolvedUrlMap[row.coordinates] : row.coordinates;
         const newP = {
           ...row,
+          coordinates: coords,
           id: `AP-${String(i + 1).padStart(3, "0")}`,
           employeeCode: row.employeeCode || `EMP-${String(i + 1).padStart(3, "0")}`,
         };
