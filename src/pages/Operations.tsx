@@ -825,6 +825,21 @@ const OperationsPage = () => {
     if (!importPreview || importPreview.length === 0) return;
     setImporting(true);
     try {
+      // Phase 0: resolve Google Maps short URLs to lat,lng (best-effort, requires backend)
+      const urlsToResolve = Array.from(new Set(
+        importPreview
+          .map(r => r.coordinates)
+          .filter(c => c && isMapsUrl(c) && !parseAnyCoords(c))
+      ));
+      let resolvedUrlMap: Record<string, string> = {};
+      if (urlsToResolve.length > 0) {
+        setImportProgress({ done: 0, total: urlsToResolve.length, phase: "geo" });
+        const { resolveMapsUrlsBatch } = await import("@/lib/geoResolver");
+        resolvedUrlMap = await resolveMapsUrlsBatch(urlsToResolve, (done, total) =>
+          setImportProgress({ done, total, phase: "geo" })
+        );
+      }
+
       // Phase 1: delete all existing
       const existing = [...personnel];
       setImportProgress({ done: 0, total: existing.length, phase: "delete" });
