@@ -82,22 +82,6 @@ export default function PersonnelMapView({ personnel, onTransfer }: Props) {
         const pos = getPos(p);
         if (!pos) return;
         const condIcon = p.weaponCondition?.includes("buenas") || p.weaponCondition === "En condiciones" ? "🟢" : p.weaponCondition?.includes("mantenimiento") ? "🟡" : "🔴";
-      mapRef.current = map;
-
-      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      }).addTo(map);
-
-      // Make transfer handler available globally for popup buttons
-      (window as any).__personnelTransfer = (id: string) => {
-        const p = personnelRef.current.find(x => x.id === id);
-        if (p && callbackRef.current) callbackRef.current(p);
-      };
-
-      personnel.forEach(p => {
-        const pos = parseCoords(p.coordinates);
-        if (!pos) return;
-        const condIcon = p.weaponCondition?.includes("buenas") || p.weaponCondition === "En condiciones" ? "🟢" : p.weaponCondition?.includes("mantenimiento") ? "🟡" : "🔴";
         const shiftLabel = p.shiftType ? `<p><strong>Turno:</strong> ${p.shiftType}${p.shiftHours ? ` (${p.shiftHours}h)` : ""}</p>` : "";
         const transferBtn = callbackRef.current ? `<button onclick="window.__personnelTransfer('${p.id}')" style="margin-top:6px;padding:4px 10px;background:#f59e0b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:11px;width:100%">⇄ Transferir Puesto</button>` : "";
 
@@ -129,7 +113,7 @@ export default function PersonnelMapView({ personnel, onTransfer }: Props) {
         mapRef.current = null;
       }
     };
-  }, [personnel]);
+  }, [personnel, resolvedMap]);
 
   return <div ref={containerRef} className="h-[500px] rounded-xl overflow-hidden border border-border" />;
 }
