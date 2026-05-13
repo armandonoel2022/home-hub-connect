@@ -901,6 +901,15 @@ const OperationsPage = () => {
                   className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-muted text-card-foreground hover:bg-border transition-colors">
                   <History className="h-4 w-4" /> Eliminados ({deletedLog.length})
                 </button>
+                {user?.isAdmin && (
+                  <>
+                    <input ref={importFileRef} type="file" accept=".xlsx,.xls" onChange={handleImportFileSelected} className="hidden" />
+                    <button onClick={() => importFileRef.current?.click()}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition-colors">
+                      <FileSpreadsheet className="h-4 w-4" /> Importar Matriz
+                    </button>
+                  </>
+                )}
                 <button onClick={() => { setForm({ status: "Activo" }); setEditingId(null); setPhotoPreview(""); setShowAdd(true); }} className="btn-gold flex items-center gap-2">
                   <Plus className="h-4 w-4" /> Registrar
                 </button>
