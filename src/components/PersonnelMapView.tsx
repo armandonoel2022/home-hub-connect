@@ -1,11 +1,10 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ArmedPersonnel } from "@/lib/types";
+import { parseAnyCoords, resolveMapsUrlsBatch, isMapsUrl } from "@/lib/geoResolver";
 
 function parseCoords(coord?: string): [number, number] | null {
   if (!coord) return null;
-  const parts = coord.split(",").map(s => parseFloat(s.trim()));
-  if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) return [parts[0], parts[1]];
-  return null;
+  return parseAnyCoords(coord);
 }
 
 interface Props {
