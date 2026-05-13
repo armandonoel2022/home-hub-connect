@@ -801,6 +801,57 @@ const OperationsPage = () => {
     setAssignTarget(null);
   };
 
+  const handleImportFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setImportError("");
+    try {
+      const rows = await parseArmedPersonnelXlsx(file);
+      if (rows.length === 0) throw new Error("No se detectaron filas válidas en el archivo.");
+      setImportPreview(rows);
+    } catch (err: any) {
+      setImportError(err?.message || "No se pudo leer el archivo.");
+      setImportPreview([]);
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!importPreview || importPreview.length === 0) return;
+    setImporting(true);
+    try {
+      // Phase 1: delete all existing
+      const existing = [...personnel];
+      setImportProgress({ done: 0, total: existing.length, phase: "delete" });
+      for (let i = 0; i < existing.length; i++) {
+        try { await removePersonnel(existing[i].id); }
+        catch { setPersonnel(prev => prev.filter(p => p.id !== existing[i].id)); }
+        setImportProgress({ done: i + 1, total: existing.length, phase: "delete" });
+      }
+
+      // Phase 2: create new ones
+      setImportProgress({ done: 0, total: importPreview.length, phase: "create" });
+      for (let i = 0; i < importPreview.length; i++) {
+        const { _rowIndex, ...row } = importPreview[i];
+        const newP = {
+          ...row,
+          id: `AP-${String(i + 1).padStart(3, "0")}`,
+          employeeCode: row.employeeCode || `EMP-${String(i + 1).padStart(3, "0")}`,
+        };
+        try { await createPersonnel(newP as any); }
+        catch { setPersonnel(prev => [newP as ArmedPersonnel, ...prev]); }
+        setImportProgress({ done: i + 1, total: importPreview.length, phase: "create" });
+      }
+      setImportPreview(null);
+      setImportProgress({ done: 0, total: 0, phase: "" });
+      alert(`Importación completa: ${importPreview.length} registros cargados.`);
+    } catch (err: any) {
+      alert("Error durante la importación: " + (err?.message || "desconocido"));
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const formFields = [
     { key: "employeeCode", label: "Código de Empleado *" },
     { key: "name", label: "Nombre del Vigilante" },
