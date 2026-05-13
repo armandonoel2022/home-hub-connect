@@ -41,18 +41,23 @@ const WEAPON_CONDITIONS = [
   "Arma en fiscalia", "Arma no estaba disponible",
 ];
 
+import { parseAnyCoords, isMapsUrl } from "@/lib/geoResolver";
+
 function parseCoords(coords: string): [number, number] | null {
-  if (!coords || !coords.includes(",")) return null;
-  const parts = coords.split(",").map(s => parseFloat(s.trim()));
-  if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) return [parts[0], parts[1]];
-  return null;
+  return parseAnyCoords(coords);
+}
+
+// Has any usable coordinate hint (lat,lng OR Google Maps URL — short URLs are resolved by the map view)
+function hasCoordsHint(coords: string): boolean {
+  if (!coords) return false;
+  return !!parseAnyCoords(coords) || isMapsUrl(coords);
 }
 
 // ─── Map Component ───
 const LazyMap = lazy(() => import("../components/PersonnelMapView"));
 
 function PersonnelMap({ personnel, onTransfer }: { personnel: ArmedPersonnel[]; onTransfer?: (p: ArmedPersonnel) => void }) {
-  const withCoords = personnel.filter(p => parseCoords(p.coordinates));
+  const withCoords = personnel.filter(p => hasCoordsHint(p.coordinates));
 
   if (withCoords.length === 0) return (
     <div className="h-[500px] flex items-center justify-center bg-muted rounded-xl">
