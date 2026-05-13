@@ -1456,6 +1456,112 @@ const OperationsPage = () => {
             </div>
           </div>
         )}
+
+        {/* IMPORT MATRIZ MODAL */}
+        {(importPreview !== null || importError) && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-card rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
+              <div className="flex items-center justify-between p-5 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <FileSpreadsheet className="h-5 w-5 text-emerald-600" />
+                  <h2 className="font-heading font-bold text-lg text-card-foreground">Importar Matriz de Personal Armado</h2>
+                </div>
+                {!importing && (
+                  <button onClick={() => { setImportPreview(null); setImportError(""); }} className="p-1 hover:bg-muted rounded-lg">
+                    <X className="h-5 w-5 text-muted-foreground" />
+                  </button>
+                )}
+              </div>
+
+              <div className="p-5 overflow-y-auto flex-1">
+                {importError && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 flex items-start gap-2">
+                    <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold text-red-800">Error al leer el archivo</p>
+                      <p className="text-xs text-red-700 mt-1">{importError}</p>
+                    </div>
+                  </div>
+                )}
+
+                {importPreview && importPreview.length > 0 && (
+                  <>
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 flex items-start gap-2">
+                      <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-xs text-amber-800">
+                        <p className="font-semibold">Esta acción reemplazará todos los registros actuales.</p>
+                        <p className="mt-1">Se eliminarán <b>{personnel.length}</b> registros existentes y se cargarán <b>{importPreview.length}</b> nuevos desde el archivo.</p>
+                      </div>
+                    </div>
+
+                    {importing ? (
+                      <div className="py-8 text-center">
+                        <p className="text-sm font-medium text-card-foreground mb-2">
+                          {importProgress.phase === "delete" ? "Eliminando registros existentes..." : "Cargando nuevos registros..."}
+                        </p>
+                        <p className="text-xs text-muted-foreground mb-3">{importProgress.done} / {importProgress.total}</p>
+                        <div className="w-full bg-muted rounded-full h-2">
+                          <div className="bg-emerald-600 h-2 rounded-full transition-all" style={{ width: `${importProgress.total ? (importProgress.done / importProgress.total) * 100 : 0}%` }} />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto border border-border rounded-lg">
+                        <table className="w-full text-xs">
+                          <thead className="bg-muted">
+                            <tr>
+                              <th className="text-left px-2 py-2">#</th>
+                              <th className="text-left px-2 py-2">Cliente</th>
+                              <th className="text-left px-2 py-2">Puesto</th>
+                              <th className="text-left px-2 py-2">Provincia</th>
+                              <th className="text-left px-2 py-2">Vigilante</th>
+                              <th className="text-left px-2 py-2">Arma</th>
+                              <th className="text-left px-2 py-2">Serial</th>
+                              <th className="text-left px-2 py-2">Cáps.</th>
+                              <th className="text-left px-2 py-2">Estado</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {importPreview.slice(0, 200).map((r, i) => (
+                              <tr key={i} className="border-t border-border">
+                                <td className="px-2 py-1.5 text-muted-foreground">{i + 1}</td>
+                                <td className="px-2 py-1.5">{r.client}</td>
+                                <td className="px-2 py-1.5">{r.location}</td>
+                                <td className="px-2 py-1.5">{r.province}</td>
+                                <td className="px-2 py-1.5">{r.name}</td>
+                                <td className="px-2 py-1.5">{r.weaponType} {r.weaponBrand}</td>
+                                <td className="px-2 py-1.5 font-mono">{r.weaponSerial}</td>
+                                <td className="px-2 py-1.5">{r.ammunitionCount || "—"}</td>
+                                <td className="px-2 py-1.5">{r.weaponCondition}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        {importPreview.length > 200 && (
+                          <p className="text-xs text-muted-foreground p-2 text-center">… y {importPreview.length - 200} filas más.</p>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {!importing && (
+                <div className="p-5 border-t border-border flex gap-3 justify-end">
+                  <button onClick={() => { setImportPreview(null); setImportError(""); }} className="px-5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">
+                    Cancelar
+                  </button>
+                  {importPreview && importPreview.length > 0 && (
+                    <button onClick={handleConfirmImport}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition-colors">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Reemplazar todo y cargar {importPreview.length} registros
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </AppLayout>
   );
