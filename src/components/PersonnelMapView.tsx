@@ -1,11 +1,10 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ArmedPersonnel } from "@/lib/types";
+import { parseAnyCoords, resolveMapsUrlsBatch, isMapsUrl } from "@/lib/geoResolver";
 
 function parseCoords(coord?: string): [number, number] | null {
   if (!coord) return null;
-  const parts = coord.split(",").map(s => parseFloat(s.trim()));
-  if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) return [parts[0], parts[1]];
-  return null;
+  return parseAnyCoords(coord);
 }
 
 interface Props {
@@ -19,12 +18,29 @@ export default function PersonnelMapView({ personnel, onTransfer }: Props) {
   const callbackRef = useRef(onTransfer);
   callbackRef.current = onTransfer;
 
+  const [resolvedMap, setResolvedMap] = useState<Record<string, string>>({});
+
   // Store personnel in ref for event handlers
   const personnelRef = useRef(personnel);
   personnelRef.current = personnel;
 
+  // Resolve any short Google Maps URLs (maps.app.goo.gl) into lat,lng via backend.
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
+    const urls = personnel
+      .map(p => p.coordinates)
+      .filter(c => c && isMapsUrl(c) && !parseAnyCoords(c));
+    if (urls.length === 0) return;
+    let cancelled = false;
+    resolveMapsUrlsBatch(urls).then(map => {
+      if (!cancelled && Object.keys(map).length) setResolvedMap(prev => ({ ...prev, ...map }));
+    });
+    return () => { cancelled = true; };
+  }, [personnel]);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    // Re-init map when personnel or resolved coords change
+    if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; }
 
     let cancelled = false;
 
@@ -41,7 +57,14 @@ export default function PersonnelMapView({ personnel, onTransfer }: Props) {
         shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
       });
 
-      const center = parseCoords(personnel[0]?.coordinates) || [18.5, -69.9];
+      const getPos = (p: ArmedPersonnel): [number, number] | null => {
+        const direct = parseCoords(p.coordinates);
+        if (direct) return direct;
+        const fallback = resolvedMap[p.coordinates];
+        return fallback ? parseCoords(fallback) : null;
+      };
+
+      const center = getPos(personnel[0]) || [18.5, -69.9];
       const map = L.map(containerRef.current).setView(center as [number, number], 9);
       mapRef.current = map;
 
@@ -56,7 +79,7 @@ export default function PersonnelMapView({ personnel, onTransfer }: Props) {
       };
 
       personnel.forEach(p => {
-        const pos = parseCoords(p.coordinates);
+        const pos = getPos(p);
         if (!pos) return;
         const condIcon = p.weaponCondition?.includes("buenas") || p.weaponCondition === "En condiciones" ? "🟢" : p.weaponCondition?.includes("mantenimiento") ? "🟡" : "🔴";
         const shiftLabel = p.shiftType ? `<p><strong>Turno:</strong> ${p.shiftType}${p.shiftHours ? ` (${p.shiftHours}h)` : ""}</p>` : "";
@@ -90,7 +113,7 @@ export default function PersonnelMapView({ personnel, onTransfer }: Props) {
         mapRef.current = null;
       }
     };
-  }, [personnel]);
+  }, [personnel, resolvedMap]);
 
   return <div ref={containerRef} className="h-[500px] rounded-xl overflow-hidden border border-border" />;
 }

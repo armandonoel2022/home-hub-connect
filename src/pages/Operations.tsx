@@ -41,18 +41,23 @@ const WEAPON_CONDITIONS = [
   "Arma en fiscalia", "Arma no estaba disponible",
 ];
 
+import { parseAnyCoords, isMapsUrl } from "@/lib/geoResolver";
+
 function parseCoords(coords: string): [number, number] | null {
-  if (!coords || !coords.includes(",")) return null;
-  const parts = coords.split(",").map(s => parseFloat(s.trim()));
-  if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) return [parts[0], parts[1]];
-  return null;
+  return parseAnyCoords(coords);
+}
+
+// Has any usable coordinate hint (lat,lng OR Google Maps URL — short URLs are resolved by the map view)
+function hasCoordsHint(coords: string): boolean {
+  if (!coords) return false;
+  return !!parseAnyCoords(coords) || isMapsUrl(coords);
 }
 
 // ─── Map Component ───
 const LazyMap = lazy(() => import("../components/PersonnelMapView"));
 
 function PersonnelMap({ personnel, onTransfer }: { personnel: ArmedPersonnel[]; onTransfer?: (p: ArmedPersonnel) => void }) {
-  const withCoords = personnel.filter(p => parseCoords(p.coordinates));
+  const withCoords = personnel.filter(p => hasCoordsHint(p.coordinates));
 
   if (withCoords.length === 0) return (
     <div className="h-[500px] flex items-center justify-center bg-muted rounded-xl">
@@ -547,7 +552,7 @@ const OperationsPage = () => {
   const [importPreview, setImportPreview] = useState<ImportRow[] | null>(null);
   const [importError, setImportError] = useState<string>("");
   const [importing, setImporting] = useState(false);
-  const [importProgress, setImportProgress] = useState({ done: 0, total: 0, phase: "" as "delete" | "create" | "" });
+  const [importProgress, setImportProgress] = useState({ done: 0, total: 0, phase: "" as "delete" | "create" | "geo" | "" });
 
   // Deleted log from localStorage
   const [deletedLog, setDeletedLog] = useState<ArmedPersonnel[]>(() => {
@@ -820,6 +825,21 @@ const OperationsPage = () => {
     if (!importPreview || importPreview.length === 0) return;
     setImporting(true);
     try {
+      // Phase 0: resolve Google Maps short URLs to lat,lng (best-effort, requires backend)
+      const urlsToResolve = Array.from(new Set(
+        importPreview
+          .map(r => r.coordinates)
+          .filter(c => c && isMapsUrl(c) && !parseAnyCoords(c))
+      ));
+      let resolvedUrlMap: Record<string, string> = {};
+      if (urlsToResolve.length > 0) {
+        setImportProgress({ done: 0, total: urlsToResolve.length, phase: "geo" });
+        const { resolveMapsUrlsBatch } = await import("@/lib/geoResolver");
+        resolvedUrlMap = await resolveMapsUrlsBatch(urlsToResolve, (done, total) =>
+          setImportProgress({ done, total, phase: "geo" })
+        );
+      }
+
       // Phase 1: delete all existing
       const existing = [...personnel];
       setImportProgress({ done: 0, total: existing.length, phase: "delete" });
@@ -833,8 +853,10 @@ const OperationsPage = () => {
       setImportProgress({ done: 0, total: importPreview.length, phase: "create" });
       for (let i = 0; i < importPreview.length; i++) {
         const { _rowIndex, ...row } = importPreview[i];
+        const coords = row.coordinates && resolvedUrlMap[row.coordinates] ? resolvedUrlMap[row.coordinates] : row.coordinates;
         const newP = {
           ...row,
+          coordinates: coords,
           id: `AP-${String(i + 1).padStart(3, "0")}`,
           employeeCode: row.employeeCode || `EMP-${String(i + 1).padStart(3, "0")}`,
         };
@@ -1497,7 +1519,7 @@ const OperationsPage = () => {
                     {importing ? (
                       <div className="py-8 text-center">
                         <p className="text-sm font-medium text-card-foreground mb-2">
-                          {importProgress.phase === "delete" ? "Eliminando registros existentes..." : "Cargando nuevos registros..."}
+                          {importProgress.phase === "geo" ? "Resolviendo enlaces de Google Maps..." : importProgress.phase === "delete" ? "Eliminando registros existentes..." : "Cargando nuevos registros..."}
                         </p>
                         <p className="text-xs text-muted-foreground mb-3">{importProgress.done} / {importProgress.total}</p>
                         <div className="w-full bg-muted rounded-full h-2">
