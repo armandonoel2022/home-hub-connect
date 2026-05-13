@@ -57,8 +57,31 @@ export default function PersonnelMapView({ personnel, onTransfer }: Props) {
         shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
       });
 
-      const center = parseCoords(personnel[0]?.coordinates) || [18.5, -69.9];
+      const getPos = (p: ArmedPersonnel): [number, number] | null => {
+        const direct = parseCoords(p.coordinates);
+        if (direct) return direct;
+        const fallback = resolvedMap[p.coordinates];
+        return fallback ? parseCoords(fallback) : null;
+      };
+
+      const center = getPos(personnel[0]) || [18.5, -69.9];
       const map = L.map(containerRef.current).setView(center as [number, number], 9);
+      mapRef.current = map;
+
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      }).addTo(map);
+
+      // Make transfer handler available globally for popup buttons
+      (window as any).__personnelTransfer = (id: string) => {
+        const p = personnelRef.current.find(x => x.id === id);
+        if (p && callbackRef.current) callbackRef.current(p);
+      };
+
+      personnel.forEach(p => {
+        const pos = getPos(p);
+        if (!pos) return;
+        const condIcon = p.weaponCondition?.includes("buenas") || p.weaponCondition === "En condiciones" ? "🟢" : p.weaponCondition?.includes("mantenimiento") ? "🟡" : "🔴";
       mapRef.current = map;
 
       L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
