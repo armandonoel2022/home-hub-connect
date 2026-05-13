@@ -18,12 +18,29 @@ export default function PersonnelMapView({ personnel, onTransfer }: Props) {
   const callbackRef = useRef(onTransfer);
   callbackRef.current = onTransfer;
 
+  const [resolvedMap, setResolvedMap] = useState<Record<string, string>>({});
+
   // Store personnel in ref for event handlers
   const personnelRef = useRef(personnel);
   personnelRef.current = personnel;
 
+  // Resolve any short Google Maps URLs (maps.app.goo.gl) into lat,lng via backend.
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
+    const urls = personnel
+      .map(p => p.coordinates)
+      .filter(c => c && isMapsUrl(c) && !parseAnyCoords(c));
+    if (urls.length === 0) return;
+    let cancelled = false;
+    resolveMapsUrlsBatch(urls).then(map => {
+      if (!cancelled && Object.keys(map).length) setResolvedMap(prev => ({ ...prev, ...map }));
+    });
+    return () => { cancelled = true; };
+  }, [personnel]);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    // Re-init map when personnel or resolved coords change
+    if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; }
 
     let cancelled = false;
 
