@@ -1519,7 +1519,7 @@ const OperationsPage = () => {
                     {importing ? (
                       <div className="py-8 text-center">
                         <p className="text-sm font-medium text-card-foreground mb-2">
-                          {importProgress.phase === "delete" ? "Eliminando registros existentes..." : "Cargando nuevos registros..."}
+                          {importProgress.phase === "geo" ? "Resolviendo enlaces de Google Maps..." : importProgress.phase === "delete" ? "Eliminando registros existentes..." : "Cargando nuevos registros..."}
                         </p>
                         <p className="text-xs text-muted-foreground mb-3">{importProgress.done} / {importProgress.total}</p>
                         <div className="w-full bg-muted rounded-full h-2">
