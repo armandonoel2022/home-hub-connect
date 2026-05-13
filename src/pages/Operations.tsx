@@ -543,6 +543,11 @@ const OperationsPage = () => {
   const [showDeletedLog, setShowDeletedLog] = useState(false);
   const [showTransferLog, setShowTransferLog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const importFileRef = useRef<HTMLInputElement>(null);
+  const [importPreview, setImportPreview] = useState<ImportRow[] | null>(null);
+  const [importError, setImportError] = useState<string>("");
+  const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState({ done: 0, total: 0, phase: "" as "delete" | "create" | "" });
 
   // Deleted log from localStorage
   const [deletedLog, setDeletedLog] = useState<ArmedPersonnel[]>(() => {
