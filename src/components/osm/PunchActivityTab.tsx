@@ -208,59 +208,58 @@ export default function PunchActivityTab() {
                   ) : filtered.map(c => {
                     const badge = COMPLIANCE_BADGE[c.compliance];
                     const Icon = badge.icon;
+                    const isOpen = expanded.has(c.accountName);
                     return (
-                      <Collapsible key={c.accountName} asChild>
-                        <>
+                      <Fragment key={c.accountName}>
+                        <TableRow>
+                          <TableCell>
+                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => toggleExpand(c.accountName)}>
+                              {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                            </Button>
+                          </TableCell>
+                          <TableCell className="font-medium text-sm">
+                            {c.accountName}
+                            <div className="text-xs text-muted-foreground font-mono">{c.accountCode}</div>
+                          </TableCell>
+                          <TableCell className="text-center">{c.punches.length}</TableCell>
+                          <TableCell className="text-center">{c.uniquePoints.length}</TableCell>
+                          <TableCell className="text-xs">{fmtDateTime(c.firstPunch)}</TableCell>
+                          <TableCell className="text-xs">{fmtDateTime(c.lastPunch)}</TableCell>
+                          <TableCell className="text-xs">
+                            {c.expectedRounds.length === 0 ? <span className="text-muted-foreground">—</span> : (
+                              <div className="flex flex-wrap gap-1">
+                                {c.expectedRounds.map(r => (
+                                  <Badge key={r.time} variant="outline"
+                                    className={r.matched ? "text-emerald-400 border-emerald-500/30" : "text-red-400 border-red-500/30"}>
+                                    {r.time} {r.matched ? `✓ ${fmtTime(r.matchedAt)}` : "✗"}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={badge.className}>
+                              <Icon className="h-3 w-3 mr-1" /> {badge.label}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                        {isOpen && (
                           <TableRow>
-                            <TableCell>
-                              <CollapsibleTrigger asChild>
-                                <Button size="icon" variant="ghost" className="h-7 w-7"><ChevronDown className="h-4 w-4" /></Button>
-                              </CollapsibleTrigger>
-                            </TableCell>
-                            <TableCell className="font-medium text-sm">
-                              {c.accountName}
-                              <div className="text-xs text-muted-foreground font-mono">{c.accountCode}</div>
-                            </TableCell>
-                            <TableCell className="text-center">{c.punches.length}</TableCell>
-                            <TableCell className="text-center">{c.uniquePoints.length}</TableCell>
-                            <TableCell className="text-xs">{fmtDateTime(c.firstPunch)}</TableCell>
-                            <TableCell className="text-xs">{fmtDateTime(c.lastPunch)}</TableCell>
-                            <TableCell className="text-xs">
-                              {c.expectedRounds.length === 0 ? <span className="text-muted-foreground">—</span> : (
-                                <div className="flex flex-wrap gap-1">
-                                  {c.expectedRounds.map(r => (
-                                    <Badge key={r.time} variant="outline"
-                                      className={r.matched ? "text-emerald-400 border-emerald-500/30" : "text-red-400 border-red-500/30"}>
-                                      {r.time} {r.matched ? `✓ ${fmtTime(r.matchedAt)}` : "✗"}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className={badge.className}>
-                                <Icon className="h-3 w-3 mr-1" /> {badge.label}
-                              </Badge>
+                            <TableCell colSpan={8} className="bg-muted/20">
+                              <div className="text-xs space-y-1 p-2 max-h-64 overflow-y-auto">
+                                <p className="font-semibold mb-2">{c.punches.length} punches registrados:</p>
+                                {c.punches.map((p, i) => (
+                                  <div key={i} className="grid grid-cols-[160px_1fr_120px] gap-2">
+                                    <span className="font-mono text-muted-foreground">{fmtDateTime(p.receivedAt)}</span>
+                                    <span>{p.pointDescription}</span>
+                                    <span className="text-muted-foreground font-mono">{p.hardware}</span>
+                                  </div>
+                                ))}
+                              </div>
                             </TableCell>
                           </TableRow>
-                          <CollapsibleContent asChild>
-                            <TableRow>
-                              <TableCell colSpan={8} className="bg-muted/20">
-                                <div className="text-xs space-y-1 p-2 max-h-64 overflow-y-auto">
-                                  <p className="font-semibold mb-2">{c.punches.length} punches registrados:</p>
-                                  {c.punches.map((p, i) => (
-                                    <div key={i} className="grid grid-cols-[140px_1fr_120px] gap-2">
-                                      <span className="font-mono text-muted-foreground">{fmtDateTime(p.receivedAt)}</span>
-                                      <span>{p.pointDescription}</span>
-                                      <span className="text-muted-foreground font-mono">{p.hardware}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          </CollapsibleContent>
-                        </>
-                      </Collapsible>
+                        )}
+                      </Fragment>
                     );
                   })}
                 </TableBody>
