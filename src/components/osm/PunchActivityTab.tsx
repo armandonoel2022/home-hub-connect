@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Fragment } from "react";
 import { FileUp, X, CheckCircle2, AlertTriangle, XCircle, ChevronDown, ChevronRight, Footprints } from "lucide-react";
 import { toast } from "sonner";
 import { parsePunchHtmFile, type PunchParsedReport } from "@/lib/punchHtmParser";
