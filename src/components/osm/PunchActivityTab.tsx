@@ -44,6 +44,8 @@ export default function PunchActivityTab() {
   const [activeReportId, setActiveReportId] = useState<string | null>(null);
   const [meta, setMeta] = useState<MonitoringReportMeta | null>(null);
   const [filter, setFilter] = useState<"all" | "missed" | "partial" | "ok" | "no-rules">("all");
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggleExpand = (k: string) => setExpanded(p => { const n = new Set(p); n.has(k) ? n.delete(k) : n.add(k); return n; });
 
   const loadHistory = async () => {
     try {
