@@ -653,5 +653,27 @@ export const payrollApi = {
   getPayslipLog: () => apiFetch<any[]>("/payroll/payslips/log"),
 };
 
+export interface MonitoringReportMeta {
+  id: string;
+  kind: "kronos" | "punches";
+  reportDate: string;
+  fileName?: string;
+  uploadedAt: string;
+  uploadedBy: string;
+  hasPayload?: boolean;
+}
+export interface MonitoringReportDoc<T = any> extends MonitoringReportMeta {
+  payload: T;
+}
+
+export const monitoringReportsApi = {
+  list: (kind: "kronos" | "punches") =>
+    apiFetch<MonitoringReportMeta[]>(`/monitoring-reports?kind=${kind}`),
+  get: <T = any>(id: string) => apiFetch<MonitoringReportDoc<T>>(`/monitoring-reports/${id}`),
+  upsert: <T = any>(data: { kind: "kronos" | "punches"; reportDate: string; fileName?: string; payload: T }) =>
+    apiFetch<MonitoringReportDoc<T>>("/monitoring-reports", { method: "POST", body: JSON.stringify(data) }),
+  remove: (id: string) => apiFetch<void>(`/monitoring-reports/${id}`, { method: "DELETE" }),
+};
+
 export default apiFetch;
 
