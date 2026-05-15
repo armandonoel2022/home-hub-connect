@@ -249,6 +249,7 @@ const ClientTracking = () => {
               <TabsTrigger value="incidents" className="gap-1.5 text-xs"><AlertTriangle className="h-3.5 w-3.5" /> Incidencias</TabsTrigger>
               <TabsTrigger value="billing" className="gap-1.5 text-xs"><DollarSign className="h-3.5 w-3.5" /> Facturación</TabsTrigger>
               <TabsTrigger value="kronos" className="gap-1.5 text-xs"><Radio className="h-3.5 w-3.5" /> Actividad Kronos</TabsTrigger>
+              <TabsTrigger value="punches" className="gap-1.5 text-xs"><Footprints className="h-3.5 w-3.5" /> Punches</TabsTrigger>
               <TabsTrigger value="reports" className="gap-1.5 text-xs"><FileText className="h-3.5 w-3.5" /> Reportes</TabsTrigger>
               {(isCSUser || canTestCS) && <TabsTrigger value="cs" className="gap-1.5 text-xs"><Phone className="h-3.5 w-3.5" /> {isCSUser ? "Mis Solicitudes" : "Solicitudes CS"}</TabsTrigger>}
             </TabsList>
