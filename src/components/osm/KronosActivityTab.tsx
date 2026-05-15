@@ -80,8 +80,42 @@ export default function KronosActivityTab({ clients }: Props) {
   const [schedules, setSchedules] = useState<SchedulesMap>(() => loadSchedules());
   const [editing, setEditing] = useState<{ code: string; name: string } | null>(null);
   const [draft, setDraft] = useState<ClientSchedule>({});
+  const [history, setHistory] = useState<MonitoringReportMeta[]>([]);
+  const [activeReportId, setActiveReportId] = useState<string | null>(null);
+  const [reportMeta, setReportMeta] = useState<MonitoringReportMeta | null>(null);
 
   useEffect(() => { saveSchedules(schedules); }, [schedules]);
+
+  const loadHistory = async () => {
+    try {
+      const list = await monitoringReportsApi.list("kronos");
+      setHistory(list);
+      // Auto-cargar el más reciente si nada activo
+      if (!activeReportId && list.length > 0) {
+        await loadReport(list[0].id);
+      }
+    } catch (e: any) {
+      if (e.message !== "API_NOT_CONFIGURED") {
+        console.warn("No se pudo cargar historial Kronos:", e.message);
+      }
+    }
+  };
+
+  const loadReport = async (id: string) => {
+    setLoading(true);
+    try {
+      const doc = await monitoringReportsApi.get<KronosParsedReport>(id);
+      setReport(doc.payload);
+      setActiveReportId(doc.id);
+      setReportMeta({ id: doc.id, kind: doc.kind, reportDate: doc.reportDate, fileName: doc.fileName, uploadedAt: doc.uploadedAt, uploadedBy: doc.uploadedBy });
+    } catch (e: any) {
+      toast.error(`Error al cargar reporte: ${e.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadHistory(); /* eslint-disable-next-line */ }, []);
 
   const openEdit = (code: string, name: string) => {
     setEditing({ code, name });
@@ -103,7 +137,26 @@ export default function KronosActivityTab({ clients }: Props) {
         return;
       }
       setReport(parsed);
-      toast.success(`Reporte cargado: ${parsed.rows.length} cuentas únicas (${parsed.rawRowCount} señales)`);
+      // Persistir al backend (upsert por reportDate)
+      try {
+        const dateKey = parsed.reportDate ? parsed.reportDate.slice(0, 10) : new Date().toISOString().slice(0, 10);
+        const saved = await monitoringReportsApi.upsert<KronosParsedReport>({
+          kind: "kronos",
+          reportDate: dateKey,
+          fileName: file.name,
+          payload: parsed,
+        });
+        setActiveReportId(saved.id);
+        setReportMeta({ id: saved.id, kind: saved.kind, reportDate: saved.reportDate, fileName: saved.fileName, uploadedAt: saved.uploadedAt, uploadedBy: saved.uploadedBy });
+        await loadHistory();
+        toast.success(`Reporte guardado (${parsed.rows.length} cuentas) — disponible para todo el equipo`);
+      } catch (e: any) {
+        if (e.message === "API_NOT_CONFIGURED") {
+          toast.warning("Backend no configurado: el reporte solo es visible en esta sesión");
+        } else {
+          toast.error(`Reporte cargado pero no se pudo guardar: ${e.message}`);
+        }
+      }
     } catch (e: any) {
       toast.error(`Error al procesar archivo: ${e.message}`);
     } finally {
