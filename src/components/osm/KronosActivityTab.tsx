@@ -290,55 +290,64 @@ export default function KronosActivityTab({ clients }: Props) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="border border-border rounded-lg p-4 bg-muted/20 flex flex-wrap items-center justify-between gap-3">
-            {report ? (
-              <>
-                <div className="text-xs space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant="outline" className="text-emerald-400 border-emerald-500/30">
-                      {report.rows.length} cuentas
-                    </Badge>
-                    <span className="text-muted-foreground">
-                      {report.rawRowCount} señales detectadas · Reporte del{" "}
-                      {report.reportDate ? new Date(report.reportDate).toLocaleString("es-DO") : "—"}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <label>
-                    <input type="file" accept=".htm,.html" className="hidden"
-                      onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }}
-                    />
-                    <Button size="sm" variant="outline" disabled={loading} asChild>
-                      <span className="cursor-pointer">
-                        <RefreshCw className="h-3 w-3 mr-2" /> Cargar otro
-                      </span>
-                    </Button>
-                  </label>
-                  <Button size="sm" variant="ghost" onClick={() => setReport(null)}>
-                    <X className="h-3 w-3 mr-2" /> Limpiar
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <>
-                <p className="text-xs text-muted-foreground flex-1">
-                  Exporta desde Kronos NET → "Resumen de estados de grupos de señales" sin filtrar por tipo.
-                  El sistema detecta automáticamente la fecha del reporte y la última señal por cuenta
-                  (apertura o cierre, según el horario configurado por cada cliente).
-                </p>
-                <label>
-                  <input type="file" accept=".htm,.html" className="hidden"
-                    onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }}
-                  />
-                  <Button size="sm" variant="default" disabled={loading} asChild>
-                    <span className="cursor-pointer">
-                      <FileUp className="h-3 w-3 mr-2" />
-                      {loading ? "Procesando..." : "Seleccionar archivo .htm"}
-                    </span>
-                  </Button>
-                </label>
-              </>
+          <div className="border border-border rounded-lg p-4 bg-muted/20 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground flex-1 min-w-[260px]">
+                Exporta desde Kronos NET → "Resumen de estados de grupos de señales".
+                Cada carga se guarda por fecha y queda visible para todo el equipo.
+              </p>
+              <label>
+                <input type="file" accept=".htm,.html" className="hidden"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }}
+                />
+                <Button size="sm" variant="default" disabled={loading} asChild>
+                  <span className="cursor-pointer">
+                    <FileUp className="h-3 w-3 mr-2" />
+                    {loading ? "Procesando..." : report ? "Cargar nuevo reporte" : "Seleccionar archivo .htm"}
+                  </span>
+                </Button>
+              </label>
+            </div>
+
+            {history.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/50">
+                <Label className="text-xs whitespace-nowrap">Historial:</Label>
+                <Select value={activeReportId || ""} onValueChange={loadReport}>
+                  <SelectTrigger className="w-[280px] h-8 text-xs">
+                    <SelectValue placeholder="Seleccionar reporte..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {history.map(h => (
+                      <SelectItem key={h.id} value={h.id} className="text-xs">
+                        {h.reportDate} · {h.fileName || "reporte"} · {h.uploadedBy}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="text-xs text-muted-foreground">{history.length} reportes guardados</span>
+              </div>
+            )}
+
+            {report && (
+              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/50 text-xs">
+                <Badge variant="outline" className="text-emerald-400 border-emerald-500/30">
+                  {report.rows.length} cuentas
+                </Badge>
+                <span className="text-muted-foreground">
+                  {report.rawRowCount} señales · Reporte del{" "}
+                  {report.reportDate ? new Date(report.reportDate).toLocaleString("es-DO") : "—"}
+                </span>
+                {reportMeta && (
+                  <span className="text-muted-foreground">
+                    · Cargado por <strong>{reportMeta.uploadedBy}</strong> el{" "}
+                    {new Date(reportMeta.uploadedAt).toLocaleString("es-DO")}
+                  </span>
+                )}
+                <Button size="sm" variant="ghost" className="h-6 ml-auto"
+                  onClick={() => { setReport(null); setActiveReportId(null); setReportMeta(null); }}>
+                  <X className="h-3 w-3 mr-1" /> Cerrar vista
+                </Button>
+              </div>
             )}
           </div>
         </CardContent>
