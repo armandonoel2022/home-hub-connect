@@ -37,7 +37,7 @@ router.post('/', auth, (req, res) => {
   }
   const items = readData(FILE);
   const existingIdx = items.findIndex(i => i.kind === kind && i.reportDate === reportDate);
-  const userLabel = req.user?.fullName || req.user?.email || 'desconocido';
+  const userLabel = req.user?.email || 'desconocido';
   const doc = {
     id: existingIdx >= 0 ? items[existingIdx].id : generateId('MR', items),
     kind,
