@@ -23,6 +23,7 @@ import {
   parseKronosHtmFile, type KronosParsedReport, type CriticidadInactividad,
 } from "@/lib/kronosHtmParser";
 import type { OSMClient } from "@/lib/osmClientData";
+import { monitoringReportsApi, type MonitoringReportMeta } from "@/lib/api";
 
 const SCHEDULE_KEY = "kronos.client.schedules.v1";
 type ClientSchedule = { open?: string; close?: string; notes?: string };
