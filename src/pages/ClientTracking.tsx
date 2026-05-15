@@ -782,6 +782,10 @@ const ClientTracking = () => {
               <KronosActivityTab clients={clients} />
             </TabsContent>
 
+            <TabsContent value="punches" className="space-y-4">
+              <PunchActivityTab />
+            </TabsContent>
+
             {/* ── REPORTS ── */}
             <TabsContent value="reports" className="space-y-4">
               <div className="flex gap-3 items-center">
