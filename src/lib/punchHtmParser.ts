@@ -2,18 +2,12 @@
  * Parser para reportes HTM de "Resumen de señales" tipo Active Track (punches/rondas)
  * exportados desde Kronos NET 3.x.
  *
- * Tabla con 9 columnas:
- *   Tiempo de recepción | No de cuenta | Dispositivo | Descripción |
- *   No hardware | Nombre de cuenta | Código | Extensión 1 | Extensión 2
- *
- * Cada fila representa un punch (lectura de un punto físico). Agrupamos por
- * "Nombre de cuenta" y evaluamos si las rondas esperadas se cumplieron según
- * la configuración por cliente.
- *
- * Configuración Spirit Apparel (NAVE B6, NAVE A18, NAVE A3): rondas requeridas
- * a las 03:30 y 05:00 con tolerancia ±60 minutos. Para los demás clientes solo
- * resumimos los punches sin verificar horarios.
+ * El parser NO conoce las reglas de cumplimiento. Devuelve los punches agrupados por
+ * cliente. La evaluación de rondas (con tolerancia y precisión) se hace fuera con
+ * `evaluatePunchReport(report, rules)`, donde `rules` viene del backend
+ * (`/api/monitoring-punch-rules`). Así, al recargar reglas no hay que reprocesar el HTM.
  */
+import type { PunchRule } from "./api";
 
 export interface PunchRow {
   receivedAt: string | null; // ISO
@@ -26,11 +20,14 @@ export interface PunchRow {
 }
 
 export interface ExpectedRound {
-  time: string;          // "HH:MM"
-  toleranceMin: number;  // ±minutos para considerar la ronda cumplida
-  matched: boolean;
-  matchedAt?: string;    // ISO de un punch dentro de la ventana
+  time: string;             // "HH:MM"
+  toleranceMin: number;
+  precisionMin: number;
+  matched: boolean;         // dentro de toleranceMin
+  precise: boolean;         // dentro de precisionMin
+  matchedAt?: string;       // ISO del punch elegido
   matchedPoint?: string;
+  deviationMin?: number;    // signed: negativo = antes, positivo = después
 }
 
 export interface PunchClientSummary {
@@ -41,6 +38,7 @@ export interface PunchClientSummary {
   firstPunch: string | null;
   lastPunch: string | null;
   expectedRounds: ExpectedRound[];   // [] si no aplica para este cliente
+  ruleLabel?: string;
   compliance: "ok" | "partial" | "missed" | "no-rules";
 }
 
@@ -105,7 +103,7 @@ function extractRows(table: HTMLTableElement): PunchRow[] {
     if (tds.length < 7) continue;
     const cells = tds.map(td => clean(td.textContent || ""));
     const iso = parseDateTime(cells[0]);
-    if (!iso) continue; // header u otra fila
+    if (!iso) continue;
     out.push({
       receivedAt: iso,
       accountCode: cells[1],
@@ -117,41 +115,6 @@ function extractRows(table: HTMLTableElement): PunchRow[] {
     });
   }
   return out;
-}
-
-// ──────────────────────────────────────────────────────────────
-// Reglas por cliente — Spirit Apparel naves B6/A18/A3
-// ──────────────────────────────────────────────────────────────
-const SPIRIT_RE = /SPIRIT.*NAVE\s*(B6|A18|A3)\b/i;
-const SPIRIT_ROUNDS = ["03:30", "05:00"];
-const SPIRIT_TOLERANCE_MIN = 60; // ±60 minutos para considerar la ronda completada
-
-export function getExpectedRoundsFor(accountName: string): { times: string[]; toleranceMin: number } | null {
-  if (SPIRIT_RE.test(accountName)) return { times: SPIRIT_ROUNDS, toleranceMin: SPIRIT_TOLERANCE_MIN };
-  return null;
-}
-
-function buildExpected(rounds: { times: string[]; toleranceMin: number }, punches: PunchRow[], reportDate: string | null): ExpectedRound[] {
-  const ref = reportDate ? new Date(reportDate) : (punches[0]?.receivedAt ? new Date(punches[0].receivedAt) : new Date());
-  // Buscar las rondas en el día más reciente de los punches
-  const lastDay = punches.length ? new Date(punches[punches.length - 1].receivedAt!) : ref;
-  return rounds.times.map(t => {
-    const [h, m] = t.split(":").map(Number);
-    const target = new Date(lastDay.getFullYear(), lastDay.getMonth(), lastDay.getDate(), h, m, 0);
-    const winMs = rounds.toleranceMin * 60 * 1000;
-    const match = punches.find(p => {
-      if (!p.receivedAt) return false;
-      const diff = Math.abs(new Date(p.receivedAt).getTime() - target.getTime());
-      return diff <= winMs;
-    });
-    return {
-      time: t,
-      toleranceMin: rounds.toleranceMin,
-      matched: !!match,
-      matchedAt: match?.receivedAt || undefined,
-      matchedPoint: match?.pointDescription || undefined,
-    };
-  });
 }
 
 export async function parsePunchHtmFile(file: File): Promise<PunchParsedReport> {
@@ -172,7 +135,6 @@ export async function parsePunchHtmFile(file: File): Promise<PunchParsedReport> 
   const rows = table ? extractRows(table) : [];
   rows.sort((a, b) => (a.receivedAt || "").localeCompare(b.receivedAt || ""));
 
-  // Agrupar por accountName (o accountCode si vacío)
   const groups = new Map<string, PunchRow[]>();
   rows.forEach(r => {
     const key = r.accountName || r.accountCode;
@@ -182,14 +144,6 @@ export async function parsePunchHtmFile(file: File): Promise<PunchParsedReport> 
 
   const clients: PunchClientSummary[] = [];
   groups.forEach((punches, name) => {
-    const rounds = getExpectedRoundsFor(name);
-    const expected = rounds ? buildExpected(rounds, punches, reportDate) : [];
-    let compliance: PunchClientSummary["compliance"];
-    if (!rounds) compliance = "no-rules";
-    else if (expected.every(r => r.matched)) compliance = "ok";
-    else if (expected.some(r => r.matched)) compliance = "partial";
-    else compliance = "missed";
-
     clients.push({
       accountName: name,
       accountCode: punches[0]?.accountCode || "",
@@ -197,14 +151,10 @@ export async function parsePunchHtmFile(file: File): Promise<PunchParsedReport> 
       uniquePoints: Array.from(new Set(punches.map(p => p.pointDescription))).filter(Boolean),
       firstPunch: punches[0]?.receivedAt || null,
       lastPunch: punches[punches.length - 1]?.receivedAt || null,
-      expectedRounds: expected,
-      compliance,
+      expectedRounds: [],
+      compliance: "no-rules",
     });
   });
-
-  // Ordenar: incumplimientos primero, luego parciales, luego ok, luego sin reglas
-  const order: Record<PunchClientSummary["compliance"], number> = { missed: 0, partial: 1, ok: 2, "no-rules": 3 };
-  clients.sort((a, b) => order[a.compliance] - order[b.compliance] || a.accountName.localeCompare(b.accountName));
 
   return {
     reportDate,
@@ -214,4 +164,72 @@ export async function parsePunchHtmFile(file: File): Promise<PunchParsedReport> 
     clients,
     fileName: file.name,
   };
+}
+
+// ──────────────────────────────────────────────────────────────
+// Evaluación de cumplimiento (puede correr cuando llegan las reglas)
+// ──────────────────────────────────────────────────────────────
+
+function findMatchingRule(accountName: string, rules: PunchRule[]): PunchRule | null {
+  const name = accountName.toUpperCase();
+  for (const r of rules) {
+    if (!r.active) continue;
+    const pattern = (r.clientPattern || "").toUpperCase().trim();
+    if (!pattern) continue;
+    if (name.includes(pattern)) return r;
+  }
+  return null;
+}
+
+function buildExpectedRounds(rule: PunchRule, punches: PunchRow[], reportDate: string | null): ExpectedRound[] {
+  const ref = reportDate ? new Date(reportDate)
+    : (punches.length ? new Date(punches[punches.length - 1].receivedAt!) : new Date());
+  return rule.rounds.map(r => {
+    const [h, m] = r.time.split(":").map(Number);
+    const target = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate(), h, m, 0);
+    const tolMs = r.toleranceMin * 60_000;
+
+    // Punch más cercano al objetivo
+    let best: PunchRow | null = null;
+    let bestDiff = Infinity;
+    for (const p of punches) {
+      if (!p.receivedAt) continue;
+      const diff = new Date(p.receivedAt).getTime() - target.getTime();
+      if (Math.abs(diff) < Math.abs(bestDiff)) { best = p; bestDiff = diff; }
+    }
+    const within = best !== null && Math.abs(bestDiff) <= tolMs;
+    const deviationMin = best ? Math.round(bestDiff / 60_000) : undefined;
+    const precise = within && Math.abs(deviationMin!) <= r.precisionMin;
+
+    return {
+      time: r.time,
+      toleranceMin: r.toleranceMin,
+      precisionMin: r.precisionMin,
+      matched: within,
+      precise,
+      matchedAt: within ? best!.receivedAt! : undefined,
+      matchedPoint: within ? best!.pointDescription : undefined,
+      deviationMin: within ? deviationMin : undefined,
+    };
+  });
+}
+
+/** Aplica un set de reglas y devuelve un nuevo report con expectedRounds + compliance recalculados. */
+export function evaluatePunchReport(report: PunchParsedReport, rules: PunchRule[]): PunchParsedReport {
+  const clients = report.clients.map(c => {
+    const rule = findMatchingRule(c.accountName, rules);
+    if (!rule) {
+      return { ...c, expectedRounds: [], ruleLabel: undefined, compliance: "no-rules" as const };
+    }
+    const expected = buildExpectedRounds(rule, c.punches, report.reportDate);
+    let compliance: PunchClientSummary["compliance"];
+    if (expected.every(r => r.matched)) compliance = "ok";
+    else if (expected.some(r => r.matched)) compliance = "partial";
+    else compliance = "missed";
+    return { ...c, expectedRounds: expected, ruleLabel: rule.label, compliance };
+  });
+
+  const order: Record<PunchClientSummary["compliance"], number> = { missed: 0, partial: 1, ok: 2, "no-rules": 3 };
+  clients.sort((a, b) => order[a.compliance] - order[b.compliance] || a.accountName.localeCompare(b.accountName));
+  return { ...report, clients };
 }
