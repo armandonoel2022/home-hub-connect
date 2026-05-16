@@ -56,6 +56,8 @@ app.use('/api/benefits', require('./routes/benefits'));
 app.use('/api/payroll', require('./routes/payroll'));
 app.use('/api/geo', require('./routes/geo'));
 app.use('/api/monitoring-reports', require('./routes/monitoring-reports'));
+app.use('/api/monitoring-account-settings', require('./routes/monitoring-account-settings'));
+app.use('/api/monitoring-punch-rules', require('./routes/monitoring-punch-rules'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({

@@ -675,5 +675,58 @@ export const monitoringReportsApi = {
   remove: (id: string) => apiFetch<void>(`/monitoring-reports/${id}`, { method: "DELETE" }),
 };
 
+// ─── Configuración persistente por cuenta de monitoreo Kronos ───
+export type MonitoringAccountKind = "regular" | "panic";
+export type MonitoringManualStatus =
+  | "Activo" | "Inactivo" | "Sin notificaciones"
+  | "Dado de baja" | "Cancelado" | "Suspendido por falta de pago";
+
+export interface MonitoringAccountSetting {
+  accountCode: string;
+  accountName?: string;
+  kind: MonitoringAccountKind;
+  manualStatus: MonitoringManualStatus | null;
+  expectedOpen: string | null;
+  expectedClose: string | null;
+  notes: string;
+  updatedAt: string;
+  updatedBy: string;
+}
+
+export const monitoringAccountSettingsApi = {
+  list: () => apiFetch<MonitoringAccountSetting[]>("/monitoring-account-settings"),
+  upsert: (accountCode: string, data: Partial<MonitoringAccountSetting>) =>
+    apiFetch<MonitoringAccountSetting>(`/monitoring-account-settings/${encodeURIComponent(accountCode)}`,
+      { method: "PUT", body: JSON.stringify(data) }),
+  remove: (accountCode: string) =>
+    apiFetch<void>(`/monitoring-account-settings/${encodeURIComponent(accountCode)}`, { method: "DELETE" }),
+};
+
+// ─── Reglas de rondas (punches) por cliente ───
+export interface PunchRoundConfig {
+  time: string;          // "HH:MM"
+  toleranceMin: number;  // ±min para considerar cumplida
+  precisionMin: number;  // ±min para considerar "preciso" (subset del tolerance)
+}
+export interface PunchRule {
+  id: string;
+  clientPattern: string;
+  label: string;
+  rounds: PunchRoundConfig[];
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+  updatedBy: string;
+}
+
+export const punchRulesApi = {
+  list: () => apiFetch<PunchRule[]>("/monitoring-punch-rules"),
+  create: (data: Pick<PunchRule, "clientPattern" | "label" | "rounds" | "active">) =>
+    apiFetch<PunchRule>("/monitoring-punch-rules", { method: "POST", body: JSON.stringify(data) }),
+  update: (id: string, data: Partial<PunchRule>) =>
+    apiFetch<PunchRule>(`/monitoring-punch-rules/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  remove: (id: string) => apiFetch<void>(`/monitoring-punch-rules/${id}`, { method: "DELETE" }),
+};
+
 export default apiFetch;
 
