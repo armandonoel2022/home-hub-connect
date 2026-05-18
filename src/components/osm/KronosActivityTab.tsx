@@ -664,54 +664,106 @@ export default function KronosActivityTab({ clients }: Props) {
       )}
 
       <Dialog open={!!editing} onOpenChange={o => !o && setEditing(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Settings2 className="h-4 w-4" /> Configuración de cuenta
+              <Settings2 className="h-4 w-4" /> Configuración de LX
             </DialogTitle>
             <DialogDescription>
-              {editing?.name} <span className="font-mono text-xs">({editing?.code})</span>
+              {editing?.name} <span className="font-mono text-xs">(cuenta {editing?.code})</span>
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
+            {/* Cliente CxC */}
             <div>
-              <Label className="text-xs">Tipo de cuenta</Label>
-              <Select value={draft.kind || "regular"}
-                onValueChange={v => setDraft(d => ({ ...d, kind: v as any }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="regular">Estándar (apertura/cierre)</SelectItem>
-                  <SelectItem value="panic">🚨 Botón de pánico (no aplica apertura/cierre)</SelectItem>
+              <Label className="text-xs flex items-center justify-between">
+                <span>Cliente CxC (titular de facturación)</span>
+                <Button variant="link" size="sm" className="h-auto p-0 text-xs"
+                  onClick={() => { setEditing(null); setShowBillingMgr(true); }}>
+                  + nuevo cliente
+                </Button>
+              </Label>
+              <Select value={draft.clientId || "__none__"}
+                onValueChange={v => setDraft(d => ({ ...d, clientId: v === "__none__" ? null : v }))}>
+                <SelectTrigger><SelectValue placeholder="Sin cliente vinculado" /></SelectTrigger>
+                <SelectContent className="max-h-[280px]">
+                  <SelectItem value="__none__">— Sin cliente vinculado —</SelectItem>
+                  {billingClients
+                    .slice()
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map(c => (
+                      <SelectItem key={c.id} value={c.id}>
+                        <span className="font-mono text-xs mr-2">{c.code}</span>
+                        {c.name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
+              {draft.clientId && billingClientById.get(draft.clientId)?.locationAddress && (
+                <p className="text-[11px] text-muted-foreground mt-1 flex items-start gap-1">
+                  <MapPin className="h-3 w-3 mt-0.5 shrink-0" />
+                  Ubicación del cliente: {billingClientById.get(draft.clientId)?.locationAddress}
+                </p>
+              )}
             </div>
 
-            <div>
-              <Label className="text-xs">Estado manual (silencia alertas si no es Activo)</Label>
-              <Select value={draft.manualStatus || "__none__"}
-                onValueChange={v => setDraft(d => ({ ...d, manualStatus: v === "__none__" ? null : v as any }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">— Sin estado manual —</SelectItem>
-                  {MANUAL_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Tipo</Label>
+                <Select value={draft.kind || "regular"}
+                  onValueChange={v => setDraft(d => ({ ...d, kind: v as any }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="regular">Estándar</SelectItem>
+                    <SelectItem value="panic">🚨 Botón de pánico</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Estado LX</Label>
+                <Select value={draft.lxStatus || "__none__"}
+                  onValueChange={v => setDraft(d => ({ ...d, lxStatus: v === "__none__" ? null : v as LxStatus }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— Sin definir —</SelectItem>
+                    {LX_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+            <p className="text-[11px] text-muted-foreground -mt-1">
+              Cualquier estado distinto de <strong>Activa</strong> silencia las alertas de esta LX.
+            </p>
 
             {draft.kind !== "panic" && (
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label htmlFor="open" className="text-xs">Hora apertura</Label>
+                  <Label htmlFor="open" className="text-xs">Hora apertura esperada</Label>
                   <Input id="open" type="time" value={draft.expectedOpen || ""}
                     onChange={e => setDraft(d => ({ ...d, expectedOpen: e.target.value || null }))} />
                 </div>
                 <div>
-                  <Label htmlFor="close" className="text-xs">Hora cierre</Label>
+                  <Label htmlFor="close" className="text-xs">Hora cierre esperado</Label>
                   <Input id="close" type="time" value={draft.expectedClose || ""}
                     onChange={e => setDraft(d => ({ ...d, expectedClose: e.target.value || null }))} />
                 </div>
               </div>
             )}
+
+            <div className="border-t pt-3 space-y-2">
+              <Label className="text-xs flex items-center gap-1">
+                <MapPin className="h-3 w-3" /> Ubicación específica de esta LX
+              </Label>
+              <Input placeholder="Dirección (ej: Nave B6, oficina principal)"
+                value={draft.locationAddress || ""}
+                onChange={e => setDraft(d => ({ ...d, locationAddress: e.target.value }))} />
+              <Input placeholder="Enlace Google Maps (https://maps.app.goo.gl/...)"
+                value={draft.locationMapsUrl || ""}
+                onChange={e => setDraft(d => ({ ...d, locationMapsUrl: e.target.value }))} />
+              <p className="text-[11px] text-muted-foreground">
+                Déjalo vacío si quieres heredar la ubicación del cliente CxC.
+              </p>
+            </div>
 
             <div>
               <Label htmlFor="notes" className="text-xs">Notas</Label>
@@ -733,6 +785,13 @@ export default function KronosActivityTab({ clients }: Props) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BillingClientsManager
+        open={showBillingMgr}
+        onOpenChange={setShowBillingMgr}
+        onChanged={loadBillingClients}
+      />
+
     </div>
   );
 }
