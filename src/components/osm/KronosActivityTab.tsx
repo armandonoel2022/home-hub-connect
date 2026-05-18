@@ -352,6 +352,7 @@ export default function KronosActivityTab({ clients }: Props) {
       if (filterCrit === "panic") { if (!r.isPanic) return false; }
       else if (filterCrit === "muted") { if (!r.isMuted || r.isPanic) return false; }
       else if (filterCrit === "discrepancia") { if (!r.discrepancia) return false; }
+      else if (filterCrit === "unlinked") { if (r.setting?.clientId) return false; }
       else if (filterCrit !== "all") {
         if (r.isPanic || r.isMuted) return false;
         if (r.criticidad !== filterCrit) return false;
@@ -361,12 +362,15 @@ export default function KronosActivityTab({ clients }: Props) {
         if (!r.accountCode.toLowerCase().includes(q)
           && !r.accountName.toLowerCase().includes(q)
           && !(r.osm?.businessName || "").toLowerCase().includes(q)
+          && !(r.billingClient?.name || "").toLowerCase().includes(q)
+          && !(r.billingClient?.code || "").toLowerCase().includes(q)
           && !(r.osm?.contact || "").toLowerCase().includes(q)
           && !(r.osm?.phone || "").includes(q)) return false;
       }
       return true;
     });
   }, [combined, filterCrit, search]);
+
 
   const exportCallList = () => {
     const toCall = combined.filter(r => !r.isPanic && !r.isMuted && (r.criticidad === "alta" || r.criticidad === "media"));
