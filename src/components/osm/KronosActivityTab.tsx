@@ -24,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
   FileUp, AlertTriangle, Phone, Download, Search, X, ShieldAlert, Pencil, Settings2, Siren,
+  Users, MapPin, Link2,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -31,22 +32,28 @@ import {
 } from "@/lib/kronosHtmParser";
 import type { OSMClient } from "@/lib/osmClientData";
 import {
-  monitoringReportsApi, monitoringAccountSettingsApi,
-  type MonitoringReportMeta, type MonitoringAccountSetting, type MonitoringManualStatus,
+  monitoringReportsApi, monitoringAccountSettingsApi, billingClientsApi,
+  type MonitoringReportMeta, type MonitoringAccountSetting, type LxStatus, type BillingClient,
 } from "@/lib/api";
+import BillingClientsManager from "./BillingClientsManager";
 
-const MANUAL_STATUSES: MonitoringManualStatus[] = [
-  "Activo", "Inactivo", "Sin notificaciones",
-  "Dado de baja", "Cancelado", "Suspendido por falta de pago",
+const LX_STATUSES: LxStatus[] = [
+  "Activa", "Prueba", "Cancelada", "Suspendida",
+  "Dada de baja", "Sin notificaciones", "Inactiva",
 ];
-const STATUS_COLOR: Record<MonitoringManualStatus, string> = {
-  "Activo": "text-emerald-400 border-emerald-500/30",
-  "Inactivo": "text-muted-foreground border-border",
-  "Sin notificaciones": "text-blue-400 border-blue-500/30",
-  "Dado de baja": "text-red-400 border-red-500/30",
-  "Cancelado": "text-red-400 border-red-500/30",
-  "Suspendido por falta de pago": "text-amber-400 border-amber-500/30",
+const LX_STATUS_COLOR: Record<LxStatus, string> = {
+  "Activa": "text-emerald-400 border-emerald-500/30",
+  "Prueba": "text-blue-400 border-blue-500/30",
+  "Cancelada": "text-red-400 border-red-500/30",
+  "Suspendida": "text-amber-400 border-amber-500/30",
+  "Dada de baja": "text-red-400 border-red-500/30",
+  "Sin notificaciones": "text-purple-400 border-purple-500/30",
+  "Inactiva": "text-muted-foreground border-border",
 };
+/** Estados de LX que silencian alertas (todo menos Activa) */
+const MUTING_LX_STATUSES = new Set<LxStatus>([
+  "Prueba", "Cancelada", "Suspendida", "Dada de baja", "Sin notificaciones", "Inactiva",
+]);
 
 const CRIT_LABEL: Record<CriticidadInactividad, string> = {
   baja: "Baja (1 día)",
@@ -71,25 +78,35 @@ interface CombinedRow {
   criticidad: CriticidadInactividad | "ok";
   osm?: OSMClient;
   setting?: MonitoringAccountSetting;
+  billingClient?: BillingClient;
   isPanic: boolean;
-  isMuted: boolean; // manualStatus que silencia alertas
+  isMuted: boolean; // estado LX que silencia alertas
   discrepancia?: string;
 }
 
-type FilterKey = "all" | "ok" | CriticidadInactividad | "discrepancia" | "panic" | "muted";
+type FilterKey = "all" | "ok" | CriticidadInactividad | "discrepancia" | "panic" | "muted" | "unlinked";
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleString("es-DO", { dateStyle: "short", timeStyle: "short" });
 }
 
+/** Score simple de similitud para auto-sugerir cliente CxC desde el nombre de la LX. */
+function simScore(a: string, b: string): number {
+  const A = a.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]+/g, " ");
+  const B = b.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]+/g, " ");
+  const wA = new Set(A.split(/\s+/).filter(w => w.length >= 3));
+  const wB = new Set(B.split(/\s+/).filter(w => w.length >= 3));
+  if (wA.size === 0 || wB.size === 0) return 0;
+  let common = 0;
+  wA.forEach(w => { if (wB.has(w)) common++; });
+  return common / Math.max(wA.size, wB.size);
+}
+
 interface Props {
   clients: OSMClient[];
 }
 
-const PANIC_MUTING_STATUSES = new Set<MonitoringManualStatus>([
-  "Inactivo", "Sin notificaciones", "Dado de baja", "Cancelado", "Suspendido por falta de pago",
-]);
 
 export default function KronosActivityTab({ clients }: Props) {
   const [report, setReport] = useState<KronosParsedReport | null>(null);
