@@ -500,7 +500,7 @@ export default function KronosActivityTab({ clients }: Props) {
           <div className="flex flex-wrap gap-2 items-center">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input className="pl-9" placeholder="Buscar cuenta, nombre, contacto, teléfono..."
+              <Input className="pl-9" placeholder="Buscar cuenta, nombre, cliente CxC, contacto, teléfono..."
                 value={search} onChange={e => setSearch(e.target.value)} />
             </div>
             <Select value={filterCrit} onValueChange={(v: any) => setFilterCrit(v)}>
@@ -512,14 +512,19 @@ export default function KronosActivityTab({ clients }: Props) {
                 <SelectItem value="media">🟡 Media (2d)</SelectItem>
                 <SelectItem value="alta">🔴 Alta (3+d)</SelectItem>
                 <SelectItem value="panic">🚨 Botón de pánico</SelectItem>
-                <SelectItem value="muted">🔇 Silenciadas (estado manual)</SelectItem>
+                <SelectItem value="muted">🔇 Silenciadas (estado LX)</SelectItem>
+                <SelectItem value="unlinked">🔗 Sin cliente CxC</SelectItem>
                 <SelectItem value="discrepancia">⚠️ Discrepancias</SelectItem>
               </SelectContent>
             </Select>
+            <Button onClick={() => setShowBillingMgr(true)} variant="outline" size="sm">
+              <Users className="h-4 w-4 mr-2" /> Clientes CxC ({billingClients.length})
+            </Button>
             <Button onClick={exportCallList} variant="default" size="sm">
-              <Download className="h-4 w-4 mr-2" /> Exportar lista de llamadas
+              <Download className="h-4 w-4 mr-2" /> Exportar llamadas
             </Button>
           </div>
+
 
           <Card>
             <CardContent className="p-0 overflow-x-auto">
