@@ -24,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
   FileUp, AlertTriangle, Phone, Download, Search, X, ShieldAlert, Pencil, Settings2, Siren,
+  Users, MapPin, Link2,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -31,22 +32,28 @@ import {
 } from "@/lib/kronosHtmParser";
 import type { OSMClient } from "@/lib/osmClientData";
 import {
-  monitoringReportsApi, monitoringAccountSettingsApi,
-  type MonitoringReportMeta, type MonitoringAccountSetting, type MonitoringManualStatus,
+  monitoringReportsApi, monitoringAccountSettingsApi, billingClientsApi,
+  type MonitoringReportMeta, type MonitoringAccountSetting, type LxStatus, type BillingClient,
 } from "@/lib/api";
+import BillingClientsManager from "./BillingClientsManager";
 
-const MANUAL_STATUSES: MonitoringManualStatus[] = [
-  "Activo", "Inactivo", "Sin notificaciones",
-  "Dado de baja", "Cancelado", "Suspendido por falta de pago",
+const LX_STATUSES: LxStatus[] = [
+  "Activa", "Prueba", "Cancelada", "Suspendida",
+  "Dada de baja", "Sin notificaciones", "Inactiva",
 ];
-const STATUS_COLOR: Record<MonitoringManualStatus, string> = {
-  "Activo": "text-emerald-400 border-emerald-500/30",
-  "Inactivo": "text-muted-foreground border-border",
-  "Sin notificaciones": "text-blue-400 border-blue-500/30",
-  "Dado de baja": "text-red-400 border-red-500/30",
-  "Cancelado": "text-red-400 border-red-500/30",
-  "Suspendido por falta de pago": "text-amber-400 border-amber-500/30",
+const LX_STATUS_COLOR: Record<LxStatus, string> = {
+  "Activa": "text-emerald-400 border-emerald-500/30",
+  "Prueba": "text-blue-400 border-blue-500/30",
+  "Cancelada": "text-red-400 border-red-500/30",
+  "Suspendida": "text-amber-400 border-amber-500/30",
+  "Dada de baja": "text-red-400 border-red-500/30",
+  "Sin notificaciones": "text-purple-400 border-purple-500/30",
+  "Inactiva": "text-muted-foreground border-border",
 };
+/** Estados de LX que silencian alertas (todo menos Activa) */
+const MUTING_LX_STATUSES = new Set<LxStatus>([
+  "Prueba", "Cancelada", "Suspendida", "Dada de baja", "Sin notificaciones", "Inactiva",
+]);
 
 const CRIT_LABEL: Record<CriticidadInactividad, string> = {
   baja: "Baja (1 día)",
@@ -71,25 +78,35 @@ interface CombinedRow {
   criticidad: CriticidadInactividad | "ok";
   osm?: OSMClient;
   setting?: MonitoringAccountSetting;
+  billingClient?: BillingClient;
   isPanic: boolean;
-  isMuted: boolean; // manualStatus que silencia alertas
+  isMuted: boolean; // estado LX que silencia alertas
   discrepancia?: string;
 }
 
-type FilterKey = "all" | "ok" | CriticidadInactividad | "discrepancia" | "panic" | "muted";
+type FilterKey = "all" | "ok" | CriticidadInactividad | "discrepancia" | "panic" | "muted" | "unlinked";
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleString("es-DO", { dateStyle: "short", timeStyle: "short" });
 }
 
+/** Score simple de similitud para auto-sugerir cliente CxC desde el nombre de la LX. */
+function simScore(a: string, b: string): number {
+  const A = a.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]+/g, " ");
+  const B = b.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]+/g, " ");
+  const wA = new Set(A.split(/\s+/).filter(w => w.length >= 3));
+  const wB = new Set(B.split(/\s+/).filter(w => w.length >= 3));
+  if (wA.size === 0 || wB.size === 0) return 0;
+  let common = 0;
+  wA.forEach(w => { if (wB.has(w)) common++; });
+  return common / Math.max(wA.size, wB.size);
+}
+
 interface Props {
   clients: OSMClient[];
 }
 
-const PANIC_MUTING_STATUSES = new Set<MonitoringManualStatus>([
-  "Inactivo", "Sin notificaciones", "Dado de baja", "Cancelado", "Suspendido por falta de pago",
-]);
 
 export default function KronosActivityTab({ clients }: Props) {
   const [report, setReport] = useState<KronosParsedReport | null>(null);
@@ -97,11 +114,13 @@ export default function KronosActivityTab({ clients }: Props) {
   const [search, setSearch] = useState("");
   const [filterCrit, setFilterCrit] = useState<FilterKey>("all");
   const [settings, setSettings] = useState<Record<string, MonitoringAccountSetting>>({});
+  const [billingClients, setBillingClients] = useState<BillingClient[]>([]);
   const [editing, setEditing] = useState<{ code: string; name: string } | null>(null);
   const [draft, setDraft] = useState<Partial<MonitoringAccountSetting>>({});
   const [history, setHistory] = useState<MonitoringReportMeta[]>([]);
   const [activeReportId, setActiveReportId] = useState<string | null>(null);
   const [reportMeta, setReportMeta] = useState<MonitoringReportMeta | null>(null);
+  const [showBillingMgr, setShowBillingMgr] = useState(false);
 
   const loadSettings = async () => {
     try {
@@ -111,6 +130,15 @@ export default function KronosActivityTab({ clients }: Props) {
       setSettings(m);
     } catch (e: any) {
       if (e.message !== "API_NOT_CONFIGURED") console.warn("Settings:", e.message);
+    }
+  };
+
+  const loadBillingClients = async () => {
+    try {
+      const list = await billingClientsApi.list();
+      setBillingClients(list);
+    } catch (e: any) {
+      if (e.message !== "API_NOT_CONFIGURED") console.warn("BillingClients:", e.message);
     }
   };
 
@@ -136,15 +164,36 @@ export default function KronosActivityTab({ clients }: Props) {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { loadSettings(); loadHistory(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { loadSettings(); loadBillingClients(); loadHistory(); /* eslint-disable-next-line */ }, []);
+
+  /** Sugerencia automática de cliente CxC para una LX sin vincular, basada en nombres. */
+  const suggestClient = (lxName: string): BillingClient | null => {
+    if (!lxName || billingClients.length === 0) return null;
+    let best: BillingClient | null = null;
+    let bestScore = 0;
+    billingClients.forEach(c => {
+      const s = simScore(lxName, c.name);
+      if (s > bestScore) { bestScore = s; best = c; }
+    });
+    return bestScore >= 0.5 ? best : null;
+  };
 
   const openEdit = (code: string, name: string) => {
     setEditing({ code, name });
     const cur = settings[code];
-    setDraft(cur ? { ...cur } : {
-      accountCode: code, accountName: name, kind: "regular", manualStatus: null,
-      expectedOpen: null, expectedClose: null, notes: "",
-    });
+    if (cur) {
+      setDraft({ ...cur });
+    } else {
+      const suggested = suggestClient(name);
+      setDraft({
+        accountCode: code, accountName: name, kind: "regular",
+        lxStatus: "Activa",
+        clientId: suggested?.id || null,
+        expectedOpen: null, expectedClose: null, notes: "",
+        locationAddress: "", locationMapsUrl: "",
+      });
+      if (suggested) toast.info(`Cliente sugerido: ${suggested.code} — ${suggested.name}`);
+    }
   };
 
   const saveEdit = async () => {
@@ -152,10 +201,13 @@ export default function KronosActivityTab({ clients }: Props) {
     try {
       const saved = await monitoringAccountSettingsApi.upsert(editing.code, {
         accountName: editing.name,
+        clientId: draft.clientId || null,
         kind: (draft.kind === "panic" ? "panic" : "regular"),
-        manualStatus: draft.manualStatus || null,
+        lxStatus: draft.lxStatus || null,
         expectedOpen: draft.expectedOpen || null,
         expectedClose: draft.expectedClose || null,
+        locationAddress: draft.locationAddress || "",
+        locationMapsUrl: draft.locationMapsUrl || "",
         notes: draft.notes || "",
       });
       setSettings(prev => ({ ...prev, [editing.code]: saved }));
@@ -195,23 +247,37 @@ export default function KronosActivityTab({ clients }: Props) {
     } finally { setLoading(false); }
   };
 
+
   const osmByCode = useMemo(() => {
     const m = new Map<string, OSMClient>();
     clients.forEach(c => { if (c.accountCode) m.set(c.accountCode.trim(), c); });
     return m;
   }, [clients]);
 
+  const billingClientById = useMemo(() => {
+    const m = new Map<string, BillingClient>();
+    billingClients.forEach(c => m.set(c.id, c));
+    return m;
+  }, [billingClients]);
+
   const combined = useMemo<CombinedRow[]>(() => {
     if (!report) return [];
     const list: CombinedRow[] = [];
     const seen = new Set<string>();
 
+    const processSetting = (setting?: MonitoringAccountSetting) => {
+      const isPanic = setting?.kind === "panic";
+      const lxStatus = setting?.lxStatus || null;
+      const isMuted = !!(lxStatus && MUTING_LX_STATUSES.has(lxStatus));
+      const billingClient = setting?.clientId ? billingClientById.get(setting.clientId) : undefined;
+      return { isPanic, isMuted, billingClient };
+    };
+
     report.rows.forEach(r => {
       seen.add(r.accountCode);
       const osm = osmByCode.get(r.accountCode);
       const setting = settings[r.accountCode];
-      const isPanic = setting?.kind === "panic";
-      const isMuted = !!(setting?.manualStatus && PANIC_MUTING_STATUSES.has(setting.manualStatus));
+      const { isPanic, isMuted, billingClient } = processSetting(setting);
 
       const alertas: string[] = [];
       if (!isPanic && !isMuted) {
@@ -228,6 +294,9 @@ export default function KronosActivityTab({ clients }: Props) {
         } else {
           alertas.push("Cuenta no existe en catálogo OSM");
         }
+        if (!billingClient && !setting?.clientId) {
+          alertas.push("LX sin cliente CxC asignado");
+        }
       }
 
       list.push({
@@ -240,7 +309,7 @@ export default function KronosActivityTab({ clients }: Props) {
         sameDayCycle: !isPanic && r.sameDayCycle,
         daysSince: r.daysSince,
         criticidad: isMuted ? "ok" : r.criticidad,
-        osm, setting, isPanic, isMuted,
+        osm, setting, billingClient, isPanic, isMuted,
         discrepancia: alertas.join(" • ") || undefined,
       });
     });
@@ -250,16 +319,16 @@ export default function KronosActivityTab({ clients }: Props) {
       if (!c.accountCode || seen.has(c.accountCode.trim())) return;
       if (c.monitoringStatus !== "Activo") return;
       const setting = settings[c.accountCode];
-      const isPanic = setting?.kind === "panic";
-      const isMuted = !!(setting?.manualStatus && PANIC_MUTING_STATUSES.has(setting.manualStatus));
+      const { isPanic, isMuted, billingClient } = processSetting(setting);
       list.push({
         accountCode: c.accountCode, accountName: c.businessName, estado: "",
         lastSignal: null, lastOpen: null, lastClose: null, sameDayCycle: false,
         daysSince: null, criticidad: isMuted ? "ok" : "alta",
-        osm: c, setting, isPanic, isMuted,
+        osm: c, setting, billingClient, isPanic, isMuted,
         discrepancia: isMuted || isPanic ? undefined : "Activo en OSM pero NO aparece en reporte Kronos",
       });
     });
+
 
     return list.sort((a, b) => (b.daysSince ?? 9999) - (a.daysSince ?? 9999));
   }, [report, clients, osmByCode, settings]);
@@ -283,6 +352,7 @@ export default function KronosActivityTab({ clients }: Props) {
       if (filterCrit === "panic") { if (!r.isPanic) return false; }
       else if (filterCrit === "muted") { if (!r.isMuted || r.isPanic) return false; }
       else if (filterCrit === "discrepancia") { if (!r.discrepancia) return false; }
+      else if (filterCrit === "unlinked") { if (r.setting?.clientId) return false; }
       else if (filterCrit !== "all") {
         if (r.isPanic || r.isMuted) return false;
         if (r.criticidad !== filterCrit) return false;
@@ -292,12 +362,15 @@ export default function KronosActivityTab({ clients }: Props) {
         if (!r.accountCode.toLowerCase().includes(q)
           && !r.accountName.toLowerCase().includes(q)
           && !(r.osm?.businessName || "").toLowerCase().includes(q)
+          && !(r.billingClient?.name || "").toLowerCase().includes(q)
+          && !(r.billingClient?.code || "").toLowerCase().includes(q)
           && !(r.osm?.contact || "").toLowerCase().includes(q)
           && !(r.osm?.phone || "").includes(q)) return false;
       }
       return true;
     });
   }, [combined, filterCrit, search]);
+
 
   const exportCallList = () => {
     const toCall = combined.filter(r => !r.isPanic && !r.isMuted && (r.criticidad === "alta" || r.criticidad === "media"));
@@ -431,7 +504,7 @@ export default function KronosActivityTab({ clients }: Props) {
           <div className="flex flex-wrap gap-2 items-center">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input className="pl-9" placeholder="Buscar cuenta, nombre, contacto, teléfono..."
+              <Input className="pl-9" placeholder="Buscar cuenta, nombre, cliente CxC, contacto, teléfono..."
                 value={search} onChange={e => setSearch(e.target.value)} />
             </div>
             <Select value={filterCrit} onValueChange={(v: any) => setFilterCrit(v)}>
@@ -443,24 +516,30 @@ export default function KronosActivityTab({ clients }: Props) {
                 <SelectItem value="media">🟡 Media (2d)</SelectItem>
                 <SelectItem value="alta">🔴 Alta (3+d)</SelectItem>
                 <SelectItem value="panic">🚨 Botón de pánico</SelectItem>
-                <SelectItem value="muted">🔇 Silenciadas (estado manual)</SelectItem>
+                <SelectItem value="muted">🔇 Silenciadas (estado LX)</SelectItem>
+                <SelectItem value="unlinked">🔗 Sin cliente CxC</SelectItem>
                 <SelectItem value="discrepancia">⚠️ Discrepancias</SelectItem>
               </SelectContent>
             </Select>
+            <Button onClick={() => setShowBillingMgr(true)} variant="outline" size="sm">
+              <Users className="h-4 w-4 mr-2" /> Clientes CxC ({billingClients.length})
+            </Button>
             <Button onClick={exportCallList} variant="default" size="sm">
-              <Download className="h-4 w-4 mr-2" /> Exportar lista de llamadas
+              <Download className="h-4 w-4 mr-2" /> Exportar llamadas
             </Button>
           </div>
+
 
           <Card>
             <CardContent className="p-0 overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[80px]">Cuenta</TableHead>
-                    <TableHead>Nombre</TableHead>
+                    <TableHead className="w-[80px]">Cuenta LX</TableHead>
+                    <TableHead>Nombre LX</TableHead>
+                    <TableHead className="text-xs">Cliente CxC</TableHead>
                     <TableHead>Tipo</TableHead>
-                    <TableHead>Estado manual</TableHead>
+                    <TableHead>Estado LX</TableHead>
                     <TableHead className="text-right text-xs">Última señal</TableHead>
                     <TableHead className="text-center text-xs">Días</TableHead>
                     <TableHead className="text-xs">Apertura</TableHead>
@@ -475,11 +554,25 @@ export default function KronosActivityTab({ clients }: Props) {
                 </TableHeader>
                 <TableBody>
                   {filtered.length === 0 ? (
-                    <TableRow><TableCell colSpan={14} className="text-center text-muted-foreground py-8">Sin resultados</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={15} className="text-center text-muted-foreground py-8">Sin resultados</TableCell></TableRow>
                   ) : filtered.map(r => (
                     <TableRow key={r.accountCode} className={r.isPanic ? "bg-purple-500/5" : r.isMuted ? "opacity-60" : ""}>
                       <TableCell className="font-mono text-xs">{r.accountCode}</TableCell>
                       <TableCell className="font-medium text-sm">{r.osm?.businessName || r.accountName}</TableCell>
+                      <TableCell className="text-xs">
+                        {r.billingClient ? (
+                          <div className="flex flex-col">
+                            <span className="font-mono text-[10px] text-muted-foreground">{r.billingClient.code}</span>
+                            <span className="font-medium">{r.billingClient.name}</span>
+                          </div>
+                        ) : r.setting?.clientId ? (
+                          <Badge variant="outline" className="text-amber-400 border-amber-500/30">Cliente eliminado</Badge>
+                        ) : (
+                          <span className="text-muted-foreground italic flex items-center gap-1">
+                            <Link2 className="h-3 w-3" /> sin vincular
+                          </span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         {r.isPanic ? (
                           <Badge variant="outline" className="text-purple-400 border-purple-500/30">
@@ -488,12 +581,13 @@ export default function KronosActivityTab({ clients }: Props) {
                         ) : <span className="text-xs text-muted-foreground">Estándar</span>}
                       </TableCell>
                       <TableCell>
-                        {r.setting?.manualStatus ? (
-                          <Badge variant="outline" className={STATUS_COLOR[r.setting.manualStatus]}>
-                            {r.setting.manualStatus}
+                        {r.setting?.lxStatus ? (
+                          <Badge variant="outline" className={LX_STATUS_COLOR[r.setting.lxStatus]}>
+                            {r.setting.lxStatus}
                           </Badge>
                         ) : <span className="text-xs text-muted-foreground">—</span>}
                       </TableCell>
+
                       <TableCell className="text-right text-xs">{fmtDate(r.lastSignal)}</TableCell>
                       <TableCell className="text-center">
                         {r.daysSince === null ? (
@@ -570,54 +664,106 @@ export default function KronosActivityTab({ clients }: Props) {
       )}
 
       <Dialog open={!!editing} onOpenChange={o => !o && setEditing(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Settings2 className="h-4 w-4" /> Configuración de cuenta
+              <Settings2 className="h-4 w-4" /> Configuración de LX
             </DialogTitle>
             <DialogDescription>
-              {editing?.name} <span className="font-mono text-xs">({editing?.code})</span>
+              {editing?.name} <span className="font-mono text-xs">(cuenta {editing?.code})</span>
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
+            {/* Cliente CxC */}
             <div>
-              <Label className="text-xs">Tipo de cuenta</Label>
-              <Select value={draft.kind || "regular"}
-                onValueChange={v => setDraft(d => ({ ...d, kind: v as any }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="regular">Estándar (apertura/cierre)</SelectItem>
-                  <SelectItem value="panic">🚨 Botón de pánico (no aplica apertura/cierre)</SelectItem>
+              <Label className="text-xs flex items-center justify-between">
+                <span>Cliente CxC (titular de facturación)</span>
+                <Button variant="link" size="sm" className="h-auto p-0 text-xs"
+                  onClick={() => { setEditing(null); setShowBillingMgr(true); }}>
+                  + nuevo cliente
+                </Button>
+              </Label>
+              <Select value={draft.clientId || "__none__"}
+                onValueChange={v => setDraft(d => ({ ...d, clientId: v === "__none__" ? null : v }))}>
+                <SelectTrigger><SelectValue placeholder="Sin cliente vinculado" /></SelectTrigger>
+                <SelectContent className="max-h-[280px]">
+                  <SelectItem value="__none__">— Sin cliente vinculado —</SelectItem>
+                  {billingClients
+                    .slice()
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map(c => (
+                      <SelectItem key={c.id} value={c.id}>
+                        <span className="font-mono text-xs mr-2">{c.code}</span>
+                        {c.name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
+              {draft.clientId && billingClientById.get(draft.clientId)?.locationAddress && (
+                <p className="text-[11px] text-muted-foreground mt-1 flex items-start gap-1">
+                  <MapPin className="h-3 w-3 mt-0.5 shrink-0" />
+                  Ubicación del cliente: {billingClientById.get(draft.clientId)?.locationAddress}
+                </p>
+              )}
             </div>
 
-            <div>
-              <Label className="text-xs">Estado manual (silencia alertas si no es Activo)</Label>
-              <Select value={draft.manualStatus || "__none__"}
-                onValueChange={v => setDraft(d => ({ ...d, manualStatus: v === "__none__" ? null : v as any }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">— Sin estado manual —</SelectItem>
-                  {MANUAL_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Tipo</Label>
+                <Select value={draft.kind || "regular"}
+                  onValueChange={v => setDraft(d => ({ ...d, kind: v as any }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="regular">Estándar</SelectItem>
+                    <SelectItem value="panic">🚨 Botón de pánico</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Estado LX</Label>
+                <Select value={draft.lxStatus || "__none__"}
+                  onValueChange={v => setDraft(d => ({ ...d, lxStatus: v === "__none__" ? null : v as LxStatus }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— Sin definir —</SelectItem>
+                    {LX_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+            <p className="text-[11px] text-muted-foreground -mt-1">
+              Cualquier estado distinto de <strong>Activa</strong> silencia las alertas de esta LX.
+            </p>
 
             {draft.kind !== "panic" && (
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label htmlFor="open" className="text-xs">Hora apertura</Label>
+                  <Label htmlFor="open" className="text-xs">Hora apertura esperada</Label>
                   <Input id="open" type="time" value={draft.expectedOpen || ""}
                     onChange={e => setDraft(d => ({ ...d, expectedOpen: e.target.value || null }))} />
                 </div>
                 <div>
-                  <Label htmlFor="close" className="text-xs">Hora cierre</Label>
+                  <Label htmlFor="close" className="text-xs">Hora cierre esperado</Label>
                   <Input id="close" type="time" value={draft.expectedClose || ""}
                     onChange={e => setDraft(d => ({ ...d, expectedClose: e.target.value || null }))} />
                 </div>
               </div>
             )}
+
+            <div className="border-t pt-3 space-y-2">
+              <Label className="text-xs flex items-center gap-1">
+                <MapPin className="h-3 w-3" /> Ubicación específica de esta LX
+              </Label>
+              <Input placeholder="Dirección (ej: Nave B6, oficina principal)"
+                value={draft.locationAddress || ""}
+                onChange={e => setDraft(d => ({ ...d, locationAddress: e.target.value }))} />
+              <Input placeholder="Enlace Google Maps (https://maps.app.goo.gl/...)"
+                value={draft.locationMapsUrl || ""}
+                onChange={e => setDraft(d => ({ ...d, locationMapsUrl: e.target.value }))} />
+              <p className="text-[11px] text-muted-foreground">
+                Déjalo vacío si quieres heredar la ubicación del cliente CxC.
+              </p>
+            </div>
 
             <div>
               <Label htmlFor="notes" className="text-xs">Notas</Label>
@@ -639,6 +785,13 @@ export default function KronosActivityTab({ clients }: Props) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BillingClientsManager
+        open={showBillingMgr}
+        onOpenChange={setShowBillingMgr}
+        onChanged={loadBillingClients}
+      />
+
     </div>
   );
 }

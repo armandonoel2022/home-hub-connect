@@ -1,23 +1,25 @@
 /**
- * Configuración persistente por cuenta de monitoreo (Kronos).
+ * Configuración persistente por LX (cuenta Kronos).
+ *
+ * Una LX (account code de 4+ dígitos en Kronos) puede pertenecer a un cliente
+ * facturable (billing-clients) o estar suelta. El estado operativo se rastrea
+ * con `lxStatus` (reemplaza al antiguo `manualStatus`).
  *
  * Documento por accountCode:
  *   {
- *     accountCode,           // PK natural ("0001", "1234", etc.)
- *     accountName,           // último nombre conocido (para referencia)
- *     kind: "regular" | "panic",  // panic = botón de pánico (no aplica apertura/cierre)
- *     manualStatus: "Activo" | "Inactivo" | "Sin notificaciones" |
- *                   "Dado de baja" | "Cancelado" | "Suspendido por falta de pago" | null
- *     expectedOpen: "HH:MM" | null,
- *     expectedClose: "HH:MM" | null,
- *     notes: string,
+ *     accountCode,
+ *     accountName,                 // último nombre visto en reportes Kronos
+ *     clientId,                    // BC-XXXX (FK a billing-clients) o null
+ *     kind: "regular" | "panic",   // panic = botón de pánico
+ *     lxStatus: "Activa" | "Prueba" | "Cancelada" | "Suspendida" |
+ *               "Dada de baja" | "Sin notificaciones" | "Inactiva" | null,
+ *     locationAddress, locationMapsUrl,
+ *     locationLat, locationLng,
+ *     expectedOpen, expectedClose, notes,
+ *     // compatibilidad histórica:
+ *     manualStatus (deprecated — el front lo lee solo si lxStatus no existe)
  *     updatedAt, updatedBy
  *   }
- *
- * Endpoints:
- *   GET    /api/monitoring-account-settings              -> lista completa
- *   PUT    /api/monitoring-account-settings/:accountCode -> upsert
- *   DELETE /api/monitoring-account-settings/:accountCode -> reset
  */
 const express = require('express');
 const { readData, writeData } = require('../config/database');
@@ -26,13 +28,32 @@ const auth = require('../middleware/auth');
 const FILE = 'monitoring_account_settings.json';
 const router = express.Router();
 
-const ALLOWED_STATUS = new Set([
+const ALLOWED_LX_STATUS = new Set([
+  'Activa', 'Prueba', 'Cancelada', 'Suspendida',
+  'Dada de baja', 'Sin notificaciones', 'Inactiva',
+]);
+// Legacy values that we still accept on write for back-compat
+const LEGACY_STATUS = new Set([
   'Activo', 'Inactivo', 'Sin notificaciones',
   'Dado de baja', 'Cancelado', 'Suspendido por falta de pago',
 ]);
+const LEGACY_TO_NEW = {
+  'Activo': 'Activa', 'Inactivo': 'Inactiva',
+  'Sin notificaciones': 'Sin notificaciones',
+  'Dado de baja': 'Dada de baja', 'Cancelado': 'Cancelada',
+  'Suspendido por falta de pago': 'Suspendida',
+};
 
 router.get('/', auth, (req, res) => {
-  res.json(readData(FILE));
+  const list = readData(FILE);
+  // Migración suave: si no tiene lxStatus pero tiene manualStatus legacy, exponer ambos
+  const migrated = list.map(item => {
+    if (!item.lxStatus && item.manualStatus && LEGACY_TO_NEW[item.manualStatus]) {
+      return { ...item, lxStatus: LEGACY_TO_NEW[item.manualStatus] };
+    }
+    return item;
+  });
+  res.json(migrated);
 });
 
 router.put('/:accountCode', auth, (req, res) => {
@@ -45,17 +66,33 @@ router.put('/:accountCode', auth, (req, res) => {
   const userLabel = req.user?.email || 'desconocido';
 
   const kind = body.kind === 'panic' ? 'panic' : 'regular';
-  const manualStatus = body.manualStatus && ALLOWED_STATUS.has(body.manualStatus)
-    ? body.manualStatus : null;
 
+  // Acepta lxStatus (nuevo) o manualStatus (legacy). Normaliza a lxStatus.
+  let lxStatus = null;
+  if (body.lxStatus && ALLOWED_LX_STATUS.has(body.lxStatus)) {
+    lxStatus = body.lxStatus;
+  } else if (body.manualStatus && LEGACY_STATUS.has(body.manualStatus)) {
+    lxStatus = LEGACY_TO_NEW[body.manualStatus];
+  } else if (body.lxStatus === null || body.manualStatus === null) {
+    lxStatus = null;
+  } else if (idx >= 0) {
+    lxStatus = items[idx].lxStatus || (items[idx].manualStatus ? LEGACY_TO_NEW[items[idx].manualStatus] : null);
+  }
+
+  const prev = idx >= 0 ? items[idx] : null;
   const doc = {
     accountCode: code,
-    accountName: body.accountName || (idx >= 0 ? items[idx].accountName : ''),
+    accountName: body.accountName ?? prev?.accountName ?? '',
+    clientId: body.clientId !== undefined ? (body.clientId || null) : (prev?.clientId ?? null),
     kind,
-    manualStatus,
-    expectedOpen: body.expectedOpen || null,
-    expectedClose: body.expectedClose || null,
-    notes: body.notes || '',
+    lxStatus,
+    locationAddress: body.locationAddress ?? prev?.locationAddress ?? '',
+    locationMapsUrl: body.locationMapsUrl ?? prev?.locationMapsUrl ?? '',
+    locationLat: body.locationLat ?? prev?.locationLat ?? null,
+    locationLng: body.locationLng ?? prev?.locationLng ?? null,
+    expectedOpen: body.expectedOpen ?? prev?.expectedOpen ?? null,
+    expectedClose: body.expectedClose ?? prev?.expectedClose ?? null,
+    notes: body.notes ?? prev?.notes ?? '',
     updatedAt: new Date().toISOString(),
     updatedBy: userLabel,
   };

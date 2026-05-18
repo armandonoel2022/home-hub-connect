@@ -675,17 +675,29 @@ export const monitoringReportsApi = {
   remove: (id: string) => apiFetch<void>(`/monitoring-reports/${id}`, { method: "DELETE" }),
 };
 
-// ─── Configuración persistente por cuenta de monitoreo Kronos ───
+// ─── Configuración persistente por LX (cuenta Kronos) ───
 export type MonitoringAccountKind = "regular" | "panic";
+/** Legacy. Mantener por compatibilidad de tipos en código existente. */
 export type MonitoringManualStatus =
   | "Activo" | "Inactivo" | "Sin notificaciones"
   | "Dado de baja" | "Cancelado" | "Suspendido por falta de pago";
+/** Estado actual de la LX. Reemplaza a manualStatus. */
+export type LxStatus =
+  | "Activa" | "Prueba" | "Cancelada" | "Suspendida"
+  | "Dada de baja" | "Sin notificaciones" | "Inactiva";
 
 export interface MonitoringAccountSetting {
   accountCode: string;
   accountName?: string;
+  clientId?: string | null;
   kind: MonitoringAccountKind;
-  manualStatus: MonitoringManualStatus | null;
+  lxStatus: LxStatus | null;
+  /** @deprecated usar lxStatus */
+  manualStatus?: MonitoringManualStatus | null;
+  locationAddress?: string;
+  locationMapsUrl?: string;
+  locationLat?: number | null;
+  locationLng?: number | null;
   expectedOpen: string | null;
   expectedClose: string | null;
   notes: string;
@@ -700,6 +712,37 @@ export const monitoringAccountSettingsApi = {
       { method: "PUT", body: JSON.stringify(data) }),
   remove: (accountCode: string) =>
     apiFetch<void>(`/monitoring-account-settings/${encodeURIComponent(accountCode)}`, { method: "DELETE" }),
+};
+
+// ─── Catálogo maestro de Clientes facturados (Cuentas por Cobrar) ───
+export interface BillingClient {
+  id: string;
+  code: string;
+  name: string;
+  contact?: string;
+  phone?: string;
+  email?: string;
+  locationAddress?: string;
+  locationMapsUrl?: string;
+  locationLat?: number | null;
+  locationLng?: number | null;
+  notes?: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+  updatedBy: string;
+}
+
+export const billingClientsApi = {
+  list: () => apiFetch<BillingClient[]>("/billing-clients"),
+  create: (data: Partial<BillingClient>) =>
+    apiFetch<BillingClient>("/billing-clients", { method: "POST", body: JSON.stringify(data) }),
+  update: (id: string, data: Partial<BillingClient>) =>
+    apiFetch<BillingClient>(`/billing-clients/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  remove: (id: string) => apiFetch<void>(`/billing-clients/${id}`, { method: "DELETE" }),
+  bulkImport: (items: Partial<BillingClient>[], mode: "upsert" | "replace" = "upsert") =>
+    apiFetch<{ ok: boolean; mode: string; created: number; updated: number; skipped: number; total: number }>(
+      "/billing-clients/bulk-import", { method: "POST", body: JSON.stringify({ items, mode }) }),
 };
 
 // ─── Reglas de rondas (punches) por cliente ───
