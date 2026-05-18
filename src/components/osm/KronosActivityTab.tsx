@@ -114,11 +114,13 @@ export default function KronosActivityTab({ clients }: Props) {
   const [search, setSearch] = useState("");
   const [filterCrit, setFilterCrit] = useState<FilterKey>("all");
   const [settings, setSettings] = useState<Record<string, MonitoringAccountSetting>>({});
+  const [billingClients, setBillingClients] = useState<BillingClient[]>([]);
   const [editing, setEditing] = useState<{ code: string; name: string } | null>(null);
   const [draft, setDraft] = useState<Partial<MonitoringAccountSetting>>({});
   const [history, setHistory] = useState<MonitoringReportMeta[]>([]);
   const [activeReportId, setActiveReportId] = useState<string | null>(null);
   const [reportMeta, setReportMeta] = useState<MonitoringReportMeta | null>(null);
+  const [showBillingMgr, setShowBillingMgr] = useState(false);
 
   const loadSettings = async () => {
     try {
@@ -128,6 +130,15 @@ export default function KronosActivityTab({ clients }: Props) {
       setSettings(m);
     } catch (e: any) {
       if (e.message !== "API_NOT_CONFIGURED") console.warn("Settings:", e.message);
+    }
+  };
+
+  const loadBillingClients = async () => {
+    try {
+      const list = await billingClientsApi.list();
+      setBillingClients(list);
+    } catch (e: any) {
+      if (e.message !== "API_NOT_CONFIGURED") console.warn("BillingClients:", e.message);
     }
   };
 
@@ -153,15 +164,36 @@ export default function KronosActivityTab({ clients }: Props) {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { loadSettings(); loadHistory(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { loadSettings(); loadBillingClients(); loadHistory(); /* eslint-disable-next-line */ }, []);
+
+  /** Sugerencia automática de cliente CxC para una LX sin vincular, basada en nombres. */
+  const suggestClient = (lxName: string): BillingClient | null => {
+    if (!lxName || billingClients.length === 0) return null;
+    let best: BillingClient | null = null;
+    let bestScore = 0;
+    billingClients.forEach(c => {
+      const s = simScore(lxName, c.name);
+      if (s > bestScore) { bestScore = s; best = c; }
+    });
+    return bestScore >= 0.5 ? best : null;
+  };
 
   const openEdit = (code: string, name: string) => {
     setEditing({ code, name });
     const cur = settings[code];
-    setDraft(cur ? { ...cur } : {
-      accountCode: code, accountName: name, kind: "regular", manualStatus: null,
-      expectedOpen: null, expectedClose: null, notes: "",
-    });
+    if (cur) {
+      setDraft({ ...cur });
+    } else {
+      const suggested = suggestClient(name);
+      setDraft({
+        accountCode: code, accountName: name, kind: "regular",
+        lxStatus: "Activa",
+        clientId: suggested?.id || null,
+        expectedOpen: null, expectedClose: null, notes: "",
+        locationAddress: "", locationMapsUrl: "",
+      });
+      if (suggested) toast.info(`Cliente sugerido: ${suggested.code} — ${suggested.name}`);
+    }
   };
 
   const saveEdit = async () => {
@@ -169,10 +201,13 @@ export default function KronosActivityTab({ clients }: Props) {
     try {
       const saved = await monitoringAccountSettingsApi.upsert(editing.code, {
         accountName: editing.name,
+        clientId: draft.clientId || null,
         kind: (draft.kind === "panic" ? "panic" : "regular"),
-        manualStatus: draft.manualStatus || null,
+        lxStatus: draft.lxStatus || null,
         expectedOpen: draft.expectedOpen || null,
         expectedClose: draft.expectedClose || null,
+        locationAddress: draft.locationAddress || "",
+        locationMapsUrl: draft.locationMapsUrl || "",
         notes: draft.notes || "",
       });
       setSettings(prev => ({ ...prev, [editing.code]: saved }));
@@ -211,6 +246,7 @@ export default function KronosActivityTab({ clients }: Props) {
       toast.error(`Error al procesar archivo: ${e.message}`);
     } finally { setLoading(false); }
   };
+
 
   const osmByCode = useMemo(() => {
     const m = new Map<string, OSMClient>();
