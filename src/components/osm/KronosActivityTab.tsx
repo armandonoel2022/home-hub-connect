@@ -535,10 +535,11 @@ export default function KronosActivityTab({ clients }: Props) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[80px]">Cuenta</TableHead>
-                    <TableHead>Nombre</TableHead>
+                    <TableHead className="w-[80px]">Cuenta LX</TableHead>
+                    <TableHead>Nombre LX</TableHead>
+                    <TableHead className="text-xs">Cliente CxC</TableHead>
                     <TableHead>Tipo</TableHead>
-                    <TableHead>Estado manual</TableHead>
+                    <TableHead>Estado LX</TableHead>
                     <TableHead className="text-right text-xs">Última señal</TableHead>
                     <TableHead className="text-center text-xs">Días</TableHead>
                     <TableHead className="text-xs">Apertura</TableHead>
@@ -553,11 +554,25 @@ export default function KronosActivityTab({ clients }: Props) {
                 </TableHeader>
                 <TableBody>
                   {filtered.length === 0 ? (
-                    <TableRow><TableCell colSpan={14} className="text-center text-muted-foreground py-8">Sin resultados</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={15} className="text-center text-muted-foreground py-8">Sin resultados</TableCell></TableRow>
                   ) : filtered.map(r => (
                     <TableRow key={r.accountCode} className={r.isPanic ? "bg-purple-500/5" : r.isMuted ? "opacity-60" : ""}>
                       <TableCell className="font-mono text-xs">{r.accountCode}</TableCell>
                       <TableCell className="font-medium text-sm">{r.osm?.businessName || r.accountName}</TableCell>
+                      <TableCell className="text-xs">
+                        {r.billingClient ? (
+                          <div className="flex flex-col">
+                            <span className="font-mono text-[10px] text-muted-foreground">{r.billingClient.code}</span>
+                            <span className="font-medium">{r.billingClient.name}</span>
+                          </div>
+                        ) : r.setting?.clientId ? (
+                          <Badge variant="outline" className="text-amber-400 border-amber-500/30">Cliente eliminado</Badge>
+                        ) : (
+                          <span className="text-muted-foreground italic flex items-center gap-1">
+                            <Link2 className="h-3 w-3" /> sin vincular
+                          </span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         {r.isPanic ? (
                           <Badge variant="outline" className="text-purple-400 border-purple-500/30">
@@ -566,12 +581,13 @@ export default function KronosActivityTab({ clients }: Props) {
                         ) : <span className="text-xs text-muted-foreground">Estándar</span>}
                       </TableCell>
                       <TableCell>
-                        {r.setting?.manualStatus ? (
-                          <Badge variant="outline" className={STATUS_COLOR[r.setting.manualStatus]}>
-                            {r.setting.manualStatus}
+                        {r.setting?.lxStatus ? (
+                          <Badge variant="outline" className={LX_STATUS_COLOR[r.setting.lxStatus]}>
+                            {r.setting.lxStatus}
                           </Badge>
                         ) : <span className="text-xs text-muted-foreground">—</span>}
                       </TableCell>
+
                       <TableCell className="text-right text-xs">{fmtDate(r.lastSignal)}</TableCell>
                       <TableCell className="text-center">
                         {r.daysSince === null ? (
