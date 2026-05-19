@@ -219,6 +219,7 @@ export function approveLoanByGerencia(
   gerenciaUserName: string,
   comment: string | undefined,
   rrhhUserIds: string[],
+  override?: { approvedAmount?: number; approvedTermMonths?: number; approvedInstallment?: number; overrideJustification?: string },
 ): HRRequest | null {
   const all = getAll();
   const req = all.find((r) => r.id === requestId);
@@ -231,6 +232,15 @@ export function approveLoanByGerencia(
     approved: true,
     comment,
   };
+  if (override && req.loanDetails) {
+    req.loanDetails = {
+      ...req.loanDetails,
+      approvedAmount: override.approvedAmount ?? req.loanDetails.amountRequested,
+      approvedTermMonths: override.approvedTermMonths ?? req.loanDetails.termMonths,
+      approvedInstallment: override.approvedInstallment ?? req.loanDetails.monthlyInstallment,
+      overrideJustification: override.overrideJustification || req.loanDetails.overrideJustification,
+    };
+  }
   req.status = "Pendiente Aplicación RRHH";
   save(all);
 
@@ -246,6 +256,7 @@ export function approveLoanByGerencia(
   );
   return req;
 }
+
 
 /** RRHH registra fecha de aplicación y cierra el préstamo. */
 export function applyLoan(
