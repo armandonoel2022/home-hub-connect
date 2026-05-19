@@ -79,11 +79,12 @@ function RoundBadge({ r }: { r: ExpectedRound }) {
 export default function PunchActivityTab() {
   const [rawReport, setRawReport] = useState<PunchParsedReport | null>(null);
   const [rules, setRules] = useState<PunchRule[]>([]);
+  const [settings, setSettings] = useState<Record<string, MonitoringAccountSetting>>({});
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState<MonitoringReportMeta[]>([]);
   const [activeReportId, setActiveReportId] = useState<string | null>(null);
   const [meta, setMeta] = useState<MonitoringReportMeta | null>(null);
-  const [filter, setFilter] = useState<"all" | "missed" | "partial" | "ok" | "no-rules">("all");
+  const [filter, setFilter] = useState<"all" | "missed" | "partial" | "ok" | "no-rules" | "baton">("all");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [rulesOpen, setRulesOpen] = useState(false);
 
@@ -92,6 +93,14 @@ export default function PunchActivityTab() {
   const loadRules = async () => {
     try { setRules(await punchRulesApi.list()); }
     catch (e: any) { if (e.message !== "API_NOT_CONFIGURED") console.warn("Reglas:", e.message); }
+  };
+  const loadSettings = async () => {
+    try {
+      const list = await monitoringAccountSettingsApi.list();
+      const m: Record<string, MonitoringAccountSetting> = {};
+      list.forEach(s => { m[s.accountCode] = s; });
+      setSettings(m);
+    } catch (e: any) { if (e.message !== "API_NOT_CONFIGURED") console.warn("Settings:", e.message); }
   };
 
   const loadHistory = async () => {
