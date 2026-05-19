@@ -213,6 +213,19 @@ const HRForms = () => {
     const isLoan = activeForm === "prestamos";
     let loanDetails: any = null;
     if (isLoan) {
+      const settingsPre = getLoanSettings();
+      if (!resolvedHireDate) {
+        toast({ title: "Falta fecha de ingreso", description: "No se pudo verificar la antigüedad del empleado. Contacta a RRHH para actualizar su fecha de ingreso.", variant: "destructive" });
+        return;
+      }
+      if (tenureMonths < settingsPre.minTenureMonths) {
+        toast({
+          title: "Antigüedad insuficiente",
+          description: `Se requieren al menos ${settingsPre.minTenureMonths} meses de antigüedad para solicitar un préstamo. Antigüedad actual: ${tenureMonths} mes${tenureMonths === 1 ? "" : "es"}.`,
+          variant: "destructive",
+        });
+        return;
+      }
       const amount = Number((formData["Monto Solicitado (RD$)"] || "").replace(/[^\d.]/g, ""));
       const termMonths = Number(formData["Plazo de Pago (meses)"]) || 0;
       const salary = Number(formData["Salario Mensual (RD$)"]) || findEmployeeSalary(effectiveRequester?.fullName || "");
@@ -789,7 +802,12 @@ const HRForms = () => {
                     {formConfig.find(f => f.key === activeForm)?.label}
                   </h2>
                   <p className="text-xs text-muted-foreground mt-1">Aprobación Virtual</p>
-                  {supervisor && (
+                  {activeForm === "prestamos" ? (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Será enviada a: <strong>{diliaApprover?.fullName || "Dilia Aguasvivas"}</strong> (RRHH)
+                      {gerenciaApprover && <> → luego a <strong>{gerenciaApprover.fullName}</strong> (Gerencia General)</>}
+                    </p>
+                  ) : supervisor && (
                     <p className="text-xs text-muted-foreground mt-1">
                       Será enviada a: <strong>{supervisor.fullName}</strong> ({supervisor.position})
                       {rrhhLeader && <> → luego a <strong>{rrhhLeader.fullName}</strong> (RRHH)</>}
@@ -815,9 +833,23 @@ const HRForms = () => {
                 </div>
 
                 <div className="mt-6 pt-4 border-t border-border">
-                  <Button className="w-full gap-2" onClick={handleVirtualSubmit}>
-                    <Send className="h-4 w-4" /> Enviar para Aprobación
-                  </Button>
+                  {(() => {
+                    const loanBlocked = activeForm === "prestamos" && (!resolvedHireDate || tenureMonths < getLoanSettings().minTenureMonths);
+                    return (
+                      <>
+                        {loanBlocked && (
+                          <div className="mb-3 rounded-lg p-3 border bg-amber-50 border-amber-200 text-amber-800 text-xs">
+                            {!resolvedHireDate
+                              ? "No se pudo verificar la fecha de ingreso del empleado. Solicita a RRHH actualizar el directorio antes de enviar."
+                              : `Antigüedad insuficiente: se requieren ${getLoanSettings().minTenureMonths} meses (actual: ${tenureMonths}). No es posible enviar la solicitud.`}
+                          </div>
+                        )}
+                        <Button className="w-full gap-2" onClick={handleVirtualSubmit} disabled={loanBlocked}>
+                          <Send className="h-4 w-4" /> Enviar para Aprobación
+                        </Button>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
@@ -1310,13 +1342,18 @@ function LoanForm({ userName, department, showSignature, hireDate, suggestedSala
     <div className="space-y-5">
       <div className={cn(
         "rounded-lg p-3 border text-sm",
-        meetsPolicy ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-amber-50 border-amber-200 text-amber-800",
+        meetsPolicy ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-red-50 border-red-300 text-red-800",
       )}>
         <p className="font-semibold">Política de préstamos</p>
         <p className="text-xs mt-1">
           Antigüedad mínima de <strong>{settings.minTenureMonths} meses</strong>. Antigüedad actual: <strong>{tenure.label}</strong>.
           Tasa anual vigente: <strong>{settings.annualInterestRatePct}%</strong>. Cuota máxima: <strong>1/6 del salario mensual</strong>.
         </p>
+        {!meetsPolicy && (
+          <p className="text-xs mt-2 font-semibold">
+            ⛔ No es posible enviar la solicitud — el empleado aún no cumple la antigüedad mínima requerida.
+          </p>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-4">
         <FormField label="Nombre del Empleado"><Input defaultValue={userName} readOnly /></FormField>
@@ -1327,10 +1364,26 @@ function LoanForm({ userName, department, showSignature, hireDate, suggestedSala
         <p className="text-xs text-muted-foreground mt-1">RRHH verificará este valor contra la nómina.</p>
       </FormField>
       {salary > 0 && (
-        <div className="text-xs bg-muted/40 border border-border rounded p-3 grid grid-cols-2 gap-2">
-          <div>Vacaciones acumuladas: <strong>RD${capacity.vacaciones.toLocaleString()}</strong></div>
-          <div>Salario 13 acumulado: <strong>RD${capacity.salario13.toLocaleString()}</strong></div>
-          <div className="col-span-2">Monto máx sugerido: <strong>RD${capacity.maxAvailable.toLocaleString()}</strong> · Cuota máx (1/6): <strong>RD${capacity.maxInstallment.toLocaleString()}</strong></div>
+        <div className="text-xs bg-muted/40 border border-border rounded p-3 space-y-2">
+          <p className="font-semibold text-foreground">Prestaciones acumuladas (Código de Trabajo R.D.)</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+            <div>
+              Vacaciones (Art. 177): <strong>RD${capacity.vacaciones.toLocaleString()}</strong>
+              <div className="text-muted-foreground">
+                {capacity.vacacionesDias} días × (salario / 23.83) — {capacity.anios >= 5 ? "18" : "14"} días/año proporcional.
+              </div>
+            </div>
+            <div>
+              Salario 13 (Art. 219): <strong>RD${capacity.salario13.toLocaleString()}</strong>
+              <div className="text-muted-foreground">
+                salario × {capacity.mesesEnAnio} meses transcurridos / 12.
+              </div>
+            </div>
+          </div>
+          <div className="pt-2 border-t border-border">
+            Monto máx sugerido: <strong>RD${capacity.maxAvailable.toLocaleString()}</strong> ·
+            Cuota máx (1/6 salario): <strong>RD${capacity.maxInstallment.toLocaleString()}</strong>
+          </div>
         </div>
       )}
       <div className="grid grid-cols-2 gap-4">
