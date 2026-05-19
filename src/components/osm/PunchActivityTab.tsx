@@ -170,9 +170,13 @@ export default function PunchActivityTab() {
     partial: report.clients.filter(c => c.compliance === "partial").length,
     missed: report.clients.filter(c => c.compliance === "missed").length,
     noRules: report.clients.filter(c => c.compliance === "no-rules").length,
+    baton: report.clients.filter(c => batonCodes.has(c.accountCode)).length,
   } : null;
 
-  const filtered = report ? report.clients.filter(c => filter === "all" || c.compliance === filter) : [];
+  const filtered = report ? report.clients.filter(c => {
+    if (filter === "baton") return batonCodes.has(c.accountCode);
+    return filter === "all" || c.compliance === filter;
+  }) : [];
 
   return (
     <div className="space-y-4">
