@@ -212,6 +212,82 @@ const HRPayrollReport = () => {
             </div>
           </div>
 
+          {/* Horas extras enviadas por líderes (PayrollExtras) */}
+          <div className="bg-card border border-border rounded-xl overflow-hidden mb-6">
+            <div className="px-4 py-3 bg-muted border-b border-border flex items-center justify-between">
+              <h2 className="text-sm font-heading font-bold text-card-foreground flex items-center gap-2">
+                <Clock className="h-4 w-4 text-gold" />
+                Horas extras / nocturnas / feriados / almuerzos enviados por líderes
+                {pendingExtras.length > 0 && (
+                  <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] bg-amber-500/15 text-amber-700">
+                    {pendingExtras.length} pendiente(s)
+                  </span>
+                )}
+              </h2>
+              {pendingExtras.length > 0 && (
+                <Button size="sm" onClick={approveAllPending} className="gap-1">
+                  <CheckCircle2 className="h-4 w-4" /> Aprobar todos
+                </Button>
+              )}
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="text-left px-3 py-2 font-semibold">Fecha</th>
+                    <th className="text-left px-3 py-2 font-semibold">Empleado</th>
+                    <th className="text-left px-3 py-2 font-semibold">Tipo</th>
+                    <th className="text-right px-3 py-2 font-semibold">Cantidad</th>
+                    <th className="text-left px-3 py-2 font-semibold">Registrado por</th>
+                    <th className="text-left px-3 py-2 font-semibold">Descripción</th>
+                    <th className="text-left px-3 py-2 font-semibold">Estado</th>
+                    <th className="text-right px-3 py-2 font-semibold">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {extras.length === 0 ? (
+                    <tr><td colSpan={8} className="text-center py-6 text-muted-foreground">Sin registros este período</td></tr>
+                  ) : extras.map((e) => (
+                    <tr key={e.id} className="hover:bg-muted/30">
+                      <td className="px-3 py-2 font-mono text-xs">{e.date}</td>
+                      <td className="px-3 py-2 font-medium">{e.employeeName}</td>
+                      <td className="px-3 py-2">{EXTRA_TYPE_LABEL[e.type]}</td>
+                      <td className="px-3 py-2 text-right font-mono">
+                        {e.type === "meal" ? `RD$ ${e.amount}` : e.type === "holiday" ? `${e.days} día(s)` : `${e.hours}h`}
+                      </td>
+                      <td className="px-3 py-2 text-muted-foreground text-xs">{e.registeredBy}</td>
+                      <td className="px-3 py-2 text-muted-foreground text-xs">{e.description || "—"}</td>
+                      <td className="px-3 py-2">
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                          e.status === "Procesada" ? "bg-emerald-500/10 text-emerald-700" : "bg-amber-500/10 text-amber-700"
+                        }`}>{e.status}</span>
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        {e.status === "Pendiente RRHH" ? (
+                          <div className="flex justify-end gap-1">
+                            <Button size="sm" variant="outline" className="h-7 gap-1" onClick={() => approveExtra(e.id)}>
+                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> Aprobar
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => rejectExtra(e.id)}>
+                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground">Incluida en nómina</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {processedExtras.length > 0 && (
+              <div className="px-4 py-2 text-[11px] text-muted-foreground bg-muted/40 border-t border-border">
+                {processedExtras.length} registro(s) ya procesado(s) este período.
+              </div>
+            )}
+          </div>
+
           {/* Resumen consolidado */}
           <div className="bg-card border border-border rounded-xl overflow-hidden mb-6">
             <div className="px-4 py-3 bg-muted border-b border-border">
