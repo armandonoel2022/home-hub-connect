@@ -789,7 +789,12 @@ const HRForms = () => {
                     {formConfig.find(f => f.key === activeForm)?.label}
                   </h2>
                   <p className="text-xs text-muted-foreground mt-1">Aprobación Virtual</p>
-                  {supervisor && (
+                  {activeForm === "prestamos" ? (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Será enviada a: <strong>{diliaApprover?.fullName || "Dilia Aguasvivas"}</strong> (RRHH)
+                      {gerenciaApprover && <> → luego a <strong>{gerenciaApprover.fullName}</strong> (Gerencia General)</>}
+                    </p>
+                  ) : supervisor && (
                     <p className="text-xs text-muted-foreground mt-1">
                       Será enviada a: <strong>{supervisor.fullName}</strong> ({supervisor.position})
                       {rrhhLeader && <> → luego a <strong>{rrhhLeader.fullName}</strong> (RRHH)</>}
