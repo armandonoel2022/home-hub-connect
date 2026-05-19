@@ -175,11 +175,13 @@ const HRForms = () => {
   const beneficiary = beneficiaryId ? allUsers.find(u => u.id === beneficiaryId) : null;
   const effectiveRequester = beneficiary || user;
 
+  // Hire date resuelto: usa el del usuario o, si falta, busca en el directorio de empleados
+  const resolvedHireDate = effectiveRequester?.hireDate || findEmployeeHireDate(effectiveRequester?.fullName || "") || null;
+
   // Compute tenure of the effective requester (puede ser empleado beneficiario)
   const tenureMonths = (() => {
-    const hd = effectiveRequester?.hireDate;
-    if (!hd) return 0;
-    const hire = new Date(hd);
+    if (!resolvedHireDate) return 0;
+    const hire = new Date(resolvedHireDate);
     const now = new Date();
     return (now.getFullYear() - hire.getFullYear()) * 12 + (now.getMonth() - hire.getMonth());
   })();
