@@ -811,7 +811,7 @@ const HRForms = () => {
                   </div>
                 )}
                 <div ref={virtualFormRef}>
-                  <RenderForm formType={activeForm} userName={effectiveRequester?.fullName || ""} department={effectiveRequester?.department || ""} showSignature={false} />
+                  <RenderForm formType={activeForm} userName={effectiveRequester?.fullName || ""} department={effectiveRequester?.department || ""} showSignature={false} hireDate={resolvedHireDate} suggestedSalary={findEmployeeSalary(effectiveRequester?.fullName || "")} />
                 </div>
 
                 <div className="mt-6 pt-4 border-t border-border">
