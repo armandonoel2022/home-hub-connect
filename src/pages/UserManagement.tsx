@@ -530,19 +530,21 @@ const UserManagementPage = () => {
           const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
           const today = new Date();
           const todayMMDD = `${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
-          const grouped: Record<number, Array<{ u: IntranetUser; mmdd: string; day: number }>> = {};
-          activeUsers.forEach((u) => {
-            const raw = (u.birthday || "").trim();
+          const grouped: Record<number, Array<{ id: string; fullName: string; department: string; mmdd: string; day: number }>> = {};
+          hrEmployees.forEach((e) => {
+            const raw = (e.birthDate || e.birthdayMMDD || e.birthday || "").trim();
             if (!raw) return;
-            // Soporta "MM-DD" o "YYYY-MM-DD"
-            const parts = raw.split("-");
-            let mm: number, dd: number;
-            if (parts.length === 3) { mm = +parts[1]; dd = +parts[2]; }
-            else if (parts.length === 2) { mm = +parts[0]; dd = +parts[1]; }
-            else return;
-            if (!mm || !dd) return;
+            // Soporta "MM-DD", "YYYY-MM-DD", "DD/MM/YYYY"
+            let mm: number | null = null, dd: number | null = null;
+            const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            const mmddOnly = raw.match(/^(\d{2})-(\d{2})$/);
+            const dmy = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+            if (iso) { mm = +iso[2]; dd = +iso[3]; }
+            else if (mmddOnly) { mm = +mmddOnly[1]; dd = +mmddOnly[2]; }
+            else if (dmy) { dd = +dmy[1]; mm = +dmy[2]; }
+            if (!mm || !dd || mm < 1 || mm > 12 || dd < 1 || dd > 31) return;
             const mmdd = `${String(mm).padStart(2,"0")}-${String(dd).padStart(2,"0")}`;
-            (grouped[mm] ||= []).push({ u, mmdd, day: dd });
+            (grouped[mm] ||= []).push({ id: e.employeeCode, fullName: e.fullName, department: e.department, mmdd, day: dd });
           });
           Object.values(grouped).forEach(arr => arr.sort((a,b) => a.day - b.day));
           const total = Object.values(grouped).reduce((s, a) => s + a.length, 0);
@@ -553,7 +555,9 @@ const UserManagementPage = () => {
                   <div className="flex items-center gap-2">
                     <CalendarDays className="h-5 w-5 text-gold" />
                     <h2 className="font-heading font-bold text-base text-card-foreground">Cumpleaños por mes</h2>
-                    <span className="text-xs text-muted-foreground">({total} empleados con fecha registrada)</span>
+                    <span className="text-xs text-muted-foreground">
+                      {loadingHrEmployees ? "Cargando…" : `(${total} de ${hrEmployees.length} empleados activos con fecha registrada)`}
+                    </span>
                   </div>
                   <button onClick={() => setShowBirthdayList(false)} className="p-1.5 rounded-lg hover:bg-muted">
                     <X className="h-5 w-5 text-muted-foreground" />
