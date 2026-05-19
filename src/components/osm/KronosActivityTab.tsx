@@ -361,30 +361,44 @@ export default function KronosActivityTab({ clients }: Props) {
   }, [report, clients, osmByCode, settings, billingClientById]);
 
   const stats = useMemo(() => {
-    const operational = combined.filter(r => !r.noOpenClose && !r.isMuted);
+    const isInactiveCancelled = (r: CombinedRow) => !!r.setting?.lxStatus && INACTIVE_CANCELLED.has(r.setting.lxStatus);
+    const isDeleted = (r: CombinedRow) => !!r.setting?.lxStatus && DELETED_STATUSES.has(r.setting.lxStatus);
+    const visible = combined.filter(r => !isInactiveCancelled(r) && !isDeleted(r));
+    const operational = visible.filter(r => !r.noOpenClose && !r.isMuted);
     return {
-      total: combined.length,
+      total: visible.length,
       alta: operational.filter(r => r.criticidad === "alta").length,
       media: operational.filter(r => r.criticidad === "media").length,
       baja: operational.filter(r => r.criticidad === "baja").length,
       ok: operational.filter(r => r.criticidad === "ok").length,
-      panic: combined.filter(r => r.isPanic).length,
-      baton: combined.filter(r => r.isBaton).length,
-      muted: combined.filter(r => r.isMuted && !r.noOpenClose).length,
-      discrepancias: combined.filter(r => r.discrepancia).length,
+      panic: visible.filter(r => r.isPanic).length,
+      baton: visible.filter(r => r.isBaton).length,
+      muted: visible.filter(r => r.isMuted && !r.noOpenClose).length,
+      inactiveCancelled: combined.filter(isInactiveCancelled).length,
+      deleted: combined.filter(isDeleted).length,
+      discrepancias: visible.filter(r => r.discrepancia).length,
     };
   }, [combined]);
 
   const filtered = useMemo(() => {
+    const isInactiveCancelled = (r: CombinedRow) => !!r.setting?.lxStatus && INACTIVE_CANCELLED.has(r.setting.lxStatus);
+    const isDeleted = (r: CombinedRow) => !!r.setting?.lxStatus && DELETED_STATUSES.has(r.setting.lxStatus);
+
     return combined.filter(r => {
-      if (filterCrit === "panic") { if (!r.isPanic) return false; }
-      else if (filterCrit === "baton") { if (!r.isBaton) return false; }
-      else if (filterCrit === "muted") { if (!r.isMuted || r.noOpenClose) return false; }
-      else if (filterCrit === "discrepancia") { if (!r.discrepancia) return false; }
-      else if (filterCrit === "unlinked") { if (r.setting?.clientId) return false; }
-      else if (filterCrit !== "all") {
-        if (r.noOpenClose || r.isMuted) return false;
-        if (r.criticidad !== filterCrit) return false;
+      if (filterCrit === "inactive-cancelled") { if (!isInactiveCancelled(r)) return false; }
+      else if (filterCrit === "deleted") { if (!isDeleted(r)) return false; }
+      else {
+        // Por defecto sacamos las inactivas/canceladas/dadas de baja del resto de vistas
+        if (isInactiveCancelled(r) || isDeleted(r)) return false;
+        if (filterCrit === "panic") { if (!r.isPanic) return false; }
+        else if (filterCrit === "baton") { if (!r.isBaton) return false; }
+        else if (filterCrit === "muted") { if (!r.isMuted || r.noOpenClose) return false; }
+        else if (filterCrit === "discrepancia") { if (!r.discrepancia) return false; }
+        else if (filterCrit === "unlinked") { if (r.setting?.clientId) return false; }
+        else if (filterCrit !== "all") {
+          if (r.noOpenClose || r.isMuted) return false;
+          if (r.criticidad !== filterCrit) return false;
+        }
       }
       if (search.trim()) {
         const q = search.toLowerCase();
