@@ -229,7 +229,7 @@ const HRForms = () => {
         return;
       }
       const settings = getLoanSettings();
-      const capacity = calcLoanCapacity(salary, effectiveRequester?.hireDate, settings.maxInstallmentFraction);
+      const capacity = calcLoanCapacity(salary, resolvedHireDate, settings.maxInstallmentFraction);
       const installment = calcMonthlyInstallment(amount, termMonths, settings.annualInterestRatePct);
       if (installment > capacity.maxInstallment && capacity.maxInstallment > 0) {
         toast({
