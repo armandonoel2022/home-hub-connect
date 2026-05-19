@@ -136,17 +136,45 @@ const HRForms = () => {
   const supervisor = allUsers.find((u) => u.id === user?.reportsTo);
   const rrhhLeader = allUsers.find((u) => u.department === "Recursos Humanos" && u.isDepartmentLeader);
   const rrhhUserIds = allUsers.filter((u) => u.department === "Recursos Humanos").map((u) => u.id);
-  const adminApprover = allUsers.find((u) => u.fullName === "Chrisnel Fabian");
+  // Dilia Aguasvivas — destinataria directa de préstamos
+  const diliaApprover = allUsers.find((u) => u.fullName?.toLowerCase().includes("dilia")) || rrhhLeader;
   const gerenciaApprover = allUsers.find((u) => u.fullName === "Aurelio Pérez");
   const isRRHH = user?.department === "Recursos Humanos";
-  const isAdminApprover = user?.id === adminApprover?.id;
   const isGerenciaApprover = user?.id === gerenciaApprover?.id;
   const isSupervisor = user?.isDepartmentLeader === true || user?.isAdmin === true;
 
-  // Compute employee tenure in months for loan validation
+  // ── Employees seed (para lookup de salario al solicitar préstamo) ──
+  const [employees, setEmployees] = useState<Array<{ employeeCode: string; fullName: string; salary: number; department: string; status?: string }>>([]);
+  useEffect(() => {
+    fetch("/data/employees_seed.json").then(r => r.ok ? r.json() : []).then(setEmployees).catch(() => {});
+  }, []);
+
+  function findEmployeeSalary(name: string): number {
+    if (!name) return 0;
+    const norm = name.trim().toLowerCase();
+    const match = employees.find(e =>
+      e.fullName.toLowerCase().includes(norm) ||
+      norm.includes(e.fullName.toLowerCase().split(" ")[0])
+    );
+    return match?.salary || 0;
+  }
+
+  // Beneficiary (cuando un líder solicita para alguien de su área)
+  const [beneficiaryId, setBeneficiaryId] = useState<string>("");
+  const teamMembers = useMemo(() =>
+    isSupervisor && user
+      ? allUsers.filter(u => u.id !== user.id && (u.reportsTo === user.id || (user.isAdmin && u.department === user.department)))
+      : [],
+    [allUsers, user, isSupervisor]
+  );
+  const beneficiary = beneficiaryId ? allUsers.find(u => u.id === beneficiaryId) : null;
+  const effectiveRequester = beneficiary || user;
+
+  // Compute tenure of the effective requester (puede ser empleado beneficiario)
   const tenureMonths = (() => {
-    if (!user?.hireDate) return 0;
-    const hire = new Date(user.hireDate);
+    const hd = effectiveRequester?.hireDate;
+    if (!hd) return 0;
+    const hire = new Date(hd);
     const now = new Date();
     return (now.getFullYear() - hire.getFullYear()) * 12 + (now.getMonth() - hire.getMonth());
   })();
@@ -154,15 +182,13 @@ const HRForms = () => {
   const handleVirtualSubmit = () => {
     if (!user || !activeForm || !virtualFormRef.current) return;
     const formEl = virtualFormRef.current;
-    
-    // Collect all input/textarea/select values
+
     const formData: Record<string, string> = {};
     formEl.querySelectorAll("input, textarea").forEach((el) => {
       const input = el as HTMLInputElement | HTMLTextAreaElement;
       const label = input.closest(".space-y-1\\.5")?.querySelector("label")?.textContent || "";
       if (label) formData[label] = input.value;
     });
-    // Also collect date picker button text
     formEl.querySelectorAll("button[data-state]").forEach((el) => {
       const btn = el as HTMLButtonElement;
       const label = btn.closest(".space-y-1\\.5")?.querySelector("label")?.textContent || "";
@@ -170,7 +196,6 @@ const HRForms = () => {
       if (label && text && text !== "Seleccionar fecha") formData[label] = text;
     });
 
-    // Validate required dates for vacation
     if (activeForm === "vacaciones") {
       if (!formData["Fecha de Inicio"] || !formData["Fecha de Fin"]) {
         toast({ title: "Campos requeridos", description: "Debe seleccionar la fecha de inicio y fin de las vacaciones.", variant: "destructive" });
@@ -178,21 +203,58 @@ const HRForms = () => {
       }
     }
 
-    // Loan requests: validate amount and skip supervisor (goes straight to RRHH)
     const isLoan = activeForm === "prestamos";
+    let loanDetails: any = null;
     if (isLoan) {
       const amount = Number((formData["Monto Solicitado (RD$)"] || "").replace(/[^\d.]/g, ""));
+      const termMonths = Number(formData["Plazo de Pago (meses)"]) || 0;
+      const salary = Number(formData["Salario Mensual (RD$)"]) || findEmployeeSalary(effectiveRequester?.fullName || "");
       if (!amount || amount <= 0) {
         toast({ title: "Monto requerido", description: "Indica el monto del préstamo solicitado.", variant: "destructive" });
+        return;
+      }
+      if (!termMonths || termMonths <= 0) {
+        toast({ title: "Plazo requerido", description: "Indica el plazo en meses.", variant: "destructive" });
         return;
       }
       if (!formData["Motivo del Préstamo"] || !formData["Motivo del Préstamo"].trim()) {
         toast({ title: "Motivo requerido", description: "Describe el motivo del préstamo.", variant: "destructive" });
         return;
       }
+      const settings = getLoanSettings();
+      const capacity = calcLoanCapacity(salary, effectiveRequester?.hireDate, settings.maxInstallmentFraction);
+      const installment = calcMonthlyInstallment(amount, termMonths, settings.annualInterestRatePct);
+      if (installment > capacity.maxInstallment && capacity.maxInstallment > 0) {
+        toast({
+          title: "Cuota excede 1/6 del salario",
+          description: `Cuota calculada RD$${installment.toLocaleString()} > máximo RD$${capacity.maxInstallment.toLocaleString()}. Ajusta el plazo o el monto.`,
+          variant: "destructive",
+        });
+        return;
+      }
+      const overPolicy = amount > capacity.maxAvailable;
+      if (overPolicy && !formData["Justificación de excepción"]?.trim()) {
+        toast({
+          title: "Excepción requiere justificación",
+          description: `El monto supera el máximo sugerido (RD$${capacity.maxAvailable.toLocaleString()}). Justifica la excepción para que Aurelio la evalúe.`,
+          variant: "destructive",
+        });
+        return;
+      }
+      loanDetails = {
+        monthlySalary: salary,
+        amountRequested: amount,
+        termMonths,
+        annualInterestRatePct: settings.annualInterestRatePct,
+        monthlyInstallment: installment,
+        calculatedMaxAvailable: capacity.maxAvailable,
+        maxInstallment: capacity.maxInstallment,
+        isOverPolicy: overPolicy,
+        overrideJustification: formData["Justificación de excepción"] || undefined,
+      };
     }
 
-    if (!isLoan && !supervisor && !user.isAdmin) {
+    if (!isLoan && !supervisor && !user.isAdmin && !beneficiary) {
       toast({ title: "Error", description: "No se encontró un supervisor asignado. Contacte a RRHH.", variant: "destructive" });
       return;
     }
@@ -201,41 +263,51 @@ const HRForms = () => {
       id: generateRequestId(),
       formType: activeForm as HRFormType,
       status: isLoan ? "Pendiente RRHH" : "Pendiente Supervisor",
-      requestedBy: user.id,
-      requestedByName: user.fullName,
-      department: user.department,
+      requestedBy: effectiveRequester!.id,
+      requestedByName: effectiveRequester!.fullName,
+      department: effectiveRequester!.department,
       requestedAt: new Date().toISOString(),
       formData: {
         ...formData,
-        ...(isLoan && user.hireDate
-          ? { "Fecha de ingreso": format(new Date(user.hireDate), "dd/MM/yyyy"), "Antigüedad (meses)": String(tenureMonths) }
+        ...(isLoan && effectiveRequester?.hireDate
+          ? { "Fecha de ingreso": format(new Date(effectiveRequester.hireDate), "dd/MM/yyyy"), "Antigüedad (meses)": String(tenureMonths) }
           : {}),
+        ...(beneficiary ? { "Solicitado por (líder)": user.fullName } : {}),
       },
-      supervisorId: isLoan ? "" : (supervisor?.id || rrhhLeader?.id || ""),
-      supervisorName: isLoan ? "—" : (supervisor?.fullName || rrhhLeader?.fullName || "N/A"),
+      supervisorId: isLoan ? (diliaApprover?.id || "") : (supervisor?.id || rrhhLeader?.id || ""),
+      supervisorName: isLoan ? (diliaApprover?.fullName || "RRHH") : (supervisor?.fullName || rrhhLeader?.fullName || "N/A"),
       supervisorApproval: null,
       rrhhApproval: null,
-      adminApproval: null,
       gerenciaApproval: null,
       loanApplyDate: null,
       loanApplyComment: null,
+      loanDetails,
+      beneficiaryId: beneficiary?.id || null,
+      beneficiaryName: beneficiary?.fullName || null,
+      requestedOnBehalf: !!beneficiary,
       rejectionReason: null,
       rejectedBy: null,
       rejectedAt: null,
     };
 
-    createHRRequest(request, isLoan ? rrhhUserIds : []);
+    // Loans go directly to Dilia (RRHH). Notify her specifically + RRHH team for visibility.
+    const notifyIds = isLoan
+      ? [diliaApprover?.id, ...rrhhUserIds].filter(Boolean) as string[]
+      : [];
+    createHRRequest(request, notifyIds);
     setRefreshKey((k) => k + 1);
     toast({
       title: "Solicitud Enviada",
       description: isLoan
-        ? `Tu solicitud de préstamo fue enviada a Recursos Humanos para revisión.`
+        ? `Solicitud de préstamo enviada a ${diliaApprover?.fullName || "RRHH"} para revisión.`
         : `Tu solicitud de ${formConfig.find(f => f.key === activeForm)?.label} fue enviada a ${request.supervisorName} para aprobación.`,
     });
+    setBeneficiaryId("");
     setActiveForm(null);
     setFormMode(null);
     setActiveView("my-requests");
   };
+
 
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
