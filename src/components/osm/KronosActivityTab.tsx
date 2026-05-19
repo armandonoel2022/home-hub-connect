@@ -582,7 +582,11 @@ export default function KronosActivityTab({ clients }: Props) {
                   {filtered.length === 0 ? (
                     <TableRow><TableCell colSpan={15} className="text-center text-muted-foreground py-8">Sin resultados</TableCell></TableRow>
                   ) : filtered.map(r => (
-                    <TableRow key={r.accountCode} className={r.isPanic ? "bg-purple-500/5" : r.isMuted ? "opacity-60" : ""}>
+                    <TableRow key={r.accountCode} className={
+                      r.isPanic ? "bg-purple-500/5"
+                      : r.isBaton ? "bg-cyan-500/5"
+                      : r.isMuted ? "opacity-60" : ""
+                    }>
                       <TableCell className="font-mono text-xs">{r.accountCode}</TableCell>
                       <TableCell className="font-medium text-sm">{r.osm?.businessName || r.accountName}</TableCell>
                       <TableCell className="text-xs">
@@ -600,7 +604,19 @@ export default function KronosActivityTab({ clients }: Props) {
                         )}
                       </TableCell>
                       <TableCell>
-                        {r.isPanic ? (
+                        {r.setting?.serviceType ? (
+                          <div className="flex flex-col gap-0.5">
+                            <Badge variant="outline" className={SERVICE_COLOR[r.setting.serviceType]}>
+                              {r.setting.serviceType === "Botón de pánico" && <Siren className="h-3 w-3 mr-1" />}
+                              {r.setting.serviceType}
+                            </Badge>
+                            {(r.setting.commType || r.setting.brand) && (
+                              <span className="text-[10px] text-muted-foreground">
+                                {[r.setting.commType, r.setting.brand].filter(Boolean).join(" · ")}
+                              </span>
+                            )}
+                          </div>
+                        ) : r.isPanic ? (
                           <Badge variant="outline" className="text-purple-400 border-purple-500/30">
                             <Siren className="h-3 w-3 mr-1" /> Pánico
                           </Badge>
@@ -620,7 +636,7 @@ export default function KronosActivityTab({ clients }: Props) {
                           <Badge variant="outline" className="text-red-400 border-red-500/30">s/señal</Badge>
                         ) : (
                           <span className={`font-bold text-sm ${
-                            r.isPanic || r.isMuted ? "text-muted-foreground"
+                            r.noOpenClose || r.isMuted ? "text-muted-foreground"
                             : r.daysSince >= 3 ? "text-red-400"
                             : r.daysSince === 2 ? "text-amber-400"
                             : r.daysSince === 1 ? "text-blue-400" : "text-emerald-400"
@@ -628,15 +644,15 @@ export default function KronosActivityTab({ clients }: Props) {
                         )}
                       </TableCell>
                       <TableCell className="text-xs whitespace-nowrap">
-                        {r.isPanic ? <span className="text-muted-foreground">N/A</span>
+                        {r.noOpenClose ? <span className="text-muted-foreground">N/A</span>
                           : r.lastOpen ? fmtDate(r.lastOpen) : <span className="text-amber-400">—</span>}
                       </TableCell>
                       <TableCell className="text-xs whitespace-nowrap">
-                        {r.isPanic ? <span className="text-muted-foreground">N/A</span>
+                        {r.noOpenClose ? <span className="text-muted-foreground">N/A</span>
                           : r.lastClose ? fmtDate(r.lastClose) : <span className="text-amber-400">—</span>}
                       </TableCell>
                       <TableCell className="text-xs">
-                        {r.isPanic ? "—"
+                        {r.noOpenClose ? "—"
                           : r.sameDayCycle ? <Badge variant="outline" className="text-emerald-400 border-emerald-500/30">A↔C</Badge>
                           : r.lastOpen && !r.lastClose ? <Badge variant="outline" className="text-amber-400 border-amber-500/30">Sin cierre</Badge>
                           : !r.lastOpen && r.lastClose ? <Badge variant="outline" className="text-amber-400 border-amber-500/30">Sin apertura</Badge>
@@ -651,6 +667,7 @@ export default function KronosActivityTab({ clients }: Props) {
                       </TableCell>
                       <TableCell>
                         {r.isPanic ? <Badge variant="outline" className="text-purple-400 border-purple-500/30">N/A</Badge>
+                          : r.isBaton ? <Badge variant="outline" className="text-cyan-400 border-cyan-500/30">→ Punches</Badge>
                           : r.isMuted ? <Badge variant="outline" className="text-muted-foreground">Silenciada</Badge>
                           : r.criticidad === "ok" ? <Badge variant="outline" className="text-emerald-400 border-emerald-500/30">Al día</Badge>
                           : <Badge variant="outline" className={CRIT_COLOR[r.criticidad as CriticidadInactividad]}>{CRIT_LABEL[r.criticidad as CriticidadInactividad]}</Badge>}
