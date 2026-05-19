@@ -125,7 +125,14 @@ export default function PunchActivityTab() {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { loadRules(); loadHistory(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { loadRules(); loadSettings(); loadHistory(); /* eslint-disable-next-line */ }, []);
+
+  /** Códigos de cuenta marcados como Bastón en Actividad Kronos */
+  const batonCodes = useMemo(() => {
+    const s = new Set<string>();
+    Object.values(settings).forEach(st => { if (st.serviceType === "Bastón") s.add(st.accountCode); });
+    return s;
+  }, [settings]);
 
   // Reevaluar cuando cambien las reglas o el reporte
   const report = useMemo(() => rawReport ? evaluatePunchReport(rawReport, rules) : null, [rawReport, rules]);
