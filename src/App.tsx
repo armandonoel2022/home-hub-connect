@@ -64,11 +64,15 @@ function ProtectedRoutes() {
   const { user, isLoading, activeUsers } = useAuth();
   const chatCtx = useChatContextSafe();
   const [employees, setEmployees] = React.useState<any[]>([]);
+  const [now, setNow] = React.useState(() => new Date());
 
   React.useEffect(() => {
     import("@/lib/api").then(({ employeesApi }) => {
       employeesApi.getAll().then(setEmployees).catch(() => {});
     });
+    // Re-render cada minuto para que la hora del overlay automático se active
+    const t = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(t);
   }, []);
 
   if (isLoading) {
@@ -86,8 +90,15 @@ function ProtectedRoutes() {
     return <Navigate to="/login" replace />;
   }
 
-  const today = new Date();
+  const today = now;
   const todayMMDD = `${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+  // Hora configurable a partir de la cual aparece el overlay automático (HH:MM, default 08:00)
+  const autoTime = (typeof window !== "undefined" && localStorage.getItem("safeone_bday_auto_time")) || "08:00";
+  const [autoH, autoM] = autoTime.split(":").map((n) => parseInt(n, 10) || 0);
+  const minutesNow = today.getHours() * 60 + today.getMinutes();
+  const minutesTarget = autoH * 60 + autoM;
+  const timeReached = minutesNow >= minutesTarget;
 
   // Cumpleaños desde usuarios con campo `birthday` (MM-DD) y empleados del seed (birthDate ISO)
   const fromUsers = (activeUsers || []).filter((u) => u.birthday === todayMMDD);
@@ -106,7 +117,7 @@ function ProtectedRoutes() {
       isAdmin: false,
       extension: "",
     }));
-  const birthdayUsers = [...fromUsers, ...fromEmployees];
+  const birthdayUsers = timeReached ? [...fromUsers, ...fromEmployees] : [];
 
   return (
     <>

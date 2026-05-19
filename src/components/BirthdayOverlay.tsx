@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { X, PartyPopper, Cake, Download, Send } from "lucide-react";
 import html2canvas from "html2canvas";
 import { sendBrowserNotification } from "@/lib/windowsNotifications";
@@ -13,88 +13,115 @@ interface BirthdayOverlayProps {
 
 const DISMISS_KEY_PREFIX = "safeone_bday_dismissed_";
 
-function getTodayKey(): string {
+function todayStamp(): string {
   const d = new Date();
-  return `${DISMISS_KEY_PREFIX}${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function getDayKey(): string {
+  return `${DISMISS_KEY_PREFIX}${todayStamp()}`;
+}
+
+function loadDismissedSet(): Set<string> {
+  try {
+    const raw = localStorage.getItem(getDayKey());
+    if (!raw) return new Set();
+    if (raw === "true") return new Set(["__all__"]); // legacy
+    const arr = JSON.parse(raw);
+    return new Set(Array.isArray(arr) ? arr : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveDismissedSet(set: Set<string>) {
+  localStorage.setItem(getDayKey(), JSON.stringify([...set]));
 }
 
 function cleanOldKeys() {
-  const todayKey = getTodayKey();
+  const today = getDayKey();
   for (let i = localStorage.length - 1; i >= 0; i--) {
     const key = localStorage.key(i);
-    if (key && key.startsWith(DISMISS_KEY_PREFIX) && key !== todayKey) {
+    if (key && key.startsWith(DISMISS_KEY_PREFIX) && key !== today) {
       localStorage.removeItem(key);
     }
   }
 }
 
 const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest, onSendCongrats }: BirthdayOverlayProps) => {
-  const [visible, setVisible] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [downloading, setDownloading] = useState(false);
   const [sent, setSent] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const notificationSentRef = useRef(false);
 
+  // En modo test mostramos todos (uno solo o lista pasada por el caller).
+  // En modo real, mostramos uno a la vez los que no han sido descartados hoy.
+  const queue = useMemo(() => {
+    if (isTest) return birthdayUsers;
+    return birthdayUsers.filter((u) => !dismissedIds.has(u.id));
+  }, [birthdayUsers, dismissedIds, isTest]);
+
   useEffect(() => {
     if (isTest) {
-      setVisible(true);
-      setDismissed(false);
+      setCurrentIdx(0);
       setSent(false);
       return;
     }
-
     if (birthdayUsers.length === 0) return;
-
     cleanOldKeys();
-    const alreadyDismissed = localStorage.getItem(getTodayKey()) === "true";
+    setDismissedIds(loadDismissedSet());
+  }, [birthdayUsers, isTest]);
 
-    if (alreadyDismissed) {
-      setDismissed(true);
-      return;
+  useEffect(() => {
+    if (isTest || queue.length === 0) return;
+    if (notificationSentRef.current) return;
+    notificationSentRef.current = true;
+    const nativeKey = `safeone_bday_notified_${todayStamp()}`;
+    if (!localStorage.getItem(nativeKey)) {
+      localStorage.setItem(nativeKey, "true");
+      const names = birthdayUsers.map((u) => u.fullName);
+      const title = birthdayUsers.length === 1
+        ? `🎂 ¡Hoy cumple años ${names[0]}!`
+        : `🎂 ¡Hoy cumplen años ${names.length} compañeros!`;
+      const body = birthdayUsers.length === 1
+        ? `${birthdayUsers[0].position} — ${birthdayUsers[0].department}. ¡Envíale una felicitación!`
+        : `${names.join(", ")}. ¡Envíales una felicitación!`;
+      sendBrowserNotification(title, body, { tag: "birthday-today", type: "message" });
     }
+  }, [queue, birthdayUsers, isTest]);
 
-    setVisible(true);
-
-    // Send native notification once per day
-    if (!notificationSentRef.current) {
-      notificationSentRef.current = true;
-      const nativeKey = `safeone_bday_notified_${getTodayKey().replace(DISMISS_KEY_PREFIX, "")}`;
-      if (!localStorage.getItem(nativeKey)) {
-        localStorage.setItem(nativeKey, "true");
-
-        const names = birthdayUsers.map((u) => u.fullName);
-        const title = birthdayUsers.length === 1
-          ? `🎂 ¡Hoy cumple años ${names[0]}!`
-          : `🎂 ¡Hoy cumplen años ${names.length} compañeros!`;
-        const body = birthdayUsers.length === 1
-          ? `${birthdayUsers[0].position} — ${birthdayUsers[0].department}. ¡Envíale una felicitación!`
-          : `${names.join(", ")}. ¡Envíales una felicitación!`;
-
-        sendBrowserNotification(title, body, {
-          tag: "birthday-today",
-          type: "message",
-        });
-      }
-    }
-  }, [birthdayUsers, dismissed, isTest]);
+  // En modo test sin lista (preview de mes), tratamos como múltiple y se navega también.
+  const isTestGroup = isTest && birthdayUsers.length > 1;
+  const visibleList = isTest && !isTestGroup ? birthdayUsers : [queue[currentIdx]].filter(Boolean);
+  const groupMode = isTestGroup; // muestra lista completa en una sola tarjeta
+  const person = !groupMode ? visibleList[0] : null;
 
   const handleDismiss = () => {
-    setVisible(false);
-    setDismissed(true);
     if (isTest) {
       onDismissTest?.();
-    } else {
-      localStorage.setItem(getTodayKey(), "true");
+      return;
     }
+    const current = queue[currentIdx];
+    if (!current) return;
+    const next = new Set(dismissedIds);
+    next.add(current.id);
+    setDismissedIds(next);
+    saveDismissedSet(next);
+    setSent(false);
+    setCurrentIdx(0); // queue se recalcula automáticamente, mostramos el primero restante
   };
 
   const handleSendCongrats = () => {
-    if (onSendCongrats) {
+    if (onSendCongrats && person) {
+      onSendCongrats(person);
+      setSent(true);
+    } else if (onSendCongrats && groupMode) {
       birthdayUsers.forEach((u) => onSendCongrats(u));
       setSent(true);
     }
-    handleDismiss();
+    setTimeout(() => handleDismiss(), 400);
   };
 
   const handleDownload = useCallback(async () => {
@@ -108,9 +135,10 @@ const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest, onSendCongrats 
         allowTaint: true,
       });
       const link = document.createElement("a");
-      const name = birthdayUsers.length === 1
-        ? `cumpleanos-${birthdayUsers[0].fullName.replace(/\s+/g, "-").toLowerCase()}`
-        : "cumpleanos-safeone";
+      const baseName = person
+        ? person.fullName
+        : (groupMode ? "cumpleanos-safeone" : "cumpleanos");
+      const name = `cumpleanos-${baseName.replace(/\s+/g, "-").toLowerCase()}`;
       link.download = `${name}.png`;
       link.href = canvas.toDataURL("image/png");
       document.body.appendChild(link);
@@ -121,12 +149,12 @@ const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest, onSendCongrats 
     } finally {
       setDownloading(false);
     }
-  }, [birthdayUsers]);
+  }, [person, groupMode]);
 
-  if (!visible || birthdayUsers.length === 0) return null;
+  const showing = isTest ? birthdayUsers.length > 0 : queue.length > 0;
+  if (!showing) return null;
 
-  const isSingle = birthdayUsers.length === 1;
-  const person = isSingle ? birthdayUsers[0] : null;
+  const remaining = isTest ? 0 : Math.max(0, queue.length - 1);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-500">
@@ -149,28 +177,17 @@ const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest, onSendCongrats 
       </div>
 
       <div className="relative bg-card rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
-        {/* Top action buttons */}
         <div className="absolute top-3 right-3 flex items-center gap-1 z-10">
-          <button
-            onClick={handleDownload}
-            disabled={downloading}
-            className="p-1.5 rounded-lg hover:bg-muted transition-colors"
-            title="Descargar imagen"
-          >
+          <button onClick={handleDownload} disabled={downloading} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="Descargar imagen">
             <Download className={`h-4 w-4 text-muted-foreground ${downloading ? "animate-pulse" : ""}`} />
           </button>
-          <button
-            onClick={handleDismiss}
-            className="p-1.5 rounded-lg hover:bg-muted transition-colors"
-          >
+          <button onClick={handleDismiss} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="Cerrar">
             <X className="h-5 w-5 text-muted-foreground" />
           </button>
         </div>
 
-        {/* Capturable card area */}
         <div ref={cardRef} className="bg-card overflow-y-auto flex-1">
           <div className="h-1.5 w-full" style={{ background: "var(--gradient-gold)" }} />
-
           <div className="px-6 py-5 text-center">
             <div className="flex items-center justify-center gap-2 mb-4">
               <PartyPopper className="h-6 w-6 text-gold animate-bounce" />
@@ -178,13 +195,10 @@ const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest, onSendCongrats 
               <PartyPopper className="h-6 w-6 text-gold animate-bounce" style={{ animationDelay: "0.3s" }} />
             </div>
 
-            {isSingle && person ? (
+            {person ? (
               <>
-                <h2 className="font-heading font-black text-xl text-card-foreground mb-1">
-                  ¡Feliz Cumpleaños! 🎉
-                </h2>
+                <h2 className="font-heading font-black text-xl text-card-foreground mb-1">¡Feliz Cumpleaños! 🎉</h2>
                 <p className="text-muted-foreground text-xs mb-4">Hoy es un día muy especial</p>
-
                 <div className="bg-muted rounded-xl p-4 mb-4">
                   <div className="flex flex-col items-center gap-2">
                     <div className="w-16 h-16 rounded-full bg-gold/20 flex items-center justify-center shrink-0">
@@ -200,18 +214,14 @@ const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest, onSendCongrats 
                     </div>
                   </div>
                 </div>
-
                 <p className="text-xs text-muted-foreground italic mb-2">
                   SafeOne Security Company te desea un maravilloso día lleno de éxitos y bendiciones 🎂
                 </p>
               </>
             ) : (
               <>
-                <h2 className="font-heading font-black text-xl text-card-foreground mb-1">
-                  ¡Feliz Cumpleaños! 🎉
-                </h2>
+                <h2 className="font-heading font-black text-xl text-card-foreground mb-1">¡Feliz Cumpleaños! 🎉</h2>
                 <p className="text-muted-foreground text-xs mb-4">Hoy celebramos a quienes cumplen años</p>
-
                 <div className="space-y-3 mb-4">
                   {birthdayUsers.map((u) => (
                     <div key={u.id} className="bg-muted rounded-xl p-3 flex items-center gap-3">
@@ -229,7 +239,6 @@ const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest, onSendCongrats 
                     </div>
                   ))}
                 </div>
-
                 <p className="text-xs text-muted-foreground italic mb-2">
                   SafeOne Security Company les desea un maravilloso día lleno de éxitos y bendiciones 🎂
                 </p>
@@ -238,7 +247,12 @@ const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest, onSendCongrats 
           </div>
         </div>
 
-        {/* Action buttons outside capture area */}
+        {!isTest && remaining > 0 && (
+          <div className="px-6 pt-2 text-[11px] text-center text-muted-foreground">
+            Quedan {remaining} cumpleaño{remaining > 1 ? "s" : ""} por mostrar hoy
+          </div>
+        )}
+
         <div className="px-6 py-4 border-t border-border flex gap-2 shrink-0">
           <button onClick={handleDownload} disabled={downloading} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-muted text-xs font-medium text-card-foreground hover:bg-border transition-colors">
             <Download className="h-3.5 w-3.5" />
