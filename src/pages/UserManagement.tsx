@@ -53,6 +53,7 @@ const UserManagementPage = () => {
   const csvInputRef = useRef<HTMLInputElement>(null);
   const [birthdayTestUsers, setBirthdayTestUsers] = useState<IntranetUser[]>([]);
   const [showBirthdayTest, setShowBirthdayTest] = useState(false);
+  const [showBirthdayList, setShowBirthdayList] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [importPreview, setImportPreview] = useState<Partial<IntranetUser>[]>([]);
   const [importErrors, setImportErrors] = useState<string[]>([]);
