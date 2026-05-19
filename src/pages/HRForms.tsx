@@ -276,8 +276,8 @@ const HRForms = () => {
       requestedAt: new Date().toISOString(),
       formData: {
         ...formData,
-        ...(isLoan && effectiveRequester?.hireDate
-          ? { "Fecha de ingreso": format(new Date(effectiveRequester.hireDate), "dd/MM/yyyy"), "Antigüedad (meses)": String(tenureMonths) }
+        ...(isLoan && resolvedHireDate
+          ? { "Fecha de ingreso": format(new Date(resolvedHireDate), "dd/MM/yyyy"), "Antigüedad (meses)": String(tenureMonths) }
           : {}),
         ...(beneficiary ? { "Solicitado por (líder)": user.fullName } : {}),
       },
