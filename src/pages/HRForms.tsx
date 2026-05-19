@@ -833,9 +833,23 @@ const HRForms = () => {
                 </div>
 
                 <div className="mt-6 pt-4 border-t border-border">
-                  <Button className="w-full gap-2" onClick={handleVirtualSubmit}>
-                    <Send className="h-4 w-4" /> Enviar para Aprobación
-                  </Button>
+                  {(() => {
+                    const loanBlocked = activeForm === "prestamos" && (!resolvedHireDate || tenureMonths < getLoanSettings().minTenureMonths);
+                    return (
+                      <>
+                        {loanBlocked && (
+                          <div className="mb-3 rounded-lg p-3 border bg-amber-50 border-amber-200 text-amber-800 text-xs">
+                            {!resolvedHireDate
+                              ? "No se pudo verificar la fecha de ingreso del empleado. Solicita a RRHH actualizar el directorio antes de enviar."
+                              : `Antigüedad insuficiente: se requieren ${getLoanSettings().minTenureMonths} meses (actual: ${tenureMonths}). No es posible enviar la solicitud.`}
+                          </div>
+                        )}
+                        <Button className="w-full gap-2" onClick={handleVirtualSubmit} disabled={loanBlocked}>
+                          <Send className="h-4 w-4" /> Enviar para Aprobación
+                        </Button>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
