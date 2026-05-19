@@ -102,7 +102,10 @@ interface CombinedRow {
   discrepancia?: string;
 }
 
-type FilterKey = "all" | "ok" | CriticidadInactividad | "discrepancia" | "panic" | "baton" | "muted" | "unlinked";
+type FilterKey = "all" | "ok" | CriticidadInactividad | "discrepancia" | "panic" | "baton" | "muted" | "inactive-cancelled" | "deleted" | "unlinked";
+
+const INACTIVE_CANCELLED = new Set<LxStatus>(["Cancelada", "Inactiva"]);
+const DELETED_STATUSES = new Set<LxStatus>(["Dada de baja"]);
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
