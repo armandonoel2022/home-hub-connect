@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useChatContextSafe } from "@/contexts/ChatContext";
 import { employeesApi, isApiConfigured, type Employee } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Cake, CalendarDays, Eye } from "lucide-react";
+import { ArrowLeft, Cake, CalendarDays, Eye, ChevronDown, ChevronRight } from "lucide-react";
 import type { IntranetUser } from "@/lib/types";
 
 const MONTHS = [
