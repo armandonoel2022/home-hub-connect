@@ -59,12 +59,15 @@ function pickEnum(value, set, prev) {
 
 router.get('/', auth, (req, res) => {
   const list = readData(FILE);
-  // Migración suave: si no tiene lxStatus pero tiene manualStatus legacy, exponer ambos
   const migrated = list.map(item => {
-    if (!item.lxStatus && item.manualStatus && LEGACY_TO_NEW[item.manualStatus]) {
-      return { ...item, lxStatus: LEGACY_TO_NEW[item.manualStatus] };
+    let out = item;
+    if (!out.lxStatus && out.manualStatus && LEGACY_TO_NEW[out.manualStatus]) {
+      out = { ...out, lxStatus: LEGACY_TO_NEW[out.manualStatus] };
     }
-    return item;
+    if (out.serviceType && LEGACY_SERVICE_TYPE[out.serviceType]) {
+      out = { ...out, serviceType: LEGACY_SERVICE_TYPE[out.serviceType] };
+    }
+    return out;
   });
   res.json(migrated);
 });
