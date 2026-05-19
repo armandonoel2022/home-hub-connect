@@ -54,18 +54,7 @@ const UserManagementPage = () => {
   const csvInputRef = useRef<HTMLInputElement>(null);
   const [birthdayTestUsers, setBirthdayTestUsers] = useState<IntranetUser[]>([]);
   const [showBirthdayTest, setShowBirthdayTest] = useState(false);
-  const [showBirthdayList, setShowBirthdayList] = useState(false);
-  const [hrEmployees, setHrEmployees] = useState<Employee[]>([]);
-  const [loadingHrEmployees, setLoadingHrEmployees] = useState(false);
-
-  useEffect(() => {
-    if (!showBirthdayList || hrEmployees.length > 0) return;
-    setLoadingHrEmployees(true);
-    employeesApi.getAll({ status: "Activo" })
-      .then(setHrEmployees)
-      .catch((err) => toast({ title: "Error cargando empleados", description: String(err?.message || err), variant: "destructive" }))
-      .finally(() => setLoadingHrEmployees(false));
-  }, [showBirthdayList, hrEmployees.length]);
+  // Cumpleaños — módulo movido a /rrhh/cumpleanos
   const [showImport, setShowImport] = useState(false);
   const [importPreview, setImportPreview] = useState<Partial<IntranetUser>[]>([]);
   const [importErrors, setImportErrors] = useState<string[]>([]);
