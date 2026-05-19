@@ -254,84 +254,11 @@ const ClientTracking = () => {
               {(isCSUser || canTestCS) && <TabsTrigger value="cs" className="gap-1.5 text-xs"><Phone className="h-3.5 w-3.5" /> {isCSUser ? "Mis Solicitudes" : "Solicitudes CS"}</TabsTrigger>}
             </TabsList>
 
-            {/* ── DASHBOARD ── */}
+            {/* ── DASHBOARD (integrado: facturación · Kronos · rondas) ── */}
             <TabsContent value="dashboard" className="space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-                {[
-                  { label: "Total Clientes", value: stats.total, icon: Activity, color: "text-blue-400" },
-                  { label: "Activos", value: stats.activos, icon: CheckCircle2, color: "text-emerald-400" },
-                  { label: "Pendientes", value: stats.pendientes, icon: Clock, color: "text-amber-400" },
-                  { label: "Investigar", value: stats.investigar, icon: AlertTriangle, color: "text-orange-400" },
-                  { label: "Sin Monitor/Sistema", value: stats.sinMonitoreo, icon: EyeOff, color: "text-red-400" },
-                  { label: "Con Facturación", value: stats.conFacturacion, icon: DollarSign, color: "text-emerald-400" },
-                  { label: "Sin Facturación", value: stats.sinFacturacion, icon: DollarSign, color: "text-red-400" },
-                ].map((kpi) => (
-                  <Card key={kpi.label} className="bg-card border-border">
-                    <CardContent className="p-4 text-center">
-                      <kpi.icon className={`h-5 w-5 mx-auto mb-1 ${kpi.color}`} />
-                      <p className="text-2xl font-bold text-foreground">{kpi.value}</p>
-                      <p className="text-xs text-muted-foreground">{kpi.label}</p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+              <IntegratedDashboardTab onNavigate={setActiveTab} />
 
-              <div className="grid md:grid-cols-2 gap-4">
-                <Card className="bg-card border-border">
-                  <CardHeader className="pb-2"><CardTitle className="text-sm">Servicios Activos</CardTitle></CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-3"><Progress value={stats.complianceRate} className="flex-1" /><span className="text-lg font-bold text-foreground">{stats.complianceRate}%</span></div>
-                    <p className="text-xs text-muted-foreground mt-1">{stats.activos} de {stats.total} clientes con servicio activo</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-card border-border">
-                  <CardHeader className="pb-2"><CardTitle className="text-sm">Cobertura de Facturación</CardTitle></CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-3"><Progress value={stats.billingCoverage} className="flex-1" /><span className="text-lg font-bold text-foreground">{stats.billingCoverage}%</span></div>
-                    <p className="text-xs text-muted-foreground mt-1">{stats.conFacturacion} de {stats.total} clientes con facturación en CxC</p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <Card className="bg-card border-border">
-                  <CardHeader><CardTitle className="text-sm">Distribución por Estado</CardTitle></CardHeader>
-                  <CardContent>
-                    <ResponsiveContainer width="100%" height={280}>
-                      <BarChart data={stats.byStatus} style={{ cursor: "pointer" }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                        <XAxis dataKey="name" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} angle={-35} textAnchor="end" height={70} />
-                        <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                        <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--foreground))" }} />
-                        <Bar dataKey="count" name="Clientes" radius={[4, 4, 0, 0]} onClick={(data: any) => {
-                          if (data && data.name) {
-                            setStatusFilter(data.name);
-                            setActiveTab("clients");
-                          }
-                        }}>
-                          {stats.byStatus.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
-                <Card className="bg-card border-border">
-                  <CardHeader><CardTitle className="text-sm">Facturación vs Sin Facturación</CardTitle></CardHeader>
-                  <CardContent>
-                    <ResponsiveContainer width="100%" height={280}>
-                      <RePieChart>
-                        <Pie data={stats.billingPie} cx="50%" cy="50%" innerRadius={60} outerRadius={100} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                          <Cell fill="#10b981" /><Cell fill="#ef4444" />
-                        </Pie>
-                        <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--foreground))" }} />
-                        <Legend />
-                      </RePieChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Incident summary in dashboard */}
+              {/* Incidencias activas (resumen rápido del dashboard legacy) */}
               <Card className="bg-card border-border">
                 <CardHeader>
                   <CardTitle className="text-sm flex items-center gap-2">
@@ -350,10 +277,55 @@ const ClientTracking = () => {
                         <Badge className={`${INC_PRIORITY_COLORS[i.priority]} text-xs`}>{i.priority}</Badge>
                       </div>
                     ))}
+                    {incidents.filter(i => i.status !== "resuelta" && i.status !== "cerrada").length === 0 && (
+                      <p className="text-sm text-muted-foreground">Sin incidencias activas.</p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Vista legacy de distribución por estado, conservada como referencia */}
+              <details className="border border-border rounded-md">
+                <summary className="cursor-pointer px-3 py-2 text-xs text-muted-foreground hover:text-foreground">
+                  Ver distribución legacy por estado OSM (no facturable)
+                </summary>
+                <div className="p-3 grid md:grid-cols-2 gap-4">
+                  <Card className="bg-card border-border">
+                    <CardHeader><CardTitle className="text-sm">Distribución por Estado</CardTitle></CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={240}>
+                        <BarChart data={stats.byStatus} style={{ cursor: "pointer" }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                          <XAxis dataKey="name" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} angle={-35} textAnchor="end" height={70} />
+                          <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                          <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--foreground))" }} />
+                          <Bar dataKey="count" name="Clientes" radius={[4, 4, 0, 0]} onClick={(data: any) => {
+                            if (data && data.name) { setStatusFilter(data.name); setActiveTab("clients"); }
+                          }}>
+                            {stats.byStatus.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-card border-border">
+                    <CardHeader><CardTitle className="text-sm">Facturación vs Sin Facturación (legacy)</CardTitle></CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={240}>
+                        <RePieChart>
+                          <Pie data={stats.billingPie} cx="50%" cy="50%" innerRadius={50} outerRadius={90} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                            <Cell fill="#10b981" /><Cell fill="#ef4444" />
+                          </Pie>
+                          <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--foreground))" }} />
+                          <Legend />
+                        </RePieChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+                </div>
+              </details>
             </TabsContent>
+
 
             {/* ── CLIENTS TABLE ── */}
             <TabsContent value="clients" className="space-y-4">
