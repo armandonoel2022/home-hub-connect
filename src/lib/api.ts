@@ -789,5 +789,42 @@ export const punchRulesApi = {
   remove: (id: string) => apiFetch<void>(`/monitoring-punch-rules/${id}`, { method: "DELETE" }),
 };
 
+// ─── Snapshots históricos del servicio ───
+export interface MonitoringSnapshotMetrics {
+  totalLx: number;
+  activeLx: number;
+  billableLx: number;
+  compliedCycle: number;
+  compliedCyclePct: number;
+  noSignalHigh: number;
+  activeTrackTotal: number;
+  activeTrackComplied: number;
+  activeTrackPct: number;
+  incidentsOpen: number;
+  incidentsResolved: number;
+}
+export interface MonitoringSnapshot {
+  id: string;
+  date: string; // YYYY-MM-DD
+  source: "kronos" | "punch" | "manual" | "auto-close";
+  metrics: MonitoringSnapshotMetrics;
+  createdAt: string;
+  createdBy: string;
+}
+export const monitoringSnapshotsApi = {
+  list: (params?: { from?: string; to?: string; source?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.from) q.set("from", params.from);
+    if (params?.to) q.set("to", params.to);
+    if (params?.source) q.set("source", params.source);
+    const qs = q.toString();
+    return apiFetch<MonitoringSnapshot[]>(`/monitoring-snapshots${qs ? `?${qs}` : ""}`);
+  },
+  upsert: (data: { date: string; source: MonitoringSnapshot["source"]; metrics: MonitoringSnapshotMetrics }) =>
+    apiFetch<MonitoringSnapshot>("/monitoring-snapshots", { method: "POST", body: JSON.stringify(data) }),
+  remove: (id: string) => apiFetch<void>(`/monitoring-snapshots/${id}`, { method: "DELETE" }),
+};
+
 export default apiFetch;
+
 
