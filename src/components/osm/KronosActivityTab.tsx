@@ -37,6 +37,10 @@ import {
   type ServiceType, type CommType, type BrandType,
 } from "@/lib/api";
 import BillingClientsManager from "./BillingClientsManager";
+import TeamNotifyDialog from "./TeamNotifyDialog";
+import { queueEmail } from "@/lib/emailService";
+import { useAuth } from "@/contexts/AuthContext";
+import { Bell } from "lucide-react";
 
 const LX_STATUSES: LxStatus[] = [
   "Activa", "Prueba", "Cancelada", "Suspendida",
