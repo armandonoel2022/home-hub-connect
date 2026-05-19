@@ -789,9 +789,24 @@ const HRForms = () => {
                     </p>
                   )}
                 </div>
+                {/* Líder: solicitar en nombre de otro empleado */}
+                {isSupervisor && teamMembers.length > 0 && (
+                  <div className="mb-4 p-3 bg-muted/40 rounded-lg border border-border">
+                    <Label className="text-xs font-semibold">Solicitar en nombre de (opcional)</Label>
+                    <Select value={beneficiaryId || "self"} onValueChange={(v) => setBeneficiaryId(v === "self" ? "" : v)}>
+                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="self">— Yo mismo ({user?.fullName}) —</SelectItem>
+                        {teamMembers.map(m => <SelectItem key={m.id} value={m.id}>{m.fullName} ({m.position || m.department})</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    {beneficiary && <p className="text-xs text-muted-foreground mt-1">Solicitud quedará a nombre de <strong>{beneficiary.fullName}</strong>; tú quedarás registrado como solicitante.</p>}
+                  </div>
+                )}
                 <div ref={virtualFormRef}>
-                  <RenderForm formType={activeForm} userName={user?.fullName || ""} department={user?.department || ""} showSignature={false} />
+                  <RenderForm formType={activeForm} userName={effectiveRequester?.fullName || ""} department={effectiveRequester?.department || ""} showSignature={false} />
                 </div>
+
                 <div className="mt-6 pt-4 border-t border-border">
                   <Button className="w-full gap-2" onClick={handleVirtualSubmit}>
                     <Send className="h-4 w-4" /> Enviar para Aprobación
