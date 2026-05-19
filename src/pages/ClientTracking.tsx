@@ -37,6 +37,8 @@ import CustomerServiceOverlay from "@/components/osm/CustomerServiceOverlay";
 import KronosActivityTab from "@/components/osm/KronosActivityTab";
 import PunchActivityTab from "@/components/osm/PunchActivityTab";
 import IntegratedDashboardTab from "@/components/osm/IntegratedDashboardTab";
+import OperatorsTab from "@/components/osm/OperatorsTab";
+import TrendsTab from "@/components/osm/TrendsTab";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RePieChart, Pie, Cell, Legend } from "recharts";
 import { toast } from "sonner";
 
