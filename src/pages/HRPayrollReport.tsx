@@ -34,8 +34,49 @@ const HRPayrollReport = () => {
   const [sourceFilter, setSourceFilter] = useState<"all" | "Monitoreo" | "Operaciones">("all");
   const [typeFilter, setTypeFilter] = useState<"all" | OpsReportType>("all");
   const [search, setSearch] = useState("");
+  const { toast } = useToast();
 
   const reports = useMemo(() => getOpsReports(), []);
+
+  // ── Registros de horas extras enviados por líderes (PayrollExtras) ──
+  const [extras, setExtras] = useState<PayrollExtra[]>([]);
+  const refreshExtras = () => {
+    payrollExtrasApi.list({ period: month }).then(setExtras).catch(() => setExtras([]));
+  };
+  useEffect(() => { refreshExtras(); }, [month]);
+
+  const pendingExtras = extras.filter((e) => e.status === "Pendiente RRHH");
+  const processedExtras = extras.filter((e) => e.status === "Procesada");
+
+  const approveExtra = async (id: string) => {
+    try {
+      await payrollExtrasApi.update(id, { status: "Procesada" });
+      toast({ title: "Aprobado", description: "Registro marcado como Procesado e incluido en la nómina." });
+      refreshExtras();
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message || "No se pudo aprobar", variant: "destructive" });
+    }
+  };
+
+  const rejectExtra = async (id: string) => {
+    if (!confirm("¿Eliminar este registro? Se notificará al líder que lo registró.")) return;
+    try {
+      await payrollExtrasApi.remove(id);
+      toast({ title: "Eliminado", description: "Registro removido del consolidado." });
+      refreshExtras();
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
+  };
+
+  const approveAllPending = async () => {
+    if (pendingExtras.length === 0) return;
+    if (!confirm(`Aprobar ${pendingExtras.length} registro(s) pendientes?`)) return;
+    await Promise.all(pendingExtras.map((p) => payrollExtrasApi.update(p.id, { status: "Procesada" }).catch(() => null)));
+    toast({ title: "Aprobados", description: `${pendingExtras.length} registro(s) procesados.` });
+    refreshExtras();
+  };
+
 
   const filtered = useMemo(() => {
     return reports.filter((r) => {
