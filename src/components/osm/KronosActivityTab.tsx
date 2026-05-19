@@ -220,8 +220,11 @@ export default function KronosActivityTab({ clients }: Props) {
       const saved = await monitoringAccountSettingsApi.upsert(editing.code, {
         accountName: editing.name,
         clientId: draft.clientId || null,
-        kind: (draft.kind === "panic" ? "panic" : "regular"),
+        kind: (draft.serviceType === "Botón de pánico" || draft.kind === "panic") ? "panic" : "regular",
         lxStatus: draft.lxStatus || null,
+        serviceType: draft.serviceType ?? null,
+        commType: draft.commType ?? null,
+        brand: draft.brand ?? null,
         expectedOpen: draft.expectedOpen || null,
         expectedClose: draft.expectedClose || null,
         locationAddress: draft.locationAddress || "",
