@@ -61,6 +61,19 @@ const HRBirthdaysPage = () => {
   const [previewUsers, setPreviewUsers] = useState<IntranetUser[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [filterMonth, setFilterMonth] = useState<number | "all">("all");
+  const [expandedMonths, setExpandedMonths] = useState<Set<number>>(
+    () => new Set([new Date().getMonth() + 1])
+  );
+
+  const toggleMonth = (m: number) => {
+    setExpandedMonths((prev) => {
+      const next = new Set(prev);
+      if (next.has(m)) next.delete(m); else next.add(m);
+      return next;
+    });
+  };
+  const expandAll = () => setExpandedMonths(new Set(MONTHS.map((_, i) => i + 1)));
+  const collapseAll = () => setExpandedMonths(new Set());
   const [autoTime, setAutoTime] = useState<string>(
     () => (typeof window !== "undefined" && localStorage.getItem("safeone_bday_auto_time")) || "08:00"
   );
