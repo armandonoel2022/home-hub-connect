@@ -102,7 +102,10 @@ interface CombinedRow {
   discrepancia?: string;
 }
 
-type FilterKey = "all" | "ok" | CriticidadInactividad | "discrepancia" | "panic" | "baton" | "muted" | "unlinked";
+type FilterKey = "all" | "ok" | CriticidadInactividad | "discrepancia" | "panic" | "baton" | "muted" | "inactive-cancelled" | "deleted" | "unlinked";
+
+const INACTIVE_CANCELLED = new Set<LxStatus>(["Cancelada", "Inactiva"]);
+const DELETED_STATUSES = new Set<LxStatus>(["Dada de baja"]);
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
@@ -358,30 +361,44 @@ export default function KronosActivityTab({ clients }: Props) {
   }, [report, clients, osmByCode, settings, billingClientById]);
 
   const stats = useMemo(() => {
-    const operational = combined.filter(r => !r.noOpenClose && !r.isMuted);
+    const isInactiveCancelled = (r: CombinedRow) => !!r.setting?.lxStatus && INACTIVE_CANCELLED.has(r.setting.lxStatus);
+    const isDeleted = (r: CombinedRow) => !!r.setting?.lxStatus && DELETED_STATUSES.has(r.setting.lxStatus);
+    const visible = combined.filter(r => !isInactiveCancelled(r) && !isDeleted(r));
+    const operational = visible.filter(r => !r.noOpenClose && !r.isMuted);
     return {
-      total: combined.length,
+      total: visible.length,
       alta: operational.filter(r => r.criticidad === "alta").length,
       media: operational.filter(r => r.criticidad === "media").length,
       baja: operational.filter(r => r.criticidad === "baja").length,
       ok: operational.filter(r => r.criticidad === "ok").length,
-      panic: combined.filter(r => r.isPanic).length,
-      baton: combined.filter(r => r.isBaton).length,
-      muted: combined.filter(r => r.isMuted && !r.noOpenClose).length,
-      discrepancias: combined.filter(r => r.discrepancia).length,
+      panic: visible.filter(r => r.isPanic).length,
+      baton: visible.filter(r => r.isBaton).length,
+      muted: visible.filter(r => r.isMuted && !r.noOpenClose).length,
+      inactiveCancelled: combined.filter(isInactiveCancelled).length,
+      deleted: combined.filter(isDeleted).length,
+      discrepancias: visible.filter(r => r.discrepancia).length,
     };
   }, [combined]);
 
   const filtered = useMemo(() => {
+    const isInactiveCancelled = (r: CombinedRow) => !!r.setting?.lxStatus && INACTIVE_CANCELLED.has(r.setting.lxStatus);
+    const isDeleted = (r: CombinedRow) => !!r.setting?.lxStatus && DELETED_STATUSES.has(r.setting.lxStatus);
+
     return combined.filter(r => {
-      if (filterCrit === "panic") { if (!r.isPanic) return false; }
-      else if (filterCrit === "baton") { if (!r.isBaton) return false; }
-      else if (filterCrit === "muted") { if (!r.isMuted || r.noOpenClose) return false; }
-      else if (filterCrit === "discrepancia") { if (!r.discrepancia) return false; }
-      else if (filterCrit === "unlinked") { if (r.setting?.clientId) return false; }
-      else if (filterCrit !== "all") {
-        if (r.noOpenClose || r.isMuted) return false;
-        if (r.criticidad !== filterCrit) return false;
+      if (filterCrit === "inactive-cancelled") { if (!isInactiveCancelled(r)) return false; }
+      else if (filterCrit === "deleted") { if (!isDeleted(r)) return false; }
+      else {
+        // Por defecto sacamos las inactivas/canceladas/dadas de baja del resto de vistas
+        if (isInactiveCancelled(r) || isDeleted(r)) return false;
+        if (filterCrit === "panic") { if (!r.isPanic) return false; }
+        else if (filterCrit === "baton") { if (!r.isBaton) return false; }
+        else if (filterCrit === "muted") { if (!r.isMuted || r.noOpenClose) return false; }
+        else if (filterCrit === "discrepancia") { if (!r.discrepancia) return false; }
+        else if (filterCrit === "unlinked") { if (r.setting?.clientId) return false; }
+        else if (filterCrit !== "all") {
+          if (r.noOpenClose || r.isMuted) return false;
+          if (r.criticidad !== filterCrit) return false;
+        }
       }
       if (search.trim()) {
         const q = search.toLowerCase();
@@ -546,6 +563,8 @@ export default function KronosActivityTab({ clients }: Props) {
                 <SelectItem value="panic">🚨 Botón de pánico</SelectItem>
                 <SelectItem value="baton">🥢 Bastón (Punches)</SelectItem>
                 <SelectItem value="muted">🔇 Silenciadas (estado LX)</SelectItem>
+                <SelectItem value="inactive-cancelled">⛔ Inactivas y Canceladas ({stats.inactiveCancelled})</SelectItem>
+                <SelectItem value="deleted">🗑️ Dadas de baja ({stats.deleted})</SelectItem>
                 <SelectItem value="unlinked">🔗 Sin cliente CxC</SelectItem>
                 <SelectItem value="discrepancia">⚠️ Discrepancias</SelectItem>
               </SelectContent>
@@ -586,7 +605,9 @@ export default function KronosActivityTab({ clients }: Props) {
                     <TableRow><TableCell colSpan={15} className="text-center text-muted-foreground py-8">Sin resultados</TableCell></TableRow>
                   ) : filtered.map(r => (
                     <TableRow key={r.accountCode} className={
-                      r.isPanic ? "bg-purple-500/5"
+                      r.setting?.lxStatus && (INACTIVE_CANCELLED.has(r.setting.lxStatus) || DELETED_STATUSES.has(r.setting.lxStatus))
+                        ? "opacity-40 grayscale bg-muted/30"
+                      : r.isPanic ? "bg-purple-500/5"
                       : r.isBaton ? "bg-cyan-500/5"
                       : r.isMuted ? "opacity-60" : ""
                     }>
