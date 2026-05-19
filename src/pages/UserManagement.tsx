@@ -11,7 +11,7 @@ import { Navigate } from "react-router-dom";
 import RegistrationRequests from "@/components/RegistrationRequests";
 import BirthdayOverlay from "@/components/BirthdayOverlay";
 import ExportMenu from "@/components/ExportMenu";
-import { employeesApi, type Employee } from "@/lib/api";
+// employeesApi ya no se usa aquí (cumpleaños vive en /rrhh/cumpleanos)
 import { toast } from "@/hooks/use-toast";
 
 const emptyForm = (): Partial<IntranetUser> => ({
@@ -54,18 +54,7 @@ const UserManagementPage = () => {
   const csvInputRef = useRef<HTMLInputElement>(null);
   const [birthdayTestUsers, setBirthdayTestUsers] = useState<IntranetUser[]>([]);
   const [showBirthdayTest, setShowBirthdayTest] = useState(false);
-  const [showBirthdayList, setShowBirthdayList] = useState(false);
-  const [hrEmployees, setHrEmployees] = useState<Employee[]>([]);
-  const [loadingHrEmployees, setLoadingHrEmployees] = useState(false);
-
-  useEffect(() => {
-    if (!showBirthdayList || hrEmployees.length > 0) return;
-    setLoadingHrEmployees(true);
-    employeesApi.getAll({ status: "Activo" })
-      .then(setHrEmployees)
-      .catch((err) => toast({ title: "Error cargando empleados", description: String(err?.message || err), variant: "destructive" }))
-      .finally(() => setLoadingHrEmployees(false));
-  }, [showBirthdayList, hrEmployees.length]);
+  // Cumpleaños — módulo movido a /rrhh/cumpleanos
   const [showImport, setShowImport] = useState(false);
   const [importPreview, setImportPreview] = useState<Partial<IntranetUser>[]>([]);
   const [importErrors, setImportErrors] = useState<string[]>([]);
@@ -514,92 +503,19 @@ const UserManagementPage = () => {
                 <Cake className="h-4 w-4" />
                 Previsualizar
               </button>
-              <button
-                onClick={() => setShowBirthdayList(true)}
+              <a
+                href="/rrhh/cumpleanos"
                 className="text-sm flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-background hover:bg-muted transition-colors"
+                title="El módulo de cumpleaños vive en Recursos Humanos"
               >
                 <CalendarDays className="h-4 w-4 text-gold" />
-                Ver cumpleaños por mes
-              </button>
+                Ver cumpleaños por mes (RRHH)
+              </a>
             </div>
           </div>
         </div>
 
-        {/* Modal — Cumpleaños por mes */}
-        {showBirthdayList && (() => {
-          const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
-          const today = new Date();
-          const todayMMDD = `${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
-          const grouped: Record<number, Array<{ id: string; fullName: string; department: string; mmdd: string; day: number }>> = {};
-          hrEmployees.forEach((e) => {
-            const raw = (e.birthDate || e.birthdayMMDD || e.birthday || "").trim();
-            if (!raw) return;
-            // Soporta "MM-DD", "YYYY-MM-DD", "DD/MM/YYYY"
-            let mm: number | null = null, dd: number | null = null;
-            const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-            const mmddOnly = raw.match(/^(\d{2})-(\d{2})$/);
-            const dmy = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
-            if (iso) { mm = +iso[2]; dd = +iso[3]; }
-            else if (mmddOnly) { mm = +mmddOnly[1]; dd = +mmddOnly[2]; }
-            else if (dmy) { dd = +dmy[1]; mm = +dmy[2]; }
-            if (!mm || !dd || mm < 1 || mm > 12 || dd < 1 || dd > 31) return;
-            const mmdd = `${String(mm).padStart(2,"0")}-${String(dd).padStart(2,"0")}`;
-            (grouped[mm] ||= []).push({ id: e.employeeCode, fullName: e.fullName, department: e.department, mmdd, day: dd });
-          });
-          Object.values(grouped).forEach(arr => arr.sort((a,b) => a.day - b.day));
-          const total = Object.values(grouped).reduce((s, a) => s + a.length, 0);
-          return (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowBirthdayList(false)}>
-              <div className="bg-card rounded-2xl w-full max-w-4xl max-h-[85vh] shadow-2xl flex flex-col" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-                  <div className="flex items-center gap-2">
-                    <CalendarDays className="h-5 w-5 text-gold" />
-                    <h2 className="font-heading font-bold text-base text-card-foreground">Cumpleaños por mes</h2>
-                    <span className="text-xs text-muted-foreground">
-                      {loadingHrEmployees ? "Cargando…" : `(${total} de ${hrEmployees.length} empleados activos con fecha registrada)`}
-                    </span>
-                  </div>
-                  <button onClick={() => setShowBirthdayList(false)} className="p-1.5 rounded-lg hover:bg-muted">
-                    <X className="h-5 w-5 text-muted-foreground" />
-                  </button>
-                </div>
-                <div className="overflow-y-auto p-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {MONTHS.map((name, idx) => {
-                    const m = idx + 1;
-                    const items = grouped[m] || [];
-                    const isCurrentMonth = m === today.getMonth() + 1;
-                    return (
-                      <div key={m} className={`rounded-lg border p-3 ${isCurrentMonth ? "border-gold bg-gold/5" : "border-border bg-muted/20"}`}>
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-heading font-bold text-sm text-card-foreground">{name}</h3>
-                          <span className="text-xs text-muted-foreground">{items.length}</span>
-                        </div>
-                        {items.length === 0 ? (
-                          <p className="text-xs text-muted-foreground italic">Sin cumpleaños</p>
-                        ) : (
-                          <ul className="space-y-1.5">
-                            {items.map(({ id, fullName, department, mmdd, day }) => {
-                              const isToday = mmdd === todayMMDD;
-                              return (
-                                <li key={id} className={`text-xs flex items-center gap-2 px-2 py-1 rounded ${isToday ? "bg-gold/20 font-semibold" : ""}`}>
-                                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-background border border-border text-[10px] font-bold shrink-0">{day}</span>
-                                  <div className="min-w-0 flex-1">
-                                    <p className="text-card-foreground truncate">{fullName} {isToday && "🎂"}</p>
-                                    <p className="text-muted-foreground truncate text-[10px]">{department}</p>
-                                  </div>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          );
-        })()}
+        {/* Modal — Cumpleaños por mes — movido a /rrhh/cumpleanos */}
 
         {/* Birthday Test Overlay */}
         {showBirthdayTest && birthdayTestUsers.length > 0 && (
