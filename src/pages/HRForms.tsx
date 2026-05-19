@@ -1342,13 +1342,18 @@ function LoanForm({ userName, department, showSignature, hireDate, suggestedSala
     <div className="space-y-5">
       <div className={cn(
         "rounded-lg p-3 border text-sm",
-        meetsPolicy ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-amber-50 border-amber-200 text-amber-800",
+        meetsPolicy ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-red-50 border-red-300 text-red-800",
       )}>
         <p className="font-semibold">Política de préstamos</p>
         <p className="text-xs mt-1">
           Antigüedad mínima de <strong>{settings.minTenureMonths} meses</strong>. Antigüedad actual: <strong>{tenure.label}</strong>.
           Tasa anual vigente: <strong>{settings.annualInterestRatePct}%</strong>. Cuota máxima: <strong>1/6 del salario mensual</strong>.
         </p>
+        {!meetsPolicy && (
+          <p className="text-xs mt-2 font-semibold">
+            ⛔ No es posible enviar la solicitud — el empleado aún no cumple la antigüedad mínima requerida.
+          </p>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-4">
         <FormField label="Nombre del Empleado"><Input defaultValue={userName} readOnly /></FormField>
