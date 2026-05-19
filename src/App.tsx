@@ -140,6 +140,7 @@ function ProtectedRoutes() {
         <Route path="/rrhh/nomina" element={<Payroll />} />
         <Route path="/rrhh/beneficios" element={<HRBenefits />} />
         <Route path="/rrhh/horas-extras" element={<PayrollExtrasPage />} />
+        <Route path="/rrhh/cumpleanos" element={<HRBirthdays />} />
         <Route path="/admin/formularios" element={<AdminForms />} />
         <Route path="/admin/hub" element={<AdminHub />} />
         <Route path="/admin/flotilla-mantenimiento" element={<FleetMaintenance />} />
