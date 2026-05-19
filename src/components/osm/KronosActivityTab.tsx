@@ -226,6 +226,7 @@ export default function KronosActivityTab({ clients }: Props) {
 
   const saveEdit = async () => {
     if (!editing) return;
+    const prev = settings[editing.code];
     try {
       const saved = await monitoringAccountSettingsApi.upsert(editing.code, {
         accountName: editing.name,
@@ -241,9 +242,41 @@ export default function KronosActivityTab({ clients }: Props) {
         locationMapsUrl: draft.locationMapsUrl || "",
         notes: draft.notes || "",
       });
-      setSettings(prev => ({ ...prev, [editing.code]: saved }));
+      setSettings(p => ({ ...p, [editing.code]: saved }));
       toast.success(`Configuración guardada para ${editing.name}`);
+
+      // Diff humano-leíble
+      const changes: string[] = [];
+      const cmp = (label: string, a: any, b: any) => {
+        const A = a ?? "—", B = b ?? "—";
+        if (String(A) !== String(B)) changes.push(`• ${label}: ${A} → ${B}`);
+      };
+      cmp("Tipo de servicio", prev?.serviceType, saved.serviceType);
+      cmp("Estado LX", prev?.lxStatus, saved.lxStatus);
+      cmp("Comunicación", prev?.commType, saved.commType);
+      cmp("Marca", prev?.brand, saved.brand);
+      cmp("Cliente CxC", prev?.clientId, saved.clientId);
+      cmp("Horario apertura", prev?.expectedOpen, saved.expectedOpen);
+      cmp("Horario cierre", prev?.expectedClose, saved.expectedClose);
+      cmp("Ubicación", prev?.locationAddress, saved.locationAddress);
+      cmp("Notas", prev?.notes, saved.notes);
+
+      const subject = `LX ${editing.code} — ${editing.name}`;
+      const body = changes.length > 0
+        ? `Se actualizó la configuración de la LX ${editing.code} (${editing.name}):\n\n${changes.join("\n")}`
+        : `Configuración guardada para LX ${editing.code} (${editing.name}) sin cambios detectables.`;
+
+      // Email automático a tecnologia@ (siempre, aunque no se notifique a nadie más)
+      queueEmail("tecnologia@safeone.com.do", `[Monitoreo] ${subject}`,
+        `${body}\n\n— ${user?.fullName || "Monitoreo"} (${user?.email || ""})`,
+        "general");
+
       setEditing(null);
+
+      // Si hubo cambios, abrir diálogo de notificación al equipo
+      if (changes.length > 0) {
+        setNotifyCtx({ subject, message: body });
+      }
     } catch (e: any) {
       if (e.message === "API_NOT_CONFIGURED") {
         toast.error("Backend no configurado: no se pudo persistir");
