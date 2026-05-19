@@ -692,7 +692,8 @@ export type ServiceType =
   | "Monitoreado con Respuesta"
   | "Botón de pánico"
   | "Interrupción Energética"
-  | "Bastón";
+  | "Bastón"
+  | "Panel de Incendio";
 /** Tipo de comunicación del panel */
 export type CommType = "EBS LX-EPX" | "Intelbras";
 /** Marca del equipo asociado */
