@@ -177,12 +177,12 @@ export function approveByRRHH(
 
 // ─── Loan-specific flow ───
 
-/** RRHH validó antigüedad y escala a Administración (Chrisnel Fabián). */
-export function escalateLoanToAdmin(
+/** RRHH (Dilia) escala el préstamo directamente a Gerencia General (Aurelio). */
+export function escalateLoanToGerencia(
   requestId: string,
   rrhhUserId: string,
   rrhhUserName: string,
-  adminUserId: string,
+  gerenciaUserId: string,
   comment?: string,
 ): HRRequest | null {
   const all = getAll();
@@ -194,95 +194,25 @@ export function escalateLoanToAdmin(
     byName: rrhhUserName,
     at: new Date().toISOString(),
     approved: true,
-    comment: comment || "Antigüedad validada. Escalado a Administración.",
-  };
-  req.status = "Pendiente Administración";
-  save(all);
-
-  addNotification(
-    adminUserId,
-    `Solicitud de Préstamo ${req.id} de ${req.requestedByName} pendiente de tu aprobación.`,
-    req.id,
-  );
-  addNotification(
-    req.requestedBy,
-    `Tu solicitud de préstamo ${req.id} fue validada por RRHH y enviada a Administración.`,
-    req.id,
-  );
-  return req;
-}
-
-/** Chrisnel aprueba el préstamo directamente. */
-export function approveLoanByAdmin(
-  requestId: string,
-  adminUserId: string,
-  adminUserName: string,
-  comment: string | undefined,
-  rrhhUserIds: string[],
-): HRRequest | null {
-  const all = getAll();
-  const req = all.find((r) => r.id === requestId);
-  if (!req || req.status !== "Pendiente Administración") return null;
-
-  req.adminApproval = {
-    by: adminUserId,
-    byName: adminUserName,
-    at: new Date().toISOString(),
-    approved: true,
-    comment,
-  };
-  req.status = "Pendiente Aplicación RRHH";
-  save(all);
-
-  notifyUsers(
-    rrhhUserIds,
-    `Préstamo ${req.id} aprobado por ${adminUserName}. Registra la fecha de aplicación.`,
-    req.id,
-  );
-  addNotification(
-    req.requestedBy,
-    `Tu solicitud de préstamo ${req.id} fue aprobada por Administración.`,
-    req.id,
-  );
-  return req;
-}
-
-/** Chrisnel decide escalar a Don Aurelio (Gerencia General). */
-export function escalateLoanToGerencia(
-  requestId: string,
-  adminUserId: string,
-  adminUserName: string,
-  gerenciaUserId: string,
-  comment?: string,
-): HRRequest | null {
-  const all = getAll();
-  const req = all.find((r) => r.id === requestId);
-  if (!req || req.status !== "Pendiente Administración") return null;
-
-  req.adminApproval = {
-    by: adminUserId,
-    byName: adminUserName,
-    at: new Date().toISOString(),
-    approved: true,
-    comment: comment || "Escalado a Gerencia General para aprobación final.",
+    comment: comment || "Antigüedad validada. Solicitando aprobación a Gerencia General.",
   };
   req.status = "Pendiente Gerencia General";
   save(all);
 
   addNotification(
     gerenciaUserId,
-    `Solicitud de Préstamo ${req.id} de ${req.requestedByName} escalada por ${adminUserName} para tu aprobación final.`,
+    `Solicitud de Préstamo ${req.id} de ${req.requestedByName} pendiente de tu aprobación.`,
     req.id,
   );
   addNotification(
     req.requestedBy,
-    `Tu solicitud de préstamo ${req.id} fue escalada a Gerencia General.`,
+    `Tu solicitud de préstamo ${req.id} fue validada por RRHH y enviada a Gerencia General (Aurelio Pérez).`,
     req.id,
   );
   return req;
 }
 
-/** Aurelio aprueba el préstamo (final). */
+/** Aurelio aprueba el préstamo (final). Puede sobreescribir monto/plazo (excepción). */
 export function approveLoanByGerencia(
   requestId: string,
   gerenciaUserId: string,
