@@ -541,6 +541,7 @@ export default function KronosActivityTab({ clients }: Props) {
                 <SelectItem value="media">🟡 Media (2d)</SelectItem>
                 <SelectItem value="alta">🔴 Alta (3+d)</SelectItem>
                 <SelectItem value="panic">🚨 Botón de pánico</SelectItem>
+                <SelectItem value="baton">🥢 Bastón (Punches)</SelectItem>
                 <SelectItem value="muted">🔇 Silenciadas (estado LX)</SelectItem>
                 <SelectItem value="unlinked">🔗 Sin cliente CxC</SelectItem>
                 <SelectItem value="discrepancia">⚠️ Discrepancias</SelectItem>
