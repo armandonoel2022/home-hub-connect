@@ -774,7 +774,7 @@ const HRForms = () => {
                 <Button onClick={handlePrint} className="gap-2"><Printer className="h-4 w-4" /> Imprimir</Button>
               </div>
               <div ref={printRef} className="print-area bg-card rounded-xl border border-border p-8">
-                <RenderForm formType={activeForm} userName={user?.fullName || ""} department={user?.department || ""} />
+                <RenderForm formType={activeForm} userName={user?.fullName || ""} department={user?.department || ""} hireDate={resolvedHireDate} suggestedSalary={findEmployeeSalary(user?.fullName || "")} />
               </div>
             </div>
           )}
