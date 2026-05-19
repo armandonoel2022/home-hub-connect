@@ -34,6 +34,7 @@ import type { OSMClient } from "@/lib/osmClientData";
 import {
   monitoringReportsApi, monitoringAccountSettingsApi, billingClientsApi,
   type MonitoringReportMeta, type MonitoringAccountSetting, type LxStatus, type BillingClient,
+  type ServiceType, type CommType, type BrandType,
 } from "@/lib/api";
 import BillingClientsManager from "./BillingClientsManager";
 
@@ -41,6 +42,21 @@ const LX_STATUSES: LxStatus[] = [
   "Activa", "Prueba", "Cancelada", "Suspendida",
   "Dada de baja", "Sin notificaciones", "Inactiva",
 ];
+const SERVICE_TYPES: ServiceType[] = [
+  "Monitoreado sin respuesta", "Monitoreado con Respuesta",
+  "Botón de pánico", "Interrupción Energética", "Bastón",
+];
+const COMM_TYPES: CommType[] = ["EBS LX-EPX", "Intelbras"];
+const BRANDS: BrandType[] = ["Hikvision", "Daiwa"];
+const SERVICE_COLOR: Record<ServiceType, string> = {
+  "Monitoreado sin respuesta": "text-sky-400 border-sky-500/30",
+  "Monitoreado con Respuesta": "text-emerald-400 border-emerald-500/30",
+  "Botón de pánico": "text-purple-400 border-purple-500/30",
+  "Interrupción Energética": "text-orange-400 border-orange-500/30",
+  "Bastón": "text-cyan-400 border-cyan-500/30",
+};
+/** Tipos de servicio que NO requieren apertura/cierre y silencian alertas operativas. */
+const NO_OPEN_CLOSE_SERVICES = new Set<ServiceType>(["Botón de pánico", "Bastón"]);
 const LX_STATUS_COLOR: Record<LxStatus, string> = {
   "Activa": "text-emerald-400 border-emerald-500/30",
   "Prueba": "text-blue-400 border-blue-500/30",
@@ -80,11 +96,13 @@ interface CombinedRow {
   setting?: MonitoringAccountSetting;
   billingClient?: BillingClient;
   isPanic: boolean;
+  isBaton: boolean;
   isMuted: boolean; // estado LX que silencia alertas
+  noOpenClose: boolean; // panic OR baton: ignora aperturas/cierres
   discrepancia?: string;
 }
 
-type FilterKey = "all" | "ok" | CriticidadInactividad | "discrepancia" | "panic" | "muted" | "unlinked";
+type FilterKey = "all" | "ok" | CriticidadInactividad | "discrepancia" | "panic" | "baton" | "muted" | "unlinked";
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
@@ -202,8 +220,11 @@ export default function KronosActivityTab({ clients }: Props) {
       const saved = await monitoringAccountSettingsApi.upsert(editing.code, {
         accountName: editing.name,
         clientId: draft.clientId || null,
-        kind: (draft.kind === "panic" ? "panic" : "regular"),
+        kind: (draft.serviceType === "Botón de pánico" || draft.kind === "panic") ? "panic" : "regular",
         lxStatus: draft.lxStatus || null,
+        serviceType: draft.serviceType ?? null,
+        commType: draft.commType ?? null,
+        brand: draft.brand ?? null,
         expectedOpen: draft.expectedOpen || null,
         expectedClose: draft.expectedClose || null,
         locationAddress: draft.locationAddress || "",
@@ -266,21 +287,24 @@ export default function KronosActivityTab({ clients }: Props) {
     const seen = new Set<string>();
 
     const processSetting = (setting?: MonitoringAccountSetting) => {
-      const isPanic = setting?.kind === "panic";
+      const serviceType = setting?.serviceType || null;
+      const isPanic = setting?.kind === "panic" || serviceType === "Botón de pánico";
+      const isBaton = serviceType === "Bastón";
+      const noOpenClose = isPanic || isBaton;
       const lxStatus = setting?.lxStatus || null;
       const isMuted = !!(lxStatus && MUTING_LX_STATUSES.has(lxStatus));
       const billingClient = setting?.clientId ? billingClientById.get(setting.clientId) : undefined;
-      return { isPanic, isMuted, billingClient };
+      return { isPanic, isBaton, noOpenClose, isMuted, billingClient };
     };
 
     report.rows.forEach(r => {
       seen.add(r.accountCode);
       const osm = osmByCode.get(r.accountCode);
       const setting = settings[r.accountCode];
-      const { isPanic, isMuted, billingClient } = processSetting(setting);
+      const { isPanic, isBaton, noOpenClose, isMuted, billingClient } = processSetting(setting);
 
       const alertas: string[] = [];
-      if (!isPanic && !isMuted) {
+      if (!noOpenClose && !isMuted) {
         if (osm) {
           if (osm.monitoringStatus === "Activo" && r.criticidad === "alta") {
             alertas.push("Marcado ACTIVO en OSM pero sin señal hace 3+ días");
@@ -304,12 +328,12 @@ export default function KronosActivityTab({ clients }: Props) {
         accountName: r.accountName,
         estado: r.estado,
         lastSignal: r.lastSignal,
-        lastOpen: isPanic ? null : r.lastOpen,
-        lastClose: isPanic ? null : r.lastClose,
-        sameDayCycle: !isPanic && r.sameDayCycle,
+        lastOpen: noOpenClose ? null : r.lastOpen,
+        lastClose: noOpenClose ? null : r.lastClose,
+        sameDayCycle: !noOpenClose && r.sameDayCycle,
         daysSince: r.daysSince,
-        criticidad: isMuted ? "ok" : r.criticidad,
-        osm, setting, billingClient, isPanic, isMuted,
+        criticidad: (isMuted || noOpenClose) ? "ok" : r.criticidad,
+        osm, setting, billingClient, isPanic, isBaton, noOpenClose, isMuted,
         discrepancia: alertas.join(" • ") || undefined,
       });
     });
@@ -319,22 +343,22 @@ export default function KronosActivityTab({ clients }: Props) {
       if (!c.accountCode || seen.has(c.accountCode.trim())) return;
       if (c.monitoringStatus !== "Activo") return;
       const setting = settings[c.accountCode];
-      const { isPanic, isMuted, billingClient } = processSetting(setting);
+      const { isPanic, isBaton, noOpenClose, isMuted, billingClient } = processSetting(setting);
       list.push({
         accountCode: c.accountCode, accountName: c.businessName, estado: "",
         lastSignal: null, lastOpen: null, lastClose: null, sameDayCycle: false,
-        daysSince: null, criticidad: isMuted ? "ok" : "alta",
-        osm: c, setting, billingClient, isPanic, isMuted,
-        discrepancia: isMuted || isPanic ? undefined : "Activo en OSM pero NO aparece en reporte Kronos",
+        daysSince: null, criticidad: (isMuted || noOpenClose) ? "ok" : "alta",
+        osm: c, setting, billingClient, isPanic, isBaton, noOpenClose, isMuted,
+        discrepancia: (isMuted || noOpenClose) ? undefined : "Activo en OSM pero NO aparece en reporte Kronos",
       });
     });
 
 
     return list.sort((a, b) => (b.daysSince ?? 9999) - (a.daysSince ?? 9999));
-  }, [report, clients, osmByCode, settings]);
+  }, [report, clients, osmByCode, settings, billingClientById]);
 
   const stats = useMemo(() => {
-    const operational = combined.filter(r => !r.isPanic && !r.isMuted);
+    const operational = combined.filter(r => !r.noOpenClose && !r.isMuted);
     return {
       total: combined.length,
       alta: operational.filter(r => r.criticidad === "alta").length,
@@ -342,7 +366,8 @@ export default function KronosActivityTab({ clients }: Props) {
       baja: operational.filter(r => r.criticidad === "baja").length,
       ok: operational.filter(r => r.criticidad === "ok").length,
       panic: combined.filter(r => r.isPanic).length,
-      muted: combined.filter(r => r.isMuted && !r.isPanic).length,
+      baton: combined.filter(r => r.isBaton).length,
+      muted: combined.filter(r => r.isMuted && !r.noOpenClose).length,
       discrepancias: combined.filter(r => r.discrepancia).length,
     };
   }, [combined]);
@@ -350,11 +375,12 @@ export default function KronosActivityTab({ clients }: Props) {
   const filtered = useMemo(() => {
     return combined.filter(r => {
       if (filterCrit === "panic") { if (!r.isPanic) return false; }
-      else if (filterCrit === "muted") { if (!r.isMuted || r.isPanic) return false; }
+      else if (filterCrit === "baton") { if (!r.isBaton) return false; }
+      else if (filterCrit === "muted") { if (!r.isMuted || r.noOpenClose) return false; }
       else if (filterCrit === "discrepancia") { if (!r.discrepancia) return false; }
       else if (filterCrit === "unlinked") { if (r.setting?.clientId) return false; }
       else if (filterCrit !== "all") {
-        if (r.isPanic || r.isMuted) return false;
+        if (r.noOpenClose || r.isMuted) return false;
         if (r.criticidad !== filterCrit) return false;
       }
       if (search.trim()) {
@@ -373,7 +399,7 @@ export default function KronosActivityTab({ clients }: Props) {
 
 
   const exportCallList = () => {
-    const toCall = combined.filter(r => !r.isPanic && !r.isMuted && (r.criticidad === "alta" || r.criticidad === "media"));
+    const toCall = combined.filter(r => !r.noOpenClose && !r.isMuted && (r.criticidad === "alta" || r.criticidad === "media"));
     if (toCall.length === 0) { toast.info("No hay cuentas para llamar"); return; }
     const csv = [
       ["Codigo", "Nombre", "Contacto", "Telefono", "Ultima senal", "Dias", "Criticidad", "Discrepancia"].join(","),
@@ -468,7 +494,7 @@ export default function KronosActivityTab({ clients }: Props) {
 
       {report && (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-7 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-8 gap-3">
             <KpiCard label="Total" value={stats.total} color="text-foreground"
               active={filterCrit === "all"} onClick={() => setFilterCrit("all")} />
             <KpiCard label="🟢 Al día" value={stats.ok} color="text-emerald-400"
@@ -481,6 +507,8 @@ export default function KronosActivityTab({ clients }: Props) {
               active={filterCrit === "alta"} onClick={() => setFilterCrit("alta")} />
             <KpiCard label="🚨 Pánico" value={stats.panic} color="text-purple-400"
               active={filterCrit === "panic"} onClick={() => setFilterCrit("panic")} />
+            <KpiCard label="🥢 Bastón" value={stats.baton} color="text-cyan-400"
+              active={filterCrit === "baton"} onClick={() => setFilterCrit("baton")} />
             <KpiCard label="🔇 Silenciadas" value={stats.muted} color="text-muted-foreground"
               active={filterCrit === "muted"} onClick={() => setFilterCrit("muted")} />
           </div>
@@ -516,6 +544,7 @@ export default function KronosActivityTab({ clients }: Props) {
                 <SelectItem value="media">🟡 Media (2d)</SelectItem>
                 <SelectItem value="alta">🔴 Alta (3+d)</SelectItem>
                 <SelectItem value="panic">🚨 Botón de pánico</SelectItem>
+                <SelectItem value="baton">🥢 Bastón (Punches)</SelectItem>
                 <SelectItem value="muted">🔇 Silenciadas (estado LX)</SelectItem>
                 <SelectItem value="unlinked">🔗 Sin cliente CxC</SelectItem>
                 <SelectItem value="discrepancia">⚠️ Discrepancias</SelectItem>
@@ -556,7 +585,11 @@ export default function KronosActivityTab({ clients }: Props) {
                   {filtered.length === 0 ? (
                     <TableRow><TableCell colSpan={15} className="text-center text-muted-foreground py-8">Sin resultados</TableCell></TableRow>
                   ) : filtered.map(r => (
-                    <TableRow key={r.accountCode} className={r.isPanic ? "bg-purple-500/5" : r.isMuted ? "opacity-60" : ""}>
+                    <TableRow key={r.accountCode} className={
+                      r.isPanic ? "bg-purple-500/5"
+                      : r.isBaton ? "bg-cyan-500/5"
+                      : r.isMuted ? "opacity-60" : ""
+                    }>
                       <TableCell className="font-mono text-xs">{r.accountCode}</TableCell>
                       <TableCell className="font-medium text-sm">{r.osm?.businessName || r.accountName}</TableCell>
                       <TableCell className="text-xs">
@@ -574,7 +607,19 @@ export default function KronosActivityTab({ clients }: Props) {
                         )}
                       </TableCell>
                       <TableCell>
-                        {r.isPanic ? (
+                        {r.setting?.serviceType ? (
+                          <div className="flex flex-col gap-0.5">
+                            <Badge variant="outline" className={SERVICE_COLOR[r.setting.serviceType]}>
+                              {r.setting.serviceType === "Botón de pánico" && <Siren className="h-3 w-3 mr-1" />}
+                              {r.setting.serviceType}
+                            </Badge>
+                            {(r.setting.commType || r.setting.brand) && (
+                              <span className="text-[10px] text-muted-foreground">
+                                {[r.setting.commType, r.setting.brand].filter(Boolean).join(" · ")}
+                              </span>
+                            )}
+                          </div>
+                        ) : r.isPanic ? (
                           <Badge variant="outline" className="text-purple-400 border-purple-500/30">
                             <Siren className="h-3 w-3 mr-1" /> Pánico
                           </Badge>
@@ -594,7 +639,7 @@ export default function KronosActivityTab({ clients }: Props) {
                           <Badge variant="outline" className="text-red-400 border-red-500/30">s/señal</Badge>
                         ) : (
                           <span className={`font-bold text-sm ${
-                            r.isPanic || r.isMuted ? "text-muted-foreground"
+                            r.noOpenClose || r.isMuted ? "text-muted-foreground"
                             : r.daysSince >= 3 ? "text-red-400"
                             : r.daysSince === 2 ? "text-amber-400"
                             : r.daysSince === 1 ? "text-blue-400" : "text-emerald-400"
@@ -602,15 +647,15 @@ export default function KronosActivityTab({ clients }: Props) {
                         )}
                       </TableCell>
                       <TableCell className="text-xs whitespace-nowrap">
-                        {r.isPanic ? <span className="text-muted-foreground">N/A</span>
+                        {r.noOpenClose ? <span className="text-muted-foreground">N/A</span>
                           : r.lastOpen ? fmtDate(r.lastOpen) : <span className="text-amber-400">—</span>}
                       </TableCell>
                       <TableCell className="text-xs whitespace-nowrap">
-                        {r.isPanic ? <span className="text-muted-foreground">N/A</span>
+                        {r.noOpenClose ? <span className="text-muted-foreground">N/A</span>
                           : r.lastClose ? fmtDate(r.lastClose) : <span className="text-amber-400">—</span>}
                       </TableCell>
                       <TableCell className="text-xs">
-                        {r.isPanic ? "—"
+                        {r.noOpenClose ? "—"
                           : r.sameDayCycle ? <Badge variant="outline" className="text-emerald-400 border-emerald-500/30">A↔C</Badge>
                           : r.lastOpen && !r.lastClose ? <Badge variant="outline" className="text-amber-400 border-amber-500/30">Sin cierre</Badge>
                           : !r.lastOpen && r.lastClose ? <Badge variant="outline" className="text-amber-400 border-amber-500/30">Sin apertura</Badge>
@@ -625,6 +670,7 @@ export default function KronosActivityTab({ clients }: Props) {
                       </TableCell>
                       <TableCell>
                         {r.isPanic ? <Badge variant="outline" className="text-purple-400 border-purple-500/30">N/A</Badge>
+                          : r.isBaton ? <Badge variant="outline" className="text-cyan-400 border-cyan-500/30">→ Punches</Badge>
                           : r.isMuted ? <Badge variant="outline" className="text-muted-foreground">Silenciada</Badge>
                           : r.criticidad === "ok" ? <Badge variant="outline" className="text-emerald-400 border-emerald-500/30">Al día</Badge>
                           : <Badge variant="outline" className={CRIT_COLOR[r.criticidad as CriticidadInactividad]}>{CRIT_LABEL[r.criticidad as CriticidadInactividad]}</Badge>}
@@ -709,13 +755,17 @@ export default function KronosActivityTab({ clients }: Props) {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs">Tipo</Label>
-                <Select value={draft.kind || "regular"}
-                  onValueChange={v => setDraft(d => ({ ...d, kind: v as any }))}>
+                <Label className="text-xs">Tipo de servicio</Label>
+                <Select value={draft.serviceType || "__none__"}
+                  onValueChange={v => setDraft(d => ({
+                    ...d,
+                    serviceType: v === "__none__" ? null : v as ServiceType,
+                    kind: v === "Botón de pánico" ? "panic" : "regular",
+                  }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="regular">Estándar</SelectItem>
-                    <SelectItem value="panic">🚨 Botón de pánico</SelectItem>
+                    <SelectItem value="__none__">— Estándar (sin definir) —</SelectItem>
+                    {SERVICE_TYPES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -731,11 +781,45 @@ export default function KronosActivityTab({ clients }: Props) {
                 </Select>
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Tipo de comunicación</Label>
+                <Select value={draft.commType || "__none__"}
+                  onValueChange={v => setDraft(d => ({ ...d, commType: v === "__none__" ? null : v as CommType }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— Sin definir —</SelectItem>
+                    {COMM_TYPES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Marca</Label>
+                <Select value={draft.brand || "__none__"}
+                  onValueChange={v => setDraft(d => ({ ...d, brand: v === "__none__" ? null : v as BrandType }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— Sin definir —</SelectItem>
+                    {BRANDS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {draft.serviceType === "Bastón" && (
+              <p className="text-[11px] text-cyan-400 -mt-1">
+                🥢 Esta LX se evaluará en la pestaña <strong>Punches</strong> (no requiere apertura/cierre).
+              </p>
+            )}
+            {draft.serviceType === "Botón de pánico" && (
+              <p className="text-[11px] text-purple-400 -mt-1">
+                🚨 Esta LX queda deshabilitada para apertura/cierre y no genera alertas operativas.
+              </p>
+            )}
             <p className="text-[11px] text-muted-foreground -mt-1">
               Cualquier estado distinto de <strong>Activa</strong> silencia las alertas de esta LX.
             </p>
 
-            {draft.kind !== "panic" && (
+            {draft.kind !== "panic" && draft.serviceType !== "Botón de pánico" && draft.serviceType !== "Bastón" && (
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label htmlFor="open" className="text-xs">Hora apertura esperada</Label>

@@ -686,6 +686,18 @@ export type LxStatus =
   | "Activa" | "Prueba" | "Cancelada" | "Suspendida"
   | "Dada de baja" | "Sin notificaciones" | "Inactiva";
 
+/** Tipo de servicio operativo de la cuenta */
+export type ServiceType =
+  | "Monitoreado sin respuesta"
+  | "Monitoreado con Respuesta"
+  | "Botón de pánico"
+  | "Interrupción Energética"
+  | "Bastón";
+/** Tipo de comunicación del panel */
+export type CommType = "EBS LX-EPX" | "Intelbras";
+/** Marca del equipo asociado */
+export type BrandType = "Hikvision" | "Daiwa";
+
 export interface MonitoringAccountSetting {
   accountCode: string;
   accountName?: string;
@@ -694,6 +706,9 @@ export interface MonitoringAccountSetting {
   lxStatus: LxStatus | null;
   /** @deprecated usar lxStatus */
   manualStatus?: MonitoringManualStatus | null;
+  serviceType?: ServiceType | null;
+  commType?: CommType | null;
+  brand?: BrandType | null;
   locationAddress?: string;
   locationMapsUrl?: string;
   locationLat?: number | null;

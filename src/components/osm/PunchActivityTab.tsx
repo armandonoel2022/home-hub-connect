@@ -33,8 +33,8 @@ import {
   type PunchParsedReport, type ExpectedRound,
 } from "@/lib/punchHtmParser";
 import {
-  monitoringReportsApi, punchRulesApi,
-  type MonitoringReportMeta, type PunchRule, type PunchRoundConfig,
+  monitoringReportsApi, punchRulesApi, monitoringAccountSettingsApi,
+  type MonitoringReportMeta, type PunchRule, type PunchRoundConfig, type MonitoringAccountSetting,
 } from "@/lib/api";
 
 function fmtDateTime(iso: string | null): string {
@@ -79,11 +79,12 @@ function RoundBadge({ r }: { r: ExpectedRound }) {
 export default function PunchActivityTab() {
   const [rawReport, setRawReport] = useState<PunchParsedReport | null>(null);
   const [rules, setRules] = useState<PunchRule[]>([]);
+  const [settings, setSettings] = useState<Record<string, MonitoringAccountSetting>>({});
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState<MonitoringReportMeta[]>([]);
   const [activeReportId, setActiveReportId] = useState<string | null>(null);
   const [meta, setMeta] = useState<MonitoringReportMeta | null>(null);
-  const [filter, setFilter] = useState<"all" | "missed" | "partial" | "ok" | "no-rules">("all");
+  const [filter, setFilter] = useState<"all" | "missed" | "partial" | "ok" | "no-rules" | "baton">("all");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [rulesOpen, setRulesOpen] = useState(false);
 
@@ -92,6 +93,14 @@ export default function PunchActivityTab() {
   const loadRules = async () => {
     try { setRules(await punchRulesApi.list()); }
     catch (e: any) { if (e.message !== "API_NOT_CONFIGURED") console.warn("Reglas:", e.message); }
+  };
+  const loadSettings = async () => {
+    try {
+      const list = await monitoringAccountSettingsApi.list();
+      const m: Record<string, MonitoringAccountSetting> = {};
+      list.forEach(s => { m[s.accountCode] = s; });
+      setSettings(m);
+    } catch (e: any) { if (e.message !== "API_NOT_CONFIGURED") console.warn("Settings:", e.message); }
   };
 
   const loadHistory = async () => {
@@ -116,7 +125,14 @@ export default function PunchActivityTab() {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { loadRules(); loadHistory(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { loadRules(); loadSettings(); loadHistory(); /* eslint-disable-next-line */ }, []);
+
+  /** Códigos de cuenta marcados como Bastón en Actividad Kronos */
+  const batonCodes = useMemo(() => {
+    const s = new Set<string>();
+    Object.values(settings).forEach(st => { if (st.serviceType === "Bastón") s.add(st.accountCode); });
+    return s;
+  }, [settings]);
 
   // Reevaluar cuando cambien las reglas o el reporte
   const report = useMemo(() => rawReport ? evaluatePunchReport(rawReport, rules) : null, [rawReport, rules]);
@@ -154,9 +170,13 @@ export default function PunchActivityTab() {
     partial: report.clients.filter(c => c.compliance === "partial").length,
     missed: report.clients.filter(c => c.compliance === "missed").length,
     noRules: report.clients.filter(c => c.compliance === "no-rules").length,
+    baton: report.clients.filter(c => batonCodes.has(c.accountCode)).length,
   } : null;
 
-  const filtered = report ? report.clients.filter(c => filter === "all" || c.compliance === filter) : [];
+  const filtered = report ? report.clients.filter(c => {
+    if (filter === "baton") return batonCodes.has(c.accountCode);
+    return filter === "all" || c.compliance === filter;
+  }) : [];
 
   return (
     <div className="space-y-4">
@@ -231,12 +251,13 @@ export default function PunchActivityTab() {
 
       {report && stats && (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
             <KpiCard label="Total clientes" value={stats.total} color="text-foreground" active={filter === "all"} onClick={() => setFilter("all")} />
             <KpiCard label="✅ Cumplió" value={stats.ok} color="text-emerald-400" active={filter === "ok"} onClick={() => setFilter("ok")} />
             <KpiCard label="⚠️ Parcial" value={stats.partial} color="text-amber-400" active={filter === "partial"} onClick={() => setFilter("partial")} />
             <KpiCard label="❌ Incumplió" value={stats.missed} color="text-red-400" active={filter === "missed"} onClick={() => setFilter("missed")} />
             <KpiCard label="Sin regla" value={stats.noRules} color="text-muted-foreground" active={filter === "no-rules"} onClick={() => setFilter("no-rules")} />
+            <KpiCard label="🥢 Bastón" value={stats.baton} color="text-cyan-400" active={filter === "baton"} onClick={() => setFilter("baton")} />
           </div>
 
           <Card>
@@ -270,7 +291,12 @@ export default function PunchActivityTab() {
                             </Button>
                           </TableCell>
                           <TableCell className="font-medium text-sm">
-                            {c.accountName}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span>{c.accountName}</span>
+                              {batonCodes.has(c.accountCode) && (
+                                <Badge variant="outline" className="text-cyan-400 border-cyan-500/30 text-[10px]">🥢 Bastón</Badge>
+                              )}
+                            </div>
                             <div className="text-xs text-muted-foreground font-mono">{c.accountCode}</div>
                             {c.ruleLabel && <div className="text-[10px] text-primary mt-0.5">{c.ruleLabel}</div>}
                           </TableCell>

@@ -32,6 +32,12 @@ const ALLOWED_LX_STATUS = new Set([
   'Activa', 'Prueba', 'Cancelada', 'Suspendida',
   'Dada de baja', 'Sin notificaciones', 'Inactiva',
 ]);
+const ALLOWED_SERVICE_TYPE = new Set([
+  'Monitoreado sin respuesta', 'Monitoreado con Respuesta',
+  'Botón de pánico', 'Interrupción Energética', 'Bastón',
+]);
+const ALLOWED_COMM_TYPE = new Set(['EBS LX-EPX', 'Intelbras']);
+const ALLOWED_BRAND = new Set(['Hikvision', 'Daiwa']);
 // Legacy values that we still accept on write for back-compat
 const LEGACY_STATUS = new Set([
   'Activo', 'Inactivo', 'Sin notificaciones',
@@ -43,6 +49,12 @@ const LEGACY_TO_NEW = {
   'Dado de baja': 'Dada de baja', 'Cancelado': 'Cancelada',
   'Suspendido por falta de pago': 'Suspendida',
 };
+
+function pickEnum(value, set, prev) {
+  if (value === null) return null;
+  if (value === undefined) return prev ?? null;
+  return set.has(value) ? value : (prev ?? null);
+}
 
 router.get('/', auth, (req, res) => {
   const list = readData(FILE);
@@ -80,12 +92,18 @@ router.put('/:accountCode', auth, (req, res) => {
   }
 
   const prev = idx >= 0 ? items[idx] : null;
+  // serviceType ↔ kind: si es Botón de pánico forzamos kind=panic
+  const serviceType = pickEnum(body.serviceType, ALLOWED_SERVICE_TYPE, prev?.serviceType);
+  const effectiveKind = serviceType === 'Botón de pánico' ? 'panic' : kind;
   const doc = {
     accountCode: code,
     accountName: body.accountName ?? prev?.accountName ?? '',
     clientId: body.clientId !== undefined ? (body.clientId || null) : (prev?.clientId ?? null),
-    kind,
+    kind: effectiveKind,
     lxStatus,
+    serviceType,
+    commType: pickEnum(body.commType, ALLOWED_COMM_TYPE, prev?.commType),
+    brand: pickEnum(body.brand, ALLOWED_BRAND, prev?.brand),
     locationAddress: body.locationAddress ?? prev?.locationAddress ?? '',
     locationMapsUrl: body.locationMapsUrl ?? prev?.locationMapsUrl ?? '',
     locationLat: body.locationLat ?? prev?.locationLat ?? null,
