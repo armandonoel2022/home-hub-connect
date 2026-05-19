@@ -17,7 +17,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { benefitsApi } from "@/lib/api";
+import { benefitsApi, isApiConfigured } from "@/lib/api";
 import {
   ArrowLeft, Download, Pencil, Plus, Trash2, Sparkles,
   UserPlus, Cake, Clock, HeartPulse, CalendarDays, Sun, Award,
