@@ -52,6 +52,7 @@ import Training from "./pages/Training";
 import Kiosk from "./pages/Kiosk";
 import EmployeeDirectory from "./pages/EmployeeDirectory";
 import Payroll from "./pages/Payroll";
+import PayrollExtrasPage from "./pages/PayrollExtras";
 import NotFound from "./pages/NotFound";
 
 
@@ -111,6 +112,7 @@ function ProtectedRoutes() {
         <Route path="/rrhh/empleados" element={<EmployeeDirectory />} />
         <Route path="/rrhh/nomina" element={<Payroll />} />
         <Route path="/rrhh/beneficios" element={<HRBenefits />} />
+        <Route path="/rrhh/horas-extras" element={<PayrollExtrasPage />} />
         <Route path="/admin/formularios" element={<AdminForms />} />
         <Route path="/admin/hub" element={<AdminHub />} />
         <Route path="/admin/flotilla-mantenimiento" element={<FleetMaintenance />} />
