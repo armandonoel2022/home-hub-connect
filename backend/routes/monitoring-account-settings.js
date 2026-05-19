@@ -116,6 +116,7 @@ router.put('/:accountCode', auth, (req, res) => {
     expectedOpen: body.expectedOpen ?? prev?.expectedOpen ?? null,
     expectedClose: body.expectedClose ?? prev?.expectedClose ?? null,
     notes: body.notes ?? prev?.notes ?? '',
+    operatorId: body.operatorId !== undefined ? (body.operatorId || null) : (prev?.operatorId ?? null),
     updatedAt: new Date().toISOString(),
     updatedBy: userLabel,
   };
