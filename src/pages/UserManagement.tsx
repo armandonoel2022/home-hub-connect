@@ -514,13 +514,14 @@ const UserManagementPage = () => {
                 <Cake className="h-4 w-4" />
                 Previsualizar
               </button>
-              <button
-                onClick={() => setShowBirthdayList(true)}
+              <a
+                href="/rrhh/cumpleanos"
                 className="text-sm flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-background hover:bg-muted transition-colors"
+                title="El módulo de cumpleaños vive en Recursos Humanos"
               >
                 <CalendarDays className="h-4 w-4 text-gold" />
-                Ver cumpleaños por mes
-              </button>
+                Ver cumpleaños por mes (RRHH)
+              </a>
             </div>
           </div>
         </div>
