@@ -563,6 +563,8 @@ export default function KronosActivityTab({ clients }: Props) {
                 <SelectItem value="panic">🚨 Botón de pánico</SelectItem>
                 <SelectItem value="baton">🥢 Bastón (Punches)</SelectItem>
                 <SelectItem value="muted">🔇 Silenciadas (estado LX)</SelectItem>
+                <SelectItem value="inactive-cancelled">⛔ Inactivas y Canceladas ({stats.inactiveCancelled})</SelectItem>
+                <SelectItem value="deleted">🗑️ Dadas de baja ({stats.deleted})</SelectItem>
                 <SelectItem value="unlinked">🔗 Sin cliente CxC</SelectItem>
                 <SelectItem value="discrepancia">⚠️ Discrepancias</SelectItem>
               </SelectContent>
