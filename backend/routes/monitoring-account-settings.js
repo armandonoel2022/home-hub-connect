@@ -92,12 +92,18 @@ router.put('/:accountCode', auth, (req, res) => {
   }
 
   const prev = idx >= 0 ? items[idx] : null;
+  // serviceType ↔ kind: si es Botón de pánico forzamos kind=panic
+  const serviceType = pickEnum(body.serviceType, ALLOWED_SERVICE_TYPE, prev?.serviceType);
+  const effectiveKind = serviceType === 'Botón de pánico' ? 'panic' : kind;
   const doc = {
     accountCode: code,
     accountName: body.accountName ?? prev?.accountName ?? '',
     clientId: body.clientId !== undefined ? (body.clientId || null) : (prev?.clientId ?? null),
-    kind,
+    kind: effectiveKind,
     lxStatus,
+    serviceType,
+    commType: pickEnum(body.commType, ALLOWED_COMM_TYPE, prev?.commType),
+    brand: pickEnum(body.brand, ALLOWED_BRAND, prev?.brand),
     locationAddress: body.locationAddress ?? prev?.locationAddress ?? '',
     locationMapsUrl: body.locationMapsUrl ?? prev?.locationMapsUrl ?? '',
     locationLat: body.locationLat ?? prev?.locationLat ?? null,
