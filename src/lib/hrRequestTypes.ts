@@ -4,19 +4,11 @@ export type HRRequestStatus =
   | "Pendiente Supervisor"
   | "Aprobada Supervisor"
   | "Pendiente RRHH"
-  // Loan-specific stages:
-  | "Pendiente Administración" // RRHH escaló a Chrisnel Fabián
-  | "Pendiente Gerencia General" // Chrisnel escaló a Aurelio Pérez
-  | "Pendiente Aplicación RRHH" // Aprobado, RRHH debe registrar fecha de aplicación
+  // Loan-specific stages (simplificado: RRHH/Dilia → Gerencia General/Aurelio → RRHH aplica):
+  | "Pendiente Gerencia General"
+  | "Pendiente Aplicación RRHH"
   | "Aprobada"
   | "Rechazada";
-
-export const HR_STATUS_FLOW: HRRequestStatus[] = [
-  "Pendiente Supervisor",
-  "Aprobada Supervisor",
-  "Pendiente RRHH",
-  "Aprobada",
-];
 
 export const HR_FORM_LABELS: Record<HRFormType, string> = {
   vacaciones: "Vacaciones",
@@ -33,7 +25,6 @@ export interface HRApprovalStep {
   at: string;
   approved: boolean;
   comment?: string;
-  /** For vacaciones: who covers during absence */
   coverPerson?: string;
 }
 
@@ -44,6 +35,22 @@ export interface HRNotification {
   requestId: string;
   read: boolean;
   createdAt: string;
+}
+
+/** Detalle financiero del préstamo. */
+export interface LoanDetails {
+  monthlySalary: number;
+  amountRequested: number;
+  termMonths: number;
+  annualInterestRatePct: number;
+  monthlyInstallment: number;
+  calculatedMaxAvailable: number;
+  maxInstallment: number;
+  isOverPolicy: boolean;
+  overrideJustification?: string;
+  approvedAmount?: number;
+  approvedTermMonths?: number;
+  approvedInstallment?: number;
 }
 
 export interface HRRequest {
@@ -59,13 +66,13 @@ export interface HRRequest {
   supervisorName: string;
   supervisorApproval: HRApprovalStep | null;
   rrhhApproval: HRApprovalStep | null;
-  /** Loan-only: Chrisnel Fabián review */
-  adminApproval?: HRApprovalStep | null;
-  /** Loan-only: Aurelio Pérez (Gerencia General) review */
   gerenciaApproval?: HRApprovalStep | null;
-  /** Loan-only: scheduled application date set by RRHH after final approval */
   loanApplyDate?: string | null;
   loanApplyComment?: string | null;
+  loanDetails?: LoanDetails | null;
+  beneficiaryId?: string | null;
+  beneficiaryName?: string | null;
+  requestedOnBehalf?: boolean;
   rejectionReason: string | null;
   rejectedBy: string | null;
   rejectedAt: string | null;
