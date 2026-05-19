@@ -502,9 +502,88 @@ const UserManagementPage = () => {
                 <Cake className="h-4 w-4" />
                 Previsualizar
               </button>
+              <button
+                onClick={() => setShowBirthdayList(true)}
+                className="text-sm flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-background hover:bg-muted transition-colors"
+              >
+                <CalendarDays className="h-4 w-4 text-gold" />
+                Ver cumpleaños por mes
+              </button>
             </div>
           </div>
         </div>
+
+        {/* Modal — Cumpleaños por mes */}
+        {showBirthdayList && (() => {
+          const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+          const today = new Date();
+          const todayMMDD = `${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+          const grouped: Record<number, Array<{ u: IntranetUser; mmdd: string; day: number }>> = {};
+          activeUsers.forEach((u) => {
+            const raw = (u.birthday || "").trim();
+            if (!raw) return;
+            // Soporta "MM-DD" o "YYYY-MM-DD"
+            const parts = raw.split("-");
+            let mm: number, dd: number;
+            if (parts.length === 3) { mm = +parts[1]; dd = +parts[2]; }
+            else if (parts.length === 2) { mm = +parts[0]; dd = +parts[1]; }
+            else return;
+            if (!mm || !dd) return;
+            const mmdd = `${String(mm).padStart(2,"0")}-${String(dd).padStart(2,"0")}`;
+            (grouped[mm] ||= []).push({ u, mmdd, day: dd });
+          });
+          Object.values(grouped).forEach(arr => arr.sort((a,b) => a.day - b.day));
+          const total = Object.values(grouped).reduce((s, a) => s + a.length, 0);
+          return (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowBirthdayList(false)}>
+              <div className="bg-card rounded-2xl w-full max-w-4xl max-h-[85vh] shadow-2xl flex flex-col" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+                  <div className="flex items-center gap-2">
+                    <CalendarDays className="h-5 w-5 text-gold" />
+                    <h2 className="font-heading font-bold text-base text-card-foreground">Cumpleaños por mes</h2>
+                    <span className="text-xs text-muted-foreground">({total} empleados con fecha registrada)</span>
+                  </div>
+                  <button onClick={() => setShowBirthdayList(false)} className="p-1.5 rounded-lg hover:bg-muted">
+                    <X className="h-5 w-5 text-muted-foreground" />
+                  </button>
+                </div>
+                <div className="overflow-y-auto p-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {MONTHS.map((name, idx) => {
+                    const m = idx + 1;
+                    const items = grouped[m] || [];
+                    const isCurrentMonth = m === today.getMonth() + 1;
+                    return (
+                      <div key={m} className={`rounded-lg border p-3 ${isCurrentMonth ? "border-gold bg-gold/5" : "border-border bg-muted/20"}`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-heading font-bold text-sm text-card-foreground">{name}</h3>
+                          <span className="text-xs text-muted-foreground">{items.length}</span>
+                        </div>
+                        {items.length === 0 ? (
+                          <p className="text-xs text-muted-foreground italic">Sin cumpleaños</p>
+                        ) : (
+                          <ul className="space-y-1.5">
+                            {items.map(({ u, mmdd, day }) => {
+                              const isToday = mmdd === todayMMDD;
+                              return (
+                                <li key={u.id} className={`text-xs flex items-center gap-2 px-2 py-1 rounded ${isToday ? "bg-gold/20 font-semibold" : ""}`}>
+                                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-background border border-border text-[10px] font-bold shrink-0">{day}</span>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-card-foreground truncate">{u.fullName} {isToday && "🎂"}</p>
+                                    <p className="text-muted-foreground truncate text-[10px]">{u.department}</p>
+                                  </div>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Birthday Test Overlay */}
         {showBirthdayTest && birthdayTestUsers.length > 0 && (
