@@ -11,7 +11,7 @@ import { Navigate } from "react-router-dom";
 import RegistrationRequests from "@/components/RegistrationRequests";
 import BirthdayOverlay from "@/components/BirthdayOverlay";
 import ExportMenu from "@/components/ExportMenu";
-import { employeesApi, type Employee } from "@/lib/api";
+// employeesApi ya no se usa aquí (cumpleaños vive en /rrhh/cumpleanos)
 import { toast } from "@/hooks/use-toast";
 
 const emptyForm = (): Partial<IntranetUser> => ({
