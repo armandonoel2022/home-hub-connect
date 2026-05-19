@@ -314,24 +314,87 @@ router.post('/runs/generate', auth, (req, res) => {
   // factor: si frequency = quincenal → 0.5 ; si mensual completa → 1
   const factor = frequency === 'quincenal' ? 0.5 : 1;
 
+  // Cargar extras (horas extras, nocturnas, feriados, almuerzos) del período
+  const extras = loadExtrasForPeriod(period);
+  const extrasByEmp = new Map();
+  extras.forEach(x => {
+    const arr = extrasByEmp.get(x.employeeCode) || [];
+    arr.push(x);
+    extrasByEmp.set(x.employeeCode, arr);
+  });
+
   const items = target.map(e => {
     const grossMonthly = Number(e.salary) || 0;
+    const factors = payrollFactors(e);
+    const empExtras = extrasByEmp.get(e.employeeCode) || [];
+
+    // Cálculos por tipo (CT R.D. Art. 203, 204, 205 — recargos referenciales)
+    let overtimeHours = 0, overtimeAmount = 0;
+    let nightHours = 0, nightAmount = 0;
+    let holidayDays = 0, holidayAmount = 0;
+    let mealDeduction = 0;
+    const mealDetail = [];
+
+    empExtras.forEach(x => {
+      const hourly = factors.hourlyRate;
+      if (x.type === 'overtime') {
+        const h = Number(x.hours) || 0;
+        overtimeHours += h;
+        // 35% recargo (Art. 203) hasta 68h/sem; aquí simplificamos a 35%
+        overtimeAmount += x.amount ? Number(x.amount) : h * hourly * 1.35;
+      } else if (x.type === 'night') {
+        const h = Number(x.hours) || 0;
+        nightHours += h;
+        // Recargo nocturno 15%
+        nightAmount += x.amount ? Number(x.amount) : h * hourly * 1.15;
+      } else if (x.type === 'holiday') {
+        const d = Number(x.days) || 1;
+        holidayDays += d;
+        // Día feriado trabajado: 100% adicional sobre la jornada normal
+        holidayAmount += x.amount ? Number(x.amount) : d * factors.normalDailyHours * hourly;
+      } else if (x.type === 'meal') {
+        const a = Number(x.amount) || 0;
+        mealDeduction += a;
+        mealDetail.push({ date: x.date, description: x.description || 'Almuerzo', amount: round2(a) });
+      }
+    });
+
     const ded = calcDeductions(grossMonthly);
+    const grossPeriodBase = grossMonthly * factor;
+    const earningsExtra = overtimeAmount + nightAmount + holidayAmount;
+    const grossPeriod = grossPeriodBase + earningsExtra;
+    const totalDeductions = ded.totalDeductions * factor + mealDeduction;
+    const net = grossPeriod - totalDeductions;
+
     return {
       employeeCode: e.employeeCode,
       fullName: e.fullName,
-      cedula: e.tss || '',
+      cedula: e.cedula || e.tss || '',
       department: e.department,
       position: e.position,
       bank: e.bank,
       category: e.category || e.payrollType,
+      hireDate: e.hireDate || '',
+      isSecurityAgent: factors.security,
+      monthlyDivisor: factors.monthlyDivisor,
+      normalDailyHours: factors.normalDailyHours,
+      hourlyRate: round2(factors.hourlyRate),
       grossMonthly,
-      grossPeriod: round2(grossMonthly * factor),
+      grossPeriodBase: round2(grossPeriodBase),
+      overtimeHours: round2(overtimeHours),
+      overtimeAmount: round2(overtimeAmount),
+      nightHours: round2(nightHours),
+      nightAmount: round2(nightAmount),
+      holidayDays: round2(holidayDays),
+      holidayAmount: round2(holidayAmount),
+      mealDeduction: round2(mealDeduction),
+      mealDetail,
+      grossPeriod: round2(grossPeriod),
       sfs: round2(ded.sfs * factor),
       afp: round2(ded.afp * factor),
       isr: round2(ded.isr * factor),
-      totalDeductions: round2(ded.totalDeductions * factor),
-      net: round2(ded.netMonthly * factor),
+      totalDeductions: round2(totalDeductions),
+      net: round2(net),
     };
   });
 
@@ -340,9 +403,13 @@ router.post('/runs/generate', auth, (req, res) => {
     sfs: acc.sfs + i.sfs,
     afp: acc.afp + i.afp,
     isr: acc.isr + i.isr,
+    overtime: acc.overtime + i.overtimeAmount,
+    night: acc.night + i.nightAmount,
+    holiday: acc.holiday + i.holidayAmount,
+    meals: acc.meals + i.mealDeduction,
     deductions: acc.deductions + i.totalDeductions,
     net: acc.net + i.net,
-  }), { gross: 0, sfs: 0, afp: 0, isr: 0, deductions: 0, net: 0 });
+  }), { gross: 0, sfs: 0, afp: 0, isr: 0, overtime: 0, night: 0, holiday: 0, meals: 0, deductions: 0, net: 0 });
 
   const all = readData(RUNS_FILE);
   const list = Array.isArray(all) ? all : [];
