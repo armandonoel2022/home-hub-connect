@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Clock, Moon, CalendarDays, UtensilsCrossed, Trash2, Send } from "lucide-react";
+import { Clock, Moon, CalendarDays, UtensilsCrossed, Trash2, Send, ArrowLeft } from "lucide-react";
 import { payrollExtrasApi, employeesApi, type PayrollExtra, type Employee } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 
@@ -110,6 +110,12 @@ export default function PayrollExtrasPage() {
       <div className="flex flex-col min-h-screen">
         <Navbar />
         <div className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 py-8 w-full">
+          <button
+            onClick={() => navigate(-1)}
+            className="mb-4 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" /> Volver
+          </button>
           <div className="mb-6">
             <h1 className="text-2xl font-heading font-bold text-foreground flex items-center gap-2">
               <Clock className="h-6 w-6 text-gold" /> Horas extras, nocturnas, feriados y almuerzos

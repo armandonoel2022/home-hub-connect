@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import BirthdayOverlay from "@/components/BirthdayOverlay";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChatContextSafe } from "@/contexts/ChatContext";
-import { employeesApi, type Employee } from "@/lib/api";
+import { employeesApi, isApiConfigured, type Employee } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
-import { Cake, CalendarDays, Eye, X } from "lucide-react";
+import { ArrowLeft, Cake, CalendarDays, Eye } from "lucide-react";
 import type { IntranetUser } from "@/lib/types";
 
 const MONTHS = [
@@ -54,6 +54,7 @@ function toIntranetUser(item: BirthdayItem): IntranetUser {
 
 const HRBirthdaysPage = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const chatCtx = useChatContextSafe();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(false);
@@ -66,18 +67,34 @@ const HRBirthdaysPage = () => {
 
   useEffect(() => {
     if (!isAuthorized) return;
-    setLoading(true);
-    employeesApi
-      .getAll({ status: "Activo" })
-      .then(setEmployees)
-      .catch((err) =>
-        toast({
-          title: "Error cargando empleados",
-          description: String(err?.message || err),
-          variant: "destructive",
-        })
-      )
-      .finally(() => setLoading(false));
+    let cancelled = false;
+    const loadSeed = async () => {
+      try {
+        const res = await fetch("/data/employees_seed.json");
+        if (!res.ok) throw new Error("Seed no disponible");
+        const seed = await res.json();
+        if (!cancelled) setEmployees(seed.filter((e: any) => e.status === "Activo"));
+      } catch (e: any) {
+        if (!cancelled) toast({ title: "Error cargando empleados", description: String(e?.message || e), variant: "destructive" });
+      }
+    };
+    const load = async () => {
+      setLoading(true);
+      if (!isApiConfigured()) {
+        await loadSeed();
+      } else {
+        try {
+          const data = await employeesApi.getAll({ status: "Activo" });
+          if (!data || data.length === 0) await loadSeed();
+          else if (!cancelled) setEmployees(data);
+        } catch {
+          await loadSeed();
+        }
+      }
+      if (!cancelled) setLoading(false);
+    };
+    load();
+    return () => { cancelled = true; };
   }, [isAuthorized]);
 
   const { grouped, total, todayItems } = useMemo(() => {
@@ -145,7 +162,15 @@ const HRBirthdaysPage = () => {
   return (
     <AppLayout>
       <div className="max-w-7xl mx-auto">
-        <div className="px-6 pt-6 pb-4 flex items-start justify-between gap-4 flex-wrap">
+        <div className="px-6 pt-6">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" /> Volver
+          </button>
+        </div>
+        <div className="px-6 pt-4 pb-4 flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-gold/15 flex items-center justify-center">
               <Cake className="h-5 w-5 text-gold" />
