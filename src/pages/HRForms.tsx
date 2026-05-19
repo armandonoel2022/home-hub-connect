@@ -28,9 +28,9 @@ import {
   getAllHRRequests, getRequestsByUser,
   createHRRequest, approveBySupervisor, approveByRRHH,
   rejectRequest, generateRequestId, getNotificationsForUser, markAllNotificationsRead,
-  escalateLoanToAdmin, approveLoanByAdmin, escalateLoanToGerencia,
-  approveLoanByGerencia, applyLoan,
+  escalateLoanToGerencia, approveLoanByGerencia, applyLoan,
 } from "@/lib/hrRequestService";
+import { getLoanSettings, saveLoanSettings, calcLoanCapacity, calcMonthlyInstallment } from "@/lib/loanSettings";
 
 type FormType = "vacaciones" | "dias-libres" | "comida" | "ausencias" | "feriados" | "permisos" | "prestamos";
 type FormMode = "print" | "virtual";
