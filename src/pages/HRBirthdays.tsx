@@ -290,13 +290,15 @@ const HRBirthdaysPage = () => {
                       return (
                         <li
                           key={item.id}
-                          className={`text-xs flex items-center gap-2 px-2 py-1.5 rounded-md ${isToday ? "bg-gold/20 font-semibold" : "hover:bg-muted"}`}
+                          onClick={() => previewSingle(item)}
+                          className={`text-xs flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-colors ${isToday ? "bg-gold/20 font-semibold hover:bg-gold/30" : "hover:bg-muted"}`}
+                          title="Click para ver y descargar el overlay"
                         >
                           <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-background border border-border text-[11px] font-bold shrink-0">
                             {item.day}
                           </span>
                           <div className="min-w-0 flex-1">
-                            <p className="text-card-foreground truncate">
+                            <p className="text-card-foreground truncate hover:text-gold transition-colors">
                               {item.fullName} {isToday && "🎂"}
                             </p>
                             <p className="text-muted-foreground truncate text-[10px]">
@@ -304,13 +306,7 @@ const HRBirthdaysPage = () => {
                               {item.position ? ` — ${item.position}` : ""}
                             </p>
                           </div>
-                          <button
-                            onClick={() => previewSingle(item)}
-                            className="opacity-0 group-hover:opacity-100 hover:opacity-100 p-1 rounded hover:bg-background transition-opacity"
-                            title="Previsualizar y descargar overlay"
-                          >
-                            <Eye className="h-3.5 w-3.5 text-gold" />
-                          </button>
+                          <Eye className="h-3.5 w-3.5 text-gold opacity-60" />
                         </li>
                       );
                     })}
