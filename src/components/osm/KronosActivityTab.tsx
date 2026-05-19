@@ -302,6 +302,22 @@ export default function KronosActivityTab({ clients }: Props) {
         setReportMeta({ id: saved.id, kind: saved.kind, reportDate: saved.reportDate, fileName: saved.fileName, uploadedAt: saved.uploadedAt, uploadedBy: saved.uploadedBy });
         await loadHistory();
         toast.success(`Reporte guardado (${parsed.rows.length} cuentas) — visible para todo el equipo`);
+        // Snapshot automático para tendencias
+        try {
+          const total = parsed.rows.length;
+          const noSignalHigh = parsed.rows.filter((r: any) => r.criticidad === "alta").length;
+          const compliedCycle = parsed.rows.filter((r: any) => r.sameDayCycle).length;
+          const compliedCyclePct = total > 0 ? Math.round((compliedCycle / total) * 100) : 0;
+          await monitoringSnapshotsApi.upsert({
+            date: dateKey, source: "kronos",
+            metrics: {
+              totalLx: total, activeLx: total, billableLx: 0,
+              compliedCycle, compliedCyclePct, noSignalHigh,
+              activeTrackTotal: 0, activeTrackComplied: 0, activeTrackPct: 0,
+              incidentsOpen: 0, incidentsResolved: 0,
+            },
+          });
+        } catch {}
       } catch (e: any) {
         if (e.message === "API_NOT_CONFIGURED") toast.warning("Backend no configurado: el reporte solo es visible en esta sesión");
         else toast.error(`Reporte cargado pero no se pudo guardar: ${e.message}`);
