@@ -54,6 +54,7 @@ function toIntranetUser(item: BirthdayItem): IntranetUser {
 
 const HRBirthdaysPage = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const chatCtx = useChatContextSafe();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(false);
