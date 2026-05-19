@@ -226,6 +226,35 @@ const HRBirthdaysPage = () => {
           </div>
         </div>
 
+        {/* Configuración del overlay automático */}
+        <div className="px-6 pb-2">
+          <div className="bg-card border border-border rounded-xl p-4 flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-gold" />
+              <span className="text-sm font-medium text-card-foreground">Overlay automático diario</span>
+            </div>
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+              Aparece a partir de:
+              <input
+                type="time"
+                value={autoTime}
+                onChange={(e) => saveAutoTime(e.target.value)}
+                className="px-2 py-1 rounded-md bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none"
+              />
+            </label>
+            <button
+              onClick={resetTodayDismissed}
+              className="text-xs px-3 py-1.5 rounded-md border border-border bg-background hover:bg-muted text-card-foreground transition-colors"
+              title="Vuelve a mostrar los overlays de hoy aunque ya hayan sido cerrados"
+            >
+              Reiniciar overlays de hoy
+            </button>
+            <span className="text-[11px] text-muted-foreground ml-auto">
+              Si hay varios cumpleaños, se muestran uno por uno. No se repiten en el mismo día.
+            </span>
+          </div>
+        </div>
+
         <div className="px-6 pb-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {monthsToRender.map((m) => {
             const items = grouped[m] || [];
