@@ -67,18 +67,34 @@ const HRBirthdaysPage = () => {
 
   useEffect(() => {
     if (!isAuthorized) return;
-    setLoading(true);
-    employeesApi
-      .getAll({ status: "Activo" })
-      .then(setEmployees)
-      .catch((err) =>
-        toast({
-          title: "Error cargando empleados",
-          description: String(err?.message || err),
-          variant: "destructive",
-        })
-      )
-      .finally(() => setLoading(false));
+    let cancelled = false;
+    const loadSeed = async () => {
+      try {
+        const res = await fetch("/data/employees_seed.json");
+        if (!res.ok) throw new Error("Seed no disponible");
+        const seed = await res.json();
+        if (!cancelled) setEmployees(seed.filter((e: any) => e.status === "Activo"));
+      } catch (e: any) {
+        if (!cancelled) toast({ title: "Error cargando empleados", description: String(e?.message || e), variant: "destructive" });
+      }
+    };
+    const load = async () => {
+      setLoading(true);
+      if (!isApiConfigured()) {
+        await loadSeed();
+      } else {
+        try {
+          const data = await employeesApi.getAll({ status: "Activo" });
+          if (!data || data.length === 0) await loadSeed();
+          else if (!cancelled) setEmployees(data);
+        } catch {
+          await loadSeed();
+        }
+      }
+      if (!cancelled) setLoading(false);
+    };
+    load();
+    return () => { cancelled = true; };
   }, [isAuthorized]);
 
   const { grouped, total, todayItems } = useMemo(() => {
