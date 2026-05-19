@@ -54,6 +54,7 @@ import Kiosk from "./pages/Kiosk";
 import EmployeeDirectory from "./pages/EmployeeDirectory";
 import Payroll from "./pages/Payroll";
 import PayrollExtrasPage from "./pages/PayrollExtras";
+import HRBirthdays from "./pages/HRBirthdays";
 import NotFound from "./pages/NotFound";
 
 
