@@ -21,7 +21,7 @@ import {
   CheckCircle2, AlertTriangle, Clock, Radio, WifiOff, PhoneOff,
   BarChart3, PieChart, TrendingUp, DollarSign, Activity, Filter,
   FileWarning, Phone, Camera, Video, Mic, Send, MessageSquare,
-  Calendar, Download, FileText, Users, Bell, Footprints,
+  Calendar, Download, FileText, Users, Bell, Footprints, UserCheck, TrendingUp as TrendingUpIcon,
 } from "lucide-react";
 import {
   getOSMClients, saveOSMClients, addOSMClient, updateOSMClient, deleteOSMClient,
