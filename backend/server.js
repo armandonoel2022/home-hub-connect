@@ -54,6 +54,7 @@ app.use('/api/training', require('./routes/training'));
 app.use('/api/employees', require('./routes/employees'));
 app.use('/api/benefits', require('./routes/benefits'));
 app.use('/api/payroll', require('./routes/payroll'));
+app.use('/api/payroll-extras', require('./routes/payroll-extras'));
 app.use('/api/geo', require('./routes/geo'));
 app.use('/api/monitoring-reports', require('./routes/monitoring-reports'));
 app.use('/api/monitoring-account-settings', require('./routes/monitoring-account-settings'));

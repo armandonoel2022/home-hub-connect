@@ -541,9 +541,15 @@ export interface Employee {
   hourlyRate: number;
   /** Cédula (campo histórico llamado tss en el seed) */
   tss?: string;
+  /** Cédula oficial (nueva columna) */
+  cedula?: string;
   /** Email corporativo opcional para envío de volante */
   email?: string;
   hireDate?: string;
+  /** Fecha de nacimiento ISO (YYYY-MM-DD) */
+  birthDate?: string;
+  /** Cumpleaños MM-DD precomputado para overlay */
+  birthdayMMDD?: string;
   birthday?: string;
   updatedAt?: string;
   // ─── Cumplimiento TSS (gestión manual) ───
@@ -604,6 +610,7 @@ export interface TssCompareResult {
   ghostTss: any[];
   salaryMismatch: any[];
 }
+export interface MealDetailItem { date: string; description: string; amount: number; }
 export interface PayrollItem {
   employeeCode: string;
   fullName: string;
@@ -612,7 +619,21 @@ export interface PayrollItem {
   position: string;
   bank: string;
   category: string;
+  hireDate?: string;
+  isSecurityAgent?: boolean;
+  monthlyDivisor?: number;
+  normalDailyHours?: number;
+  hourlyRate?: number;
   grossMonthly: number;
+  grossPeriodBase?: number;
+  overtimeHours?: number;
+  overtimeAmount?: number;
+  nightHours?: number;
+  nightAmount?: number;
+  holidayDays?: number;
+  holidayAmount?: number;
+  mealDeduction?: number;
+  mealDetail?: MealDetailItem[];
   grossPeriod: number;
   sfs: number;
   afp: number;
@@ -632,8 +653,36 @@ export interface PayrollRun {
   closed: boolean;
   closedAt?: string;
   items: PayrollItem[];
-  totals: { gross: number; sfs: number; afp: number; isr: number; deductions: number; net: number; count: number };
+  totals: { gross: number; sfs: number; afp: number; isr: number; overtime?: number; night?: number; holiday?: number; meals?: number; deductions: number; net: number; count: number };
 }
+
+export interface PayrollExtra {
+  id: string;
+  employeeCode: string;
+  employeeName: string;
+  type: "overtime" | "night" | "holiday" | "meal";
+  date: string;
+  hours?: number;
+  days?: number;
+  amount?: number;
+  description?: string;
+  registeredBy: string;
+  registeredAt: string;
+  status: "Pendiente RRHH" | "Procesada";
+  payrollRunId?: string;
+}
+
+export const payrollExtrasApi = {
+  list: (params?: { employeeCode?: string; period?: string; status?: string; type?: string }) => {
+    const q = new URLSearchParams(params as any).toString();
+    return apiFetch<PayrollExtra[]>(`/payroll-extras${q ? "?" + q : ""}`);
+  },
+  create: (data: Partial<PayrollExtra>) =>
+    apiFetch<PayrollExtra>("/payroll-extras", { method: "POST", body: JSON.stringify(data) }),
+  update: (id: string, data: Partial<PayrollExtra>) =>
+    apiFetch<PayrollExtra>(`/payroll-extras/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  remove: (id: string) => apiFetch<void>(`/payroll-extras/${id}`, { method: "DELETE" }),
+};
 
 export const payrollApi = {
   importTss: (data: { period: string; rows: any[] }) =>

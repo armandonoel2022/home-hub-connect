@@ -1,3 +1,4 @@
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -52,6 +53,7 @@ import Training from "./pages/Training";
 import Kiosk from "./pages/Kiosk";
 import EmployeeDirectory from "./pages/EmployeeDirectory";
 import Payroll from "./pages/Payroll";
+import PayrollExtrasPage from "./pages/PayrollExtras";
 import NotFound from "./pages/NotFound";
 
 
@@ -60,6 +62,13 @@ const queryClient = new QueryClient();
 function ProtectedRoutes() {
   const { user, isLoading, activeUsers } = useAuth();
   const chatCtx = useChatContextSafe();
+  const [employees, setEmployees] = React.useState<any[]>([]);
+
+  React.useEffect(() => {
+    import("@/lib/api").then(({ employeesApi }) => {
+      employeesApi.getAll().then(setEmployees).catch(() => {});
+    });
+  }, []);
 
   if (isLoading) {
     return (
@@ -77,8 +86,26 @@ function ProtectedRoutes() {
   }
 
   const today = new Date();
-  const todayStr = `${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-  const birthdayUsers = (activeUsers || []).filter((u) => u.birthday === todayStr);
+  const todayMMDD = `${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+  // Cumpleaños desde usuarios con campo `birthday` (MM-DD) y empleados del seed (birthDate ISO)
+  const fromUsers = (activeUsers || []).filter((u) => u.birthday === todayMMDD);
+  const fromEmployees = (employees || [])
+    .filter((e: any) => e.status === "Activo" && e.birthDate && e.birthDate.slice(5, 10) === todayMMDD)
+    .filter((e: any) => !fromUsers.find((u) => u.fullName.toLowerCase() === String(e.fullName).toLowerCase()))
+    .map((e: any) => ({
+      id: `EMP-${e.employeeCode}`,
+      fullName: e.fullName,
+      email: "",
+      department: e.department,
+      position: e.position,
+      birthday: todayMMDD,
+      photoUrl: "",
+      allowedDepartments: [],
+      isAdmin: false,
+      extension: "",
+    }));
+  const birthdayUsers = [...fromUsers, ...fromEmployees];
 
   return (
     <>
@@ -111,6 +138,7 @@ function ProtectedRoutes() {
         <Route path="/rrhh/empleados" element={<EmployeeDirectory />} />
         <Route path="/rrhh/nomina" element={<Payroll />} />
         <Route path="/rrhh/beneficios" element={<HRBenefits />} />
+        <Route path="/rrhh/horas-extras" element={<PayrollExtrasPage />} />
         <Route path="/admin/formularios" element={<AdminForms />} />
         <Route path="/admin/hub" element={<AdminHub />} />
         <Route path="/admin/flotilla-mantenimiento" element={<FleetMaintenance />} />
