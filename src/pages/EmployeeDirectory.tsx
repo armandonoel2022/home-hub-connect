@@ -398,11 +398,11 @@ const EmployeeDirectory = () => {
             </div>
             <div>
               <Label>Fecha nacimiento</Label>
-              <Input type="date" value={formData.birthday || ""} onChange={e => setFormData({ ...formData, birthday: e.target.value })} />
+              <Input type="date" value={(formData as any).birthDate || ""} onChange={e => setFormData({ ...formData, birthDate: e.target.value } as any)} />
             </div>
             <div>
               <Label>Cédula</Label>
-              <Input value={(formData as any).tss || ""} onChange={e => setFormData({ ...formData, tss: e.target.value } as any)} />
+              <Input value={(formData as any).cedula || (formData as any).tss || ""} onChange={e => setFormData({ ...formData, cedula: e.target.value } as any)} />
             </div>
             <div>
               <Label>Email corporativo</Label>
