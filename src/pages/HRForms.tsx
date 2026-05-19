@@ -359,25 +359,42 @@ const HRForms = () => {
     toast({ title: "Rechazada", description: `Solicitud ${reqId} fue rechazada.`, variant: "destructive" });
   };
 
+  // Aurelio loan settings panel
+  const [showLoanSettings, setShowLoanSettings] = useState(false);
+  const [loanRate, setLoanRate] = useState<number>(getLoanSettings().annualInterestRatePct);
+
+  // Gerencia override fields
+  const [overrideAmount, setOverrideAmount] = useState<string>("");
+  const [overrideTerm, setOverrideTerm] = useState<string>("");
+
   const handleConfirmLoanAction = () => {
     if (!user || !loanActionId || !loanAction) return;
     let result: HRRequest | null = null;
-    if (loanAction === "escalate-admin") {
-      if (!adminApprover?.id) {
-        toast({ title: "Error", description: "No se encontró a Chrisnel Fabián.", variant: "destructive" });
-        return;
-      }
-      result = escalateLoanToAdmin(loanActionId, user.id, user.fullName, adminApprover.id, loanComment);
-    } else if (loanAction === "approve-admin") {
-      result = approveLoanByAdmin(loanActionId, user.id, user.fullName, loanComment, rrhhUserIds);
-    } else if (loanAction === "escalate-gerencia") {
+    if (loanAction === "escalate-gerencia") {
       if (!gerenciaApprover?.id) {
         toast({ title: "Error", description: "No se encontró a Aurelio Pérez.", variant: "destructive" });
         return;
       }
       result = escalateLoanToGerencia(loanActionId, user.id, user.fullName, gerenciaApprover.id, loanComment);
     } else if (loanAction === "approve-gerencia") {
-      result = approveLoanByGerencia(loanActionId, user.id, user.fullName, loanComment, rrhhUserIds);
+      const req = getAllHRRequests().find(r => r.id === loanActionId);
+      const settings = getLoanSettings();
+      let override: any = undefined;
+      const ovAmt = Number(overrideAmount);
+      const ovTerm = Number(overrideTerm);
+      if (req?.loanDetails && (ovAmt > 0 || ovTerm > 0)) {
+        const finalAmt = ovAmt > 0 ? ovAmt : req.loanDetails.amountRequested;
+        const finalTerm = ovTerm > 0 ? ovTerm : req.loanDetails.termMonths;
+        const finalInst = calcMonthlyInstallment(finalAmt, finalTerm, settings.annualInterestRatePct);
+        override = {
+          approvedAmount: finalAmt,
+          approvedTermMonths: finalTerm,
+          approvedInstallment: finalInst,
+          overrideJustification: loanComment,
+        };
+      }
+      result = approveLoanByGerencia(loanActionId, user.id, user.fullName, loanComment, rrhhUserIds, override);
+      setOverrideAmount(""); setOverrideTerm("");
     } else if (loanAction === "apply") {
       if (!loanApplyDate) {
         toast({ title: "Fecha requerida", description: "Indica la fecha de aplicación del préstamo.", variant: "destructive" });
@@ -392,6 +409,7 @@ const HRForms = () => {
     }
   };
 
+
   const handleBack = () => {
     if (formMode) { setFormMode(null); }
     else if (activeForm) { setActiveForm(null); }
@@ -404,11 +422,11 @@ const HRForms = () => {
   const pendingApprovals = user ? getAllHRRequests().filter((r) => {
     if (r.status === "Pendiente Supervisor" && r.supervisorId === user.id) return true;
     if (r.status === "Pendiente RRHH" && isRRHH) return true;
-    if (r.status === "Pendiente Administración" && isAdminApprover) return true;
     if (r.status === "Pendiente Gerencia General" && isGerenciaApprover) return true;
     if (r.status === "Pendiente Aplicación RRHH" && isRRHH) return true;
     return false;
   }) : [];
+
 
   // HR Notifications
   const hrNotifications = user ? getNotificationsForUser(user.id) : [];
