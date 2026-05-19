@@ -291,7 +291,12 @@ export default function PunchActivityTab() {
                             </Button>
                           </TableCell>
                           <TableCell className="font-medium text-sm">
-                            {c.accountName}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span>{c.accountName}</span>
+                              {batonCodes.has(c.accountCode) && (
+                                <Badge variant="outline" className="text-cyan-400 border-cyan-500/30 text-[10px]">🥢 Bastón</Badge>
+                              )}
+                            </div>
                             <div className="text-xs text-muted-foreground font-mono">{c.accountCode}</div>
                             {c.ruleLabel && <div className="text-[10px] text-primary mt-0.5">{c.ruleLabel}</div>}
                           </TableCell>
