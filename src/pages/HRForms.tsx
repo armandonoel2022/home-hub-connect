@@ -488,12 +488,13 @@ const HRForms = () => {
                   <ClipboardList className="h-4 w-4" /> Consolidado Nómina
                 </Button>
               )}
-              {/* Empleado externo: botón destacado para nueva solicitud */}
-              {!showInternalView && activeView === "my-requests" && (
-                <Button size="sm" className="gap-2 ml-auto" onClick={() => setActiveView("forms")}>
-                  <FileText className="h-4 w-4" /> Nueva Solicitud
+              {/* Aurelio: configurar tasa de préstamos */}
+              {isGerenciaApprover && (
+                <Button variant="outline" size="sm" className="gap-2" onClick={() => setShowLoanSettings(s => !s)}>
+                  <Banknote className="h-4 w-4" /> Tasa préstamos: {loanRate}%
                 </Button>
               )}
+
             </div>
           )}
 
