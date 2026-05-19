@@ -97,7 +97,8 @@ router.put('/:accountCode', auth, (req, res) => {
 
   const prev = idx >= 0 ? items[idx] : null;
   // serviceType ↔ kind: si es Botón de pánico forzamos kind=panic
-  const serviceType = pickEnum(body.serviceType, ALLOWED_SERVICE_TYPE, prev?.serviceType);
+  const incomingService = body.serviceType && LEGACY_SERVICE_TYPE[body.serviceType] ? LEGACY_SERVICE_TYPE[body.serviceType] : body.serviceType;
+  const serviceType = pickEnum(incomingService, ALLOWED_SERVICE_TYPE, prev?.serviceType);
   const effectiveKind = serviceType === 'Botón de pánico' ? 'panic' : kind;
   const doc = {
     accountCode: code,
