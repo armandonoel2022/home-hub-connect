@@ -44,7 +44,7 @@ const LX_STATUSES: LxStatus[] = [
 ];
 const SERVICE_TYPES: ServiceType[] = [
   "Monitoreado sin respuesta", "Monitoreado con Respuesta",
-  "Botón de pánico", "Interrupción Energética", "Bastón",
+  "Botón de pánico", "Interrupción Energética", "Bastón", "Panel de Incendio",
 ];
 const COMM_TYPES: CommType[] = ["EBS LX-EPX", "Intelbras"];
 const BRANDS: BrandType[] = ["Hikvision", "Daiwa"];
@@ -54,9 +54,10 @@ const SERVICE_COLOR: Record<ServiceType, string> = {
   "Botón de pánico": "text-purple-400 border-purple-500/30",
   "Interrupción Energética": "text-orange-400 border-orange-500/30",
   "Bastón": "text-cyan-400 border-cyan-500/30",
+  "Panel de Incendio": "text-red-400 border-red-500/30",
 };
 /** Tipos de servicio que NO requieren apertura/cierre y silencian alertas operativas. */
-const NO_OPEN_CLOSE_SERVICES = new Set<ServiceType>(["Botón de pánico", "Bastón"]);
+const NO_OPEN_CLOSE_SERVICES = new Set<ServiceType>(["Botón de pánico", "Bastón", "Panel de Incendio"]);
 const LX_STATUS_COLOR: Record<LxStatus, string> = {
   "Activa": "text-emerald-400 border-emerald-500/30",
   "Prueba": "text-blue-400 border-blue-500/30",
