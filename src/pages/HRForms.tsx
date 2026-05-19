@@ -498,6 +498,26 @@ const HRForms = () => {
             </div>
           )}
 
+          {/* Aurelio: panel de configuración de tasa */}
+          {showLoanSettings && isGerenciaApprover && (
+            <div className="mb-6 p-4 rounded-lg border border-border bg-card">
+              <h3 className="font-bold text-sm mb-2">Configuración global de préstamos</h3>
+              <div className="grid grid-cols-2 gap-3 items-end">
+                <div>
+                  <Label className="text-xs">Tasa de interés anual (%)</Label>
+                  <Input type="number" step="0.01" value={loanRate} onChange={e => setLoanRate(Number(e.target.value))} />
+                </div>
+                <Button size="sm" onClick={() => {
+                  saveLoanSettings({ annualInterestRatePct: loanRate }, user?.fullName || "Aurelio");
+                  toast({ title: "Tasa actualizada", description: `Nueva tasa anual: ${loanRate}%` });
+                  setShowLoanSettings(false);
+                }}>Guardar</Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">Aplica a nuevas solicitudes de préstamo. Cuota máxima: 1/6 del salario mensual.</p>
+            </div>
+          )}
+
+
           {/* ═══ FORMS VIEW ═══ */}
           {activeView === "forms" && !activeForm && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
