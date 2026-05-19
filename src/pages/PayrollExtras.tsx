@@ -40,7 +40,27 @@ export default function PayrollExtrasPage() {
   const [period, setPeriod] = useState(() => new Date().toISOString().slice(0, 7));
 
   useEffect(() => {
-    employeesApi.getAll().then(setEmployees).catch(() => {});
+    let cancelled = false;
+    const loadSeed = async () => {
+      try {
+        const res = await fetch("/data/employees_seed.json");
+        if (!res.ok) return;
+        const seed = await res.json();
+        if (!cancelled) setEmployees(seed);
+      } catch {}
+    };
+    const run = async () => {
+      if (!isApiConfigured()) { await loadSeed(); return; }
+      try {
+        const data = await employeesApi.getAll();
+        if (!data || data.length === 0) await loadSeed();
+        else if (!cancelled) setEmployees(data);
+      } catch {
+        await loadSeed();
+      }
+    };
+    run();
+    return () => { cancelled = true; };
   }, []);
 
   const refresh = () => {
