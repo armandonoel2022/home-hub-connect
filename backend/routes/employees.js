@@ -27,10 +27,15 @@ function load() {
     // Merge: conservar ediciones por employeeCode si existían
     const existing = Array.isArray(raw) ? raw : [];
     const byCode = new Map(existing.map(e => [String(e.employeeCode), e]));
+    // Campos cuya última versión proviene SIEMPRE del seed (HR-managed bulk fields).
+    const SEED_AUTHORITATIVE = ['tss', 'tssRegistered', 'tssRegisteredAt', 'cedula', 'hireDate', 'birthDate', 'birthdayMMDD', 'salary', 'payrollType', 'department', 'position', 'bank', 'fullName', 'status'];
     const merged = SEED.map(s => {
       const prev = byCode.get(String(s.employeeCode));
-      // Si el usuario editó manualmente, mantener su versión pero garantizar campos del seed
-      return prev ? { ...s, ...prev } : s;
+      if (!prev) return s;
+      // Mantener ediciones manuales (notas, etc) pero forzar campos autoritativos del seed
+      const authoritative = {};
+      SEED_AUTHORITATIVE.forEach(k => { if (s[k] !== undefined) authoritative[k] = s[k]; });
+      return { ...prev, ...s, ...authoritative };
     });
     // Mantener empleados creados manualmente (no presentes en seed)
     const seedCodes = new Set(SEED.map(s => String(s.employeeCode)));
