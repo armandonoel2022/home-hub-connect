@@ -40,7 +40,7 @@ export default function PayrollExtrasPage() {
   const [period, setPeriod] = useState(() => new Date().toISOString().slice(0, 7));
 
   useEffect(() => {
-    employeesApi.list().then(setEmployees).catch(() => {});
+    employeesApi.getAll().then(setEmployees).catch(() => {});
   }, []);
 
   const refresh = () => {
