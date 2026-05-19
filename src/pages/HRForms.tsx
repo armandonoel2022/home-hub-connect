@@ -144,19 +144,24 @@ const HRForms = () => {
   const isSupervisor = user?.isDepartmentLeader === true || user?.isAdmin === true;
 
   // ── Employees seed (para lookup de salario al solicitar préstamo) ──
-  const [employees, setEmployees] = useState<Array<{ employeeCode: string; fullName: string; salary: number; department: string; status?: string }>>([]);
+  const [employees, setEmployees] = useState<Array<{ employeeCode: string; fullName: string; salary: number; department: string; status?: string; hireDate?: string }>>([]);
   useEffect(() => {
     fetch("/data/employees_seed.json").then(r => r.ok ? r.json() : []).then(setEmployees).catch(() => {});
   }, []);
 
-  function findEmployeeSalary(name: string): number {
-    if (!name) return 0;
+  function findEmployee(name: string) {
+    if (!name) return null;
     const norm = name.trim().toLowerCase();
-    const match = employees.find(e =>
+    return employees.find(e =>
       e.fullName.toLowerCase().includes(norm) ||
       norm.includes(e.fullName.toLowerCase().split(" ")[0])
-    );
-    return match?.salary || 0;
+    ) || null;
+  }
+  function findEmployeeSalary(name: string): number {
+    return findEmployee(name)?.salary || 0;
+  }
+  function findEmployeeHireDate(name: string): string | null {
+    return findEmployee(name)?.hireDate || null;
   }
 
   // Beneficiary (cuando un líder solicita para alguien de su área)
