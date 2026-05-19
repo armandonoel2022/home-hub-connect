@@ -755,13 +755,17 @@ export default function KronosActivityTab({ clients }: Props) {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs">Tipo</Label>
-                <Select value={draft.kind || "regular"}
-                  onValueChange={v => setDraft(d => ({ ...d, kind: v as any }))}>
+                <Label className="text-xs">Tipo de servicio</Label>
+                <Select value={draft.serviceType || "__none__"}
+                  onValueChange={v => setDraft(d => ({
+                    ...d,
+                    serviceType: v === "__none__" ? null : v as ServiceType,
+                    kind: v === "Botón de pánico" ? "panic" : "regular",
+                  }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="regular">Estándar</SelectItem>
-                    <SelectItem value="panic">🚨 Botón de pánico</SelectItem>
+                    <SelectItem value="__none__">— Estándar (sin definir) —</SelectItem>
+                    {SERVICE_TYPES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -777,6 +781,40 @@ export default function KronosActivityTab({ clients }: Props) {
                 </Select>
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Tipo de comunicación</Label>
+                <Select value={draft.commType || "__none__"}
+                  onValueChange={v => setDraft(d => ({ ...d, commType: v === "__none__" ? null : v as CommType }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— Sin definir —</SelectItem>
+                    {COMM_TYPES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Marca</Label>
+                <Select value={draft.brand || "__none__"}
+                  onValueChange={v => setDraft(d => ({ ...d, brand: v === "__none__" ? null : v as BrandType }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— Sin definir —</SelectItem>
+                    {BRANDS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {draft.serviceType === "Bastón" && (
+              <p className="text-[11px] text-cyan-400 -mt-1">
+                🥢 Esta LX se evaluará en la pestaña <strong>Punches</strong> (no requiere apertura/cierre).
+              </p>
+            )}
+            {draft.serviceType === "Botón de pánico" && (
+              <p className="text-[11px] text-purple-400 -mt-1">
+                🚨 Esta LX queda deshabilitada para apertura/cierre y no genera alertas operativas.
+              </p>
+            )}
             <p className="text-[11px] text-muted-foreground -mt-1">
               Cualquier estado distinto de <strong>Activa</strong> silencia las alertas de esta LX.
             </p>
