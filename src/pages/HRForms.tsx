@@ -477,7 +477,7 @@ const HRForms = () => {
                 <Send className="h-4 w-4" /> Mis Solicitudes
                 {myRequests.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{myRequests.length}</Badge>}
               </Button>
-              {(isSupervisor || isRRHH || isAdminApprover || isGerenciaApprover) && (
+              {(isSupervisor || isRRHH || isGerenciaApprover) && (
                 <Button variant={activeView === "approvals" ? "default" : "outline"} size="sm" onClick={() => setActiveView("approvals")} className="gap-2">
                   <Inbox className="h-4 w-4" /> Aprobaciones
                   {pendingApprovals.length > 0 && <Badge variant="destructive" className="ml-1 text-xs">{pendingApprovals.length}</Badge>}
@@ -621,11 +621,40 @@ const HRForms = () => {
                     </div>
                   ) : req.formType === "prestamos" ? (
                     <div className="space-y-2">
-                      {/* Tenure validation hint for RRHH */}
+                      {/* Loan financial summary */}
+                      {req.loanDetails && (
+                        <div className="text-xs bg-muted/50 rounded p-3 border border-border space-y-1">
+                          <div className="grid grid-cols-2 gap-2">
+                            <div><span className="text-muted-foreground">Salario mensual:</span> <strong>RD${req.loanDetails.monthlySalary.toLocaleString()}</strong></div>
+                            <div><span className="text-muted-foreground">Monto solicitado:</span> <strong>RD${req.loanDetails.amountRequested.toLocaleString()}</strong></div>
+                            <div><span className="text-muted-foreground">Plazo:</span> <strong>{req.loanDetails.termMonths} meses</strong></div>
+                            <div><span className="text-muted-foreground">Tasa anual:</span> <strong>{req.loanDetails.annualInterestRatePct}%</strong></div>
+                            <div><span className="text-muted-foreground">Cuota mensual:</span> <strong>RD${req.loanDetails.monthlyInstallment.toLocaleString()}</strong></div>
+                            <div><span className="text-muted-foreground">Cuota máx (1/6):</span> <strong>RD${req.loanDetails.maxInstallment.toLocaleString()}</strong></div>
+                            <div className="col-span-2"><span className="text-muted-foreground">Máx sugerido (vacaciones+13):</span> <strong>RD${req.loanDetails.calculatedMaxAvailable.toLocaleString()}</strong></div>
+                          </div>
+                          {req.loanDetails.isOverPolicy && (
+                            <div className="text-amber-700 bg-amber-50 border border-amber-200 rounded p-2 mt-2">
+                              ⚠ Excepción: monto supera prestaciones acumuladas. {req.loanDetails.overrideJustification && <em>"{req.loanDetails.overrideJustification}"</em>}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {/* Tenure hint for RRHH */}
                       {req.status === "Pendiente RRHH" && isRRHH && (
                         <div className="text-xs text-muted-foreground bg-muted/50 rounded p-2">
                           Antigüedad declarada: <strong>{req.formData["Antigüedad (meses)"] || "?"} meses</strong>.
-                          Política: requiere mínimo <strong>6 meses</strong> en la posición para escalar a Administración.
+                          Mínimo requerido: <strong>{getLoanSettings().minTenureMonths} meses</strong>.
+                        </div>
+                      )}
+                      {/* Gerencia override panel */}
+                      {req.status === "Pendiente Gerencia General" && isGerenciaApprover && loanActionId === req.id && loanAction === "approve-gerencia" && (
+                        <div className="border-t border-border pt-3 space-y-2">
+                          <p className="text-xs font-semibold">Sobreescribir monto/plazo (excepción) — opcional</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Input type="number" placeholder={`Monto aprobado (default ${req.loanDetails?.amountRequested || 0})`} value={overrideAmount} onChange={e => setOverrideAmount(e.target.value)} />
+                            <Input type="number" placeholder={`Plazo meses (default ${req.loanDetails?.termMonths || 0})`} value={overrideTerm} onChange={e => setOverrideTerm(e.target.value)} />
+                          </div>
                         </div>
                       )}
                       <div className="flex gap-2 flex-wrap">
@@ -634,24 +663,11 @@ const HRForms = () => {
                             <Button
                               size="sm"
                               className="gap-1"
-                              disabled={Number(req.formData["Antigüedad (meses)"] || 0) < 6}
-                              onClick={() => { setLoanActionId(req.id); setLoanAction("escalate-admin"); }}
-                              title={Number(req.formData["Antigüedad (meses)"] || 0) < 6 ? "Antigüedad menor a 6 meses" : ""}
+                              disabled={Number(req.formData["Antigüedad (meses)"] || 0) < getLoanSettings().minTenureMonths}
+                              onClick={() => { setLoanActionId(req.id); setLoanAction("escalate-gerencia"); }}
+                              title={Number(req.formData["Antigüedad (meses)"] || 0) < getLoanSettings().minTenureMonths ? "Antigüedad menor a la requerida" : ""}
                             >
-                              <Send className="h-3.5 w-3.5" /> Enviar a Administración
-                            </Button>
-                            <Button size="sm" variant="destructive" className="gap-1" onClick={() => setRejectId(req.id)}>
-                              <ThumbsDown className="h-3.5 w-3.5" /> Rechazar
-                            </Button>
-                          </>
-                        )}
-                        {req.status === "Pendiente Administración" && isAdminApprover && (
-                          <>
-                            <Button size="sm" className="gap-1" onClick={() => { setLoanActionId(req.id); setLoanAction("approve-admin"); }}>
-                              <ThumbsUp className="h-3.5 w-3.5" /> Aprobar
-                            </Button>
-                            <Button size="sm" variant="outline" className="gap-1" onClick={() => { setLoanActionId(req.id); setLoanAction("escalate-gerencia"); }}>
-                              <Send className="h-3.5 w-3.5" /> Escalar a Gerencia General
+                              <Send className="h-3.5 w-3.5" /> Enviar a Gerencia General (Aurelio)
                             </Button>
                             <Button size="sm" variant="destructive" className="gap-1" onClick={() => setRejectId(req.id)}>
                               <ThumbsDown className="h-3.5 w-3.5" /> Rechazar
@@ -675,6 +691,7 @@ const HRForms = () => {
                         )}
                       </div>
                     </div>
+
                   ) : (
                     <div className="flex gap-2">
                       <Button size="sm" className="gap-1" onClick={() => handleApprove(req)}>
@@ -819,10 +836,13 @@ function RequestCard({ req }: { req: HRRequest }) {
             {req.rrhhApproval ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Clock className="h-3.5 w-3.5" />}
             RRHH: {req.rrhhApproval ? `${req.rrhhApproval.byName} ✓` : "Pendiente"}
           </div>
-          <div className="flex items-center gap-1">
-            {req.adminApproval ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Clock className="h-3.5 w-3.5" />}
-            Administración: {req.adminApproval ? `${req.adminApproval.byName} ✓` : "Pendiente"}
-          </div>
+          {req.gerenciaApproval && (
+            <div className="flex items-center gap-1">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+              Gerencia: {req.gerenciaApproval.byName} ✓
+            </div>
+          )}
+
           {(req.gerenciaApproval || req.status === "Pendiente Gerencia General") && (
             <div className="flex items-center gap-1">
               {req.gerenciaApproval ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Clock className="h-3.5 w-3.5" />}
