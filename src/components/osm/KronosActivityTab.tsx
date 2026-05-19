@@ -96,11 +96,13 @@ interface CombinedRow {
   setting?: MonitoringAccountSetting;
   billingClient?: BillingClient;
   isPanic: boolean;
+  isBaton: boolean;
   isMuted: boolean; // estado LX que silencia alertas
+  noOpenClose: boolean; // panic OR baton: ignora aperturas/cierres
   discrepancia?: string;
 }
 
-type FilterKey = "all" | "ok" | CriticidadInactividad | "discrepancia" | "panic" | "muted" | "unlinked";
+type FilterKey = "all" | "ok" | CriticidadInactividad | "discrepancia" | "panic" | "baton" | "muted" | "unlinked";
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
