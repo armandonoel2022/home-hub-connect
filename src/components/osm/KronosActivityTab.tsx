@@ -37,6 +37,10 @@ import {
   type ServiceType, type CommType, type BrandType,
 } from "@/lib/api";
 import BillingClientsManager from "./BillingClientsManager";
+import TeamNotifyDialog from "./TeamNotifyDialog";
+import { queueEmail } from "@/lib/emailService";
+import { useAuth } from "@/contexts/AuthContext";
+import { Bell } from "lucide-react";
 
 const LX_STATUSES: LxStatus[] = [
   "Activa", "Prueba", "Cancelada", "Suspendida",
@@ -44,7 +48,7 @@ const LX_STATUSES: LxStatus[] = [
 ];
 const SERVICE_TYPES: ServiceType[] = [
   "Monitoreado sin respuesta", "Monitoreado con Respuesta",
-  "Botón de pánico", "Interrupción Energética", "Bastón", "Panel de Incendio",
+  "Botón de pánico", "Interrupción Energética", "Active Track", "Panel de Incendio",
 ];
 const COMM_TYPES: CommType[] = ["EBS LX-EPX", "Intelbras"];
 const BRANDS: BrandType[] = ["Hikvision", "Daiwa"];
@@ -53,11 +57,11 @@ const SERVICE_COLOR: Record<ServiceType, string> = {
   "Monitoreado con Respuesta": "text-emerald-400 border-emerald-500/30",
   "Botón de pánico": "text-purple-400 border-purple-500/30",
   "Interrupción Energética": "text-orange-400 border-orange-500/30",
-  "Bastón": "text-cyan-400 border-cyan-500/30",
+  "Active Track": "text-cyan-400 border-cyan-500/30",
   "Panel de Incendio": "text-red-400 border-red-500/30",
 };
 /** Tipos de servicio que NO requieren apertura/cierre y silencian alertas operativas. */
-const NO_OPEN_CLOSE_SERVICES = new Set<ServiceType>(["Botón de pánico", "Bastón", "Panel de Incendio"]);
+const NO_OPEN_CLOSE_SERVICES = new Set<ServiceType>(["Botón de pánico", "Active Track", "Panel de Incendio"]);
 const LX_STATUS_COLOR: Record<LxStatus, string> = {
   "Activa": "text-emerald-400 border-emerald-500/30",
   "Prueba": "text-blue-400 border-blue-500/30",
@@ -143,6 +147,8 @@ export default function KronosActivityTab({ clients }: Props) {
   const [activeReportId, setActiveReportId] = useState<string | null>(null);
   const [reportMeta, setReportMeta] = useState<MonitoringReportMeta | null>(null);
   const [showBillingMgr, setShowBillingMgr] = useState(false);
+  const [notifyCtx, setNotifyCtx] = useState<{ subject: string; message: string } | null>(null);
+  const { user } = useAuth();
 
   const loadSettings = async () => {
     try {
@@ -220,6 +226,7 @@ export default function KronosActivityTab({ clients }: Props) {
 
   const saveEdit = async () => {
     if (!editing) return;
+    const prev = settings[editing.code];
     try {
       const saved = await monitoringAccountSettingsApi.upsert(editing.code, {
         accountName: editing.name,
@@ -235,9 +242,41 @@ export default function KronosActivityTab({ clients }: Props) {
         locationMapsUrl: draft.locationMapsUrl || "",
         notes: draft.notes || "",
       });
-      setSettings(prev => ({ ...prev, [editing.code]: saved }));
+      setSettings(p => ({ ...p, [editing.code]: saved }));
       toast.success(`Configuración guardada para ${editing.name}`);
+
+      // Diff humano-leíble
+      const changes: string[] = [];
+      const cmp = (label: string, a: any, b: any) => {
+        const A = a ?? "—", B = b ?? "—";
+        if (String(A) !== String(B)) changes.push(`• ${label}: ${A} → ${B}`);
+      };
+      cmp("Tipo de servicio", prev?.serviceType, saved.serviceType);
+      cmp("Estado LX", prev?.lxStatus, saved.lxStatus);
+      cmp("Comunicación", prev?.commType, saved.commType);
+      cmp("Marca", prev?.brand, saved.brand);
+      cmp("Cliente CxC", prev?.clientId, saved.clientId);
+      cmp("Horario apertura", prev?.expectedOpen, saved.expectedOpen);
+      cmp("Horario cierre", prev?.expectedClose, saved.expectedClose);
+      cmp("Ubicación", prev?.locationAddress, saved.locationAddress);
+      cmp("Notas", prev?.notes, saved.notes);
+
+      const subject = `LX ${editing.code} — ${editing.name}`;
+      const body = changes.length > 0
+        ? `Se actualizó la configuración de la LX ${editing.code} (${editing.name}):\n\n${changes.join("\n")}`
+        : `Configuración guardada para LX ${editing.code} (${editing.name}) sin cambios detectables.`;
+
+      // Email automático a tecnologia@ (siempre, aunque no se notifique a nadie más)
+      queueEmail("tecnologia@safeone.com.do", `[Monitoreo] ${subject}`,
+        `${body}\n\n— ${user?.fullName || "Monitoreo"} (${user?.email || ""})`,
+        "general");
+
       setEditing(null);
+
+      // Si hubo cambios, abrir diálogo de notificación al equipo
+      if (changes.length > 0) {
+        setNotifyCtx({ subject, message: body });
+      }
     } catch (e: any) {
       if (e.message === "API_NOT_CONFIGURED") {
         toast.error("Backend no configurado: no se pudo persistir");
@@ -293,7 +332,7 @@ export default function KronosActivityTab({ clients }: Props) {
     const processSetting = (setting?: MonitoringAccountSetting) => {
       const serviceType = setting?.serviceType || null;
       const isPanic = setting?.kind === "panic" || serviceType === "Botón de pánico";
-      const isBaton = serviceType === "Bastón";
+      const isBaton = serviceType === "Active Track";
       const noOpenClose = isPanic || isBaton;
       const lxStatus = setting?.lxStatus || null;
       const isMuted = !!(lxStatus && MUTING_LX_STATUSES.has(lxStatus));
@@ -525,7 +564,7 @@ export default function KronosActivityTab({ clients }: Props) {
               active={filterCrit === "alta"} onClick={() => setFilterCrit("alta")} />
             <KpiCard label="🚨 Pánico" value={stats.panic} color="text-purple-400"
               active={filterCrit === "panic"} onClick={() => setFilterCrit("panic")} />
-            <KpiCard label="🥢 Bastón" value={stats.baton} color="text-cyan-400"
+            <KpiCard label="🛰️ Active Track" value={stats.baton} color="text-cyan-400"
               active={filterCrit === "baton"} onClick={() => setFilterCrit("baton")} />
             <KpiCard label="🔇 Silenciadas" value={stats.muted} color="text-muted-foreground"
               active={filterCrit === "muted"} onClick={() => setFilterCrit("muted")} />
@@ -562,7 +601,7 @@ export default function KronosActivityTab({ clients }: Props) {
                 <SelectItem value="media">🟡 Media (2d)</SelectItem>
                 <SelectItem value="alta">🔴 Alta (3+d)</SelectItem>
                 <SelectItem value="panic">🚨 Botón de pánico</SelectItem>
-                <SelectItem value="baton">🥢 Bastón (Punches)</SelectItem>
+                <SelectItem value="baton">🛰️ Active Track (Punches)</SelectItem>
                 <SelectItem value="muted">🔇 Silenciadas (estado LX)</SelectItem>
                 <SelectItem value="inactive-cancelled">⛔ Inactivas y Canceladas ({stats.inactiveCancelled})</SelectItem>
                 <SelectItem value="deleted">🗑️ Dadas de baja ({stats.deleted})</SelectItem>
@@ -713,11 +752,21 @@ export default function KronosActivityTab({ clients }: Props) {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Button size="icon" variant="ghost" className="h-7 w-7"
-                          onClick={() => openEdit(r.accountCode, r.osm?.businessName || r.accountName)}
-                          title="Editar configuración">
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
+                        <div className="flex items-center gap-0.5">
+                          <Button size="icon" variant="ghost" className="h-7 w-7"
+                            onClick={() => openEdit(r.accountCode, r.osm?.businessName || r.accountName)}
+                            title="Editar configuración">
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-7 w-7"
+                            onClick={() => setNotifyCtx({
+                              subject: `LX ${r.accountCode} — ${r.osm?.businessName || r.accountName}`,
+                              message: `Nota sobre LX ${r.accountCode} (${r.osm?.businessName || r.accountName}).\nEstado actual: ${r.estado}${r.discrepancia ? `\nAlerta: ${r.discrepancia}` : ""}\n\n`,
+                            })}
+                            title="Notificar al equipo / enviar correo">
+                            <Bell className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -827,7 +876,7 @@ export default function KronosActivityTab({ clients }: Props) {
                 </Select>
               </div>
             </div>
-            {draft.serviceType === "Bastón" && (
+            {draft.serviceType === "Active Track" && (
               <p className="text-[11px] text-cyan-400 -mt-1">
                 🥢 Esta LX se evaluará en la pestaña <strong>Punches</strong> (no requiere apertura/cierre).
               </p>
@@ -841,7 +890,7 @@ export default function KronosActivityTab({ clients }: Props) {
               Cualquier estado distinto de <strong>Activa</strong> silencia las alertas de esta LX.
             </p>
 
-            {draft.kind !== "panic" && draft.serviceType !== "Botón de pánico" && draft.serviceType !== "Bastón" && (
+            {draft.kind !== "panic" && draft.serviceType !== "Botón de pánico" && draft.serviceType !== "Active Track" && (
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label htmlFor="open" className="text-xs">Hora apertura esperada</Label>
@@ -897,6 +946,16 @@ export default function KronosActivityTab({ clients }: Props) {
         onOpenChange={setShowBillingMgr}
         onChanged={loadBillingClients}
       />
+
+      <TeamNotifyDialog
+        open={!!notifyCtx}
+        onOpenChange={(o) => !o && setNotifyCtx(null)}
+        subjectContext={notifyCtx?.subject || ""}
+        defaultMessage={notifyCtx?.message || ""}
+        eventType="lx_change"
+        fromUser={user ? { name: user.fullName, email: user.email } : null}
+      />
+
 
     </div>
   );

@@ -34,8 +34,9 @@ const ALLOWED_LX_STATUS = new Set([
 ]);
 const ALLOWED_SERVICE_TYPE = new Set([
   'Monitoreado sin respuesta', 'Monitoreado con Respuesta',
-  'Botón de pánico', 'Interrupción Energética', 'Bastón', 'Panel de Incendio',
+  'Botón de pánico', 'Interrupción Energética', 'Active Track', 'Panel de Incendio',
 ]);
+const LEGACY_SERVICE_TYPE = { 'Bastón': 'Active Track' };
 const ALLOWED_COMM_TYPE = new Set(['EBS LX-EPX', 'Intelbras']);
 const ALLOWED_BRAND = new Set(['Hikvision', 'Daiwa']);
 // Legacy values that we still accept on write for back-compat
@@ -58,12 +59,15 @@ function pickEnum(value, set, prev) {
 
 router.get('/', auth, (req, res) => {
   const list = readData(FILE);
-  // Migración suave: si no tiene lxStatus pero tiene manualStatus legacy, exponer ambos
   const migrated = list.map(item => {
-    if (!item.lxStatus && item.manualStatus && LEGACY_TO_NEW[item.manualStatus]) {
-      return { ...item, lxStatus: LEGACY_TO_NEW[item.manualStatus] };
+    let out = item;
+    if (!out.lxStatus && out.manualStatus && LEGACY_TO_NEW[out.manualStatus]) {
+      out = { ...out, lxStatus: LEGACY_TO_NEW[out.manualStatus] };
     }
-    return item;
+    if (out.serviceType && LEGACY_SERVICE_TYPE[out.serviceType]) {
+      out = { ...out, serviceType: LEGACY_SERVICE_TYPE[out.serviceType] };
+    }
+    return out;
   });
   res.json(migrated);
 });
@@ -93,7 +97,8 @@ router.put('/:accountCode', auth, (req, res) => {
 
   const prev = idx >= 0 ? items[idx] : null;
   // serviceType ↔ kind: si es Botón de pánico forzamos kind=panic
-  const serviceType = pickEnum(body.serviceType, ALLOWED_SERVICE_TYPE, prev?.serviceType);
+  const incomingService = body.serviceType && LEGACY_SERVICE_TYPE[body.serviceType] ? LEGACY_SERVICE_TYPE[body.serviceType] : body.serviceType;
+  const serviceType = pickEnum(incomingService, ALLOWED_SERVICE_TYPE, prev?.serviceType);
   const effectiveKind = serviceType === 'Botón de pánico' ? 'panic' : kind;
   const doc = {
     accountCode: code,
