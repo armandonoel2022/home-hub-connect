@@ -162,7 +162,15 @@ const HRBirthdaysPage = () => {
   return (
     <AppLayout>
       <div className="max-w-7xl mx-auto">
-        <div className="px-6 pt-6 pb-4 flex items-start justify-between gap-4 flex-wrap">
+        <div className="px-6 pt-6">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" /> Volver
+          </button>
+        </div>
+        <div className="px-6 pt-4 pb-4 flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-gold/15 flex items-center justify-center">
               <Cake className="h-5 w-5 text-gold" />
