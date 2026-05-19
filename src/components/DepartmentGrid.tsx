@@ -92,6 +92,7 @@ const DEPT_MULTI_ROUTES: Record<string, { label: string; route: string; icon: an
     { label: "Nómina", route: "/rrhh/consolidado-nomina", icon: DollarSign },
     { label: "Beneficios", route: "/rrhh/beneficios", icon: Gift },
     { label: "Horas extras", route: "/rrhh/horas-extras", icon: Clock },
+    { label: "Cumpleaños", route: "/rrhh/cumpleanos", icon: Cake },
   ],
   "Tecnología y Monitoreo": [
     { label: "Tecnología", route: "/tickets", icon: Settings },
