@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useChatContextSafe } from "@/contexts/ChatContext";
 import { employeesApi, isApiConfigured, type Employee } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Cake, CalendarDays, Eye } from "lucide-react";
+import { ArrowLeft, Cake, CalendarDays, Eye, ChevronDown, ChevronRight } from "lucide-react";
 import type { IntranetUser } from "@/lib/types";
 
 const MONTHS = [
@@ -61,6 +61,19 @@ const HRBirthdaysPage = () => {
   const [previewUsers, setPreviewUsers] = useState<IntranetUser[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [filterMonth, setFilterMonth] = useState<number | "all">("all");
+  const [expandedMonths, setExpandedMonths] = useState<Set<number>>(
+    () => new Set([new Date().getMonth() + 1])
+  );
+
+  const toggleMonth = (m: number) => {
+    setExpandedMonths((prev) => {
+      const next = new Set(prev);
+      if (next.has(m)) next.delete(m); else next.add(m);
+      return next;
+    });
+  };
+  const expandAll = () => setExpandedMonths(new Set(MONTHS.map((_, i) => i + 1)));
+  const collapseAll = () => setExpandedMonths(new Set());
   const [autoTime, setAutoTime] = useState<string>(
     () => (typeof window !== "undefined" && localStorage.getItem("safeone_bday_auto_time")) || "08:00"
   );
@@ -255,62 +268,93 @@ const HRBirthdaysPage = () => {
           </div>
         </div>
 
-        <div className="px-6 pb-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="px-6 pb-2 flex items-center gap-2 text-xs">
+          <button
+            onClick={expandAll}
+            className="px-3 py-1.5 rounded-md border border-border bg-background hover:bg-muted text-card-foreground transition-colors"
+          >
+            Expandir todos
+          </button>
+          <button
+            onClick={collapseAll}
+            className="px-3 py-1.5 rounded-md border border-border bg-background hover:bg-muted text-card-foreground transition-colors"
+          >
+            Colapsar todos
+          </button>
+        </div>
+
+        <div className="px-6 pb-10 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {monthsToRender.map((m) => {
             const items = grouped[m] || [];
             const isCurrentMonth = m === currentMonth;
+            const isOpen = expandedMonths.has(m) || filterMonth === m;
             return (
               <div
                 key={m}
-                className={`rounded-xl border p-4 ${isCurrentMonth ? "border-gold bg-gold/5" : "border-border bg-card"}`}
+                className={`rounded-xl border overflow-hidden ${isCurrentMonth ? "border-gold bg-gold/5" : "border-border bg-card"}`}
               >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <CalendarDays className={`h-4 w-4 ${isCurrentMonth ? "text-gold" : "text-muted-foreground"}`} />
-                    <h3 className="font-heading font-bold text-sm text-card-foreground">{MONTHS[m - 1]}</h3>
-                    <span className="text-xs text-muted-foreground">({items.length})</span>
+                <button
+                  onClick={() => toggleMonth(m)}
+                  className="w-full flex items-center justify-between gap-2 p-4 hover:bg-muted/40 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    {isOpen ? (
+                      <ChevronDown className={`h-4 w-4 shrink-0 ${isCurrentMonth ? "text-gold" : "text-muted-foreground"}`} />
+                    ) : (
+                      <ChevronRight className={`h-4 w-4 shrink-0 ${isCurrentMonth ? "text-gold" : "text-muted-foreground"}`} />
+                    )}
+                    <CalendarDays className={`h-4 w-4 shrink-0 ${isCurrentMonth ? "text-gold" : "text-muted-foreground"}`} />
+                    <h3 className="font-heading font-bold text-sm text-card-foreground truncate">{MONTHS[m - 1]}</h3>
                   </div>
-                  {items.length > 0 && (
-                    <button
-                      onClick={() => previewMonth(m)}
-                      className="text-[11px] flex items-center gap-1 px-2 py-1 rounded-md border border-border bg-background hover:bg-muted transition-colors"
-                      title="Previsualizar overlay con todos los cumpleaños del mes"
-                    >
-                      <Eye className="h-3 w-3" />
-                      Overlay del mes
-                    </button>
-                  )}
-                </div>
-                {items.length === 0 ? (
-                  <p className="text-xs text-muted-foreground italic">Sin cumpleaños</p>
-                ) : (
-                  <ul className="space-y-1.5">
-                    {items.map((item) => {
-                      const isToday = item.mmdd === todayMMDD;
-                      return (
-                        <li
-                          key={item.id}
-                          onClick={() => previewSingle(item)}
-                          className={`text-xs flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-colors ${isToday ? "bg-gold/20 font-semibold hover:bg-gold/30" : "hover:bg-muted"}`}
-                          title="Click para ver y descargar el overlay"
-                        >
-                          <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-background border border-border text-[11px] font-bold shrink-0">
-                            {item.day}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-card-foreground truncate hover:text-gold transition-colors">
-                              {item.fullName} {isToday && "🎂"}
-                            </p>
-                            <p className="text-muted-foreground truncate text-[10px]">
-                              {item.department}
-                              {item.position ? ` — ${item.position}` : ""}
-                            </p>
-                          </div>
-                          <Eye className="h-3.5 w-3.5 text-gold opacity-60" />
-                        </li>
-                      );
-                    })}
-                  </ul>
+                  <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${items.length > 0 ? (isCurrentMonth ? "bg-gold/30 text-card-foreground font-semibold" : "bg-muted text-card-foreground") : "text-muted-foreground"}`}>
+                    {items.length}
+                  </span>
+                </button>
+
+                {isOpen && (
+                  <div className="px-4 pb-4">
+                    {items.length > 0 && (
+                      <button
+                        onClick={() => previewMonth(m)}
+                        className="mb-3 text-[11px] flex items-center gap-1 px-2 py-1 rounded-md border border-border bg-background hover:bg-muted transition-colors"
+                        title="Previsualizar overlay con todos los cumpleaños del mes"
+                      >
+                        <Eye className="h-3 w-3" />
+                        Overlay del mes
+                      </button>
+                    )}
+                    {items.length === 0 ? (
+                      <p className="text-xs text-muted-foreground italic">Sin cumpleaños</p>
+                    ) : (
+                      <ul className="space-y-1.5">
+                        {items.map((item) => {
+                          const isToday = item.mmdd === todayMMDD;
+                          return (
+                            <li
+                              key={item.id}
+                              onClick={() => previewSingle(item)}
+                              className={`text-xs flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-colors ${isToday ? "bg-gold/20 font-semibold hover:bg-gold/30" : "hover:bg-muted"}`}
+                              title="Click para ver y descargar el overlay"
+                            >
+                              <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-background border border-border text-[11px] font-bold shrink-0">
+                                {item.day}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-card-foreground truncate hover:text-gold transition-colors">
+                                  {item.fullName} {isToday && "🎂"}
+                                </p>
+                                <p className="text-muted-foreground truncate text-[10px]">
+                                  {item.department}
+                                  {item.position ? ` — ${item.position}` : ""}
+                                </p>
+                              </div>
+                              <Eye className="h-3.5 w-3.5 text-gold opacity-60" />
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </div>
                 )}
               </div>
             );
