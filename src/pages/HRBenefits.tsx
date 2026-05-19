@@ -80,10 +80,15 @@ const HRBenefits = () => {
   const load = async () => {
     setLoading(true);
     try {
+      if (!isApiConfigured()) {
+        setBenefits(DEFAULT_BENEFITS_SEED);
+        return;
+      }
       const data = await benefitsApi.getAll();
-      setBenefits(data);
+      setBenefits(data && data.length > 0 ? data : DEFAULT_BENEFITS_SEED);
     } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+      // API caída → usar seed local para que se vean los beneficios
+      setBenefits(DEFAULT_BENEFITS_SEED);
     } finally {
       setLoading(false);
     }
