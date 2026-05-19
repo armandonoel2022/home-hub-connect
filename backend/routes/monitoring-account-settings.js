@@ -36,6 +36,7 @@ const ALLOWED_SERVICE_TYPE = new Set([
   'Monitoreado sin respuesta', 'Monitoreado con Respuesta',
   'Botón de pánico', 'Interrupción Energética', 'Active Track', 'Panel de Incendio',
 ]);
+const LEGACY_SERVICE_TYPE = { 'Bastón': 'Active Track' };
 const ALLOWED_COMM_TYPE = new Set(['EBS LX-EPX', 'Intelbras']);
 const ALLOWED_BRAND = new Set(['Hikvision', 'Daiwa']);
 // Legacy values that we still accept on write for back-compat
