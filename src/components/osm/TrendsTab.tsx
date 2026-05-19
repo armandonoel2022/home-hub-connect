@@ -192,8 +192,8 @@ export default function TrendsTab({ liveMetrics }: TrendsTabProps) {
               <Button size="sm" variant="outline" onClick={load} disabled={loading}>
                 <RefreshCw className="h-3.5 w-3.5 mr-1" /> Refrescar
               </Button>
-              <Button size="sm" onClick={closeDay} disabled={!liveMetrics}
-                title={!liveMetrics ? "Sube un reporte Kronos/Punch primero" : "Guardar snapshot del día"}>
+              <Button size="sm" onClick={closeDay}
+                title="Guardar snapshot del día (consolida los reportes subidos hoy)">
                 <Save className="h-3.5 w-3.5 mr-1" /> Cerrar día
               </Button>
             </div>
