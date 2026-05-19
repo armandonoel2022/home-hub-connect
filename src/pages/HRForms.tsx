@@ -949,7 +949,7 @@ function PrintFooter() {
 }
 
 // ── Form router ──
-function RenderForm({ formType, userName, department, showSignature = true }: { formType: FormType; userName: string; department: string; showSignature?: boolean }) {
+function RenderForm({ formType, userName, department, showSignature = true, hireDate, suggestedSalary }: { formType: FormType; userName: string; department: string; showSignature?: boolean; hireDate?: string | null; suggestedSalary?: number }) {
   switch (formType) {
     case "vacaciones": return <VacationForm userName={userName} department={department} showSignature={showSignature} />;
     case "dias-libres": return <DaysOffForm userName={userName} department={department} showSignature={showSignature} />;
@@ -957,7 +957,7 @@ function RenderForm({ formType, userName, department, showSignature = true }: { 
     case "ausencias": return <AbsenceForm userName={userName} department={department} showSignature={showSignature} />;
     case "feriados": return <HolidaysForm />;
     case "permisos": return <PermissionsForm userName={userName} department={department} showSignature={showSignature} />;
-    case "prestamos": return <LoanForm userName={userName} department={department} showSignature={showSignature} />;
+    case "prestamos": return <LoanForm userName={userName} department={department} showSignature={showSignature} hireDate={hireDate} suggestedSalary={suggestedSalary} />;
     default: return null;
   }
 }
