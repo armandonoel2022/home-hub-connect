@@ -717,6 +717,8 @@ export interface MonitoringAccountSetting {
   expectedOpen: string | null;
   expectedClose: string | null;
   notes: string;
+  /** ID del operador asignado (ver src/lib/monitoringOperators.ts) */
+  operatorId?: string | null;
   updatedAt: string;
   updatedBy: string;
 }
