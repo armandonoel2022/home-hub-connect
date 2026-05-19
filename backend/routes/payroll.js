@@ -63,6 +63,28 @@ function calcDeductions(grossMonthly) {
 
 function round2(n) { return Math.round(n * 100) / 100; }
 
+/**
+ * Cálculo de tarifa por hora según Superintendencia de Seguridad y CT R.D.
+ * - Administrativos: salario / 23.83 días / 8 horas (regla CT estándar).
+ * - Agentes/Operativos de seguridad: salario / 26 días / 10 horas normales diarias
+ *   (disposición de la Superintendencia de Vigilancia y Seguridad Privada).
+ */
+function isSecurityAgent(emp) {
+  const cat = String(emp.category || emp.payrollType || '').toLowerCase();
+  const pos = String(emp.position || '').toLowerCase();
+  if (cat.includes('administrativ')) return false;
+  // Por defecto, cualquier no-administrativo se considera operativo de seguridad
+  return /agente|guardia|oficial|operativo|escolta|supervisor|vigilancia/.test(pos) || cat !== 'administrativo';
+}
+
+function payrollFactors(emp) {
+  const security = isSecurityAgent(emp);
+  const monthlyDivisor = security ? 26 : 23.83;
+  const normalDailyHours = security ? 10 : 8;
+  const hourlyRate = (Number(emp.salary) || 0) / monthlyDivisor / normalDailyHours;
+  return { security, monthlyDivisor, normalDailyHours, hourlyRate };
+}
+
 function loadEmployees() {
   const raw = readData('employees.json');
   return Array.isArray(raw) && raw.length > 0 ? raw : SEED;
@@ -71,6 +93,14 @@ function loadEmployees() {
 function loadTssImports() {
   const r = readData(TSS_FILE);
   return Array.isArray(r) ? r : [];
+}
+
+function loadExtrasForPeriod(period) {
+  const all = readData('payroll-extras.json');
+  const arr = Array.isArray(all) ? all : [];
+  // period esperado: "YYYY-MM" o "YYYY-MM-Q1"/"Q2"
+  const ym = (period || '').slice(0, 7);
+  return arr.filter(x => (x.date || '').startsWith(ym));
 }
 
 function normalizeCedula(c) {
