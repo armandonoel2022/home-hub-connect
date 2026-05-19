@@ -213,6 +213,19 @@ const HRForms = () => {
     const isLoan = activeForm === "prestamos";
     let loanDetails: any = null;
     if (isLoan) {
+      const settingsPre = getLoanSettings();
+      if (!resolvedHireDate) {
+        toast({ title: "Falta fecha de ingreso", description: "No se pudo verificar la antigüedad del empleado. Contacta a RRHH para actualizar su fecha de ingreso.", variant: "destructive" });
+        return;
+      }
+      if (tenureMonths < settingsPre.minTenureMonths) {
+        toast({
+          title: "Antigüedad insuficiente",
+          description: `Se requieren al menos ${settingsPre.minTenureMonths} meses de antigüedad para solicitar un préstamo. Antigüedad actual: ${tenureMonths} mes${tenureMonths === 1 ? "" : "es"}.`,
+          variant: "destructive",
+        });
+        return;
+      }
       const amount = Number((formData["Monto Solicitado (RD$)"] || "").replace(/[^\d.]/g, ""));
       const termMonths = Number(formData["Plazo de Pago (meses)"]) || 0;
       const salary = Number(formData["Salario Mensual (RD$)"]) || findEmployeeSalary(effectiveRequester?.fullName || "");
