@@ -107,14 +107,33 @@ export default function TrendsTab({ liveMetrics }: TrendsTabProps) {
   useEffect(() => { load(); }, []);
 
   const closeDay = async () => {
-    if (!liveMetrics) {
-      toast.error("No hay métricas en vivo. Sube un reporte Kronos/Punch primero.");
-      return;
+    const today = ymd(new Date());
+    // 1) Si nos pasaron métricas en vivo (caso ideal), las usamos.
+    // 2) Si no, intentamos consolidar los snapshots automáticos de hoy
+    //    (kronos + punch) en un snapshot 'manual'.
+    let metrics: MonitoringSnapshotMetrics | null = liveMetrics || null;
+    if (!metrics) {
+      const todays = snapshots.filter(s => s.date === today);
+      if (todays.length === 0) {
+        toast.error("No hay snapshots de hoy. Sube un reporte Kronos/Punch primero.");
+        return;
+      }
+      // Combinamos: tomamos máximo por métrica (kronos aporta ciclo/sin señal,
+      // punch aporta active track)
+      const pick = (k: keyof MonitoringSnapshotMetrics) =>
+        Math.max(...todays.map(s => Number(s.metrics[k] ?? 0)));
+      metrics = {
+        totalLx: pick("totalLx"), activeLx: pick("activeLx"), billableLx: pick("billableLx"),
+        compliedCycle: pick("compliedCycle"), compliedCyclePct: pick("compliedCyclePct"),
+        noSignalHigh: pick("noSignalHigh"),
+        activeTrackTotal: pick("activeTrackTotal"),
+        activeTrackComplied: pick("activeTrackComplied"),
+        activeTrackPct: pick("activeTrackPct"),
+        incidentsOpen: pick("incidentsOpen"), incidentsResolved: pick("incidentsResolved"),
+      };
     }
     try {
-      await monitoringSnapshotsApi.upsert({
-        date: ymd(new Date()), source: "manual", metrics: liveMetrics,
-      });
+      await monitoringSnapshotsApi.upsert({ date: today, source: "manual", metrics });
       toast.success(`Día cerrado · snapshot guardado por ${user?.fullName || "operador"}`);
       await load();
     } catch (e: any) {
