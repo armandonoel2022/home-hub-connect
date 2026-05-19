@@ -38,6 +38,7 @@ import {
   UserMinus,
   UserX,
   Clock,
+  Cake,
   RotateCcw,
   Package,
   AlertTriangle,
