@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Clock, Moon, CalendarDays, UtensilsCrossed, Trash2, Send } from "lucide-react";
+import { Clock, Moon, CalendarDays, UtensilsCrossed, Trash2, Send, ArrowLeft } from "lucide-react";
 import { payrollExtrasApi, employeesApi, type PayrollExtra, type Employee } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 
