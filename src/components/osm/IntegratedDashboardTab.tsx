@@ -133,7 +133,7 @@ export default function IntegratedDashboardTab({ onNavigate }: Props) {
       // Si alguna LX está sin señal o sin apertura/cierre, marcar el cliente
       const reasons: string[] = [];
       lxs.forEach(lx => {
-        const isMute = ["Botón de pánico", "Bastón", "Panel de Incendio"].includes(lx.serviceType || "")
+        const isMute = ["Botón de pánico", "Active Track", "Panel de Incendio"].includes(lx.serviceType || "")
                     || ["Cancelada", "Inactiva", "Suspendida", "Dada de baja", "Prueba", "Sin notificaciones"].includes(lx.lxStatus || "");
         if (isMute) { mute++; return; }
         const k = kronosByCode.get(lx.accountCode);
