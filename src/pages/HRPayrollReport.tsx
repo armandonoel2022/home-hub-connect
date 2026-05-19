@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import Navbar from "@/components/Navbar";
@@ -8,8 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Download, ClipboardList, Filter } from "lucide-react";
+import { ArrowLeft, Download, ClipboardList, Filter, CheckCircle2, Trash2, Clock } from "lucide-react";
 import { getOpsReports, REPORT_TYPE_LABEL, type OpsReportType } from "@/lib/opsReportsStorage";
+import { payrollExtrasApi, type PayrollExtra } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
+
+const EXTRA_TYPE_LABEL: Record<PayrollExtra["type"], string> = {
+  overtime: "Horas extras",
+  night: "Horas nocturnas",
+  holiday: "Feriado trabajado",
+  meal: "Almuerzo descontable",
+};
 
 const HRPayrollReport = () => {
   const navigate = useNavigate();
