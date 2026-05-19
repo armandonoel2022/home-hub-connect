@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Clock, Moon, CalendarDays, UtensilsCrossed, Trash2, Send, ArrowLeft } from "lucide-react";
-import { payrollExtrasApi, employeesApi, type PayrollExtra, type Employee } from "@/lib/api";
+import { payrollExtrasApi, employeesApi, isApiConfigured, type PayrollExtra, type Employee } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 
 const TYPE_META: Record<PayrollExtra["type"], { label: string; icon: any; color: string }> = {
