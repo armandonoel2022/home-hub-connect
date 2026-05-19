@@ -61,6 +61,22 @@ const HRBirthdaysPage = () => {
   const [previewUsers, setPreviewUsers] = useState<IntranetUser[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [filterMonth, setFilterMonth] = useState<number | "all">("all");
+  const [autoTime, setAutoTime] = useState<string>(
+    () => (typeof window !== "undefined" && localStorage.getItem("safeone_bday_auto_time")) || "08:00"
+  );
+
+  const saveAutoTime = (value: string) => {
+    setAutoTime(value);
+    localStorage.setItem("safeone_bday_auto_time", value);
+    toast({ title: "Hora actualizada", description: `El overlay automático aparecerá a partir de las ${value}.` });
+  };
+
+  const resetTodayDismissed = () => {
+    const d = new Date();
+    const key = `safeone_bday_dismissed_${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    localStorage.removeItem(key);
+    toast({ title: "Listo", description: "Los overlays de hoy volverán a aparecer." });
+  };
 
   const isAuthorized =
     user?.isAdmin || user?.department === "Recursos Humanos";
