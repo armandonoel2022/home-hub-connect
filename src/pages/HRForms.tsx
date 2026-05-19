@@ -144,19 +144,24 @@ const HRForms = () => {
   const isSupervisor = user?.isDepartmentLeader === true || user?.isAdmin === true;
 
   // ── Employees seed (para lookup de salario al solicitar préstamo) ──
-  const [employees, setEmployees] = useState<Array<{ employeeCode: string; fullName: string; salary: number; department: string; status?: string }>>([]);
+  const [employees, setEmployees] = useState<Array<{ employeeCode: string; fullName: string; salary: number; department: string; status?: string; hireDate?: string }>>([]);
   useEffect(() => {
     fetch("/data/employees_seed.json").then(r => r.ok ? r.json() : []).then(setEmployees).catch(() => {});
   }, []);
 
-  function findEmployeeSalary(name: string): number {
-    if (!name) return 0;
+  function findEmployee(name: string) {
+    if (!name) return null;
     const norm = name.trim().toLowerCase();
-    const match = employees.find(e =>
+    return employees.find(e =>
       e.fullName.toLowerCase().includes(norm) ||
       norm.includes(e.fullName.toLowerCase().split(" ")[0])
-    );
-    return match?.salary || 0;
+    ) || null;
+  }
+  function findEmployeeSalary(name: string): number {
+    return findEmployee(name)?.salary || 0;
+  }
+  function findEmployeeHireDate(name: string): string | null {
+    return findEmployee(name)?.hireDate || null;
   }
 
   // Beneficiary (cuando un líder solicita para alguien de su área)
@@ -170,11 +175,13 @@ const HRForms = () => {
   const beneficiary = beneficiaryId ? allUsers.find(u => u.id === beneficiaryId) : null;
   const effectiveRequester = beneficiary || user;
 
+  // Hire date resuelto: usa el del usuario o, si falta, busca en el directorio de empleados
+  const resolvedHireDate = effectiveRequester?.hireDate || findEmployeeHireDate(effectiveRequester?.fullName || "") || null;
+
   // Compute tenure of the effective requester (puede ser empleado beneficiario)
   const tenureMonths = (() => {
-    const hd = effectiveRequester?.hireDate;
-    if (!hd) return 0;
-    const hire = new Date(hd);
+    if (!resolvedHireDate) return 0;
+    const hire = new Date(resolvedHireDate);
     const now = new Date();
     return (now.getFullYear() - hire.getFullYear()) * 12 + (now.getMonth() - hire.getMonth());
   })();
@@ -222,7 +229,7 @@ const HRForms = () => {
         return;
       }
       const settings = getLoanSettings();
-      const capacity = calcLoanCapacity(salary, effectiveRequester?.hireDate, settings.maxInstallmentFraction);
+      const capacity = calcLoanCapacity(salary, resolvedHireDate, settings.maxInstallmentFraction);
       const installment = calcMonthlyInstallment(amount, termMonths, settings.annualInterestRatePct);
       if (installment > capacity.maxInstallment && capacity.maxInstallment > 0) {
         toast({
@@ -269,8 +276,8 @@ const HRForms = () => {
       requestedAt: new Date().toISOString(),
       formData: {
         ...formData,
-        ...(isLoan && effectiveRequester?.hireDate
-          ? { "Fecha de ingreso": format(new Date(effectiveRequester.hireDate), "dd/MM/yyyy"), "Antigüedad (meses)": String(tenureMonths) }
+        ...(isLoan && resolvedHireDate
+          ? { "Fecha de ingreso": format(new Date(resolvedHireDate), "dd/MM/yyyy"), "Antigüedad (meses)": String(tenureMonths) }
           : {}),
         ...(beneficiary ? { "Solicitado por (líder)": user.fullName } : {}),
       },
@@ -767,7 +774,7 @@ const HRForms = () => {
                 <Button onClick={handlePrint} className="gap-2"><Printer className="h-4 w-4" /> Imprimir</Button>
               </div>
               <div ref={printRef} className="print-area bg-card rounded-xl border border-border p-8">
-                <RenderForm formType={activeForm} userName={user?.fullName || ""} department={user?.department || ""} />
+                <RenderForm formType={activeForm} userName={user?.fullName || ""} department={user?.department || ""} hireDate={resolvedHireDate} suggestedSalary={findEmployeeSalary(user?.fullName || "")} />
               </div>
             </div>
           )}
@@ -804,7 +811,7 @@ const HRForms = () => {
                   </div>
                 )}
                 <div ref={virtualFormRef}>
-                  <RenderForm formType={activeForm} userName={effectiveRequester?.fullName || ""} department={effectiveRequester?.department || ""} showSignature={false} />
+                  <RenderForm formType={activeForm} userName={effectiveRequester?.fullName || ""} department={effectiveRequester?.department || ""} showSignature={false} hireDate={resolvedHireDate} suggestedSalary={findEmployeeSalary(effectiveRequester?.fullName || "")} />
                 </div>
 
                 <div className="mt-6 pt-4 border-t border-border">
@@ -942,7 +949,7 @@ function PrintFooter() {
 }
 
 // ── Form router ──
-function RenderForm({ formType, userName, department, showSignature = true }: { formType: FormType; userName: string; department: string; showSignature?: boolean }) {
+function RenderForm({ formType, userName, department, showSignature = true, hireDate, suggestedSalary }: { formType: FormType; userName: string; department: string; showSignature?: boolean; hireDate?: string | null; suggestedSalary?: number }) {
   switch (formType) {
     case "vacaciones": return <VacationForm userName={userName} department={department} showSignature={showSignature} />;
     case "dias-libres": return <DaysOffForm userName={userName} department={department} showSignature={showSignature} />;
@@ -950,7 +957,7 @@ function RenderForm({ formType, userName, department, showSignature = true }: { 
     case "ausencias": return <AbsenceForm userName={userName} department={department} showSignature={showSignature} />;
     case "feriados": return <HolidaysForm />;
     case "permisos": return <PermissionsForm userName={userName} department={department} showSignature={showSignature} />;
-    case "prestamos": return <LoanForm userName={userName} department={department} showSignature={showSignature} />;
+    case "prestamos": return <LoanForm userName={userName} department={department} showSignature={showSignature} hireDate={hireDate} suggestedSalary={suggestedSalary} />;
     default: return null;
   }
 }

@@ -13,7 +13,7 @@ const router = express.Router();
 
 // Versión del seed: incrementar cuando se actualice employeesSeed.json
 // para forzar refresco del archivo persistido sin perder ediciones manuales.
-const SEED_VERSION = 'v3-2026-05-category';
+const SEED_VERSION = 'v4-2026-05-hiredate';
 const META_FILE = 'employees.meta.json';
 
 function load() {
