@@ -34,6 +34,7 @@ import type { OSMClient } from "@/lib/osmClientData";
 import {
   monitoringReportsApi, monitoringAccountSettingsApi, billingClientsApi,
   type MonitoringReportMeta, type MonitoringAccountSetting, type LxStatus, type BillingClient,
+  type ServiceType, type CommType, type BrandType,
 } from "@/lib/api";
 import BillingClientsManager from "./BillingClientsManager";
 
@@ -41,6 +42,21 @@ const LX_STATUSES: LxStatus[] = [
   "Activa", "Prueba", "Cancelada", "Suspendida",
   "Dada de baja", "Sin notificaciones", "Inactiva",
 ];
+const SERVICE_TYPES: ServiceType[] = [
+  "Monitoreado sin respuesta", "Monitoreado con Respuesta",
+  "Botón de pánico", "Interrupción Energética", "Bastón",
+];
+const COMM_TYPES: CommType[] = ["EBS LX-EPX", "Intelbras"];
+const BRANDS: BrandType[] = ["Hikvision", "Daiwa"];
+const SERVICE_COLOR: Record<ServiceType, string> = {
+  "Monitoreado sin respuesta": "text-sky-400 border-sky-500/30",
+  "Monitoreado con Respuesta": "text-emerald-400 border-emerald-500/30",
+  "Botón de pánico": "text-purple-400 border-purple-500/30",
+  "Interrupción Energética": "text-orange-400 border-orange-500/30",
+  "Bastón": "text-cyan-400 border-cyan-500/30",
+};
+/** Tipos de servicio que NO requieren apertura/cierre y silencian alertas operativas. */
+const NO_OPEN_CLOSE_SERVICES = new Set<ServiceType>(["Botón de pánico", "Bastón"]);
 const LX_STATUS_COLOR: Record<LxStatus, string> = {
   "Activa": "text-emerald-400 border-emerald-500/30",
   "Prueba": "text-blue-400 border-blue-500/30",
