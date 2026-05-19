@@ -819,7 +819,7 @@ export default function KronosActivityTab({ clients }: Props) {
               Cualquier estado distinto de <strong>Activa</strong> silencia las alertas de esta LX.
             </p>
 
-            {draft.kind !== "panic" && (
+            {draft.kind !== "panic" && draft.serviceType !== "Botón de pánico" && draft.serviceType !== "Bastón" && (
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label htmlFor="open" className="text-xs">Hora apertura esperada</Label>
