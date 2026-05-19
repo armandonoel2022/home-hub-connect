@@ -355,7 +355,7 @@ export default function KronosActivityTab({ clients }: Props) {
   }, [report, clients, osmByCode, settings, billingClientById]);
 
   const stats = useMemo(() => {
-    const operational = combined.filter(r => !r.isPanic && !r.isMuted);
+    const operational = combined.filter(r => !r.noOpenClose && !r.isMuted);
     return {
       total: combined.length,
       alta: operational.filter(r => r.criticidad === "alta").length,
@@ -363,7 +363,8 @@ export default function KronosActivityTab({ clients }: Props) {
       baja: operational.filter(r => r.criticidad === "baja").length,
       ok: operational.filter(r => r.criticidad === "ok").length,
       panic: combined.filter(r => r.isPanic).length,
-      muted: combined.filter(r => r.isMuted && !r.isPanic).length,
+      baton: combined.filter(r => r.isBaton).length,
+      muted: combined.filter(r => r.isMuted && !r.noOpenClose).length,
       discrepancias: combined.filter(r => r.discrepancia).length,
     };
   }, [combined]);
@@ -371,11 +372,12 @@ export default function KronosActivityTab({ clients }: Props) {
   const filtered = useMemo(() => {
     return combined.filter(r => {
       if (filterCrit === "panic") { if (!r.isPanic) return false; }
-      else if (filterCrit === "muted") { if (!r.isMuted || r.isPanic) return false; }
+      else if (filterCrit === "baton") { if (!r.isBaton) return false; }
+      else if (filterCrit === "muted") { if (!r.isMuted || r.noOpenClose) return false; }
       else if (filterCrit === "discrepancia") { if (!r.discrepancia) return false; }
       else if (filterCrit === "unlinked") { if (r.setting?.clientId) return false; }
       else if (filterCrit !== "all") {
-        if (r.isPanic || r.isMuted) return false;
+        if (r.noOpenClose || r.isMuted) return false;
         if (r.criticidad !== filterCrit) return false;
       }
       if (search.trim()) {
@@ -394,7 +396,7 @@ export default function KronosActivityTab({ clients }: Props) {
 
 
   const exportCallList = () => {
-    const toCall = combined.filter(r => !r.isPanic && !r.isMuted && (r.criticidad === "alta" || r.criticidad === "media"));
+    const toCall = combined.filter(r => !r.noOpenClose && !r.isMuted && (r.criticidad === "alta" || r.criticidad === "media"));
     if (toCall.length === 0) { toast.info("No hay cuentas para llamar"); return; }
     const csv = [
       ["Codigo", "Nombre", "Contacto", "Telefono", "Ultima senal", "Dias", "Criticidad", "Discrepancia"].join(","),
