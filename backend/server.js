@@ -58,6 +58,7 @@ app.use('/api/geo', require('./routes/geo'));
 app.use('/api/monitoring-reports', require('./routes/monitoring-reports'));
 app.use('/api/monitoring-account-settings', require('./routes/monitoring-account-settings'));
 app.use('/api/monitoring-punch-rules', require('./routes/monitoring-punch-rules'));
+app.use('/api/monitoring-snapshots', require('./routes/monitoring-snapshots'));
 app.use('/api/billing-clients', require('./routes/billing-clients'));
 
 // Health check
