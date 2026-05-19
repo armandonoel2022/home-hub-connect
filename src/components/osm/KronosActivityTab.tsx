@@ -32,7 +32,7 @@ import {
 } from "@/lib/kronosHtmParser";
 import type { OSMClient } from "@/lib/osmClientData";
 import {
-  monitoringReportsApi, monitoringAccountSettingsApi, billingClientsApi,
+  monitoringReportsApi, monitoringAccountSettingsApi, billingClientsApi, monitoringSnapshotsApi,
   type MonitoringReportMeta, type MonitoringAccountSetting, type LxStatus, type BillingClient,
   type ServiceType, type CommType, type BrandType,
 } from "@/lib/api";
