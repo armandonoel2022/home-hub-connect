@@ -491,7 +491,7 @@ export default function KronosActivityTab({ clients }: Props) {
 
       {report && (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-7 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-8 gap-3">
             <KpiCard label="Total" value={stats.total} color="text-foreground"
               active={filterCrit === "all"} onClick={() => setFilterCrit("all")} />
             <KpiCard label="🟢 Al día" value={stats.ok} color="text-emerald-400"
@@ -504,6 +504,8 @@ export default function KronosActivityTab({ clients }: Props) {
               active={filterCrit === "alta"} onClick={() => setFilterCrit("alta")} />
             <KpiCard label="🚨 Pánico" value={stats.panic} color="text-purple-400"
               active={filterCrit === "panic"} onClick={() => setFilterCrit("panic")} />
+            <KpiCard label="🥢 Bastón" value={stats.baton} color="text-cyan-400"
+              active={filterCrit === "baton"} onClick={() => setFilterCrit("baton")} />
             <KpiCard label="🔇 Silenciadas" value={stats.muted} color="text-muted-foreground"
               active={filterCrit === "muted"} onClick={() => setFilterCrit("muted")} />
           </div>
