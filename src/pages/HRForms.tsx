@@ -1273,11 +1273,11 @@ function PermissionsForm({ userName, department, showSignature }: { userName: st
 }
 
 // ── Loan form ──
-function LoanForm({ userName, department, showSignature }: { userName: string; department: string; showSignature: boolean }) {
-  const { user } = useAuth();
+function LoanForm({ userName, department, showSignature, hireDate, suggestedSalary }: { userName: string; department: string; showSignature: boolean; hireDate?: string | null; suggestedSalary?: number }) {
+  const settings = getLoanSettings();
   const tenure = (() => {
-    if (!user?.hireDate) return { months: 0, label: "Sin fecha de ingreso registrada" };
-    const hire = new Date(user.hireDate);
+    if (!hireDate) return { months: 0, label: "Sin fecha de ingreso registrada" };
+    const hire = new Date(hireDate);
     const now = new Date();
     const months = (now.getFullYear() - hire.getFullYear()) * 12 + (now.getMonth() - hire.getMonth());
     const years = Math.floor(months / 12);
@@ -1287,7 +1287,17 @@ function LoanForm({ userName, department, showSignature }: { userName: string; d
       : `${months} mes${months !== 1 ? "es" : ""}`;
     return { months, label };
   })();
-  const meetsPolicy = tenure.months >= 6;
+  const meetsPolicy = tenure.months >= settings.minTenureMonths;
+
+  const [salary, setSalary] = useState<number>(suggestedSalary || 0);
+  const [amount, setAmount] = useState<number>(0);
+  const [term, setTerm] = useState<number>(6);
+  useEffect(() => { if (suggestedSalary) setSalary(suggestedSalary); }, [suggestedSalary]);
+
+  const capacity = calcLoanCapacity(salary, hireDate, settings.maxInstallmentFraction);
+  const installment = calcMonthlyInstallment(amount, term, settings.annualInterestRatePct);
+  const overPolicy = amount > 0 && amount > capacity.maxAvailable;
+  const overInstallment = installment > 0 && capacity.maxInstallment > 0 && installment > capacity.maxInstallment;
 
   return (
     <div className="space-y-5">
@@ -1297,20 +1307,40 @@ function LoanForm({ userName, department, showSignature }: { userName: string; d
       )}>
         <p className="font-semibold">Política de préstamos</p>
         <p className="text-xs mt-1">
-          Antigüedad mínima de <strong>6 meses</strong> en la posición para escalar a Administración.
-          Tu antigüedad: <strong>{tenure.label}</strong>
-          {!meetsPolicy && " — RRHH podrá rechazar la solicitud por incumplir la política."}
+          Antigüedad mínima de <strong>{settings.minTenureMonths} meses</strong>. Antigüedad actual: <strong>{tenure.label}</strong>.
+          Tasa anual vigente: <strong>{settings.annualInterestRatePct}%</strong>. Cuota máxima: <strong>1/6 del salario mensual</strong>.
         </p>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <FormField label="Nombre del Empleado"><Input defaultValue={userName} readOnly /></FormField>
         <FormField label="Departamento"><Input defaultValue={department} readOnly /></FormField>
       </div>
+      <FormField label="Salario Mensual (RD$)">
+        <Input type="number" min={0} value={salary || ""} onChange={e => setSalary(Number(e.target.value))} placeholder="Detectado automáticamente" />
+        <p className="text-xs text-muted-foreground mt-1">RRHH verificará este valor contra la nómina.</p>
+      </FormField>
+      {salary > 0 && (
+        <div className="text-xs bg-muted/40 border border-border rounded p-3 grid grid-cols-2 gap-2">
+          <div>Vacaciones acumuladas: <strong>RD${capacity.vacaciones.toLocaleString()}</strong></div>
+          <div>Salario 13 acumulado: <strong>RD${capacity.salario13.toLocaleString()}</strong></div>
+          <div className="col-span-2">Monto máx sugerido: <strong>RD${capacity.maxAvailable.toLocaleString()}</strong> · Cuota máx (1/6): <strong>RD${capacity.maxInstallment.toLocaleString()}</strong></div>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Monto Solicitado (RD$)"><Input type="number" min={0} placeholder="Ej: 15000" /></FormField>
-        <FormField label="Plazo de Pago (meses)"><Input type="number" min={1} max={24} placeholder="Ej: 6" /></FormField>
+        <FormField label="Monto Solicitado (RD$)"><Input type="number" min={0} value={amount || ""} onChange={e => setAmount(Number(e.target.value))} placeholder="Ej: 15000" /></FormField>
+        <FormField label="Plazo de Pago (meses)"><Input type="number" min={1} max={36} value={term || ""} onChange={e => setTerm(Number(e.target.value))} placeholder="Ej: 6" /></FormField>
       </div>
-      <FormField label="Modalidad de Descuento"><Input placeholder="Quincenal o Mensual" /></FormField>
+      {amount > 0 && term > 0 && (
+        <div className={cn("text-xs rounded p-3 border", overInstallment ? "bg-red-50 border-red-200 text-red-800" : "bg-emerald-50 border-emerald-200 text-emerald-800")}>
+          Cuota mensual estimada: <strong>RD${installment.toLocaleString()}</strong> (interés {settings.annualInterestRatePct}% anual).
+          {overInstallment && " ⚠ Supera 1/6 del salario — ajusta plazo o monto."}
+        </div>
+      )}
+      {overPolicy && (
+        <FormField label="Justificación de excepción">
+          <Textarea placeholder="Monto solicitado supera prestaciones acumuladas. Justifica para que Aurelio evalúe la excepción..." rows={3} />
+        </FormField>
+      )}
       <FormField label="Motivo del Préstamo"><Textarea placeholder="Describa para qué necesita el préstamo..." rows={3} /></FormField>
       {showSignature && <SignatureBlock />}
     </div>
@@ -1318,3 +1348,4 @@ function LoanForm({ userName, department, showSignature }: { userName: string; d
 }
 
 export default HRForms;
+
