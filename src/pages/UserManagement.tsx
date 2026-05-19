@@ -578,14 +578,14 @@ const UserManagementPage = () => {
                           <p className="text-xs text-muted-foreground italic">Sin cumpleaños</p>
                         ) : (
                           <ul className="space-y-1.5">
-                            {items.map(({ u, mmdd, day }) => {
+                            {items.map(({ id, fullName, department, mmdd, day }) => {
                               const isToday = mmdd === todayMMDD;
                               return (
-                                <li key={u.id} className={`text-xs flex items-center gap-2 px-2 py-1 rounded ${isToday ? "bg-gold/20 font-semibold" : ""}`}>
+                                <li key={id} className={`text-xs flex items-center gap-2 px-2 py-1 rounded ${isToday ? "bg-gold/20 font-semibold" : ""}`}>
                                   <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-background border border-border text-[10px] font-bold shrink-0">{day}</span>
                                   <div className="min-w-0 flex-1">
-                                    <p className="text-card-foreground truncate">{u.fullName} {isToday && "🎂"}</p>
-                                    <p className="text-muted-foreground truncate text-[10px]">{u.department}</p>
+                                    <p className="text-card-foreground truncate">{fullName} {isToday && "🎂"}</p>
+                                    <p className="text-muted-foreground truncate text-[10px]">{department}</p>
                                   </div>
                                 </li>
                               );
