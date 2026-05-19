@@ -284,21 +284,24 @@ export default function KronosActivityTab({ clients }: Props) {
     const seen = new Set<string>();
 
     const processSetting = (setting?: MonitoringAccountSetting) => {
-      const isPanic = setting?.kind === "panic";
+      const serviceType = setting?.serviceType || null;
+      const isPanic = setting?.kind === "panic" || serviceType === "Botón de pánico";
+      const isBaton = serviceType === "Bastón";
+      const noOpenClose = isPanic || isBaton;
       const lxStatus = setting?.lxStatus || null;
       const isMuted = !!(lxStatus && MUTING_LX_STATUSES.has(lxStatus));
       const billingClient = setting?.clientId ? billingClientById.get(setting.clientId) : undefined;
-      return { isPanic, isMuted, billingClient };
+      return { isPanic, isBaton, noOpenClose, isMuted, billingClient };
     };
 
     report.rows.forEach(r => {
       seen.add(r.accountCode);
       const osm = osmByCode.get(r.accountCode);
       const setting = settings[r.accountCode];
-      const { isPanic, isMuted, billingClient } = processSetting(setting);
+      const { isPanic, isBaton, noOpenClose, isMuted, billingClient } = processSetting(setting);
 
       const alertas: string[] = [];
-      if (!isPanic && !isMuted) {
+      if (!noOpenClose && !isMuted) {
         if (osm) {
           if (osm.monitoringStatus === "Activo" && r.criticidad === "alta") {
             alertas.push("Marcado ACTIVO en OSM pero sin señal hace 3+ días");
@@ -322,12 +325,12 @@ export default function KronosActivityTab({ clients }: Props) {
         accountName: r.accountName,
         estado: r.estado,
         lastSignal: r.lastSignal,
-        lastOpen: isPanic ? null : r.lastOpen,
-        lastClose: isPanic ? null : r.lastClose,
-        sameDayCycle: !isPanic && r.sameDayCycle,
+        lastOpen: noOpenClose ? null : r.lastOpen,
+        lastClose: noOpenClose ? null : r.lastClose,
+        sameDayCycle: !noOpenClose && r.sameDayCycle,
         daysSince: r.daysSince,
-        criticidad: isMuted ? "ok" : r.criticidad,
-        osm, setting, billingClient, isPanic, isMuted,
+        criticidad: (isMuted || noOpenClose) ? "ok" : r.criticidad,
+        osm, setting, billingClient, isPanic, isBaton, noOpenClose, isMuted,
         discrepancia: alertas.join(" • ") || undefined,
       });
     });
@@ -337,19 +340,19 @@ export default function KronosActivityTab({ clients }: Props) {
       if (!c.accountCode || seen.has(c.accountCode.trim())) return;
       if (c.monitoringStatus !== "Activo") return;
       const setting = settings[c.accountCode];
-      const { isPanic, isMuted, billingClient } = processSetting(setting);
+      const { isPanic, isBaton, noOpenClose, isMuted, billingClient } = processSetting(setting);
       list.push({
         accountCode: c.accountCode, accountName: c.businessName, estado: "",
         lastSignal: null, lastOpen: null, lastClose: null, sameDayCycle: false,
-        daysSince: null, criticidad: isMuted ? "ok" : "alta",
-        osm: c, setting, billingClient, isPanic, isMuted,
-        discrepancia: isMuted || isPanic ? undefined : "Activo en OSM pero NO aparece en reporte Kronos",
+        daysSince: null, criticidad: (isMuted || noOpenClose) ? "ok" : "alta",
+        osm: c, setting, billingClient, isPanic, isBaton, noOpenClose, isMuted,
+        discrepancia: (isMuted || noOpenClose) ? undefined : "Activo en OSM pero NO aparece en reporte Kronos",
       });
     });
 
 
     return list.sort((a, b) => (b.daysSince ?? 9999) - (a.daysSince ?? 9999));
-  }, [report, clients, osmByCode, settings]);
+  }, [report, clients, osmByCode, settings, billingClientById]);
 
   const stats = useMemo(() => {
     const operational = combined.filter(r => !r.isPanic && !r.isMuted);
