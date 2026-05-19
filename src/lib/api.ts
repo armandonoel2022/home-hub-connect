@@ -541,9 +541,15 @@ export interface Employee {
   hourlyRate: number;
   /** Cédula (campo histórico llamado tss en el seed) */
   tss?: string;
+  /** Cédula oficial (nueva columna) */
+  cedula?: string;
   /** Email corporativo opcional para envío de volante */
   email?: string;
   hireDate?: string;
+  /** Fecha de nacimiento ISO (YYYY-MM-DD) */
+  birthDate?: string;
+  /** Cumpleaños MM-DD precomputado para overlay */
+  birthdayMMDD?: string;
   birthday?: string;
   updatedAt?: string;
   // ─── Cumplimiento TSS (gestión manual) ───
