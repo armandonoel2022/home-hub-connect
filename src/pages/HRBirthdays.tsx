@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import BirthdayOverlay from "@/components/BirthdayOverlay";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChatContextSafe } from "@/contexts/ChatContext";
-import { employeesApi, type Employee } from "@/lib/api";
+import { employeesApi, isApiConfigured, type Employee } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
-import { Cake, CalendarDays, Eye, X } from "lucide-react";
+import { ArrowLeft, Cake, CalendarDays, Eye } from "lucide-react";
 import type { IntranetUser } from "@/lib/types";
 
 const MONTHS = [
