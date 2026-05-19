@@ -227,6 +227,20 @@ export default function BillingClientsManager({ open, onOpenChange, onChanged }:
           <Button size="sm" variant="ghost" onClick={exportCsv}>
             <Download className="h-4 w-4 mr-1" /> Exportar
           </Button>
+          <Button size="sm" variant="secondary" disabled={loading} onClick={async () => {
+            try {
+              setLoading(true);
+              const res = await fetch("/data/billing_clients_cristy.json");
+              const items: Partial<BillingClient>[] = await res.json();
+              if (!confirm(`Cargar ${items.length} clientes del listado de Cristy (CxC) en modo UPSERT (no borra los existentes, solo actualiza por código y agrega los nuevos). ¿Continuar?`)) return;
+              const r = await billingClientsApi.bulkImport(items, "upsert");
+              toast.success(`Listado Cristy aplicado — creados: ${r.created}, actualizados: ${r.updated}, omitidos: ${r.skipped}`);
+              await load(); onChanged?.();
+            } catch (e: any) { toast.error(`No se pudo cargar listado Cristy: ${e.message}`); }
+            finally { setLoading(false); }
+          }}>
+            📋 Cargar listado Cristy
+          </Button>
         </div>
 
         {editing && (
