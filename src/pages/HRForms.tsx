@@ -1364,10 +1364,26 @@ function LoanForm({ userName, department, showSignature, hireDate, suggestedSala
         <p className="text-xs text-muted-foreground mt-1">RRHH verificará este valor contra la nómina.</p>
       </FormField>
       {salary > 0 && (
-        <div className="text-xs bg-muted/40 border border-border rounded p-3 grid grid-cols-2 gap-2">
-          <div>Vacaciones acumuladas: <strong>RD${capacity.vacaciones.toLocaleString()}</strong></div>
-          <div>Salario 13 acumulado: <strong>RD${capacity.salario13.toLocaleString()}</strong></div>
-          <div className="col-span-2">Monto máx sugerido: <strong>RD${capacity.maxAvailable.toLocaleString()}</strong> · Cuota máx (1/6): <strong>RD${capacity.maxInstallment.toLocaleString()}</strong></div>
+        <div className="text-xs bg-muted/40 border border-border rounded p-3 space-y-2">
+          <p className="font-semibold text-foreground">Prestaciones acumuladas (Código de Trabajo R.D.)</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+            <div>
+              Vacaciones (Art. 177): <strong>RD${capacity.vacaciones.toLocaleString()}</strong>
+              <div className="text-muted-foreground">
+                {capacity.vacacionesDias} días × (salario / 23.83) — {capacity.anios >= 5 ? "18" : "14"} días/año proporcional.
+              </div>
+            </div>
+            <div>
+              Salario 13 (Art. 219): <strong>RD${capacity.salario13.toLocaleString()}</strong>
+              <div className="text-muted-foreground">
+                salario × {capacity.mesesEnAnio} meses transcurridos / 12.
+              </div>
+            </div>
+          </div>
+          <div className="pt-2 border-t border-border">
+            Monto máx sugerido: <strong>RD${capacity.maxAvailable.toLocaleString()}</strong> ·
+            Cuota máx (1/6 salario): <strong>RD${capacity.maxInstallment.toLocaleString()}</strong>
+          </div>
         </div>
       )}
       <div className="grid grid-cols-2 gap-4">
