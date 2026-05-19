@@ -525,7 +525,7 @@ export default function KronosActivityTab({ clients }: Props) {
               active={filterCrit === "alta"} onClick={() => setFilterCrit("alta")} />
             <KpiCard label="🚨 Pánico" value={stats.panic} color="text-purple-400"
               active={filterCrit === "panic"} onClick={() => setFilterCrit("panic")} />
-            <KpiCard label="🥢 Bastón" value={stats.baton} color="text-cyan-400"
+            <KpiCard label="🛰️ Active Track" value={stats.baton} color="text-cyan-400"
               active={filterCrit === "baton"} onClick={() => setFilterCrit("baton")} />
             <KpiCard label="🔇 Silenciadas" value={stats.muted} color="text-muted-foreground"
               active={filterCrit === "muted"} onClick={() => setFilterCrit("muted")} />
@@ -562,7 +562,7 @@ export default function KronosActivityTab({ clients }: Props) {
                 <SelectItem value="media">🟡 Media (2d)</SelectItem>
                 <SelectItem value="alta">🔴 Alta (3+d)</SelectItem>
                 <SelectItem value="panic">🚨 Botón de pánico</SelectItem>
-                <SelectItem value="baton">🥢 Bastón (Punches)</SelectItem>
+                <SelectItem value="baton">🛰️ Active Track (Punches)</SelectItem>
                 <SelectItem value="muted">🔇 Silenciadas (estado LX)</SelectItem>
                 <SelectItem value="inactive-cancelled">⛔ Inactivas y Canceladas ({stats.inactiveCancelled})</SelectItem>
                 <SelectItem value="deleted">🗑️ Dadas de baja ({stats.deleted})</SelectItem>

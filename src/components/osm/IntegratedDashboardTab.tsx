@@ -9,7 +9,7 @@
  * Vistas:
  *  - KPIs facturables / sin servicio / no facturadas / cumplimiento
  *  - Cumplimiento Kronos del último reporte
- *  - Cumplimiento de rondas (Bastones) del día
+ *  - Cumplimiento de rondas (Active Tracks) del día
  *  - Tabla "Facturables sin servicio operativo"
  *  - Tabla "LX activas no facturadas"
  */
@@ -234,7 +234,7 @@ export default function IntegratedDashboardTab({ onNavigate }: Props) {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
               <Footprints className="h-4 w-4 text-cyan-400" />
-              Cumplimiento de rondas (Bastones)
+              Cumplimiento de rondas (Active Tracks)
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">

@@ -127,7 +127,7 @@ export default function PunchActivityTab() {
 
   useEffect(() => { loadRules(); loadSettings(); loadHistory(); /* eslint-disable-next-line */ }, []);
 
-  /** Códigos de cuenta marcados como Bastón en Actividad Kronos.
+  /** Códigos de cuenta marcados como Active Track en Actividad Kronos.
    *  Incluye: (a) LX con serviceType="Active Track" directamente,
    *           (b) TODAS las LX que comparten clientId con alguna LX bastón
    *               (fallback por cliente facturable). */
@@ -269,7 +269,7 @@ export default function PunchActivityTab() {
             <KpiCard label="⚠️ Parcial" value={stats.partial} color="text-amber-400" active={filter === "partial"} onClick={() => setFilter("partial")} />
             <KpiCard label="❌ Incumplió" value={stats.missed} color="text-red-400" active={filter === "missed"} onClick={() => setFilter("missed")} />
             <KpiCard label="Sin regla" value={stats.noRules} color="text-muted-foreground" active={filter === "no-rules"} onClick={() => setFilter("no-rules")} />
-            <KpiCard label="🥢 Bastón" value={stats.baton} color="text-cyan-400" active={filter === "baton"} onClick={() => setFilter("baton")} />
+            <KpiCard label="🛰️ Active Track" value={stats.baton} color="text-cyan-400" active={filter === "baton"} onClick={() => setFilter("baton")} />
           </div>
 
           <Card>
@@ -278,7 +278,7 @@ export default function PunchActivityTab() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[40px]"></TableHead>
-                    <TableHead>Cliente / Bastón</TableHead>
+                    <TableHead>Cliente / Active Track</TableHead>
                     <TableHead className="text-center">Punches</TableHead>
                     <TableHead className="text-center">Puntos</TableHead>
                     <TableHead>Primer / Último</TableHead>
@@ -306,7 +306,7 @@ export default function PunchActivityTab() {
                             <div className="flex items-center gap-2 flex-wrap">
                               <span>{c.accountName}</span>
                               {batonCodes.has(c.accountCode) && (
-                                <Badge variant="outline" className="text-cyan-400 border-cyan-500/30 text-[10px]">🥢 Bastón</Badge>
+                                <Badge variant="outline" className="text-cyan-400 border-cyan-500/30 text-[10px]">🛰️ Active Track</Badge>
                               )}
                             </div>
                             <div className="text-xs text-muted-foreground font-mono">{c.accountCode}</div>
