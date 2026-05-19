@@ -429,11 +429,22 @@ router.post('/runs/generate', auth, (req, res) => {
       sfs: round2(totals.sfs),
       afp: round2(totals.afp),
       isr: round2(totals.isr),
+      overtime: round2(totals.overtime),
+      night: round2(totals.night),
+      holiday: round2(totals.holiday),
+      meals: round2(totals.meals),
       deductions: round2(totals.deductions),
       net: round2(totals.net),
       count: items.length,
     },
   };
+  // Marca extras como procesadas
+  const extrasAll = readData('payroll-extras.json');
+  if (Array.isArray(extrasAll)) {
+    const ids = new Set(items.flatMap(i => extras.filter(x => x.employeeCode === i.employeeCode).map(x => x.id)));
+    const updated = extrasAll.map(x => ids.has(x.id) ? { ...x, status: 'Procesada', payrollRunId: run?.id } : x);
+    writeData('payroll-extras.json', updated);
+  }
   list.unshift(run);
   writeData(RUNS_FILE, list);
   res.json(run);
