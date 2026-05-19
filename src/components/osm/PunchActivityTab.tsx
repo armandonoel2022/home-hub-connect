@@ -127,10 +127,22 @@ export default function PunchActivityTab() {
 
   useEffect(() => { loadRules(); loadSettings(); loadHistory(); /* eslint-disable-next-line */ }, []);
 
-  /** Códigos de cuenta marcados como Bastón en Actividad Kronos */
+  /** Códigos de cuenta marcados como Bastón en Actividad Kronos.
+   *  Incluye: (a) LX con serviceType="Bastón" directamente,
+   *           (b) TODAS las LX que comparten clientId con alguna LX bastón
+   *               (fallback por cliente facturable). */
   const batonCodes = useMemo(() => {
     const s = new Set<string>();
-    Object.values(settings).forEach(st => { if (st.serviceType === "Bastón") s.add(st.accountCode); });
+    const clientIdsWithBaton = new Set<string>();
+    Object.values(settings).forEach(st => {
+      if (st.serviceType === "Bastón") {
+        s.add(st.accountCode);
+        if (st.clientId) clientIdsWithBaton.add(st.clientId);
+      }
+    });
+    Object.values(settings).forEach(st => {
+      if (st.clientId && clientIdsWithBaton.has(st.clientId)) s.add(st.accountCode);
+    });
     return s;
   }, [settings]);
 
