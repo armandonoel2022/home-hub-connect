@@ -605,7 +605,9 @@ export default function KronosActivityTab({ clients }: Props) {
                     <TableRow><TableCell colSpan={15} className="text-center text-muted-foreground py-8">Sin resultados</TableCell></TableRow>
                   ) : filtered.map(r => (
                     <TableRow key={r.accountCode} className={
-                      r.isPanic ? "bg-purple-500/5"
+                      r.setting?.lxStatus && (INACTIVE_CANCELLED.has(r.setting.lxStatus) || DELETED_STATUSES.has(r.setting.lxStatus))
+                        ? "opacity-40 grayscale bg-muted/30"
+                      : r.isPanic ? "bg-purple-500/5"
                       : r.isBaton ? "bg-cyan-500/5"
                       : r.isMuted ? "opacity-60" : ""
                     }>
