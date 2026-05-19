@@ -64,11 +64,15 @@ function ProtectedRoutes() {
   const { user, isLoading, activeUsers } = useAuth();
   const chatCtx = useChatContextSafe();
   const [employees, setEmployees] = React.useState<any[]>([]);
+  const [now, setNow] = React.useState(() => new Date());
 
   React.useEffect(() => {
     import("@/lib/api").then(({ employeesApi }) => {
       employeesApi.getAll().then(setEmployees).catch(() => {});
     });
+    // Re-render cada minuto para que la hora del overlay automático se active
+    const t = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(t);
   }, []);
 
   if (isLoading) {
