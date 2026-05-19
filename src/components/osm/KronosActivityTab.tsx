@@ -937,6 +937,16 @@ export default function KronosActivityTab({ clients }: Props) {
         onChanged={loadBillingClients}
       />
 
+      <TeamNotifyDialog
+        open={!!notifyCtx}
+        onOpenChange={(o) => !o && setNotifyCtx(null)}
+        subjectContext={notifyCtx?.subject || ""}
+        defaultMessage={notifyCtx?.message || ""}
+        eventType="lx_change"
+        fromUser={user ? { name: user.fullName, email: user.email } : null}
+      />
+
+
     </div>
   );
 }
