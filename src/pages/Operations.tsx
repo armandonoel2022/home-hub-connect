@@ -549,6 +549,7 @@ const OperationsPage = () => {
   const [showDeletedLog, setShowDeletedLog] = useState(false);
   const [showTransferLog, setShowTransferLog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const weaponFileInputRef = useRef<HTMLInputElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
   const [importPreview, setImportPreview] = useState<ImportRow[] | null>(null);
   const [importError, setImportError] = useState<string>("");
