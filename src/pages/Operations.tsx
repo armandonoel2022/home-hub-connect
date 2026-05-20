@@ -539,6 +539,7 @@ const OperationsPage = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Partial<ArmedPersonnel>>({ status: "Activo" });
   const [photoPreview, setPhotoPreview] = useState<string>("");
+  const [weaponPhotoPreview, setWeaponPhotoPreview] = useState<string>("");
   const [viewMode, setViewMode] = useState<"dashboard" | "list" | "map">("dashboard");
   const [filterProvince, setFilterProvince] = useState("");
   const [filterCondition, setFilterCondition] = useState("");
