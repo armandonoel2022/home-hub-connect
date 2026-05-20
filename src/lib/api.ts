@@ -13,6 +13,7 @@
 import type {
   Ticket, Equipment, Vehicle, ArmedPersonnel, PhoneDevice,
   IntranetUser, PurchaseRequest, HiringRequest, MinorPurchase,
+  UniformItem, UniformAssignment, FlashlightItem,
 } from "./types";
 import type { AppNotification } from "./types";
 
@@ -206,6 +207,39 @@ export const personnelApi = {
     apiFetch<ArmedPersonnel>(`/armed-personnel/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   delete: (id: string) =>
     apiFetch<void>(`/armed-personnel/${id}`, { method: "DELETE" }),
+};
+
+// ─── Uniform Items API ───
+export const uniformItemsApi = {
+  getAll: () => apiFetch<UniformItem[]>("/uniform-items"),
+  create: (p: Omit<UniformItem, "id">) =>
+    apiFetch<UniformItem>("/uniform-items", { method: "POST", body: JSON.stringify(p) }),
+  update: (id: string, data: Partial<UniformItem>) =>
+    apiFetch<UniformItem>(`/uniform-items/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  delete: (id: string) =>
+    apiFetch<void>(`/uniform-items/${id}`, { method: "DELETE" }),
+};
+
+// ─── Uniform Assignments API ───
+export const uniformAssignmentsApi = {
+  getAll: () => apiFetch<UniformAssignment[]>("/uniform-assignments"),
+  create: (p: Omit<UniformAssignment, "id">) =>
+    apiFetch<UniformAssignment>("/uniform-assignments", { method: "POST", body: JSON.stringify(p) }),
+  update: (id: string, data: Partial<UniformAssignment>) =>
+    apiFetch<UniformAssignment>(`/uniform-assignments/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  delete: (id: string) =>
+    apiFetch<void>(`/uniform-assignments/${id}`, { method: "DELETE" }),
+};
+
+// ─── Flashlights API ───
+export const flashlightsApi = {
+  getAll: () => apiFetch<FlashlightItem[]>("/flashlights"),
+  create: (p: Omit<FlashlightItem, "id">) =>
+    apiFetch<FlashlightItem>("/flashlights", { method: "POST", body: JSON.stringify(p) }),
+  update: (id: string, data: Partial<FlashlightItem>) =>
+    apiFetch<FlashlightItem>(`/flashlights/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  delete: (id: string) =>
+    apiFetch<void>(`/flashlights/${id}`, { method: "DELETE" }),
 };
 
 // ─── Notifications API ───
