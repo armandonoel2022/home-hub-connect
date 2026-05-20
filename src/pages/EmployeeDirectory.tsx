@@ -300,7 +300,16 @@ const EmployeeDirectory = () => {
                       return (
                       <TableRow key={emp.employeeCode}>
                         <TableCell className="font-mono text-xs">{emp.employeeCode}</TableCell>
-                        <TableCell className="font-medium">{emp.fullName}</TableCell>
+                        <TableCell className="font-medium">
+                          <button
+                            type="button"
+                            onClick={() => setViewing(emp)}
+                            className="text-left hover:text-gold hover:underline inline-flex items-center gap-1.5"
+                          >
+                            {emp.fullName}
+                            {findArmedRecord(emp) && <Shield className="h-3.5 w-3.5 text-amber-600" aria-label="Personal armado" />}
+                          </button>
+                        </TableCell>
                         <TableCell>
                           <Badge variant="outline" className={`text-xs ${catColor}`}>{emp.category || "—"}</Badge>
                         </TableCell>
