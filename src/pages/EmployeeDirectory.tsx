@@ -466,6 +466,77 @@ const EmployeeDirectory = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Detail / Audit Dialog */}
+      <Dialog open={!!viewing} onOpenChange={o => { if (!o) setViewing(null); }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{viewing?.fullName}</DialogTitle>
+          </DialogHeader>
+          {viewing && (() => {
+            const armed = findArmedRecord(viewing);
+            return (
+              <div className="space-y-4 py-2">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="bg-muted rounded-lg p-3"><span className="text-xs text-muted-foreground block">Código</span><span className="font-mono">{viewing.employeeCode}</span></div>
+                  <div className="bg-muted rounded-lg p-3"><span className="text-xs text-muted-foreground block">Estatus</span>{viewing.status}</div>
+                  <div className="bg-muted rounded-lg p-3"><span className="text-xs text-muted-foreground block">Departamento</span>{viewing.department || "—"}</div>
+                  <div className="bg-muted rounded-lg p-3"><span className="text-xs text-muted-foreground block">Puesto</span>{viewing.position || "—"}</div>
+                  <div className="bg-muted rounded-lg p-3"><span className="text-xs text-muted-foreground block">Categoría</span>{viewing.category || "—"}</div>
+                  <div className="bg-muted rounded-lg p-3"><span className="text-xs text-muted-foreground block">Nómina</span>{viewing.payrollType || "—"}</div>
+                </div>
+
+                {armed ? (
+                  <div className="border-2 border-amber-200 bg-amber-50 rounded-lg p-4">
+                    <h3 className="font-semibold text-amber-900 flex items-center gap-2 mb-3">
+                      <Shield className="h-4 w-4" /> Personal Armado · Auditoría
+                    </h3>
+                    <div className="flex gap-3 flex-wrap mb-3">
+                      {armed.photo && (
+                        <div className="text-center">
+                          <img src={armed.photo} alt={armed.name} className="w-24 h-24 rounded-lg object-cover border-2 border-amber-300" />
+                          <p className="text-[10px] text-amber-700 mt-1">Vigilante</p>
+                        </div>
+                      )}
+                      {armed.weaponPhoto && (
+                        <div className="text-center">
+                          <img src={armed.weaponPhoto} alt="Arma" className="w-24 h-24 rounded-lg object-cover border-2 border-amber-300" />
+                          <p className="text-[10px] text-amber-700 mt-1">Arma asignada</p>
+                        </div>
+                      )}
+                      {!armed.photo && !armed.weaponPhoto && (
+                        <p className="text-xs text-amber-700">Sin fotos cargadas. Súbelas desde Personal Armado.</p>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-white/70 rounded p-2"><span className="text-amber-700 block">Cliente / Puesto</span>{armed.client} · {armed.location}</div>
+                      <div className="bg-white/70 rounded p-2"><span className="text-amber-700 block">Provincia</span>{armed.province || "—"}</div>
+                      <div className="bg-white/70 rounded p-2"><span className="text-amber-700 block">Tipo de Arma</span>{armed.weaponType || "—"} {armed.weaponBrand || ""}</div>
+                      <div className="bg-white/70 rounded p-2"><span className="text-amber-700 block">Serial</span><span className="font-mono">{armed.weaponSerial || "—"}</span></div>
+                      <div className="bg-white/70 rounded p-2"><span className="text-amber-700 block">Munición</span>{armed.weaponCaliber || "—"} ({armed.ammunitionCount} cápsulas)</div>
+                      <div className="bg-white/70 rounded p-2"><span className="text-amber-700 block">Estado Arma</span>{armed.weaponCondition || "—"}</div>
+                      <div className="bg-white/70 rounded p-2"><span className="text-amber-700 block">Supervisor</span>{armed.supervisor || "—"}</div>
+                      <div className="bg-white/70 rounded p-2"><span className="text-amber-700 block">Licencia</span>{armed.licenseNumber || "—"} {armed.licenseExpiry ? `(vence ${armed.licenseExpiry})` : ""}</div>
+                    </div>
+                    {(user?.isAdmin || user?.department === "Operaciones") && (
+                      <Button size="sm" variant="outline" className="mt-3" onClick={() => navigate(`/operaciones`)}>
+                        Ver en Personal Armado
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="border border-border bg-muted/40 rounded-lg p-3 text-xs text-muted-foreground">
+                    Este empleado no figura en Personal Armado.
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewing(null)}>Cerrar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 };
