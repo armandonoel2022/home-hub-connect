@@ -404,3 +404,74 @@ export interface AppNotification {
   createdAt: string;
   actionUrl: string;
 }
+
+// ─── Photo Records (Audit trail for armed personnel) ───
+export interface PhotoRecord {
+  id: string;
+  url: string;
+  uploadedAt: string;
+  uploadedBy: string;
+  uploadedById?: string;
+  kind: "agent" | "weapon";
+  metadata?: {
+    weaponType?: string;
+    weaponSerial?: string;
+    notes?: string;
+  };
+}
+
+// ─── Uniforms & Flashlights Inventory ───
+export type UniformSize = "XS" | "S" | "M" | "L" | "XL" | "XXL" | "XXXL";
+export type UniformType =
+  | "Camisa"
+  | "Pantalón"
+  | "Gorra"
+  | "Chaleco"
+  | "Bota"
+  | "Cinturón"
+  | "Otro";
+
+export interface UniformItem {
+  id: string;
+  type: UniformType;
+  size: UniformSize;
+  quantityInStock: number;
+  unitCost?: number;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UniformAssignment {
+  id: string;
+  uniformItemId: string;
+  uniformType: UniformType;
+  uniformSize: UniformSize;
+  employeeCode: string;
+  employeeName: string;
+  quantity: number;
+  deliveredAt: string;
+  deliveredBy: string;
+  condition: "Nuevo" | "Bueno" | "Regular" | "Reemplazar";
+  notes?: string;
+  createdAt?: string;
+}
+
+export type FlashlightStatus = "Disponible" | "Asignada" | "En reparación" | "Dada de baja";
+
+export interface FlashlightItem {
+  id: string;
+  code: string;
+  brand: string;
+  model: string;
+  serial?: string;
+  status: FlashlightStatus;
+  assignedToCode?: string;
+  assignedToName?: string;
+  assignedAt?: string;
+  assignedBy?: string;
+  condition: "Nueva" | "Buena" | "Regular" | "Reemplazar";
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
