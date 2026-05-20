@@ -675,13 +675,13 @@ const OperationsPage = () => {
   };
 
   const handleStartEdit = (p: ArmedPersonnel) => {
-    setForm({ ...p }); setPhotoPreview(p.photo || ""); setEditingId(p.id); setShowAdd(true); setSelected(null);
+    setForm({ ...p }); setPhotoPreview(p.photo || ""); setWeaponPhotoPreview(p.weaponPhoto || ""); setEditingId(p.id); setShowAdd(true); setSelected(null);
   };
 
   const handleSaveEdit = async () => {
     if (!editingId) return;
     const updateData: Partial<ArmedPersonnel> = {
-      employeeCode: form.employeeCode || "", name: form.name || "", photo: form.photo || "",
+      employeeCode: form.employeeCode || "", name: form.name || "", photo: form.photo || "", weaponPhoto: form.weaponPhoto || "",
       client: form.client || "", location: form.location || "", province: form.province || "",
       position: form.position || "", supervisor: form.supervisor || "",
       fleetPhone: form.fleetPhone || "", personalPhone: form.personalPhone || "",
