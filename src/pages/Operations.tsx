@@ -1400,6 +1400,21 @@ const OperationsPage = () => {
                   </div>
                 </div>
 
+                <div>
+                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Foto del Arma</label>
+                  <div className="flex items-center gap-4">
+                    <div className="w-20 h-20 rounded-xl bg-muted flex items-center justify-center overflow-hidden border-2 border-dashed border-border">
+                      {weaponPhotoPreview ? <img src={weaponPhotoPreview} alt="Arma" className="w-full h-full object-cover" /> : <Image className="h-8 w-8 text-muted-foreground" />}
+                    </div>
+                    <div>
+                      <input ref={weaponFileInputRef} type="file" accept=".jpg,.jpeg,.png" onChange={handleWeaponPhotoUpload} className="hidden" />
+                      <button type="button" onClick={() => weaponFileInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-sm font-medium text-card-foreground hover:bg-border transition-colors">
+                        <Upload className="h-4 w-4" /> Subir foto del arma
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
                 {formFields.map(({ key, label }) => (
                   <div key={key}>
                     <label className="text-sm font-medium text-card-foreground block mb-1.5">{label}</label>
