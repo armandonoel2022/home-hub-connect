@@ -671,7 +671,7 @@ const OperationsPage = () => {
     };
     try { await createPersonnel(newP as any); }
     catch { setPersonnel((prev) => [{ ...newP, id: newP.id || `AP-${Date.now()}` } as ArmedPersonnel, ...prev]); }
-    setShowAdd(false); setEditingId(null); setForm({ status: "Activo" }); setPhotoPreview("");
+    setShowAdd(false); setEditingId(null); setForm({ status: "Activo" }); setPhotoPreview(""); setWeaponPhotoPreview("");
   };
 
   const handleStartEdit = (p: ArmedPersonnel) => {
@@ -697,7 +697,7 @@ const OperationsPage = () => {
     };
     try { await updatePersonnel(editingId, updateData); }
     catch { setPersonnel((prev) => prev.map(p => p.id === editingId ? { ...p, ...updateData } : p)); }
-    setShowAdd(false); setEditingId(null); setForm({ status: "Activo" }); setPhotoPreview("");
+    setShowAdd(false); setEditingId(null); setForm({ status: "Activo" }); setPhotoPreview(""); setWeaponPhotoPreview("");
   };
 
   const handleDelete = async (p: ArmedPersonnel) => {
@@ -944,7 +944,7 @@ const OperationsPage = () => {
                     </button>
                   </>
                 )}
-                <button onClick={() => { setForm({ status: "Activo" }); setEditingId(null); setPhotoPreview(""); setShowAdd(true); }} className="btn-gold flex items-center gap-2">
+                <button onClick={() => { setForm({ status: "Activo" }); setEditingId(null); setPhotoPreview(""); setWeaponPhotoPreview(""); setShowAdd(true); }} className="btn-gold flex items-center gap-2">
                   <Plus className="h-4 w-4" /> Registrar
                 </button>
               </div>
@@ -1382,7 +1382,7 @@ const OperationsPage = () => {
             <div className="bg-card rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
               <div className="flex items-center justify-between p-5 border-b border-border">
                 <h2 className="font-heading font-bold text-lg text-card-foreground">{editingId ? "Editar Personal Armado" : "Registrar Personal Armado"}</h2>
-                <button onClick={() => { setShowAdd(false); setEditingId(null); setPhotoPreview(""); setForm({ status: "Activo" }); }} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
+                <button onClick={() => { setShowAdd(false); setEditingId(null); setPhotoPreview(""); setWeaponPhotoPreview(""); setForm({ status: "Activo" }); }} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
               </div>
               <div className="p-5 space-y-4">
                 <div>
@@ -1484,7 +1484,7 @@ const OperationsPage = () => {
                 </div>
               </div>
               <div className="p-5 border-t border-border flex gap-3 justify-end">
-                <button onClick={() => { setShowAdd(false); setEditingId(null); setPhotoPreview(""); setForm({ status: "Activo" }); }} className="px-5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">Cancelar</button>
+                <button onClick={() => { setShowAdd(false); setEditingId(null); setPhotoPreview(""); setWeaponPhotoPreview(""); setForm({ status: "Activo" }); }} className="px-5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">Cancelar</button>
                 <button onClick={editingId ? handleSaveEdit : handleAdd} className="btn-gold text-sm">{editingId ? "Guardar Cambios" : "Registrar"}</button>
               </div>
             </div>
