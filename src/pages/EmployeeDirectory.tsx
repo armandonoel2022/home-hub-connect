@@ -16,8 +16,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import {
   ArrowLeft, Users, Search, Plus, Pencil, Trash2, Save, X,
-  Building2, Briefcase, Download,
+  Building2, Briefcase, Download, Shield,
 } from "lucide-react";
+import { useArmedPersonnel } from "@/hooks/useApiHooks";
+import type { ArmedPersonnel } from "@/lib/types";
 
 const EmployeeDirectory = () => {
   const navigate = useNavigate();
