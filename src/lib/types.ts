@@ -101,6 +101,8 @@ export interface ArmedPersonnel {
   name: string;
   photo: string;
   weaponPhoto?: string;
+  agentPhotos?: PhotoRecord[];
+  weaponPhotos?: PhotoRecord[];
   client: string;
   location: string; // puesto
   province: string;
