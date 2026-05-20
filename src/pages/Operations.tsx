@@ -647,6 +647,7 @@ const OperationsPage = () => {
       employeeCode: form.employeeCode || "",
       name: form.name || "",
       photo: form.photo || "",
+      weaponPhoto: form.weaponPhoto || "",
       client: form.client || "",
       location: form.location || "",
       province: form.province || "",
