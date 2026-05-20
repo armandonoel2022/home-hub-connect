@@ -33,6 +33,18 @@ const EmployeeDirectory = () => {
   const [editing, setEditing] = useState<Employee | null>(null);
   const [creating, setCreating] = useState(false);
   const [formData, setFormData] = useState<Partial<Employee>>({});
+  const [viewing, setViewing] = useState<Employee | null>(null);
+  const { data: armedPersonnel } = useArmedPersonnel();
+
+  const normalize = (s: string) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+  const findArmedRecord = (emp: Employee): ArmedPersonnel | undefined => {
+    if (!emp) return undefined;
+    const byCode = armedPersonnel.find(a => a.employeeCode && emp.employeeCode && a.employeeCode === emp.employeeCode);
+    if (byCode) return byCode;
+    const target = normalize(emp.fullName);
+    return armedPersonnel.find(a => normalize(a.name) === target);
+  };
 
   const canEdit = !!user && (
     user.isAdmin ||
