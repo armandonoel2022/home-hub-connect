@@ -1191,6 +1191,11 @@ const OperationsPage = () => {
                   )}
                 </div>
               )}
+              <EvidenceGallery
+                person={selected}
+                onUpdated={(updated) => { setSelected(updated); setPersonnel((prev) => prev.map((p) => p.id === updated.id ? updated : p)); }}
+                userName={user?.fullName || "—"}
+              />
               <div className="p-5">
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   {[
