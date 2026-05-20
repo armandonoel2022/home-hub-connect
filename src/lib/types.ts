@@ -100,6 +100,7 @@ export interface ArmedPersonnel {
   employeeCode: string;
   name: string;
   photo: string;
+  weaponPhoto?: string;
   client: string;
   location: string; // puesto
   province: string;

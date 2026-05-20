@@ -539,6 +539,7 @@ const OperationsPage = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Partial<ArmedPersonnel>>({ status: "Activo" });
   const [photoPreview, setPhotoPreview] = useState<string>("");
+  const [weaponPhotoPreview, setWeaponPhotoPreview] = useState<string>("");
   const [viewMode, setViewMode] = useState<"dashboard" | "list" | "map">("dashboard");
   const [filterProvince, setFilterProvince] = useState("");
   const [filterCondition, setFilterCondition] = useState("");
@@ -548,6 +549,7 @@ const OperationsPage = () => {
   const [showDeletedLog, setShowDeletedLog] = useState(false);
   const [showTransferLog, setShowTransferLog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const weaponFileInputRef = useRef<HTMLInputElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
   const [importPreview, setImportPreview] = useState<ImportRow[] | null>(null);
   const [importError, setImportError] = useState<string>("");
@@ -629,6 +631,15 @@ const OperationsPage = () => {
     reader.readAsDataURL(file);
   };
 
+  const handleWeaponPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!["image/jpeg", "image/png"].includes(file.type)) { alert("Solo se permiten archivos JPG o PNG"); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => { const url = ev.target?.result as string; setWeaponPhotoPreview(url); setForm({ ...form, weaponPhoto: url }); };
+    reader.readAsDataURL(file);
+  };
+
   const handleAdd = async () => {
     if (!form.name && !form.client) return;
     const newP: Omit<ArmedPersonnel, "id"> & { id?: string } = {
@@ -636,6 +647,7 @@ const OperationsPage = () => {
       employeeCode: form.employeeCode || "",
       name: form.name || "",
       photo: form.photo || "",
+      weaponPhoto: form.weaponPhoto || "",
       client: form.client || "",
       location: form.location || "",
       province: form.province || "",
@@ -659,17 +671,17 @@ const OperationsPage = () => {
     };
     try { await createPersonnel(newP as any); }
     catch { setPersonnel((prev) => [{ ...newP, id: newP.id || `AP-${Date.now()}` } as ArmedPersonnel, ...prev]); }
-    setShowAdd(false); setEditingId(null); setForm({ status: "Activo" }); setPhotoPreview("");
+    setShowAdd(false); setEditingId(null); setForm({ status: "Activo" }); setPhotoPreview(""); setWeaponPhotoPreview("");
   };
 
   const handleStartEdit = (p: ArmedPersonnel) => {
-    setForm({ ...p }); setPhotoPreview(p.photo || ""); setEditingId(p.id); setShowAdd(true); setSelected(null);
+    setForm({ ...p }); setPhotoPreview(p.photo || ""); setWeaponPhotoPreview(p.weaponPhoto || ""); setEditingId(p.id); setShowAdd(true); setSelected(null);
   };
 
   const handleSaveEdit = async () => {
     if (!editingId) return;
     const updateData: Partial<ArmedPersonnel> = {
-      employeeCode: form.employeeCode || "", name: form.name || "", photo: form.photo || "",
+      employeeCode: form.employeeCode || "", name: form.name || "", photo: form.photo || "", weaponPhoto: form.weaponPhoto || "",
       client: form.client || "", location: form.location || "", province: form.province || "",
       position: form.position || "", supervisor: form.supervisor || "",
       fleetPhone: form.fleetPhone || "", personalPhone: form.personalPhone || "",
@@ -685,7 +697,7 @@ const OperationsPage = () => {
     };
     try { await updatePersonnel(editingId, updateData); }
     catch { setPersonnel((prev) => prev.map(p => p.id === editingId ? { ...p, ...updateData } : p)); }
-    setShowAdd(false); setEditingId(null); setForm({ status: "Activo" }); setPhotoPreview("");
+    setShowAdd(false); setEditingId(null); setForm({ status: "Activo" }); setPhotoPreview(""); setWeaponPhotoPreview("");
   };
 
   const handleDelete = async (p: ArmedPersonnel) => {
@@ -932,7 +944,7 @@ const OperationsPage = () => {
                     </button>
                   </>
                 )}
-                <button onClick={() => { setForm({ status: "Activo" }); setEditingId(null); setPhotoPreview(""); setShowAdd(true); }} className="btn-gold flex items-center gap-2">
+                <button onClick={() => { setForm({ status: "Activo" }); setEditingId(null); setPhotoPreview(""); setWeaponPhotoPreview(""); setShowAdd(true); }} className="btn-gold flex items-center gap-2">
                   <Plus className="h-4 w-4" /> Registrar
                 </button>
               </div>
@@ -1163,9 +1175,20 @@ const OperationsPage = () => {
                 </div>
                 <button onClick={() => setSelected(null)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
               </div>
-              {selected.photo && (
-                <div className="px-5 pt-5 flex justify-center">
-                  <img src={selected.photo} alt={selected.name} className="w-28 h-28 rounded-xl object-cover border-2 border-border" />
+              {(selected.photo || selected.weaponPhoto) && (
+                <div className="px-5 pt-5 flex justify-center gap-4 flex-wrap">
+                  {selected.photo && (
+                    <div className="text-center">
+                      <img src={selected.photo} alt={selected.name} className="w-28 h-28 rounded-xl object-cover border-2 border-border" />
+                      <p className="text-[10px] text-muted-foreground mt-1">Vigilante</p>
+                    </div>
+                  )}
+                  {selected.weaponPhoto && (
+                    <div className="text-center">
+                      <img src={selected.weaponPhoto} alt="Arma" className="w-28 h-28 rounded-xl object-cover border-2 border-border" />
+                      <p className="text-[10px] text-muted-foreground mt-1">Arma asignada</p>
+                    </div>
+                  )}
                 </div>
               )}
               <div className="p-5">
@@ -1370,7 +1393,7 @@ const OperationsPage = () => {
             <div className="bg-card rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
               <div className="flex items-center justify-between p-5 border-b border-border">
                 <h2 className="font-heading font-bold text-lg text-card-foreground">{editingId ? "Editar Personal Armado" : "Registrar Personal Armado"}</h2>
-                <button onClick={() => { setShowAdd(false); setEditingId(null); setPhotoPreview(""); setForm({ status: "Activo" }); }} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
+                <button onClick={() => { setShowAdd(false); setEditingId(null); setPhotoPreview(""); setWeaponPhotoPreview(""); setForm({ status: "Activo" }); }} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
               </div>
               <div className="p-5 space-y-4">
                 <div>
@@ -1383,6 +1406,21 @@ const OperationsPage = () => {
                       <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png" onChange={handlePhotoUpload} className="hidden" />
                       <button type="button" onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-sm font-medium text-card-foreground hover:bg-border transition-colors">
                         <Upload className="h-4 w-4" /> Subir foto
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Foto del Arma</label>
+                  <div className="flex items-center gap-4">
+                    <div className="w-20 h-20 rounded-xl bg-muted flex items-center justify-center overflow-hidden border-2 border-dashed border-border">
+                      {weaponPhotoPreview ? <img src={weaponPhotoPreview} alt="Arma" className="w-full h-full object-cover" /> : <Image className="h-8 w-8 text-muted-foreground" />}
+                    </div>
+                    <div>
+                      <input ref={weaponFileInputRef} type="file" accept=".jpg,.jpeg,.png" onChange={handleWeaponPhotoUpload} className="hidden" />
+                      <button type="button" onClick={() => weaponFileInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-sm font-medium text-card-foreground hover:bg-border transition-colors">
+                        <Upload className="h-4 w-4" /> Subir foto del arma
                       </button>
                     </div>
                   </div>
@@ -1472,7 +1510,7 @@ const OperationsPage = () => {
                 </div>
               </div>
               <div className="p-5 border-t border-border flex gap-3 justify-end">
-                <button onClick={() => { setShowAdd(false); setEditingId(null); setPhotoPreview(""); setForm({ status: "Activo" }); }} className="px-5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">Cancelar</button>
+                <button onClick={() => { setShowAdd(false); setEditingId(null); setPhotoPreview(""); setWeaponPhotoPreview(""); setForm({ status: "Activo" }); }} className="px-5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">Cancelar</button>
                 <button onClick={editingId ? handleSaveEdit : handleAdd} className="btn-gold text-sm">{editingId ? "Guardar Cambios" : "Registrar"}</button>
               </div>
             </div>
