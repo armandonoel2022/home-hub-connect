@@ -631,6 +631,15 @@ const OperationsPage = () => {
     reader.readAsDataURL(file);
   };
 
+  const handleWeaponPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!["image/jpeg", "image/png"].includes(file.type)) { alert("Solo se permiten archivos JPG o PNG"); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => { const url = ev.target?.result as string; setWeaponPhotoPreview(url); setForm({ ...form, weaponPhoto: url }); };
+    reader.readAsDataURL(file);
+  };
+
   const handleAdd = async () => {
     if (!form.name && !form.client) return;
     const newP: Omit<ArmedPersonnel, "id"> & { id?: string } = {
