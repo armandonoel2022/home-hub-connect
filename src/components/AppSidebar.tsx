@@ -28,6 +28,8 @@ import {
   Monitor,
   Radar,
   GraduationCap,
+  Shirt,
+  ClipboardCheck,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -48,6 +50,8 @@ const navItems = [
   { title: "Flotilla Vehicular", url: "/flotilla", icon: Truck },
   { title: "Flota Celular", url: "/flota-celular", icon: Smartphone },
   { title: "Personal Armado", url: "/operaciones", icon: Shield },
+  { title: "Uniformes y Linternas", url: "/operaciones/inventario", icon: Shirt },
+  { title: "Auditoría Superintendencia", url: "/operaciones/auditoria", icon: ClipboardCheck },
   { title: "Solicitudes Compra", url: "/solicitudes-compra", icon: ShoppingCart },
   { title: "Solicitudes Personal", url: "/solicitudes-personal", icon: Users },
   { title: "BASC", url: "/basc", icon: FileCheck },

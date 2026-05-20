@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo, lazy, Suspense } from "react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useArmedPersonnel } from "@/hooks/useApiHooks";
+import { personnelApi } from "@/lib/api";
 import type { ArmedPersonnel, PersonnelTransfer, ShiftType } from "@/lib/types";
 import { Search, Plus, User, MapPin, X, Phone, Upload, Image, Lock, Trash2, Pencil, Map, List, AlertTriangle, BarChart3, ArrowRightLeft, History, Shield, ChevronDown, ChevronRight, Clock, Package, FileSpreadsheet, AlertCircle, CheckCircle2 } from "lucide-react";
 import { parseArmedPersonnelXlsx, type ImportRow } from "@/lib/armedPersonnelXlsxImport";
@@ -1191,6 +1192,11 @@ const OperationsPage = () => {
                   )}
                 </div>
               )}
+              <EvidenceGallery
+                person={selected}
+                onUpdated={(updated) => { setSelected(updated); setPersonnel((prev) => prev.map((p) => p.id === updated.id ? updated : p)); }}
+                userName={user?.fullName || "—"}
+              />
               <div className="p-5">
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   {[
@@ -1628,3 +1634,150 @@ const OperationsPage = () => {
 };
 
 export default OperationsPage;
+
+/* ─── Evidence Gallery (audit) ─── */
+function EvidenceGallery({
+  person,
+  onUpdated,
+  userName,
+}: {
+  person: ArmedPersonnel;
+  onUpdated: (p: ArmedPersonnel) => void;
+  userName: string;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState("");
+  const agentInput = useRef<HTMLInputElement>(null);
+  const weaponInput = useRef<HTMLInputElement>(null);
+
+  const upload = async (kind: "agent" | "weapon", file: File) => {
+    setBusy(true);
+    try {
+      const url = await new Promise<string>((res, rej) => {
+        const r = new FileReader();
+        r.onload = (e) => res(e.target?.result as string);
+        r.onerror = rej;
+        r.readAsDataURL(file);
+      });
+      const record = {
+        id: `PH-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        url,
+        uploadedAt: new Date().toISOString(),
+        uploadedBy: userName,
+        kind,
+        metadata:
+          kind === "weapon"
+            ? {
+                weaponType: person.weaponType,
+                weaponSerial: person.weaponSerial,
+                notes: note,
+              }
+            : { notes: note },
+      };
+      const next = {
+        ...person,
+        agentPhotos:
+          kind === "agent"
+            ? [...(person.agentPhotos || []), record]
+            : person.agentPhotos,
+        weaponPhotos:
+          kind === "weapon"
+            ? [...(person.weaponPhotos || []), record]
+            : person.weaponPhotos,
+      };
+      const saved = await personnelApi.update(person.id, {
+        agentPhotos: next.agentPhotos,
+        weaponPhotos: next.weaponPhotos,
+      });
+      onUpdated(saved);
+      setNote("");
+    } catch (e) {
+      console.error(e);
+      alert("Error al subir foto: " + (e as any)?.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removePhoto = async (kind: "agent" | "weapon", id: string) => {
+    if (!confirm("¿Eliminar esta foto de evidencia?")) return;
+    const next =
+      kind === "agent"
+        ? { agentPhotos: (person.agentPhotos || []).filter((p) => p.id !== id) }
+        : { weaponPhotos: (person.weaponPhotos || []).filter((p) => p.id !== id) };
+    const saved = await personnelApi.update(person.id, next as any);
+    onUpdated(saved);
+  };
+
+  const block = (kind: "agent" | "weapon", title: string, items: any[]) => (
+    <div className="rounded-lg border border-border p-3">
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="text-xs font-semibold text-card-foreground uppercase tracking-wider">
+          {title} ({items.length})
+        </h4>
+        <button
+          onClick={() => (kind === "agent" ? agentInput : weaponInput).current?.click()}
+          disabled={busy}
+          className="text-xs px-2 py-1 rounded bg-gold text-charcoal-dark font-semibold disabled:opacity-50"
+        >
+          + Subir
+        </button>
+      </div>
+      {items.length === 0 ? (
+        <p className="text-[11px] text-muted-foreground">Sin evidencias</p>
+      ) : (
+        <div className="grid grid-cols-3 gap-2">
+          {items.map((p) => (
+            <div key={p.id} className="relative group rounded border border-border overflow-hidden">
+              <img src={p.url} alt="" className="w-full h-20 object-cover" />
+              <div className="p-1 text-[9px] text-muted-foreground bg-muted/40">
+                <div>{new Date(p.uploadedAt).toLocaleString("es-DO")}</div>
+                <div className="truncate">por {p.uploadedBy}</div>
+              </div>
+              <button
+                onClick={() => removePhoto(kind, p.id)}
+                className="absolute top-1 right-1 hidden group-hover:flex p-1 rounded bg-destructive/80 text-white"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="px-5 pt-3 space-y-3">
+      <div>
+        <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+          Galería de evidencias (auditoría)
+        </p>
+        <input
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Nota opcional para la próxima foto subida..."
+          className="w-full px-2 py-1.5 text-xs border border-border rounded bg-background"
+        />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {block("agent", "Fotos del agente", person.agentPhotos || [])}
+        {block("weapon", "Fotos del arma", person.weaponPhotos || [])}
+      </div>
+      <input
+        ref={agentInput}
+        type="file"
+        accept=".jpg,.jpeg,.png"
+        className="hidden"
+        onChange={(e) => e.target.files?.[0] && upload("agent", e.target.files[0])}
+      />
+      <input
+        ref={weaponInput}
+        type="file"
+        accept=".jpg,.jpeg,.png"
+        className="hidden"
+        onChange={(e) => e.target.files?.[0] && upload("weapon", e.target.files[0])}
+      />
+    </div>
+  );
+}

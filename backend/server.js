@@ -61,6 +61,9 @@ app.use('/api/monitoring-account-settings', require('./routes/monitoring-account
 app.use('/api/monitoring-punch-rules', require('./routes/monitoring-punch-rules'));
 app.use('/api/monitoring-snapshots', require('./routes/monitoring-snapshots'));
 app.use('/api/billing-clients', require('./routes/billing-clients'));
+app.use('/api/uniform-items', require('./routes/uniform-items'));
+app.use('/api/uniform-assignments', require('./routes/uniform-assignments'));
+app.use('/api/flashlights', require('./routes/flashlights'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({

@@ -55,6 +55,8 @@ import EmployeeDirectory from "./pages/EmployeeDirectory";
 import Payroll from "./pages/Payroll";
 import PayrollExtrasPage from "./pages/PayrollExtras";
 import HRBirthdays from "./pages/HRBirthdays";
+import OperationsInventory from "./pages/OperationsInventory";
+import AuditConsolidated from "./pages/AuditConsolidated";
 import NotFound from "./pages/NotFound";
 
 
@@ -143,6 +145,8 @@ function ProtectedRoutes() {
         <Route path="/flotilla" element={<Fleet />} />
         <Route path="/flota-celular" element={<PhoneFleet />} />
         <Route path="/operaciones" element={<Operations />} />
+        <Route path="/operaciones/inventario" element={<OperationsInventory />} />
+        <Route path="/operaciones/auditoria" element={<AuditConsolidated />} />
         <Route path="/solicitudes-compra" element={<PurchaseRequests />} />
         <Route path="/solicitudes-personal" element={<HiringRequests />} />
         <Route path="/rrhh/formularios" element={<HRForms />} />
