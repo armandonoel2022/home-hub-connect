@@ -242,6 +242,43 @@ export const flashlightsApi = {
     apiFetch<void>(`/flashlights/${id}`, { method: "DELETE" }),
 };
 
+// ─── Photo Sync API ───
+export interface PhotoMatch {
+  file: string;
+  url: string;
+  normalized: string;
+  cleanedName: string;
+  score: number;
+  exact: boolean;
+}
+export interface PhotoSyncScan {
+  photosDir: string;
+  photosCount: number;
+  publicBase: string;
+  employees: Array<{ employeeCode: string; fullName: string; department?: string; currentPhoto: string | null; match: PhotoMatch | null }>;
+  armed: Array<{ id: string; employeeCode?: string; fullName: string; currentPhoto: string | null; hasGallery: boolean; match: PhotoMatch | null }>;
+  users: Array<{ id: string; fullName: string; email: string; currentPhoto: string | null; match: PhotoMatch | null }>;
+  unmatchedFiles: PhotoMatch[];
+  counts: {
+    employees: { total: number; matched: number };
+    armed: { total: number; matched: number };
+    users: { total: number; matched: number };
+  };
+}
+export const photoSyncApi = {
+  scan: () => apiFetch<PhotoSyncScan>("/photo-sync/scan"),
+  apply: (body: {
+    employees?: Array<{ employeeCode: string; url: string }>;
+    armed?: Array<{ id: string; url: string; fullName?: string }>;
+    users?: Array<{ id: string; url: string }>;
+    overwrite?: boolean;
+    uploadedBy?: string;
+  }) => apiFetch<{ ok: boolean; empUpdated: number; armedUpdated: number; usersUpdated: number }>(
+    "/photo-sync/apply",
+    { method: "POST", body: JSON.stringify(body) }
+  ),
+};
+
 // ─── Notifications API ───
 export const notificationsApi = {
   getAll: () => apiFetch<AppNotification[]>("/notifications"),
