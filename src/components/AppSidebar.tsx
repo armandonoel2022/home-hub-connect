@@ -30,6 +30,7 @@ import {
   GraduationCap,
   Shirt,
   ClipboardCheck,
+  ImagePlus,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -66,6 +67,7 @@ const navItems = [
 
 const adminItems = [
   { title: "Gestión Usuarios", url: "/admin/usuarios", icon: UserCog },
+  { title: "Sincronizar Fotos", url: "/admin/sincronizar-fotos", icon: ImagePlus },
 ];
 
 const AppSidebar = () => {
