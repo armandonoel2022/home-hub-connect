@@ -57,6 +57,7 @@ import PayrollExtrasPage from "./pages/PayrollExtras";
 import HRBirthdays from "./pages/HRBirthdays";
 import OperationsInventory from "./pages/OperationsInventory";
 import AuditConsolidated from "./pages/AuditConsolidated";
+import PhotoSync from "./pages/PhotoSync";
 import NotFound from "./pages/NotFound";
 
 
@@ -176,6 +177,7 @@ function ProtectedRoutes() {
         <Route path="/tech-tasks" element={<TechTasks />} />
         <Route path="/seguimiento-clientes" element={<ClientTracking />} />
         <Route path="/capacitaciones" element={<Training />} />
+        <Route path="/admin/sincronizar-fotos" element={<PhotoSync />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </>

@@ -28,6 +28,15 @@ app.use((req, res, next) => {
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, 'data', 'uploads')));
 
+// Serve the local employee photos folder (default C:\intranet-nueva\FOTOS)
+const PHOTOS_DIR = process.env.PHOTOS_DIR || 'C:\\intranet-nueva\\FOTOS';
+try {
+  app.use('/photos', express.static(PHOTOS_DIR, { fallthrough: true, maxAge: '7d' }));
+  console.log(`📷 Fotos servidas desde ${PHOTOS_DIR} en /photos`);
+} catch (e) {
+  console.warn(`⚠️  No se pudo montar carpeta de fotos: ${e.message}`);
+}
+
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
@@ -64,6 +73,7 @@ app.use('/api/billing-clients', require('./routes/billing-clients'));
 app.use('/api/uniform-items', require('./routes/uniform-items'));
 app.use('/api/uniform-assignments', require('./routes/uniform-assignments'));
 app.use('/api/flashlights', require('./routes/flashlights'));
+app.use('/api/photo-sync', require('./routes/photo-sync'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({
