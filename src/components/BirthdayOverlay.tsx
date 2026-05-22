@@ -2,7 +2,14 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { X, PartyPopper, Cake, Download, Send } from "lucide-react";
 import html2canvas from "html2canvas";
 import { sendBrowserNotification } from "@/lib/windowsNotifications";
+import { getFileUrl } from "@/lib/api";
 import type { IntranetUser } from "@/lib/types";
+
+function resolvePhoto(url?: string | null): string {
+  if (!url) return "";
+  if (url.startsWith("/photos") || url.startsWith("/uploads")) return getFileUrl(url);
+  return url;
+}
 
 interface BirthdayOverlayProps {
   birthdayUsers: IntranetUser[];
