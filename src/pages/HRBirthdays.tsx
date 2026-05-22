@@ -4,10 +4,16 @@ import AppLayout from "@/components/AppLayout";
 import BirthdayOverlay from "@/components/BirthdayOverlay";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChatContextSafe } from "@/contexts/ChatContext";
-import { employeesApi, isApiConfigured, type Employee } from "@/lib/api";
+import { employeesApi, isApiConfigured, usersApi, getFileUrl, type Employee } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Cake, CalendarDays, Eye, ChevronDown, ChevronRight } from "lucide-react";
 import type { IntranetUser } from "@/lib/types";
+
+function resolvePhoto(url?: string | null): string {
+  if (!url) return "";
+  if (url.startsWith("/photos") || url.startsWith("/uploads")) return getFileUrl(url);
+  return url;
+}
 
 const MONTHS = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
