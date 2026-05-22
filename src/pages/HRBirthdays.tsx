@@ -51,7 +51,7 @@ function toIntranetUser(item: BirthdayItem): IntranetUser {
     department: item.department,
     position: item.position,
     birthday: item.mmdd,
-    photoUrl: item.photoUrl || "",
+    photoUrl: resolvePhoto(item.photoUrl),
     allowedDepartments: [],
     isAdmin: false,
     extension: "",
