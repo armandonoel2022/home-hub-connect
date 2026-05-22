@@ -326,6 +326,7 @@ const EmployeeDirectory = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-14">Foto</TableHead>
                       <TableHead>Código</TableHead>
                       <TableHead>Nombre</TableHead>
                       <TableHead>Categoría</TableHead>
@@ -340,7 +341,7 @@ const EmployeeDirectory = () => {
                   <TableBody>
                     {filtered.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={canEdit ? 9 : 8} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={canEdit ? 10 : 9} className="text-center text-muted-foreground py-8">
                           No se encontraron empleados
                         </TableCell>
                       </TableRow>
@@ -350,8 +351,15 @@ const EmployeeDirectory = () => {
                         emp.category === "Supervisor" ? "bg-blue-500/20 text-blue-700 border-blue-500" :
                         emp.category === "Operador" ? "bg-purple-500/20 text-purple-700 border-purple-500" :
                         "bg-slate-500/20 text-slate-700 border-slate-500";
+                      const photo = resolvePhoto(emp.photoUrl);
                       return (
                       <TableRow key={emp.employeeCode}>
+                        <TableCell>
+                          <Avatar className="h-9 w-9">
+                            {photo && <AvatarImage src={photo} alt={emp.fullName} />}
+                            <AvatarFallback className="text-[10px] bg-muted">{initialsOf(emp.fullName)}</AvatarFallback>
+                          </Avatar>
+                        </TableCell>
                         <TableCell className="font-mono text-xs">{emp.employeeCode}</TableCell>
                         <TableCell className="font-medium">
                           <button
