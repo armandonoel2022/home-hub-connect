@@ -232,9 +232,9 @@ const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest, onSendCongrats 
                 <div className="space-y-3 mb-4">
                   {birthdayUsers.map((u) => (
                     <div key={u.id} className="bg-muted rounded-xl p-3 flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-gold/20 flex items-center justify-center shrink-0">
+                      <div className="w-12 h-12 rounded-full bg-gold/20 flex items-center justify-center shrink-0 overflow-hidden">
                         {u.photoUrl ? (
-                          <img src={u.photoUrl} alt={u.fullName} className="w-full h-full rounded-full object-cover" />
+                          <img src={resolvePhoto(u.photoUrl)} alt={u.fullName} className="w-full h-full rounded-full object-cover" />
                         ) : (
                           <Cake className="h-6 w-6 text-gold" />
                         )}
