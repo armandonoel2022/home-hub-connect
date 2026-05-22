@@ -622,6 +622,10 @@ export interface Employee {
   /** Cumpleaños MM-DD precomputado para overlay */
   birthdayMMDD?: string;
   birthday?: string;
+  /** Foto del empleado (URL absoluta, base64 o ruta relativa /photos/...) */
+  photoUrl?: string;
+  photoUpdatedAt?: string;
+  photoUpdatedBy?: string;
   updatedAt?: string;
   // ─── Cumplimiento TSS (gestión manual) ───
   /** ¿Está registrado en la TSS con descuentos de ley? */
