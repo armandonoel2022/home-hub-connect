@@ -4,10 +4,16 @@ import AppLayout from "@/components/AppLayout";
 import BirthdayOverlay from "@/components/BirthdayOverlay";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChatContextSafe } from "@/contexts/ChatContext";
-import { employeesApi, isApiConfigured, type Employee } from "@/lib/api";
+import { employeesApi, isApiConfigured, usersApi, getFileUrl, type Employee } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Cake, CalendarDays, Eye, ChevronDown, ChevronRight } from "lucide-react";
 import type { IntranetUser } from "@/lib/types";
+
+function resolvePhoto(url?: string | null): string {
+  if (!url) return "";
+  if (url.startsWith("/photos") || url.startsWith("/uploads")) return getFileUrl(url);
+  return url;
+}
 
 const MONTHS = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -45,7 +51,7 @@ function toIntranetUser(item: BirthdayItem): IntranetUser {
     department: item.department,
     position: item.position,
     birthday: item.mmdd,
-    photoUrl: item.photoUrl || "",
+    photoUrl: resolvePhoto(item.photoUrl),
     allowedDepartments: [],
     isAdmin: false,
     extension: "",
@@ -107,18 +113,60 @@ const HRBirthdaysPage = () => {
         if (!cancelled) toast({ title: "Error cargando empleados", description: String(e?.message || e), variant: "destructive" });
       }
     };
+    const mergeIntranetUsers = async (base: Employee[]): Promise<Employee[]> => {
+      if (!isApiConfigured()) return base;
+      try {
+        const users = await usersApi.getAll();
+        const norm = (s: string) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+        const byName = new Map(base.map(e => [norm(e.fullName), e]));
+        const merged = [...base];
+        users.forEach((u: any) => {
+          if (u.employeeStatus === "Inactivo") return;
+          const existing = byName.get(norm(u.fullName));
+          if (existing) {
+            if (!existing.photoUrl && u.photoUrl) existing.photoUrl = u.photoUrl;
+            if (!existing.birthday && !existing.birthDate && !existing.birthdayMMDD && u.birthday) existing.birthday = u.birthday;
+          } else if (u.birthday) {
+            merged.push({
+              employeeCode: u.id,
+              fullName: u.fullName,
+              status: "Activo",
+              payrollType: "Administrativo",
+              category: "Administrativo",
+              department: u.department || "—",
+              position: u.position || "",
+              bank: "", salary: 0, hourlyRate: 0,
+              birthday: u.birthday,
+              photoUrl: u.photoUrl,
+            } as Employee);
+          }
+        });
+        return merged;
+      } catch {
+        return base;
+      }
+    };
     const load = async () => {
       setLoading(true);
+      let base: Employee[] = [];
       if (!isApiConfigured()) {
         await loadSeed();
+        base = []; // se setea dentro de loadSeed
       } else {
         try {
           const data = await employeesApi.getAll({ status: "Activo" });
-          if (!data || data.length === 0) await loadSeed();
-          else if (!cancelled) setEmployees(data);
+          if (!data || data.length === 0) {
+            await loadSeed();
+          } else if (!cancelled) {
+            base = data;
+          }
         } catch {
           await loadSeed();
         }
+      }
+      if (base.length > 0 && !cancelled) {
+        const merged = await mergeIntranetUsers(base);
+        if (!cancelled) setEmployees(merged);
       }
       if (!cancelled) setLoading(false);
     };

@@ -4,12 +4,13 @@ import AppLayout from "@/components/AppLayout";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
-import { employeesApi, isApiConfigured, type Employee } from "@/lib/api";
+import { employeesApi, isApiConfigured, usersApi, getFileUrl, type Employee } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -20,6 +21,18 @@ import {
 } from "lucide-react";
 import { useArmedPersonnel } from "@/hooks/useApiHooks";
 import type { ArmedPersonnel } from "@/lib/types";
+
+function resolvePhoto(url?: string | null): string | undefined {
+  if (!url) return undefined;
+  if (url.startsWith("/photos") || url.startsWith("/uploads")) return getFileUrl(url);
+  return url;
+}
+
+function initialsOf(name: string): string {
+  return (name || "")
+    .split(/\s+/).filter(Boolean).slice(0, 2)
+    .map(p => p[0]?.toUpperCase() || "").join("");
+}
 
 const EmployeeDirectory = () => {
   const navigate = useNavigate();
@@ -62,6 +75,44 @@ const EmployeeDirectory = () => {
     }
   };
 
+  const mergeIntranetUsers = async (base: Employee[]) => {
+    if (!isApiConfigured()) return base;
+    try {
+      const users = await usersApi.getAll();
+      const byName = new Map(base.map(e => [normalize(e.fullName), e]));
+      const merged = [...base];
+      users.forEach((u: any) => {
+        if (u.employeeStatus === "Inactivo") return;
+        const key = normalize(u.fullName);
+        const existing = byName.get(key);
+        if (existing) {
+          // Si el empleado no tiene foto pero el usuario intranet sí, úsala
+          if (!existing.photoUrl && u.photoUrl) existing.photoUrl = u.photoUrl;
+        } else {
+          // Admin/usuario intranet no presente en seed (ej. Administrador IT)
+          merged.push({
+            employeeCode: u.id || `USR-${u.email}`,
+            fullName: u.fullName,
+            status: "Activo",
+            payrollType: "Administrativo",
+            category: "Administrativo",
+            department: u.department || "—",
+            position: u.position || "",
+            bank: "",
+            salary: 0,
+            hourlyRate: 0,
+            email: u.email,
+            birthday: u.birthday,
+            photoUrl: u.photoUrl,
+          } as Employee);
+        }
+      });
+      return merged;
+    } catch {
+      return base;
+    }
+  };
+
   const loadEmployees = async () => {
     if (!isApiConfigured()) {
       await loadFromSeedFallback();
@@ -70,10 +121,12 @@ const EmployeeDirectory = () => {
     }
     try {
       const data = await employeesApi.getAll();
-      if (!data || data.length === 0) {
+      const base = (!data || data.length === 0) ? [] : data;
+      if (base.length === 0) {
         await loadFromSeedFallback();
       } else {
-        setEmployees(data);
+        const merged = await mergeIntranetUsers(base);
+        setEmployees(merged);
       }
     } catch (e: any) {
       // API caída → cargar seed estático
@@ -273,6 +326,7 @@ const EmployeeDirectory = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-14">Foto</TableHead>
                       <TableHead>Código</TableHead>
                       <TableHead>Nombre</TableHead>
                       <TableHead>Categoría</TableHead>
@@ -287,7 +341,7 @@ const EmployeeDirectory = () => {
                   <TableBody>
                     {filtered.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={canEdit ? 9 : 8} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={canEdit ? 10 : 9} className="text-center text-muted-foreground py-8">
                           No se encontraron empleados
                         </TableCell>
                       </TableRow>
@@ -297,8 +351,15 @@ const EmployeeDirectory = () => {
                         emp.category === "Supervisor" ? "bg-blue-500/20 text-blue-700 border-blue-500" :
                         emp.category === "Operador" ? "bg-purple-500/20 text-purple-700 border-purple-500" :
                         "bg-slate-500/20 text-slate-700 border-slate-500";
+                      const photo = resolvePhoto(emp.photoUrl);
                       return (
                       <TableRow key={emp.employeeCode}>
+                        <TableCell>
+                          <Avatar className="h-9 w-9">
+                            {photo && <AvatarImage src={photo} alt={emp.fullName} />}
+                            <AvatarFallback className="text-[10px] bg-muted">{initialsOf(emp.fullName)}</AvatarFallback>
+                          </Avatar>
+                        </TableCell>
                         <TableCell className="font-mono text-xs">{emp.employeeCode}</TableCell>
                         <TableCell className="font-medium">
                           <button
