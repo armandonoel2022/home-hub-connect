@@ -4,12 +4,13 @@ import AppLayout from "@/components/AppLayout";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
-import { employeesApi, isApiConfigured, type Employee } from "@/lib/api";
+import { employeesApi, isApiConfigured, usersApi, getFileUrl, type Employee } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -20,6 +21,18 @@ import {
 } from "lucide-react";
 import { useArmedPersonnel } from "@/hooks/useApiHooks";
 import type { ArmedPersonnel } from "@/lib/types";
+
+function resolvePhoto(url?: string | null): string | undefined {
+  if (!url) return undefined;
+  if (url.startsWith("/photos") || url.startsWith("/uploads")) return getFileUrl(url);
+  return url;
+}
+
+function initialsOf(name: string): string {
+  return (name || "")
+    .split(/\s+/).filter(Boolean).slice(0, 2)
+    .map(p => p[0]?.toUpperCase() || "").join("");
+}
 
 const EmployeeDirectory = () => {
   const navigate = useNavigate();
