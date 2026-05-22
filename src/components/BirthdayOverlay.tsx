@@ -208,9 +208,9 @@ const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest, onSendCongrats 
                 <p className="text-muted-foreground text-xs mb-4">Hoy es un día muy especial</p>
                 <div className="bg-muted rounded-xl p-4 mb-4">
                   <div className="flex flex-col items-center gap-2">
-                    <div className="w-16 h-16 rounded-full bg-gold/20 flex items-center justify-center shrink-0">
+                    <div className="w-16 h-16 rounded-full bg-gold/20 flex items-center justify-center shrink-0 overflow-hidden">
                       {person.photoUrl ? (
-                        <img src={person.photoUrl} alt={person.fullName} className="w-full h-full rounded-full object-cover" />
+                        <img src={resolvePhoto(person.photoUrl)} alt={person.fullName} className="w-full h-full rounded-full object-cover" />
                       ) : (
                         <Cake className="h-8 w-8 text-gold" />
                       )}
