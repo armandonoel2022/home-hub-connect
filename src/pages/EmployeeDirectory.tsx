@@ -75,6 +75,44 @@ const EmployeeDirectory = () => {
     }
   };
 
+  const mergeIntranetUsers = async (base: Employee[]) => {
+    if (!isApiConfigured()) return base;
+    try {
+      const users = await usersApi.getAll();
+      const byName = new Map(base.map(e => [normalize(e.fullName), e]));
+      const merged = [...base];
+      users.forEach((u: any) => {
+        if (u.employeeStatus === "Inactivo") return;
+        const key = normalize(u.fullName);
+        const existing = byName.get(key);
+        if (existing) {
+          // Si el empleado no tiene foto pero el usuario intranet sí, úsala
+          if (!existing.photoUrl && u.photoUrl) existing.photoUrl = u.photoUrl;
+        } else {
+          // Admin/usuario intranet no presente en seed (ej. Administrador IT)
+          merged.push({
+            employeeCode: u.id || `USR-${u.email}`,
+            fullName: u.fullName,
+            status: "Activo",
+            payrollType: "Administrativo",
+            category: "Administrativo",
+            department: u.department || "—",
+            position: u.position || "",
+            bank: "",
+            salary: 0,
+            hourlyRate: 0,
+            email: u.email,
+            birthday: u.birthday,
+            photoUrl: u.photoUrl,
+          } as Employee);
+        }
+      });
+      return merged;
+    } catch {
+      return base;
+    }
+  };
+
   const loadEmployees = async () => {
     if (!isApiConfigured()) {
       await loadFromSeedFallback();
@@ -83,10 +121,12 @@ const EmployeeDirectory = () => {
     }
     try {
       const data = await employeesApi.getAll();
-      if (!data || data.length === 0) {
+      const base = (!data || data.length === 0) ? [] : data;
+      if (base.length === 0) {
         await loadFromSeedFallback();
       } else {
-        setEmployees(data);
+        const merged = await mergeIntranetUsers(base);
+        setEmployees(merged);
       }
     } catch (e: any) {
       // API caída → cargar seed estático
