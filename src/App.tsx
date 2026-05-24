@@ -56,6 +56,7 @@ import Payroll from "./pages/Payroll";
 import PayrollExtrasPage from "./pages/PayrollExtras";
 import HRBirthdays from "./pages/HRBirthdays";
 import OperationsInventory from "./pages/OperationsInventory";
+import OperationsMaintenanceMatrix from "./pages/OperationsMaintenanceMatrix";
 import AuditConsolidated from "./pages/AuditConsolidated";
 import PhotoSync from "./pages/PhotoSync";
 import NotFound from "./pages/NotFound";
@@ -161,6 +162,7 @@ function ProtectedRoutes() {
         <Route path="/admin/hub" element={<AdminHub />} />
         <Route path="/admin/flotilla-mantenimiento" element={<FleetMaintenance />} />
         <Route path="/monitoreo" element={<MonitoringCenter />} />
+        <Route path="/operaciones/matriz-mantenimiento" element={<OperationsMaintenanceMatrix />} />
         <Route path="/centro-operaciones" element={<OperationsCenter />} />
         <Route path="/basc" element={<BASC />} />
         <Route path="/archivos" element={<SharedFiles />} />

@@ -51,6 +51,7 @@ const navItems = [
   { title: "Flotilla Vehicular", url: "/flotilla", icon: Truck },
   { title: "Flota Celular", url: "/flota-celular", icon: Smartphone },
   { title: "Personal Armado", url: "/operaciones", icon: Shield },
+  { title: "Matriz de Levantamiento", url: "/operaciones/matriz-mantenimiento", icon: Shield },
   { title: "Uniformes y Linternas", url: "/operaciones/inventario", icon: Shirt },
   { title: "Auditoría Superintendencia", url: "/operaciones/auditoria", icon: ClipboardCheck },
   { title: "Solicitudes Compra", url: "/solicitudes-compra", icon: ShoppingCart },
