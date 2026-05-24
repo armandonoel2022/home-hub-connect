@@ -102,6 +102,7 @@ const DEPT_MULTI_ROUTES: Record<string, { label: string; route: string; icon: an
   ],
   "Operaciones": [
     { label: "Personal Armado", route: "/operaciones", icon: Shield },
+    { label: "Matriz de Levantamiento", route: "/operaciones/matriz-mantenimiento", icon: Shield },
     { label: "Centro de Operaciones", route: "/centro-operaciones", icon: Users },
   ],
 };
