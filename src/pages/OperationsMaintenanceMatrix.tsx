@@ -121,9 +121,10 @@ export default function OperationsMaintenanceMatrix() {
 
   const canEdit =
     user?.department === "Operaciones" ||
-    user?.role === "admin" ||
     user?.department === "Gerencia General" ||
-    user?.department === "Calidad";
+    user?.department === "Calidad" ||
+    user?.department === "Tecnología" ||
+    user?.department === "Administración";
 
   useEffect(() => {
     setRecords(loadMatrix());
