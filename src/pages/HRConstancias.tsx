@@ -12,7 +12,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Navigate } from "react-router-dom";
 import { getOpsReports, REPORT_TYPE_LABEL, type OpsReport, type OpsReportType } from "@/lib/opsReportsStorage";
 import { ShieldAlert, Download, FileSpreadsheet, RefreshCw, Search } from "lucide-react";
-import { exportToCSV } from "@/lib/exportUtils";
+function exportToCSV(rows: Record<string, any>[], filename: string) {
+  if (!rows.length) return;
+  const headers = Object.keys(rows[0]);
+  const escape = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const csv = [headers.join(","), ...rows.map((r) => headers.map((h) => escape(r[h])).join(","))].join("\n");
+  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `${filename}.csv`; a.click();
+  URL.revokeObjectURL(url);
+}
 
 const HR_EMAILS = ["dilia@safeone.com.do", "rrhh@safeone.com.do", "tecnologia@safeone.com.do"];
 
