@@ -1,152 +1,72 @@
-# Módulo Auditoría Superintendencia — Personal Armado
+# Plan de mejoras
 
-Extender el módulo de Personal Armado con capacidades de auditoría completas (fotos con trazabilidad, inventario de uniformes/linternas y reporte consolidado por agente).
+Antes de implementar todo de golpe, te propongo este plan. Son 6 frentes y algunos son grandes — los voy a entregar en este orden para que puedas validar cada uno.
 
-## A) Carga de fotos con metadatos y trazabilidad
+## 1. Puestos de trabajo como entidad central
 
-Hoy ya guardamos `photo` (agente) y `weaponPhoto` (arma) como strings base64 sueltos. Los migramos a estructuras con auditoría sin romper compatibilidad.
+Hoy las armas se asocian solo al vigilante. Voy a crear el concepto de **Puesto de Trabajo** (Post) con:
 
-**`src/lib/types.ts`** — agregar:
-```ts
-export interface PhotoRecord {
-  id: string;
-  url: string;            // base64 o ruta
-  uploadedAt: string;     // ISO
-  uploadedBy: string;     // nombre usuario
-  uploadedById?: string;
-  kind: "agent" | "weapon";
-  metadata?: {
-    weaponType?: string;
-    weaponSerial?: string;
-    notes?: string;
-  };
-}
-```
-Añadir a `ArmedPersonnel`: `agentPhotos?: PhotoRecord[]`, `weaponPhotos?: PhotoRecord[]`. Los campos `photo`/`weaponPhoto` quedan como "principal" (primera de cada lista) por retro-compatibilidad.
+- Cliente, nombre del puesto, provincia, coordenadas, supervisor responsable.
+- Lista de **armas asignadas al puesto** (no al agente). Cada arma queda en el puesto y rota entre turnos.
+- Lista de **vigilantes asignados al puesto** (varios por puesto, con turno: diurno/nocturno/24h).
+- Historial de quién portó cada arma por turno (log simple).
 
-**`src/pages/Operations.tsx`** — en el modal de edición/detalle:
-- Nueva pestaña "Galería de evidencias" con dos secciones (Agente / Arma)
-- Cada foto se muestra con: miniatura, fecha (`toLocaleString('es-DO')`), usuario que la subió, metadatos
-- Botón "Marcar como principal", "Eliminar" (con confirmación que pida razón → guardar en audit log)
-- Al subir nueva foto se inyecta `PhotoRecord` con `uploadedBy = currentUser.fullName`, fecha actual, metadata heredada del registro (serial/tipo)
+Cambios:
+- Nuevo `src/lib/postsData.ts` (localStorage) con CRUD.
+- Nueva pestaña **"Puestos de Trabajo"** dentro de `OperationsMaintenanceMatrix` o como página independiente `/operaciones/puestos`.
+- En la matriz de levantamiento, el arma se enlaza a un `postId` además del vigilante.
+- Vista del puesto: agentes asignados, supervisor, armas en custodia, link al mapa.
 
-## B) Inventario de Uniformes y Linternas
+## 2. Supervisores → Gerencia de Operaciones
 
-Dos módulos nuevos siguiendo el patrón de `armed-personnel.json` (file storage local).
+- Cada Puesto tiene `supervisorId`.
+- Cada Supervisor reporta a un Gerente de Operaciones (campo en el usuario o tabla simple).
+- Vista de árbol en `/operaciones`: Gerencia Operaciones → Supervisores → Puestos → Vigilantes.
 
-**Tipos nuevos en `src/lib/types.ts`:**
-```ts
-export type UniformSize = "XS"|"S"|"M"|"L"|"XL"|"XXL"|"XXXL";
-export type UniformType = "Camisa"|"Pantalón"|"Gorra"|"Chaleco"|"Bota"|"Cinturón"|"Otro";
-export interface UniformItem {
-  id: string;
-  type: UniformType;
-  size: UniformSize;
-  quantityInStock: number;
-  unitCost?: number;
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-export interface UniformAssignment {
-  id: string;
-  uniformItemId: string;
-  uniformType: UniformType;
-  uniformSize: UniformSize;
-  employeeCode: string;
-  employeeName: string;
-  quantity: number;
-  deliveredAt: string;
-  deliveredBy: string;
-  condition: "Nuevo"|"Bueno"|"Regular"|"Reemplazar";
-  signatureUrl?: string;
-  notes?: string;
-}
-export interface FlashlightItem {
-  id: string;
-  code: string;            // SSC-LIN-XXXX
-  brand: string;
-  model: string;
-  serial?: string;
-  status: "Disponible"|"Asignada"|"En reparación"|"Dada de baja";
-  assignedToCode?: string;
-  assignedToName?: string;
-  assignedAt?: string;
-  assignedBy?: string;
-  condition: "Nueva"|"Buena"|"Regular"|"Reemplazar";
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-```
+## 3. Flujo de solicitudes con pantalla de respuesta
 
-**Backend (`backend/routes/`):** tres archivos nuevos siguiendo `createCrudRoutes`:
-- `uniform-items.js` → `uniform-items.json` prefix `UNI`
-- `uniform-assignments.js` → `uniform-assignments.json` prefix `UA`
-- `flashlights.js` → `flashlights.json` prefix `LIN`
+Ya existe `hrRequestService` con notificaciones. Voy a:
 
-Registrar las rutas en `backend/server.js`.
+- Crear página **"Mis Solicitudes"** (`/rrhh/mis-solicitudes`) donde cada usuario ve el estado (Pendiente Supervisor / RRHH / Gerencia / Aprobada / Rechazada) de TODAS sus solicitudes (vacaciones, préstamos, permisos, etc.) con timeline visual.
+- Reforzar el **HRNotificationOverlay** para que muestre respuestas (aprobaciones/rechazos) además de pendientes.
+- Agregar overlay de respuesta al aprobar/rechazar préstamo: el solicitante ve un toast persistente "Tu préstamo fue aprobado por Aurelio Pérez".
 
-**Frontend:**
-- `src/lib/api.ts`: añadir `uniformItemsApi`, `uniformAssignmentsApi`, `flashlightsApi` con el helper estándar y fallback a `localStorage` cuando `!isApiConfigured()`.
-- `src/pages/OperationsInventory.tsx` (nueva página) con tabs:
-  1. **Uniformes — Stock**: tabla por tipo+talla con cantidad disponible, alta/edición
-  2. **Uniformes — Entregas**: registro de entrega a agente (autocomplete desde directorio activo), descuenta stock automáticamente
-  3. **Linternas**: tabla con estado, modal para asignar/devolver/cambiar estado
-- Ruta `/operations-inventory` con guard: Operaciones, Admin, Gerencia General. Añadir entrada en `AppSidebar` bajo Operaciones.
+## 4. Constancia auditable de horas extras / feriados
 
-## C) Vista consolidada por agente (Auditoría)
+Los reportes ya se guardan en `opsReportsStorage` (localStorage). Voy a:
 
-Nueva página `src/pages/AuditConsolidated.tsx` (`/audit-superintendencia`):
-- Lista de todos los agentes activos (cruza `IntranetUser` + `ArmedPersonnel`)
-- Filtros: por cliente, ubicación, provincia, supervisor, con/sin arma, con uniformes incompletos
-- Al hacer click en un agente abre dialog con vista 360°:
-  - **Datos del agente**: código, nombre, cédula, posición, ubicación, supervisor, teléfonos
-  - **Foto principal del agente** + galería completa
-  - **Armas asignadas**: serial, tipo, calibre, condición, licencia, vencimiento + galería de fotos del arma
-  - **Activo fijo vinculado** (reusa `findLinkedAsset`)
-  - **Uniformes entregados**: tabla de `UniformAssignment` filtrada por `employeeCode`, totales por tipo/talla
-  - **Linternas asignadas**: filtrar `flashlights` por `assignedToCode`
-- Botón "Exportar reporte" (D).
+- Crear página **"Constancias RRHH"** (`/rrhh/constancias`) solo visible a RRHH + `tecnologia@safeone.com.do`.
+- Lista cronológica de cada reporte (horas extras, feriado, día libre trabajado) con: agente, fecha, horas, supervisor que reportó, estado, fecha de procesamiento.
+- Filtros por agente, fecha, tipo, estado.
+- Botón exportar PDF/Excel para auditoría.
+- En el perfil del empleado: mini-historial de sus reportes operativos.
 
-Acceso: Operaciones, Admin, Gerencia General, Calidad (auditoría).
+## 5. Validar build (`npm run build`)
 
-## D) Reporte de auditoría exportable
+- Revisar que `BirthdayOverlay`, `HRBirthdays` y todos los nuevos componentes compilen sin errores.
+- Verificar imports faltantes, rutas absolutas, dependencias de localStorage en SSR (no aplica, pero por si acaso `typeof window`).
+- Ejecutar build localmente para detectar errores TS.
 
-`src/lib/auditReport.ts`:
-- `exportAuditReportPDF(agentes[], opciones)` usando `jsPDF` + `jspdf-autotable` (ya en el stack)
-  - Portada con logo SafeOne, fecha, rango, usuario que genera
-  - Por cada agente: bloque con datos, miniaturas de fotos (max 2 agente + 2 arma), tabla de uniformes, tabla de linternas
-  - Sección final "Evidencias fotográficas" con grid completo (fecha, responsable, tipo, serial)
-- `exportAuditReportExcel(agentes[])` usando `xlsx`:
-  - Hoja "Agentes" (resumen)
-  - Hoja "Armas"
-  - Hoja "Uniformes"
-  - Hoja "Linternas"
-  - Hoja "Evidencias Fotos" (sin imágenes, solo metadatos: agente, tipo foto, fecha, responsable, serial)
+## 6. Agente virtual de cierre/apertura (Monitoreo)
 
-Dos botones en `AuditConsolidated`: "Exportar PDF" / "Exportar Excel". Soportan exportar 1 agente (desde el dialog) o todos los filtrados.
+Funcionalidad **off por defecto** con toggle:
 
-## Memoria del proyecto
+- Nuevo módulo `src/lib/monitoringAgent.ts` que:
+  - Lee la lista de clientes con horarios esperados (apertura/cierre).
+  - Cada minuto (interval) compara hora actual vs ventana esperada.
+  - Si pasa la ventana sin punch → genera alerta automática "Cliente X no ha hecho apertura" en el panel de Monitoreo.
+  - Si hace cierre antes/después de tiempo → registra observación.
+- Toggle ON/OFF persistente en `localStorage` accesible desde `MonitoringCenter` (solo monitoreo + admin).
+- Log de acciones del agente para auditar (qué notificó, cuándo).
+- Esta versión es **simulada en cliente** (no llama APIs externas). Si más adelante quieren backend real, lo migramos.
 
-Crear `mem://funcionalidades/auditoria-superintendencia.md` documentando el flujo, ubicación de archivos JSON locales (C: drive), accesos por rol, y referencia cruzada con Personal Armado / Activo Fijo.
+---
 
-## Archivos nuevos
-- `backend/routes/uniform-items.js`, `uniform-assignments.js`, `flashlights.js`
-- `src/pages/OperationsInventory.tsx`
-- `src/pages/AuditConsolidated.tsx`
-- `src/lib/auditReport.ts`
-- `mem://funcionalidades/auditoria-superintendencia.md`
+## Orden de entrega sugerido
 
-## Archivos modificados
-- `src/lib/types.ts` (PhotoRecord + tipos inventario)
-- `src/lib/api.ts` (3 nuevos APIs)
-- `src/pages/Operations.tsx` (galería de evidencias con metadatos)
-- `src/components/AppSidebar.tsx` (2 entradas nuevas)
-- `src/App.tsx` (2 rutas nuevas)
-- `backend/server.js` (registrar rutas)
+Lo entrego en **dos tandas** para que puedas probar:
 
-## Notas
-- Compatibilidad: los campos `photo`/`weaponPhoto` actuales siguen funcionando; al subir una nueva foto se duplica como primer `PhotoRecord` y se mantiene `photo` apuntando al mismo string.
-- Las imágenes se siguen almacenando como base64 dentro del JSON (consistente con la implementación actual). Si el peso crece, en una iteración futura migramos a `/uploads/armed-personnel/`.
-- Stock de uniformes: descuento atómico — al crear `UniformAssignment` se decrementa `quantityInStock` en el `UniformItem` correspondiente. Si stock=0 se bloquea con toast.
+**Tanda A (esta respuesta):** 1, 2, 3, 4, 5 — son los más críticos y operativos.
+**Tanda B (después de tu feedback):** 6 — el agente virtual, porque es más delicado y quiero que valides la lógica de horarios antes.
+
+¿Te parece bien este orden, o prefieres que entregue todo de una vez (más riesgo de errores) o cambiar prioridades?
