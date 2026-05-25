@@ -57,8 +57,11 @@ import PayrollExtrasPage from "./pages/PayrollExtras";
 import HRBirthdays from "./pages/HRBirthdays";
 import OperationsInventory from "./pages/OperationsInventory";
 import OperationsMaintenanceMatrix from "./pages/OperationsMaintenanceMatrix";
+import OperationsPosts from "./pages/OperationsPosts";
 import AuditConsolidated from "./pages/AuditConsolidated";
 import PhotoSync from "./pages/PhotoSync";
+import MyHRRequests from "./pages/MyHRRequests";
+import HRConstancias from "./pages/HRConstancias";
 import NotFound from "./pages/NotFound";
 
 
@@ -163,6 +166,9 @@ function ProtectedRoutes() {
         <Route path="/admin/flotilla-mantenimiento" element={<FleetMaintenance />} />
         <Route path="/monitoreo" element={<MonitoringCenter />} />
         <Route path="/operaciones/matriz-mantenimiento" element={<OperationsMaintenanceMatrix />} />
+        <Route path="/operaciones/puestos" element={<OperationsPosts />} />
+        <Route path="/rrhh/mis-solicitudes" element={<MyHRRequests />} />
+        <Route path="/rrhh/constancias" element={<HRConstancias />} />
         <Route path="/centro-operaciones" element={<OperationsCenter />} />
         <Route path="/basc" element={<BASC />} />
         <Route path="/archivos" element={<SharedFiles />} />
