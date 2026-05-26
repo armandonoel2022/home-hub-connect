@@ -142,19 +142,19 @@ function ProtectedRoutes() {
       />
       <Routes>
         <Route path="/" element={<Index />} />
-        <Route path="/kpis" element={<KPIDashboard />} />
-        <Route path="/tareas" element={<TaskInbox />} />
+        <Route path="/kpis" element={<RouteGuard module="kpis"><KPIDashboard /></RouteGuard>} />
+        <Route path="/tareas" element={<RouteGuard module="tasks"><TaskInbox /></RouteGuard>} />
         <Route path="/directorio" element={<Directory />} />
         <Route path="/calendario" element={<CalendarPage />} />
-        <Route path="/tickets" element={<Tickets />} />
-        <Route path="/inventario" element={<Inventory />} />
-        <Route path="/flotilla" element={<Fleet />} />
-        <Route path="/flota-celular" element={<PhoneFleet />} />
-        <Route path="/operaciones" element={<Operations />} />
-        <Route path="/operaciones/inventario" element={<OperationsInventory />} />
-        <Route path="/operaciones/auditoria" element={<AuditConsolidated />} />
-        <Route path="/solicitudes-compra" element={<PurchaseRequests />} />
-        <Route path="/solicitudes-personal" element={<HiringRequests />} />
+        <Route path="/tickets" element={<RouteGuard module="tickets"><Tickets /></RouteGuard>} />
+        <Route path="/inventario" element={<RouteGuard module="itInventory"><Inventory /></RouteGuard>} />
+        <Route path="/flotilla" element={<RouteGuard module="fleet"><Fleet /></RouteGuard>} />
+        <Route path="/flota-celular" element={<RouteGuard module="phoneFleet"><PhoneFleet /></RouteGuard>} />
+        <Route path="/operaciones" element={<RouteGuard module="armedPersonnel"><Operations /></RouteGuard>} />
+        <Route path="/operaciones/inventario" element={<RouteGuard module="uniforms"><OperationsInventory /></RouteGuard>} />
+        <Route path="/operaciones/auditoria" element={<RouteGuard module="superintAudit"><AuditConsolidated /></RouteGuard>} />
+        <Route path="/solicitudes-compra" element={<RouteGuard module="purchaseRequests"><PurchaseRequests /></RouteGuard>} />
+        <Route path="/solicitudes-personal" element={<RouteGuard module="hiringRequests"><HiringRequests /></RouteGuard>} />
         <Route path="/rrhh/formularios" element={<HRForms />} />
         <Route path="/rrhh/consolidado-nomina" element={<HRPayrollReport />} />
         <Route path="/rrhh/empleados" element={<EmployeeDirectory />} />
@@ -162,31 +162,31 @@ function ProtectedRoutes() {
         <Route path="/rrhh/beneficios" element={<HRBenefits />} />
         <Route path="/rrhh/horas-extras" element={<PayrollExtrasPage />} />
         <Route path="/rrhh/cumpleanos" element={<HRBirthdays />} />
-        <Route path="/admin/formularios" element={<AdminForms />} />
-        <Route path="/admin/hub" element={<AdminHub />} />
+        <Route path="/admin/formularios" element={<RouteGuard module="adminForms"><AdminForms /></RouteGuard>} />
+        <Route path="/admin/hub" element={<RouteGuard module="adminHub"><AdminHub /></RouteGuard>} />
         <Route path="/admin/flotilla-mantenimiento" element={<FleetMaintenance />} />
         <Route path="/monitoreo" element={<MonitoringCenter />} />
-        <Route path="/operaciones/matriz-mantenimiento" element={<OperationsMaintenanceMatrix />} />
-        <Route path="/operaciones/puestos" element={<OperationsPosts />} />
+        <Route path="/operaciones/matriz-mantenimiento" element={<RouteGuard module="maintenanceMatrix"><OperationsMaintenanceMatrix /></RouteGuard>} />
+        <Route path="/operaciones/puestos" element={<RouteGuard module="workPosts"><OperationsPosts /></RouteGuard>} />
         <Route path="/rrhh/mis-solicitudes" element={<MyHRRequests />} />
-        <Route path="/rrhh/constancias" element={<HRConstancias />} />
+        <Route path="/rrhh/constancias" element={<RouteGuard module="hrConstancias"><HRConstancias /></RouteGuard>} />
         <Route path="/centro-operaciones" element={<OperationsCenter />} />
-        <Route path="/basc" element={<BASC />} />
+        <Route path="/basc" element={<RouteGuard module="basc"><BASC /></RouteGuard>} />
         <Route path="/archivos" element={<SharedFiles />} />
         <Route path="/procedimientos" element={<Procedures />} />
         <Route path="/wiki" element={<Wiki />} />
         <Route path="/encuestas" element={<Surveys />} />
-        <Route path="/gastos-menores" element={<MinorPurchases />} />
-        <Route path="/admin/caja-chica" element={<MinorPurchases />} />
+        <Route path="/gastos-menores" element={<RouteGuard module="minorPurchases"><MinorPurchases /></RouteGuard>} />
+        <Route path="/admin/caja-chica" element={<RouteGuard module="minorPurchases"><MinorPurchases /></RouteGuard>} />
         <Route path="/admin/tarjetas-corporativas" element={<CorporateCards />} />
-        <Route path="/admin/usuarios" element={<UserManagement />} />
+        <Route path="/admin/usuarios" element={<RouteGuard module="userManagement"><UserManagement /></RouteGuard>} />
         <Route path="/procesos" element={<DepartmentProcesses />} />
-        <Route path="/auditoria" element={<AuditLog />} />
-        <Route path="/reportes" element={<Reports />} />
-        <Route path="/tech-tasks" element={<TechTasks />} />
-        <Route path="/seguimiento-clientes" element={<ClientTracking />} />
+        <Route path="/auditoria" element={<RouteGuard module="auditLog"><AuditLog /></RouteGuard>} />
+        <Route path="/reportes" element={<RouteGuard module="reports"><Reports /></RouteGuard>} />
+        <Route path="/tech-tasks" element={<RouteGuard module="techTasks"><TechTasks /></RouteGuard>} />
+        <Route path="/seguimiento-clientes" element={<RouteGuard module="clientTracking"><ClientTracking /></RouteGuard>} />
         <Route path="/capacitaciones" element={<Training />} />
-        <Route path="/admin/sincronizar-fotos" element={<PhotoSync />} />
+        <Route path="/admin/sincronizar-fotos" element={<RouteGuard module="photoSync"><PhotoSync /></RouteGuard>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </>
