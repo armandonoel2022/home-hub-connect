@@ -222,7 +222,7 @@ const AppSidebar = () => {
                 <p className="text-[10px] font-semibold text-muted-foreground tracking-widest uppercase">Administración</p>
               </div>
             )}
-            {adminItems.map((item) => {
+            {adminItems.filter((item) => canView(item.module, user)).map((item) => {
               const isActive = location.pathname === item.url;
               return (
                 <NavLink
