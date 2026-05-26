@@ -63,6 +63,7 @@ import PhotoSync from "./pages/PhotoSync";
 import MyHRRequests from "./pages/MyHRRequests";
 import HRConstancias from "./pages/HRConstancias";
 import NotFound from "./pages/NotFound";
+import RouteGuard from "@/components/RouteGuard";
 
 
 const queryClient = new QueryClient();
