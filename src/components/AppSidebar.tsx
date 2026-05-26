@@ -194,7 +194,7 @@ const AppSidebar = () => {
 
       {/* Nav */}
       <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
+        {navItems.filter((item) => canView(item.module, user)).map((item) => {
           const isActive = location.pathname === item.url;
           return (
             <NavLink
@@ -215,7 +215,7 @@ const AppSidebar = () => {
         })}
 
         {/* Admin section */}
-        {user?.isAdmin && (
+        {(user?.isAdmin || isITSuper(user)) && (
           <>
             {!collapsed && (
               <div className="pt-3 pb-1 px-3">
