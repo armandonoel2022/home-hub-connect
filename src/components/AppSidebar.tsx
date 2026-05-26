@@ -39,39 +39,42 @@ import { useNotifications } from "@/contexts/NotificationContext";
 import { useChatContext } from "@/contexts/ChatContext";
 import ChangePasswordModal from "@/components/ChangePasswordModal";
 import GlobalSearch from "@/components/GlobalSearch";
+import { canView, isITSuper, type ModuleKey } from "@/lib/permissions";
 
-const navItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "KPIs", url: "/kpis", icon: TrendingUp },
-  { title: "Tareas", url: "/tareas", icon: CheckSquare },
-  { title: "Directorio", url: "/directorio", icon: Phone },
-  { title: "Calendario", url: "/calendario", icon: Calendar },
-  { title: "Tickets IT", url: "/tickets", icon: Ticket },
-  { title: "Inventario IT", url: "/inventario", icon: Package },
-  { title: "Flotilla Vehicular", url: "/flotilla", icon: Truck },
-  { title: "Flota Celular", url: "/flota-celular", icon: Smartphone },
-  { title: "Personal Armado", url: "/operaciones", icon: Shield },
-  { title: "Puestos de Trabajo", url: "/operaciones/puestos", icon: Shield },
-  { title: "Matriz de Levantamiento", url: "/operaciones/matriz-mantenimiento", icon: Shield },
-  { title: "Uniformes y Linternas", url: "/operaciones/inventario", icon: Shirt },
-  { title: "Auditoría Superintendencia", url: "/operaciones/auditoria", icon: ClipboardCheck },
-  { title: "Mis Solicitudes RRHH", url: "/rrhh/mis-solicitudes", icon: FileCheck },
-  { title: "Constancias RRHH (Auditoría)", url: "/rrhh/constancias", icon: ClipboardList },
-  { title: "Solicitudes Compra", url: "/solicitudes-compra", icon: ShoppingCart },
-  { title: "Solicitudes Personal", url: "/solicitudes-personal", icon: Users },
-  { title: "BASC", url: "/basc", icon: FileCheck },
-  { title: "Capacitaciones", url: "/capacitaciones", icon: GraduationCap },
-  { title: "Archivos", url: "/archivos", icon: FolderOpen },
-  { title: "Procedimientos", url: "/procedimientos", icon: BookOpen },
-  { title: "Wiki", url: "/wiki", icon: BookMarked },
-  { title: "Encuestas", url: "/encuestas", icon: ClipboardList },
-  { title: "Gastos Menores", url: "/gastos-menores", icon: Wallet },
-  { title: "Seguimiento Clientes Monitoreo", url: "/seguimiento-clientes", icon: Radar },
+type NavItem = { title: string; url: string; icon: any; module: ModuleKey };
+
+const navItems: NavItem[] = [
+  { title: "Dashboard", url: "/", icon: LayoutDashboard, module: "dashboard" },
+  { title: "KPIs", url: "/kpis", icon: TrendingUp, module: "kpis" },
+  { title: "Tareas", url: "/tareas", icon: CheckSquare, module: "tasks" },
+  { title: "Directorio", url: "/directorio", icon: Phone, module: "directory" },
+  { title: "Calendario", url: "/calendario", icon: Calendar, module: "calendar" },
+  { title: "Tickets IT", url: "/tickets", icon: Ticket, module: "tickets" },
+  { title: "Inventario IT", url: "/inventario", icon: Package, module: "itInventory" },
+  { title: "Flotilla Vehicular", url: "/flotilla", icon: Truck, module: "fleet" },
+  { title: "Flota Celular", url: "/flota-celular", icon: Smartphone, module: "phoneFleet" },
+  { title: "Personal Armado", url: "/operaciones", icon: Shield, module: "armedPersonnel" },
+  { title: "Puestos de Trabajo", url: "/operaciones/puestos", icon: Shield, module: "workPosts" },
+  { title: "Matriz de Levantamiento", url: "/operaciones/matriz-mantenimiento", icon: Shield, module: "maintenanceMatrix" },
+  { title: "Uniformes y Linternas", url: "/operaciones/inventario", icon: Shirt, module: "uniforms" },
+  { title: "Auditoría Superintendencia", url: "/operaciones/auditoria", icon: ClipboardCheck, module: "superintAudit" },
+  { title: "Mis Solicitudes RRHH", url: "/rrhh/mis-solicitudes", icon: FileCheck, module: "myHRRequests" },
+  { title: "Constancias RRHH (Auditoría)", url: "/rrhh/constancias", icon: ClipboardList, module: "hrConstancias" },
+  { title: "Solicitudes Compra", url: "/solicitudes-compra", icon: ShoppingCart, module: "purchaseRequests" },
+  { title: "Solicitudes Personal", url: "/solicitudes-personal", icon: Users, module: "hiringRequests" },
+  { title: "BASC", url: "/basc", icon: FileCheck, module: "basc" },
+  { title: "Capacitaciones", url: "/capacitaciones", icon: GraduationCap, module: "training" },
+  { title: "Archivos", url: "/archivos", icon: FolderOpen, module: "sharedFiles" },
+  { title: "Procedimientos", url: "/procedimientos", icon: BookOpen, module: "procedures" },
+  { title: "Wiki", url: "/wiki", icon: BookMarked, module: "wiki" },
+  { title: "Encuestas", url: "/encuestas", icon: ClipboardList, module: "surveys" },
+  { title: "Gastos Menores", url: "/gastos-menores", icon: Wallet, module: "minorPurchases" },
+  { title: "Seguimiento Clientes Monitoreo", url: "/seguimiento-clientes", icon: Radar, module: "clientTracking" },
 ];
 
-const adminItems = [
-  { title: "Gestión Usuarios", url: "/admin/usuarios", icon: UserCog },
-  { title: "Sincronizar Fotos", url: "/admin/sincronizar-fotos", icon: ImagePlus },
+const adminItems: NavItem[] = [
+  { title: "Gestión Usuarios", url: "/admin/usuarios", icon: UserCog, module: "userManagement" },
+  { title: "Sincronizar Fotos", url: "/admin/sincronizar-fotos", icon: ImagePlus, module: "photoSync" },
 ];
 
 const AppSidebar = () => {
