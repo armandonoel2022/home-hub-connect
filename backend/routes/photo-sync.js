@@ -17,13 +17,28 @@ const auth = require('../middleware/auth');
 
 const router = express.Router();
 
-const PHOTOS_DIR = process.env.PHOTOS_DIR || 'C:\\intranet-nueva\\FOTOS';
+// Directorios escaneados. Soportamos múltiples carpetas separadas por `;` o `,`.
+// PHOTOS_DIRS prevalece; si no, usamos PHOTOS_DIR + carpeta de empleados de la build (dist).
+const RAW_DIRS = process.env.PHOTOS_DIRS
+  || `${process.env.PHOTOS_DIR || 'C:\\intranet-nueva\\FOTOS'};C:\\intranet-nueva\\dist\\fotos_empleados`;
+
+const PHOTO_SOURCES = RAW_DIRS
+  .split(/[;,]/)
+  .map((s) => s.trim())
+  .filter(Boolean)
+  .map((dir, idx) => ({
+    dir,
+    // Primer directorio se sirve en /photos (compat); los demás en /photos-2, /photos-3, ...
+    base: idx === 0 ? '/photos' : `/photos-${idx + 1}`,
+  }));
+
+const PHOTOS_DIR = PHOTO_SOURCES[0]?.dir || '';
 const PUBLIC_BASE = '/photos';
 
 function normalize(s) {
   if (!s) return '';
   return String(s)
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // strip accents
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[;,()\[\]]/g, ' ')
     .replace(/\b(copy|activo|2)\b/g, ' ')
@@ -34,7 +49,6 @@ function normalize(s) {
 
 function cleanBaseName(filename) {
   const base = filename.replace(/\.(jpg|jpeg|png|webp)$/i, '');
-  // Drop ";Activo", "(2)", " - Copy" annotations
   return base.replace(/\s*-\s*copy\s*$/i, '')
              .replace(/\s*\(\d+\)\s*$/i, '')
              .replace(/;.*$/i, '')
@@ -42,18 +56,24 @@ function cleanBaseName(filename) {
 }
 
 function listPhotos() {
-  if (!fs.existsSync(PHOTOS_DIR)) return [];
-  return fs.readdirSync(PHOTOS_DIR)
-    .filter(f => /\.(jpg|jpeg|png|webp)$/i.test(f))
-    .map(f => {
-      const cleaned = cleanBaseName(f);
-      return {
-        file: f,
-        url: `${PUBLIC_BASE}/${encodeURIComponent(f)}`,
-        normalized: normalize(cleaned),
-        cleanedName: cleaned,
-      };
-    });
+  const out = [];
+  for (const src of PHOTO_SOURCES) {
+    if (!fs.existsSync(src.dir)) continue;
+    try {
+      for (const f of fs.readdirSync(src.dir)) {
+        if (!/\.(jpg|jpeg|png|webp)$/i.test(f)) continue;
+        const cleaned = cleanBaseName(f);
+        out.push({
+          file: f,
+          source: src.dir,
+          url: `${src.base}/${encodeURIComponent(f)}`,
+          normalized: normalize(cleaned),
+          cleanedName: cleaned,
+        });
+      }
+    } catch (e) { /* ignore */ }
+  }
+  return out;
 }
 
 function tokenSetScore(a, b) {
