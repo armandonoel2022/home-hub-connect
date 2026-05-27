@@ -75,6 +75,7 @@ const navItems: NavItem[] = [
 const adminItems: NavItem[] = [
   { title: "Gestión Usuarios", url: "/admin/usuarios", icon: UserCog, module: "userManagement" },
   { title: "Sincronizar Fotos", url: "/admin/sincronizar-fotos", icon: ImagePlus, module: "photoSync" },
+  { title: "Permisos de Carpetas", url: "/admin/permisos-carpetas", icon: FolderOpen, module: "folderPermissions" },
 ];
 
 const AppSidebar = () => {
