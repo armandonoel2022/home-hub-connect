@@ -141,12 +141,12 @@ router.get('/scan', auth, (req, res) => {
   const employeeMatches = employees
     .filter(e => e.status !== 'Inactivo')
     .map(e => {
-      const m = bestMatch(normalize(e.fullName), photos);
+      const m = bestMatch(employeePhotoKeys(e), photos);
       return {
         employeeCode: e.employeeCode,
         fullName: e.fullName,
         department: e.department,
-        currentPhoto: e.photo || null,
+        currentPhoto: e.photoUrl || e.photo || null,
         match: m,
       };
     });
@@ -210,8 +210,8 @@ router.post('/apply', auth, (req, res) => {
     empList.forEach(({ employeeCode, url }) => {
       const idx = employees.findIndex(e => String(e.employeeCode) === String(employeeCode));
       if (idx === -1) return;
-      if (!overwrite && employees[idx].photo) return;
-      employees[idx] = { ...employees[idx], photo: url, photoUpdatedAt: nowIso, photoUpdatedBy: uploadedBy };
+      if (!overwrite && (employees[idx].photoUrl || employees[idx].photo)) return;
+      employees[idx] = { ...employees[idx], photoUrl: url, photo: url, photoUpdatedAt: nowIso, photoUpdatedBy: uploadedBy };
       empUpdated++;
     });
     writeData('employees.json', employees);
