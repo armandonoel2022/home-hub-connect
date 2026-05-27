@@ -183,6 +183,7 @@ router.get('/scan', auth, (req, res) => {
 
   res.json({
     photosDir: PHOTOS_DIR,
+    photoSources: PHOTO_SOURCES.map(src => ({ dir: src.dir, base: src.base })),
     photosCount: photos.length,
     publicBase: PUBLIC_BASE,
     employees: employeeMatches,

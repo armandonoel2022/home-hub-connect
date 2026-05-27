@@ -253,6 +253,7 @@ export interface PhotoMatch {
 }
 export interface PhotoSyncScan {
   photosDir: string;
+  photoSources?: Array<{ dir: string; base: string }>;
   photosCount: number;
   publicBase: string;
   employees: Array<{ employeeCode: string; fullName: string; department?: string; currentPhoto: string | null; match: PhotoMatch | null }>;
