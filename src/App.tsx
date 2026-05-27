@@ -99,7 +99,9 @@ function ProtectedRoutes() {
     .filter((e: any) => !fromUsers.find((u) => u.fullName.toLowerCase() === String(e.fullName).toLowerCase()))
     .map((e: any) => ({
       id: `EMP-${e.employeeCode}`,
+      employeeCode: e.employeeCode,
       fullName: e.fullName,
+      cedula: e.cedula || e.tss || "",
       email: e.email || "",
       department: e.department,
       position: e.position,
@@ -121,7 +123,7 @@ function ProtectedRoutes() {
       const out = await Promise.all(baseBirthday.map(async (u) => {
         if (u.photoUrl) return u;
         try {
-          const r = await photoSyncApi.find(u.fullName);
+          const r = await photoSyncApi.find(u.fullName, { employeeCode: u.employeeCode, cedula: u.cedula });
           if (r?.match?.url) return { ...u, photoUrl: r.match.url };
         } catch { /* ignore */ }
         return u;

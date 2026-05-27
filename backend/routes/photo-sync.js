@@ -48,11 +48,30 @@ function normalize(s) {
 }
 
 function cleanBaseName(filename) {
-  const base = filename.replace(/\.(jpg|jpeg|png|webp)$/i, '');
+  const base = path.basename(filename).replace(/\.(jpg|jpeg|png|webp)$/i, '');
   return base.replace(/\s*-\s*copy\s*$/i, '')
              .replace(/\s*\(\d+\)\s*$/i, '')
              .replace(/;.*$/i, '')
              .trim();
+}
+
+function toPublicUrl(base, relPath) {
+  return `${base}/${String(relPath).split(path.sep).map(encodeURIComponent).join('/')}`;
+}
+
+function walkPhotos(dir, prefix = '') {
+  if (!fs.existsSync(dir)) return [];
+  const out = [];
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const rel = prefix ? path.join(prefix, entry.name) : entry.name;
+    const abs = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      out.push(...walkPhotos(abs, rel));
+    } else if (/\.(jpg|jpeg|png|webp)$/i.test(entry.name)) {
+      out.push(rel);
+    }
+  }
+  return out;
 }
 
 function listPhotos() {
@@ -60,13 +79,12 @@ function listPhotos() {
   for (const src of PHOTO_SOURCES) {
     if (!fs.existsSync(src.dir)) continue;
     try {
-      for (const f of fs.readdirSync(src.dir)) {
-        if (!/\.(jpg|jpeg|png|webp)$/i.test(f)) continue;
+      for (const f of walkPhotos(src.dir)) {
         const cleaned = cleanBaseName(f);
         out.push({
           file: f,
           source: src.dir,
-          url: `${src.base}/${encodeURIComponent(f)}`,
+          url: toPublicUrl(src.base, f),
           normalized: normalize(cleaned),
           cleanedName: cleaned,
         });
@@ -85,15 +103,32 @@ function tokenSetScore(a, b) {
   return common / Math.max(A.size, B.size);
 }
 
-function bestMatch(targetNorm, photos) {
-  if (!targetNorm) return null;
+function bestMatch(target, photos) {
+  const candidates = Array.isArray(target) ? target : [target];
+  const normalizedCandidates = candidates.map(normalize).filter(Boolean);
+  if (!normalizedCandidates.length) return null;
   let best = null;
-  for (const p of photos) {
-    if (p.normalized === targetNorm) return { ...p, score: 1, exact: true };
-    const score = tokenSetScore(targetNorm, p.normalized);
-    if (score >= 0.75 && (!best || score > best.score)) best = { ...p, score, exact: false };
+  for (const targetNorm of normalizedCandidates) {
+    for (const p of photos) {
+      if (p.normalized === targetNorm || p.normalized.includes(targetNorm) || targetNorm.includes(p.normalized)) {
+        return { ...p, score: 1, exact: true };
+      }
+      const score = tokenSetScore(targetNorm, p.normalized);
+      if (score >= 0.6 && (!best || score > best.score)) best = { ...p, score, exact: false };
+    }
   }
   return best;
+}
+
+function employeePhotoKeys(e) {
+  return [
+    e.fullName,
+    e.employeeCode,
+    e.cedula,
+    e.tss,
+    `${e.employeeCode || ''} ${e.fullName || ''}`,
+    `${e.fullName || ''} ${e.employeeCode || ''}`,
+  ].filter(Boolean);
 }
 
 // GET /api/photo-sync/scan — returns matches for employees + armed personnel
@@ -106,12 +141,12 @@ router.get('/scan', auth, (req, res) => {
   const employeeMatches = employees
     .filter(e => e.status !== 'Inactivo')
     .map(e => {
-      const m = bestMatch(normalize(e.fullName), photos);
+      const m = bestMatch(employeePhotoKeys(e), photos);
       return {
         employeeCode: e.employeeCode,
         fullName: e.fullName,
         department: e.department,
-        currentPhoto: e.photo || null,
+        currentPhoto: e.photoUrl || e.photo || null,
         match: m,
       };
     });
@@ -148,6 +183,7 @@ router.get('/scan', auth, (req, res) => {
 
   res.json({
     photosDir: PHOTOS_DIR,
+    photoSources: PHOTO_SOURCES.map(src => ({ dir: src.dir, base: src.base })),
     photosCount: photos.length,
     publicBase: PUBLIC_BASE,
     employees: employeeMatches,
@@ -175,8 +211,8 @@ router.post('/apply', auth, (req, res) => {
     empList.forEach(({ employeeCode, url }) => {
       const idx = employees.findIndex(e => String(e.employeeCode) === String(employeeCode));
       if (idx === -1) return;
-      if (!overwrite && employees[idx].photo) return;
-      employees[idx] = { ...employees[idx], photo: url, photoUpdatedAt: nowIso, photoUpdatedBy: uploadedBy };
+      if (!overwrite && (employees[idx].photoUrl || employees[idx].photo)) return;
+      employees[idx] = { ...employees[idx], photoUrl: url, photo: url, photoUpdatedAt: nowIso, photoUpdatedBy: uploadedBy };
       empUpdated++;
     });
     writeData('employees.json', employees);
@@ -222,11 +258,15 @@ router.post('/apply', auth, (req, res) => {
   res.json({ ok: true, empUpdated, armedUpdated, usersUpdated });
 });
 
-// GET /api/photo-sync/find?name=Juan%20Perez — devuelve la mejor foto encontrada para un nombre
+// GET /api/photo-sync/find?name=Juan%20Perez&employeeCode=123 — devuelve la mejor foto encontrada
 router.get('/find', (req, res) => {
   const name = String(req.query.name || '').trim();
-  if (!name) return res.json({ match: null });
-  const m = bestMatch(normalize(name), listPhotos());
+  const employeeCode = String(req.query.employeeCode || '').trim();
+  const cedula = String(req.query.cedula || '').trim();
+  const tss = String(req.query.tss || '').trim();
+  const keys = [name, employeeCode, cedula, tss, `${employeeCode} ${name}`, `${name} ${employeeCode}`].filter(Boolean);
+  if (!keys.length) return res.json({ match: null });
+  const m = bestMatch(keys, listPhotos());
   res.json({ match: m });
 });
 

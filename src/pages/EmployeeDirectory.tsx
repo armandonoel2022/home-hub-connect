@@ -87,7 +87,7 @@ const EmployeeDirectory = () => {
         const existing = byName.get(key);
         if (existing) {
           // Si el empleado no tiene foto pero el usuario intranet sí, úsala
-          if (!existing.photoUrl && u.photoUrl) existing.photoUrl = u.photoUrl;
+          if (!existing.photoUrl && !(existing as any).photo && u.photoUrl) existing.photoUrl = u.photoUrl;
         } else {
           // Admin/usuario intranet no presente en seed (ej. Administrador IT)
           merged.push({
@@ -351,7 +351,7 @@ const EmployeeDirectory = () => {
                         emp.category === "Supervisor" ? "bg-blue-500/20 text-blue-700 border-blue-500" :
                         emp.category === "Operador" ? "bg-purple-500/20 text-purple-700 border-purple-500" :
                         "bg-slate-500/20 text-slate-700 border-slate-500";
-                      const photo = resolvePhoto(emp.photoUrl);
+                      const photo = resolvePhoto(emp.photoUrl || emp.photo);
                       return (
                       <TableRow key={emp.employeeCode}>
                         <TableCell>

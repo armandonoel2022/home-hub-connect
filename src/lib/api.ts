@@ -253,6 +253,7 @@ export interface PhotoMatch {
 }
 export interface PhotoSyncScan {
   photosDir: string;
+  photoSources?: Array<{ dir: string; base: string }>;
   photosCount: number;
   publicBase: string;
   employees: Array<{ employeeCode: string; fullName: string; department?: string; currentPhoto: string | null; match: PhotoMatch | null }>;
@@ -277,10 +278,13 @@ export const photoSyncApi = {
     "/photo-sync/apply",
     { method: "POST", body: JSON.stringify(body) }
   ),
-  find: (name: string) =>
-    apiFetch<{ match: { url: string; file: string; score: number } | null }>(
-      `/photo-sync/find?name=${encodeURIComponent(name)}`
-    ),
+  find: (name: string, extra?: { employeeCode?: string; cedula?: string; tss?: string }) => {
+    const qs = new URLSearchParams({ name });
+    if (extra?.employeeCode) qs.set("employeeCode", extra.employeeCode);
+    if (extra?.cedula) qs.set("cedula", extra.cedula);
+    if (extra?.tss) qs.set("tss", extra.tss);
+    return apiFetch<{ match: { url: string; file: string; score: number } | null }>(`/photo-sync/find?${qs.toString()}`);
+  },
 };
 
 // ─── Notifications API ───
@@ -628,6 +632,7 @@ export interface Employee {
   birthday?: string;
   /** Foto del empleado (URL absoluta, base64 o ruta relativa /photos/...) */
   photoUrl?: string;
+  photo?: string;
   photoUpdatedAt?: string;
   photoUpdatedBy?: string;
   updatedAt?: string;
