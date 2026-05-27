@@ -123,7 +123,9 @@ export default function PhotoSync() {
               <FolderSearch className="w-7 h-7" /> Sincronizar Fotos desde Carpeta
             </h1>
             <p className="text-muted-foreground mt-1">
-              Lee <code className="text-xs bg-muted px-1 rounded">{scan?.photosDir || "C:\\intranet-nueva\\FOTOS"}</code>{" "}
+              Lee {(scan?.photoSources?.length ? scan.photoSources : [{ dir: scan?.photosDir || "C:\\intranet-nueva\\FOTOS", base: "/photos" }]).map((src, idx) => (
+                <code key={`${src.base}-${idx}`} className="text-xs bg-muted px-1 rounded mr-1">{src.dir}</code>
+              ))}{" "}
               y vincula automáticamente cada archivo al empleado, agente armado o usuario correspondiente por nombre.
             </p>
           </div>
