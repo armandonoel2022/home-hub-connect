@@ -75,15 +75,62 @@ function ProtectedRoutes() {
   const chatCtx = useChatContextSafe();
   const [employees, setEmployees] = React.useState<any[]>([]);
   const [now, setNow] = React.useState(() => new Date());
+  const [enrichedBirthday, setEnrichedBirthday] = React.useState<any[]>([]);
 
   React.useEffect(() => {
     import("@/lib/api").then(({ employeesApi }) => {
       employeesApi.getAll().then(setEmployees).catch(() => {});
     });
-    // Re-render cada minuto para que la hora del overlay automático se active
     const t = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(t);
   }, []);
+
+  const today = now;
+  const todayMMDD = `${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const autoTime = (typeof window !== "undefined" && localStorage.getItem("safeone_bday_auto_time")) || "08:00";
+  const [autoH, autoM] = autoTime.split(":").map((n) => parseInt(n, 10) || 0);
+  const minutesNow = today.getHours() * 60 + today.getMinutes();
+  const minutesTarget = autoH * 60 + autoM;
+  const timeReached = minutesNow >= minutesTarget;
+
+  const fromUsers = (activeUsers || []).filter((u) => u.birthday === todayMMDD);
+  const fromEmployees = (employees || [])
+    .filter((e: any) => e.status === "Activo" && e.birthDate && e.birthDate.slice(5, 10) === todayMMDD)
+    .filter((e: any) => !fromUsers.find((u) => u.fullName.toLowerCase() === String(e.fullName).toLowerCase()))
+    .map((e: any) => ({
+      id: `EMP-${e.employeeCode}`,
+      fullName: e.fullName,
+      email: e.email || "",
+      department: e.department,
+      position: e.position,
+      birthday: todayMMDD,
+      photoUrl: e.photoUrl || e.photo || "",
+      allowedDepartments: [],
+      isAdmin: false,
+      extension: "",
+    }));
+  const baseBirthday = (user && timeReached) ? [...fromUsers, ...fromEmployees] : [];
+  const birthdayKey = baseBirthday.map((u) => u.id).join("|");
+
+  // Enriquecer con fotos provenientes de las carpetas locales (FOTOS y dist/fotos_empleados)
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!baseBirthday.length) { setEnrichedBirthday([]); return; }
+      const { photoSyncApi } = await import("@/lib/api");
+      const out = await Promise.all(baseBirthday.map(async (u) => {
+        if (u.photoUrl) return u;
+        try {
+          const r = await photoSyncApi.find(u.fullName);
+          if (r?.match?.url) return { ...u, photoUrl: r.match.url };
+        } catch { /* ignore */ }
+        return u;
+      }));
+      if (!cancelled) setEnrichedBirthday(out);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [birthdayKey]);
 
   if (isLoading) {
     return (
@@ -100,34 +147,7 @@ function ProtectedRoutes() {
     return <Navigate to="/login" replace />;
   }
 
-  const today = now;
-  const todayMMDD = `${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-
-  // Hora configurable a partir de la cual aparece el overlay automático (HH:MM, default 08:00)
-  const autoTime = (typeof window !== "undefined" && localStorage.getItem("safeone_bday_auto_time")) || "08:00";
-  const [autoH, autoM] = autoTime.split(":").map((n) => parseInt(n, 10) || 0);
-  const minutesNow = today.getHours() * 60 + today.getMinutes();
-  const minutesTarget = autoH * 60 + autoM;
-  const timeReached = minutesNow >= minutesTarget;
-
-  // Cumpleaños desde usuarios con campo `birthday` (MM-DD) y empleados del seed (birthDate ISO)
-  const fromUsers = (activeUsers || []).filter((u) => u.birthday === todayMMDD);
-  const fromEmployees = (employees || [])
-    .filter((e: any) => e.status === "Activo" && e.birthDate && e.birthDate.slice(5, 10) === todayMMDD)
-    .filter((e: any) => !fromUsers.find((u) => u.fullName.toLowerCase() === String(e.fullName).toLowerCase()))
-    .map((e: any) => ({
-      id: `EMP-${e.employeeCode}`,
-      fullName: e.fullName,
-      email: "",
-      department: e.department,
-      position: e.position,
-      birthday: todayMMDD,
-      photoUrl: "",
-      allowedDepartments: [],
-      isAdmin: false,
-      extension: "",
-    }));
-  const birthdayUsers = timeReached ? [...fromUsers, ...fromEmployees] : [];
+  const birthdayUsers = enrichedBirthday.length ? enrichedBirthday : baseBirthday;
 
   return (
     <>
