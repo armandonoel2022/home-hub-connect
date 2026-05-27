@@ -257,11 +257,15 @@ router.post('/apply', auth, (req, res) => {
   res.json({ ok: true, empUpdated, armedUpdated, usersUpdated });
 });
 
-// GET /api/photo-sync/find?name=Juan%20Perez — devuelve la mejor foto encontrada para un nombre
+// GET /api/photo-sync/find?name=Juan%20Perez&employeeCode=123 — devuelve la mejor foto encontrada
 router.get('/find', (req, res) => {
   const name = String(req.query.name || '').trim();
-  if (!name) return res.json({ match: null });
-  const m = bestMatch(normalize(name), listPhotos());
+  const employeeCode = String(req.query.employeeCode || '').trim();
+  const cedula = String(req.query.cedula || '').trim();
+  const tss = String(req.query.tss || '').trim();
+  const keys = [name, employeeCode, cedula, tss, `${employeeCode} ${name}`, `${name} ${employeeCode}`].filter(Boolean);
+  if (!keys.length) return res.json({ match: null });
+  const m = bestMatch(keys, listPhotos());
   res.json({ match: m });
 });
 
