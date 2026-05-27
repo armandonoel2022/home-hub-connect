@@ -75,42 +75,24 @@ function ProtectedRoutes() {
   const chatCtx = useChatContextSafe();
   const [employees, setEmployees] = React.useState<any[]>([]);
   const [now, setNow] = React.useState(() => new Date());
+  const [enrichedBirthday, setEnrichedBirthday] = React.useState<any[]>([]);
 
   React.useEffect(() => {
     import("@/lib/api").then(({ employeesApi }) => {
       employeesApi.getAll().then(setEmployees).catch(() => {});
     });
-    // Re-render cada minuto para que la hora del overlay automático se active
     const t = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(t);
   }, []);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-muted-foreground text-sm">Cargando...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
   const today = now;
   const todayMMDD = `${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-
-  // Hora configurable a partir de la cual aparece el overlay automático (HH:MM, default 08:00)
   const autoTime = (typeof window !== "undefined" && localStorage.getItem("safeone_bday_auto_time")) || "08:00";
   const [autoH, autoM] = autoTime.split(":").map((n) => parseInt(n, 10) || 0);
   const minutesNow = today.getHours() * 60 + today.getMinutes();
   const minutesTarget = autoH * 60 + autoM;
   const timeReached = minutesNow >= minutesTarget;
 
-  // Cumpleaños desde usuarios con campo `birthday` (MM-DD) y empleados del seed (birthDate ISO)
   const fromUsers = (activeUsers || []).filter((u) => u.birthday === todayMMDD);
   const fromEmployees = (employees || [])
     .filter((e: any) => e.status === "Activo" && e.birthDate && e.birthDate.slice(5, 10) === todayMMDD)
@@ -127,11 +109,10 @@ function ProtectedRoutes() {
       isAdmin: false,
       extension: "",
     }));
-  const baseBirthday = timeReached ? [...fromUsers, ...fromEmployees] : [];
+  const baseBirthday = (user && timeReached) ? [...fromUsers, ...fromEmployees] : [];
+  const birthdayKey = baseBirthday.map((u) => u.id).join("|");
 
   // Enriquecer con fotos provenientes de las carpetas locales (FOTOS y dist/fotos_empleados)
-  // para quienes no tengan photoUrl asignado en su perfil.
-  const [enrichedBirthday, setEnrichedBirthday] = React.useState<typeof baseBirthday>([]);
   React.useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -149,7 +130,22 @@ function ProtectedRoutes() {
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baseBirthday.map((u) => u.id).join("|")]);
+  }, [birthdayKey]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-muted-foreground text-sm">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
 
   const birthdayUsers = enrichedBirthday.length ? enrichedBirthday : baseBirthday;
 
