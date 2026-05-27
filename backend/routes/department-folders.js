@@ -9,20 +9,14 @@ const auth = require('../middleware/auth');
 const router = express.Router();
 const FILE = 'department-folders.json';
 
-// Helper: check if user belongs to department
-function isMemberOfDept(userId, department) {
-  const users = readData('users.json');
-  const user = users.find(u => u.id === userId);
-  if (!user) return false;
-  if (user.isAdmin) return true;
-  return user.department === department;
-}
+// ACL-aware permissions (folder-acl.json maintained by superuser)
+const { canViewFolder, canEditFolder } = require('./folder-acl');
 
 // ── GET /api/department-folders/:department — get all folders for a department ──
 router.get('/:department', auth, (req, res) => {
   const department = decodeURIComponent(req.params.department);
   
-  if (!isMemberOfDept(req.user.id, department)) {
+  if (!canViewFolder(req.user, department)) {
     return res.status(403).json({ message: 'No tienes acceso a las carpetas de este departamento' });
   }
   
@@ -52,7 +46,7 @@ router.post('/:department', auth, (req, res) => {
   const department = decodeURIComponent(req.params.department);
   const { name } = req.body;
   
-  if (!isMemberOfDept(req.user.id, department)) {
+  if (!canEditFolder(req.user, department)) {
     return res.status(403).json({ message: 'No tienes acceso a este departamento' });
   }
   
@@ -86,7 +80,7 @@ router.delete('/:department/:folderId', auth, (req, res) => {
   const department = decodeURIComponent(req.params.department);
   const { folderId } = req.params;
   
-  if (!isMemberOfDept(req.user.id, department)) {
+  if (!canEditFolder(req.user, department)) {
     return res.status(403).json({ message: 'No tienes acceso a este departamento' });
   }
   
@@ -110,7 +104,7 @@ router.post('/:department/:folderId/files', auth, (req, res) => {
   const { folderId } = req.params;
   const { name, size, fileData } = req.body;
   
-  if (!isMemberOfDept(req.user.id, department)) {
+  if (!canEditFolder(req.user, department)) {
     return res.status(403).json({ message: 'No tienes acceso a este departamento' });
   }
   
@@ -137,7 +131,7 @@ router.delete('/:department/:folderId/files/:fileId', auth, (req, res) => {
   const department = decodeURIComponent(req.params.department);
   const { folderId, fileId } = req.params;
   
-  if (!isMemberOfDept(req.user.id, department)) {
+  if (!canEditFolder(req.user, department)) {
     return res.status(403).json({ message: 'No tienes acceso a este departamento' });
   }
   

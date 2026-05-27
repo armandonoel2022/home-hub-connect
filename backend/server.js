@@ -74,6 +74,9 @@ app.use('/api/uniform-items', require('./routes/uniform-items'));
 app.use('/api/uniform-assignments', require('./routes/uniform-assignments'));
 app.use('/api/flashlights', require('./routes/flashlights'));
 app.use('/api/photo-sync', require('./routes/photo-sync'));
+app.use('/api/folder-acl', require('./routes/folder-acl'));
+app.use('/api/announcements', require('./routes/announcements'));
+app.use('/api/calendar-events', require('./routes/calendar-events'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({

@@ -62,8 +62,10 @@ import AuditConsolidated from "./pages/AuditConsolidated";
 import PhotoSync from "./pages/PhotoSync";
 import MyHRRequests from "./pages/MyHRRequests";
 import HRConstancias from "./pages/HRConstancias";
+import AdminFolderPermissions from "./pages/AdminFolderPermissions";
 import NotFound from "./pages/NotFound";
 import RouteGuard from "@/components/RouteGuard";
+import AnnouncementOverlay from "@/components/AnnouncementOverlay";
 
 
 const queryClient = new QueryClient();
@@ -187,6 +189,7 @@ function ProtectedRoutes() {
         <Route path="/seguimiento-clientes" element={<RouteGuard module="clientTracking"><ClientTracking /></RouteGuard>} />
         <Route path="/capacitaciones" element={<Training />} />
         <Route path="/admin/sincronizar-fotos" element={<RouteGuard module="photoSync"><PhotoSync /></RouteGuard>} />
+        <Route path="/admin/permisos-carpetas" element={<RouteGuard module="folderPermissions"><AdminFolderPermissions /></RouteGuard>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </>
@@ -215,6 +218,7 @@ const App = () => {
                 <PanicButton />
                 <NotificationOverlay />
                 <HRNotificationOverlay />
+                <AnnouncementOverlay />
                 
               </ChatProvider>
             </NotificationProvider>

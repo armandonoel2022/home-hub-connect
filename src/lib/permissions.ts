@@ -41,7 +41,8 @@ export type ModuleKey =
   | "auditLog"
   | "reports"
   | "adminHub"
-  | "adminForms";
+  | "adminForms"
+  | "folderPermissions";
 
 const norm = (s?: string) => (s || "").toLowerCase().trim();
 
@@ -179,6 +180,10 @@ export function canView(module: ModuleKey, user: IntranetUser | null | undefined
     case "adminHub":
     case "adminForms":
       return isAdmin(user);
+
+    // Gestión de permisos de carpetas — sólo super
+    case "folderPermissions":
+      return isSuperUser(user);
 
     default:
       return false;
