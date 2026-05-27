@@ -48,11 +48,30 @@ function normalize(s) {
 }
 
 function cleanBaseName(filename) {
-  const base = filename.replace(/\.(jpg|jpeg|png|webp)$/i, '');
+  const base = path.basename(filename).replace(/\.(jpg|jpeg|png|webp)$/i, '');
   return base.replace(/\s*-\s*copy\s*$/i, '')
              .replace(/\s*\(\d+\)\s*$/i, '')
              .replace(/;.*$/i, '')
              .trim();
+}
+
+function toPublicUrl(base, relPath) {
+  return `${base}/${String(relPath).split(path.sep).map(encodeURIComponent).join('/')}`;
+}
+
+function walkPhotos(dir, prefix = '') {
+  if (!fs.existsSync(dir)) return [];
+  const out = [];
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const rel = prefix ? path.join(prefix, entry.name) : entry.name;
+    const abs = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      out.push(...walkPhotos(abs, rel));
+    } else if (/\.(jpg|jpeg|png|webp)$/i.test(entry.name)) {
+      out.push(rel);
+    }
+  }
+  return out;
 }
 
 function listPhotos() {
@@ -60,13 +79,12 @@ function listPhotos() {
   for (const src of PHOTO_SOURCES) {
     if (!fs.existsSync(src.dir)) continue;
     try {
-      for (const f of fs.readdirSync(src.dir)) {
-        if (!/\.(jpg|jpeg|png|webp)$/i.test(f)) continue;
+      for (const f of walkPhotos(src.dir)) {
         const cleaned = cleanBaseName(f);
         out.push({
           file: f,
           source: src.dir,
-          url: `${src.base}/${encodeURIComponent(f)}`,
+          url: toPublicUrl(src.base, f),
           normalized: normalize(cleaned),
           cleanedName: cleaned,
         });
