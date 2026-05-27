@@ -949,6 +949,48 @@ export const monitoringSnapshotsApi = {
   remove: (id: string) => apiFetch<void>(`/monitoring-snapshots/${id}`, { method: "DELETE" }),
 };
 
+// ─── Folder ACL (administrada por superusuario) ───
+export type FolderAcl = Record<string, { viewers: string[]; editors: string[]; updatedAt?: string; updatedBy?: string }>;
+export const folderAclApi = {
+  getAll: () => apiFetch<FolderAcl>("/folder-acl"),
+  setDepartment: (department: string, data: { viewers: string[]; editors: string[] }) =>
+    apiFetch(`/folder-acl/${encodeURIComponent(department)}`, { method: "PUT", body: JSON.stringify(data) }),
+  clearDepartment: (department: string) =>
+    apiFetch<void>(`/folder-acl/${encodeURIComponent(department)}`, { method: "DELETE" }),
+};
+
+// ─── Announcements (overlay global + evento opcional en calendario) ───
+export interface AnnouncementApi {
+  id: string;
+  title: string;
+  excerpt: string;
+  priority: boolean;
+  date: string;
+  createdBy: string;
+  createdByUserId?: string;
+  audienceType: "todos" | "departamento" | "personas";
+  audienceDept?: string;
+  audienceUserIds?: string[];
+  showAsOverlay?: boolean;
+  eventDate?: string;
+  eventStartTime?: string;
+  eventEndTime?: string;
+  eventLocation?: string;
+  expiresAt?: string;
+  readBy?: string[];
+}
+export const announcementsApi = {
+  getAll: () => apiFetch<AnnouncementApi[]>("/announcements"),
+  getActive: () => apiFetch<AnnouncementApi[]>("/announcements/active"),
+  create: (a: Partial<AnnouncementApi>) =>
+    apiFetch<AnnouncementApi>("/announcements", { method: "POST", body: JSON.stringify(a) }),
+  markRead: (id: string) =>
+    apiFetch<{ ok: boolean }>(`/announcements/${id}/read`, { method: "PUT" }),
+  remove: (id: string) =>
+    apiFetch<void>(`/announcements/${id}`, { method: "DELETE" }),
+};
+
 export default apiFetch;
+
 
 
