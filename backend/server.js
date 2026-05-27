@@ -28,13 +28,15 @@ app.use((req, res, next) => {
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, 'data', 'uploads')));
 
-// Serve the local employee photos folder (default C:\intranet-nueva\FOTOS)
-const PHOTOS_DIR = process.env.PHOTOS_DIR || 'C:\\intranet-nueva\\FOTOS';
+// Serve photo source folders (default: C:\intranet-nueva\FOTOS y C:\intranet-nueva\dist\fotos_empleados)
 try {
-  app.use('/photos', express.static(PHOTOS_DIR, { fallthrough: true, maxAge: '7d' }));
-  console.log(`📷 Fotos servidas desde ${PHOTOS_DIR} en /photos`);
+  const { PHOTO_SOURCES } = require('./routes/photo-sync');
+  (PHOTO_SOURCES || []).forEach((src) => {
+    app.use(src.base, express.static(src.dir, { fallthrough: true, maxAge: '7d' }));
+    console.log(`📷 Fotos servidas desde ${src.dir} en ${src.base}`);
+  });
 } catch (e) {
-  console.warn(`⚠️  No se pudo montar carpeta de fotos: ${e.message}`);
+  console.warn(`⚠️  No se pudo montar carpetas de fotos: ${e.message}`);
 }
 
 // Routes
