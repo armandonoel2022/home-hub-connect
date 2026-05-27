@@ -103,15 +103,32 @@ function tokenSetScore(a, b) {
   return common / Math.max(A.size, B.size);
 }
 
-function bestMatch(targetNorm, photos) {
-  if (!targetNorm) return null;
+function bestMatch(target, photos) {
+  const candidates = Array.isArray(target) ? target : [target];
+  const normalizedCandidates = candidates.map(normalize).filter(Boolean);
+  if (!normalizedCandidates.length) return null;
   let best = null;
-  for (const p of photos) {
-    if (p.normalized === targetNorm) return { ...p, score: 1, exact: true };
-    const score = tokenSetScore(targetNorm, p.normalized);
-    if (score >= 0.75 && (!best || score > best.score)) best = { ...p, score, exact: false };
+  for (const targetNorm of normalizedCandidates) {
+    for (const p of photos) {
+      if (p.normalized === targetNorm || p.normalized.includes(targetNorm) || targetNorm.includes(p.normalized)) {
+        return { ...p, score: 1, exact: true };
+      }
+      const score = tokenSetScore(targetNorm, p.normalized);
+      if (score >= 0.6 && (!best || score > best.score)) best = { ...p, score, exact: false };
+    }
   }
   return best;
+}
+
+function employeePhotoKeys(e) {
+  return [
+    e.fullName,
+    e.employeeCode,
+    e.cedula,
+    e.tss,
+    `${e.employeeCode || ''} ${e.fullName || ''}`,
+    `${e.fullName || ''} ${e.employeeCode || ''}`,
+  ].filter(Boolean);
 }
 
 // GET /api/photo-sync/scan — returns matches for employees + armed personnel
