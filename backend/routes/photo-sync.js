@@ -222,6 +222,15 @@ router.post('/apply', auth, (req, res) => {
   res.json({ ok: true, empUpdated, armedUpdated, usersUpdated });
 });
 
+// GET /api/photo-sync/find?name=Juan%20Perez — devuelve la mejor foto encontrada para un nombre
+router.get('/find', (req, res) => {
+  const name = String(req.query.name || '').trim();
+  if (!name) return res.json({ match: null });
+  const m = bestMatch(normalize(name), listPhotos());
+  res.json({ match: m });
+});
+
 module.exports = router;
 module.exports.PHOTOS_DIR = PHOTOS_DIR;
+module.exports.PHOTO_SOURCES = PHOTO_SOURCES;
 module.exports.PUBLIC_BASE = PUBLIC_BASE;
