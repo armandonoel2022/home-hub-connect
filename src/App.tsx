@@ -118,16 +118,40 @@ function ProtectedRoutes() {
     .map((e: any) => ({
       id: `EMP-${e.employeeCode}`,
       fullName: e.fullName,
-      email: "",
+      email: e.email || "",
       department: e.department,
       position: e.position,
       birthday: todayMMDD,
-      photoUrl: "",
+      photoUrl: e.photoUrl || e.photo || "",
       allowedDepartments: [],
       isAdmin: false,
       extension: "",
     }));
-  const birthdayUsers = timeReached ? [...fromUsers, ...fromEmployees] : [];
+  const baseBirthday = timeReached ? [...fromUsers, ...fromEmployees] : [];
+
+  // Enriquecer con fotos provenientes de las carpetas locales (FOTOS y dist/fotos_empleados)
+  // para quienes no tengan photoUrl asignado en su perfil.
+  const [enrichedBirthday, setEnrichedBirthday] = React.useState<typeof baseBirthday>([]);
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!baseBirthday.length) { setEnrichedBirthday([]); return; }
+      const { photoSyncApi } = await import("@/lib/api");
+      const out = await Promise.all(baseBirthday.map(async (u) => {
+        if (u.photoUrl) return u;
+        try {
+          const r = await photoSyncApi.find(u.fullName);
+          if (r?.match?.url) return { ...u, photoUrl: r.match.url };
+        } catch { /* ignore */ }
+        return u;
+      }));
+      if (!cancelled) setEnrichedBirthday(out);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baseBirthday.map((u) => u.id).join("|")]);
+
+  const birthdayUsers = enrichedBirthday.length ? enrichedBirthday : baseBirthday;
 
   return (
     <>
