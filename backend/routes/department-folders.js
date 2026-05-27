@@ -9,14 +9,8 @@ const auth = require('../middleware/auth');
 const router = express.Router();
 const FILE = 'department-folders.json';
 
-// Helper: check if user belongs to department
-function isMemberOfDept(userId, department) {
-  const users = readData('users.json');
-  const user = users.find(u => u.id === userId);
-  if (!user) return false;
-  if (user.isAdmin) return true;
-  return user.department === department;
-}
+// ACL-aware permissions (folder-acl.json maintained by superuser)
+const { canViewFolder, canEditFolder } = require('./folder-acl');
 
 // ── GET /api/department-folders/:department — get all folders for a department ──
 router.get('/:department', auth, (req, res) => {
