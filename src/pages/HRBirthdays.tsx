@@ -124,7 +124,7 @@ const HRBirthdaysPage = () => {
           if (u.employeeStatus === "Inactivo") return;
           const existing = byName.get(norm(u.fullName));
           if (existing) {
-            if (!existing.photoUrl && u.photoUrl) existing.photoUrl = u.photoUrl;
+            if (!existing.photoUrl && !(existing as any).photo && u.photoUrl) existing.photoUrl = u.photoUrl;
             if (!existing.birthday && !existing.birthDate && !existing.birthdayMMDD && u.birthday) existing.birthday = u.birthday;
           } else if (u.birthday) {
             merged.push({
@@ -194,7 +194,7 @@ const HRBirthdaysPage = () => {
         mmdd,
         day,
         month,
-        photoUrl: e.photoUrl,
+        photoUrl: e.photoUrl || e.photo,
       };
       (grouped[month] ||= []).push(item);
       if (month === tmm && day === tdd) todayItems.push(item);
