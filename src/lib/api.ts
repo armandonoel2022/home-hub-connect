@@ -277,6 +277,10 @@ export const photoSyncApi = {
     "/photo-sync/apply",
     { method: "POST", body: JSON.stringify(body) }
   ),
+  find: (name: string) =>
+    apiFetch<{ match: { url: string; file: string; score: number } | null }>(
+      `/photo-sync/find?name=${encodeURIComponent(name)}`
+    ),
 };
 
 // ─── Notifications API ───
