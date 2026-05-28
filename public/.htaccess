@@ -1,0 +1,10 @@
+# SPA fallback for Apache servers
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_URI} !^/(api|uploads|photos|files)
+  RewriteRule . /index.html [L]
+</IfModule>

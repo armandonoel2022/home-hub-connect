@@ -163,6 +163,7 @@ interface MonthlyReposition {
   status: "pendiente" | "aprobado" | "aplicado";
   purchaseId?: string;
   purchaseDescription?: string;
+  purchaseIds?: string[];
   kind?: "mensual" | "transaccion";
   note?: string;
 }
@@ -650,13 +651,13 @@ const buildAppliedRepositionsSheet = (
   const push = (row: any[]) => { aoa.push(row); };
 
   // Encabezado
-  push(["SAFEONE SECURITY COMPANY", "", "", "", "", "", ""]);
-  merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+  push(["SAFEONE SECURITY COMPANY", "", "", "", "", "", "", ""]);
+  merges.push({ s: { r, c: 0 }, e: { r, c: 7 } });
   set(r, 0, "SAFEONE SECURITY COMPANY", titleStyle);
   r++;
 
-  push(["REPOSICIONES APLICADAS DE CAJA CHICA", "", "", "", "", "", ""]);
-  merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+  push(["REPOSICIONES APLICADAS DE CAJA CHICA", "", "", "", "", "", "", ""]);
+  merges.push({ s: { r, c: 0 }, e: { r, c: 7 } });
   set(r, 0, "REPOSICIONES APLICADAS DE CAJA CHICA", titleStyle);
   r++;
 
@@ -665,16 +666,16 @@ const buildAppliedRepositionsSheet = (
     : monthsInData.length > 0
       ? `${getMonthDisplay(monthsInData[0]).toUpperCase()} — ${getMonthDisplay(monthsInData[monthsInData.length - 1]).toUpperCase()}`
       : "SIN DATOS";
-  push([periodo, "", "", "", "", "", ""]);
-  merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+  push([periodo, "", "", "", "", "", "", ""]);
+  merges.push({ s: { r, c: 0 }, e: { r, c: 7 } });
   set(r, 0, periodo, titleStyle);
   r++;
 
-  push(["", "", "", "", "", "", ""]); r++;
+  push(["", "", "", "", "", "", "", ""]); r++;
 
   if (applied.length === 0) {
-    push(["Sin reposiciones aplicadas en el periodo.", "", "", "", "", "", ""]);
-    merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+    push(["Sin reposiciones aplicadas en el periodo.", "", "", "", "", "", "", ""]);
+    merges.push({ s: { r, c: 0 }, e: { r, c: 7 } });
     set(r, 0, "Sin reposiciones aplicadas en el periodo.", { ...cellStyle, alignment: { horizontal: "center", vertical: "center" }, font: { italic: true } });
     r++;
   } else {
@@ -687,60 +688,68 @@ const buildAppliedRepositionsSheet = (
 
       // Banner del mes (solo si consolidado o si hay datos)
       if (!singleMonth) {
-        push([`${getMonthDisplay(ym).toUpperCase()}`, "", "", "", "", "", ""]);
-        merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+        push([`${getMonthDisplay(ym).toUpperCase()}`, "", "", "", "", "", "", ""]);
+        merges.push({ s: { r, c: 0 }, e: { r, c: 7 } });
         set(r, 0, `${getMonthDisplay(ym).toUpperCase()}`, monthBannerStyle);
         r++;
       }
 
-      const headers = ["ID", "Tipo", "Fecha Aplicada", "Descripción / Gasto vinculado", "Solicitado por", "Aplicado por", "Monto"];
+      const headers = ["ID", "Tipo", "Fecha Aplicada", "Descripción / Gasto vinculado", "Facturas incluidas", "Solicitado por", "Aplicado por", "Monto"];
       push(headers);
       headers.forEach((h, c) => set(r, c, h, headerStyle));
       r++;
 
       let monthTotal = 0;
       monthReps.forEach((rep) => {
-        const tipo = rep.kind === "transaccion" ? "Transacción" : "Mensual";
+        const tipo = rep.kind === "transaccion"
+          ? "Transacción"
+          : (Array.isArray(rep.purchaseIds) && rep.purchaseIds.length ? "Selección" : "Mensual");
         const desc = rep.purchaseId
           ? `${rep.purchaseId} — ${rep.purchaseDescription || ""}`
-          : rep.note || "Reposición mensual";
+          : rep.note || (Array.isArray(rep.purchaseIds) && rep.purchaseIds.length ? `Reposición de ${rep.purchaseIds.length} factura(s) seleccionadas` : "Reposición mensual");
+        const facturas = rep.purchaseId
+          ? rep.purchaseId
+          : Array.isArray(rep.purchaseIds) && rep.purchaseIds.length
+            ? rep.purchaseIds.join(", ")
+            : "—";
         const fechaApl = fmtDate(rep.appliedAt || rep.requestedAt);
-        push([rep.id, tipo, fechaApl, desc, rep.requestedBy, rep.appliedBy || "—", rep.amountReposed]);
+        push([rep.id, tipo, fechaApl, desc, facturas, rep.requestedBy, rep.appliedBy || "—", rep.amountReposed]);
         set(r, 0, rep.id, cellStyle);
         set(r, 1, tipo, { ...cellStyle, alignment: { horizontal: "center", vertical: "center" } });
         set(r, 2, fechaApl, dateStyle);
         set(r, 3, desc, cellStyle);
-        set(r, 4, rep.requestedBy, cellStyle);
-        set(r, 5, rep.appliedBy || "—", cellStyle);
-        set(r, 6, rep.amountReposed, moneyStyle);
+        set(r, 4, facturas, { ...cellStyle, alignment: { vertical: "center", wrapText: true } });
+        set(r, 5, rep.requestedBy, cellStyle);
+        set(r, 6, rep.appliedBy || "—", cellStyle);
+        set(r, 7, rep.amountReposed, moneyStyle);
         r++;
         monthTotal += rep.amountReposed;
         granTotal += rep.amountReposed;
         granCount++;
       });
 
-      push(["", "", "", "", "", `TOTAL APLICADO ${getMonthDisplay(ym).toUpperCase()}`, monthTotal]);
-      set(r, 5, `TOTAL APLICADO ${getMonthDisplay(ym).toUpperCase()}`, labelRightBold);
-      set(r, 6, monthTotal, moneyBoldStyle);
+      push(["", "", "", "", "", "", `TOTAL APLICADO ${getMonthDisplay(ym).toUpperCase()}`, monthTotal]);
+      set(r, 6, `TOTAL APLICADO ${getMonthDisplay(ym).toUpperCase()}`, labelRightBold);
+      set(r, 7, monthTotal, moneyBoldStyle);
       r++;
 
-      push(["", "", "", "", "", "", ""]); r++;
+      push(["", "", "", "", "", "", "", ""]); r++;
     });
 
     // Totales generales
-    push(["TOTALES", "", "", "", "", "", ""]);
-    merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+    push(["TOTALES", "", "", "", "", "", "", ""]);
+    merges.push({ s: { r, c: 0 }, e: { r, c: 7 } });
     set(r, 0, "TOTALES", monthBannerStyle);
     r++;
 
-    push(["", "", "", "", "", "TOTAL REPOSICIONES APLICADAS RD$", granTotal]);
-    set(r, 5, "TOTAL REPOSICIONES APLICADAS RD$", grandTotalLabel);
-    set(r, 6, granTotal, grandTotalValue);
+    push(["", "", "", "", "", "", "TOTAL REPOSICIONES APLICADAS RD$", granTotal]);
+    set(r, 6, "TOTAL REPOSICIONES APLICADAS RD$", grandTotalLabel);
+    set(r, 7, granTotal, grandTotalValue);
     r++;
 
-    push(["", "", "", "", "", "CANTIDAD DE REPOSICIONES", granCount]);
-    set(r, 5, "CANTIDAD DE REPOSICIONES", labelRightBold);
-    set(r, 6, granCount, { ...cellStyle, font: { bold: true }, alignment: { horizontal: "center", vertical: "center" } });
+    push(["", "", "", "", "", "", "CANTIDAD DE REPOSICIONES", granCount]);
+    set(r, 6, "CANTIDAD DE REPOSICIONES", labelRightBold);
+    set(r, 7, granCount, { ...cellStyle, font: { bold: true }, alignment: { horizontal: "center", vertical: "center" } });
     r++;
   }
 
@@ -749,7 +758,8 @@ const buildAppliedRepositionsSheet = (
     if (!ws[addr]) ws[addr] = { t: typeof info.value === "number" ? "n" : "s", v: info.value };
     if (info.style) (ws[addr] as any).s = info.style;
   });
-  ws["!cols"] = [{ wch: 22 }, { wch: 14 }, { wch: 14 }, { wch: 50 }, { wch: 22 }, { wch: 22 }, { wch: 16 }];
+  ws["!cols"] = [{ wch: 22 }, { wch: 14 }, { wch: 14 }, { wch: 40 }, { wch: 32 }, { wch: 22 }, { wch: 22 }, { wch: 16 }];
+
   ws["!merges"] = merges;
   return ws;
 };
@@ -1198,6 +1208,7 @@ const MinorPurchases = () => {
   const [detail, setDetail] = useState<MinorPurchase | null>(null);
   const [repositionDialogOpen, setRepositionDialogOpen] = useState(false);
   const [repositionMonth, setRepositionMonth] = useState<string>(getPreviousYearMonth());
+  const [selectedRepositionPurchaseIds, setSelectedRepositionPurchaseIds] = useState<Set<string>>(new Set());
   const [otherMonthDialogOpen, setOtherMonthDialogOpen] = useState(false);
   // Selección masiva de reposiciones (aprobar/aplicar en lote)
   const [selectedRepIds, setSelectedRepIds] = useState<Set<string>>(new Set());
@@ -1522,46 +1533,70 @@ const MinorPurchases = () => {
 
   const getSpentForMonth = (yearMonth: string) => getTotalSpentInMonth(purchases, yearMonth);
 
+  // Facturas (gastos) de Caja Chica elegibles para una nueva reposición en ese mes.
+  // Excluye las que ya estén en otra reposición activa (pendiente/aprobado/aplicado).
+  const getEligiblePurchasesForMonth = (yearMonth: string): MinorPurchase[] => {
+    const used = new Set<string>();
+    repositions
+      .filter((r) => r.status !== ("rechazado" as any))
+      .forEach((r) => {
+        if (r.purchaseId) used.add(r.purchaseId);
+        if (Array.isArray(r.purchaseIds)) r.purchaseIds.forEach((id) => used.add(id));
+      });
+    return purchases.filter((p) => {
+      if (p.status !== "Aprobado" || p.voided) return false;
+      if (p.paymentMethod !== "Caja Chica") return false;
+      if (getYearMonth(p.expenseDate || p.requestedAt) !== yearMonth) return false;
+      if (used.has(p.id)) return false;
+      return true;
+    });
+  };
+
+  // Re-seleccionar todas las facturas elegibles cuando cambia el mes o se abre el diálogo.
+  useEffect(() => {
+    if (!repositionDialogOpen) return;
+    const eligible = getEligiblePurchasesForMonth(repositionMonth);
+    setSelectedRepositionPurchaseIds(new Set(eligible.map((p) => p.id)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [repositionDialogOpen, repositionMonth, purchases, repositions]);
+
   const handleRequestReposition = async () => {
     if (!user) return;
 
     const targetMonth = repositionMonth;
-    const spent = getSpentForMonth(targetMonth);
+    const eligible = getEligiblePurchasesForMonth(targetMonth);
+    const selected = eligible.filter((p) => selectedRepositionPurchaseIds.has(p.id));
 
-    if (spent === 0) {
+    if (selected.length === 0) {
       toast({
-        title: "No hay gastos en ese mes",
-        description: `${getMonthDisplay(targetMonth)} no registra gastos de Caja Chica aprobados.`,
+        title: "Selecciona facturas",
+        description: "Debes elegir al menos una factura/gasto para la reposición.",
         variant: "destructive",
       });
       return;
     }
 
-    const exists = repositions.find((r) => r.yearMonth === targetMonth);
-    if (exists) {
-      toast({
-        title: "Reposición existente",
-        description: `Ya existe una reposición ${exists.status} para ${getMonthDisplay(targetMonth)}.`,
-        variant: "destructive",
-      });
-      return;
-    }
+    const amount = selected.reduce((s, p) => s + p.amount, 0);
+    const selectedIds = selected.map((p) => p.id);
 
     let newReposition: MonthlyReposition = {
       id: `REP-${Date.now()}`,
       yearMonth: targetMonth,
-      amountReposed: spent,
+      amountReposed: amount,
       requestedBy: user.fullName,
       requestedAt: new Date().toISOString(),
       status: "pendiente",
+      purchaseIds: selectedIds,
+      kind: "mensual",
     };
 
     if (apiMode) {
       try {
         newReposition = await pettyCashApi.createReposition({
           yearMonth: targetMonth,
-          amountReposed: spent,
+          amountReposed: amount,
           requestedBy: user.fullName,
+          purchaseIds: selectedIds,
         });
       } catch (e: any) {
         toast({ title: "Error", description: e.message || "No se pudo registrar.", variant: "destructive" });
@@ -1574,8 +1609,9 @@ const MinorPurchases = () => {
 
     toast({
       title: "Solicitud de reposición registrada",
-      description: `Monto a reponer: RD$ ${spent.toLocaleString("es-DO")} para ${getMonthDisplay(targetMonth)}.`,
+      description: `${selected.length} factura(s) · RD$ ${amount.toLocaleString("es-DO")} — ${getMonthDisplay(targetMonth)}.`,
     });
+
   };
 
   // Reposición individual por transacción (desde el Historial)
@@ -4198,18 +4234,16 @@ const MinorPurchases = () => {
 
       {/* Diálogo de reposición */}
       <Dialog open={repositionDialogOpen} onOpenChange={setRepositionDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="font-heading">Solicitar Reposición de Caja Chica</DialogTitle>
             <DialogDescription>
-              Selecciona el mes a reponer. La reposición restablece el límite mensual a {fmt(CAJA_CHICA_LIMIT)}.
+              Selecciona el mes y marca las facturas/gastos que se repondrán. El monto a reponer es la suma de las facturas seleccionadas.
               <br />
-              <strong>Flujo:</strong> Solicitar → Aprobar → Aplicar
-              <br />
-              <strong>Autorizados para aplicar:</strong> Chrisnel, Xuxa, Cristy, Armando Noel
+              <strong>Flujo:</strong> Solicitar → Aprobar → Aplicar — <strong>Autorizados para aplicar:</strong> Chrisnel, Xuxa, Cristy, Armando Noel
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 overflow-y-auto pr-1">
             <div className="space-y-2">
               <Label>Mes a reponer</Label>
               <Select value={repositionMonth} onValueChange={setRepositionMonth}>
@@ -4218,7 +4252,6 @@ const MinorPurchases = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {(() => {
-                    // Meses con gasto > 0 sin reposición aplicada (cualquier mes histórico)
                     const monthsWithSpending = Array.from(
                       new Set(
                         purchases
@@ -4230,12 +4263,10 @@ const MinorPurchases = () => {
                       return <SelectItem value={getPreviousYearMonth()} disabled>Sin meses con gastos</SelectItem>;
                     }
                     return monthsWithSpending.map((m) => {
-                      const spent = getSpentForMonth(m);
-                      const existing = repositions.find((r) => r.yearMonth === m);
+                      const eligibleCount = getEligiblePurchasesForMonth(m).length;
                       return (
-                        <SelectItem key={m} value={m} disabled={!!existing}>
-                          {getMonthDisplay(m)} — {fmt(spent)}
-                          {existing && ` (${existing.status})`}
+                        <SelectItem key={m} value={m} disabled={eligibleCount === 0}>
+                          {getMonthDisplay(m)} — {fmt(getSpentForMonth(m))} · {eligibleCount} factura(s) disponible(s)
                         </SelectItem>
                       );
                     });
@@ -4243,16 +4274,89 @@ const MinorPurchases = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="p-4 bg-muted rounded-lg text-center">
-              <p className="text-sm text-muted-foreground">Monto a reponer</p>
-              <p className="text-2xl font-heading font-bold text-primary">{fmt(getSpentForMonth(repositionMonth))}</p>
-              <p className="text-xs text-muted-foreground mt-1">Gastado en {getMonthDisplay(repositionMonth)}</p>
-            </div>
+
+            {(() => {
+              const eligible = getEligiblePurchasesForMonth(repositionMonth);
+              const selectedSum = eligible
+                .filter((p) => selectedRepositionPurchaseIds.has(p.id))
+                .reduce((s, p) => s + p.amount, 0);
+              const allSelected = eligible.length > 0 && eligible.every((p) => selectedRepositionPurchaseIds.has(p.id));
+              const toggleAll = () => {
+                if (allSelected) setSelectedRepositionPurchaseIds(new Set());
+                else setSelectedRepositionPurchaseIds(new Set(eligible.map((p) => p.id)));
+              };
+              const toggleOne = (id: string) => {
+                const next = new Set(selectedRepositionPurchaseIds);
+                if (next.has(id)) next.delete(id); else next.add(id);
+                setSelectedRepositionPurchaseIds(next);
+              };
+              return (
+                <>
+                  <div className="flex items-center justify-between">
+                    <Label>Facturas / gastos elegibles ({eligible.length})</Label>
+                    {eligible.length > 0 && (
+                      <Button type="button" size="sm" variant="ghost" onClick={toggleAll}>
+                        {allSelected ? "Deseleccionar todas" : "Seleccionar todas"}
+                      </Button>
+                    )}
+                  </div>
+                  <div className="border border-border rounded-lg max-h-[40vh] overflow-y-auto">
+                    {eligible.length === 0 ? (
+                      <div className="p-4 text-sm text-muted-foreground text-center">
+                        No hay facturas disponibles para reponer en este mes (ya están todas en otra reposición).
+                      </div>
+                    ) : (
+                      <table className="w-full text-sm">
+                        <thead className="bg-muted/50 sticky top-0">
+                          <tr className="text-xs">
+                            <th className="p-2 w-10"></th>
+                            <th className="p-2 text-left">ID</th>
+                            <th className="p-2 text-left">Fecha</th>
+                            <th className="p-2 text-left">Descripción</th>
+                            <th className="p-2 text-left">Solicitante</th>
+                            <th className="p-2 text-right">Monto</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {eligible.map((p) => (
+                            <tr key={p.id} className="border-t border-border hover:bg-muted/30">
+                              <td className="p-2 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedRepositionPurchaseIds.has(p.id)}
+                                  onChange={() => toggleOne(p.id)}
+                                />
+                              </td>
+                              <td className="p-2 font-mono text-xs">{p.id}</td>
+                              <td className="p-2 text-xs">{fmtDate(p.expenseDate || p.requestedAt)}</td>
+                              <td className="p-2 text-xs">{p.description}</td>
+                              <td className="p-2 text-xs">{p.requestedBy}</td>
+                              <td className="p-2 text-right font-medium">{fmt(p.amount)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                  <div className="p-4 bg-muted rounded-lg flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Seleccionadas</p>
+                      <p className="text-sm font-medium">{selectedRepositionPurchaseIds.size} de {eligible.length} factura(s)</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Monto a reponer</p>
+                      <p className="text-2xl font-heading font-bold text-primary">{fmt(selectedSum)}</p>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="text-xs">
                 Una vez aprobada, debe presionar "Aplicar Reposición" cuando se entregue el dinero físicamente.
-                Esto restablece el límite del mes actual a {fmt(CAJA_CHICA_LIMIT)}.
+                Las facturas seleccionadas quedan vinculadas a esta reposición y aparecen en el reporte Excel.
               </AlertDescription>
             </Alert>
           </div>
@@ -4262,16 +4366,14 @@ const MinorPurchases = () => {
             </Button>
             <Button
               onClick={handleRequestReposition}
-              disabled={
-                getSpentForMonth(repositionMonth) === 0 ||
-                !!repositions.find((r) => r.yearMonth === repositionMonth)
-              }
+              disabled={selectedRepositionPurchaseIds.size === 0}
             >
               Solicitar Reposición
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
 
       {/* ─── Modal: Política y cálculos ─── */}
       <Dialog open={policyDialogOpen} onOpenChange={setPolicyDialogOpen}>

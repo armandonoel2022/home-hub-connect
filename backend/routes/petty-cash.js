@@ -50,22 +50,36 @@ router.get('/', auth, (req, res) => {
 // ─── Repositions ───
 router.post('/repositions', auth, (req, res) => {
   const state = loadState();
-  const { yearMonth, amountReposed, requestedBy, purchaseId, purchaseDescription, note } = req.body || {};
+  const { yearMonth, amountReposed, requestedBy, purchaseId, purchaseDescription, purchaseIds, note } = req.body || {};
   if (!yearMonth || !amountReposed || !requestedBy) {
     return res.status(400).json({ message: 'yearMonth, amountReposed y requestedBy requeridos' });
   }
+  const hasSelection = Array.isArray(purchaseIds) && purchaseIds.length > 0;
+
   // Per-transaction repositions (purchaseId presente) NO chequean duplicado mensual.
-  if (!purchaseId) {
+  // Selección parcial (purchaseIds) tampoco: permite múltiples reposiciones del mismo mes.
+  if (!purchaseId && !hasSelection) {
     const exists = state.repositions.find(
-      r => r.yearMonth === yearMonth && r.status !== 'rechazado' && !r.purchaseId
+      r => r.yearMonth === yearMonth && r.status !== 'rechazado' && !r.purchaseId && !(Array.isArray(r.purchaseIds) && r.purchaseIds.length)
     );
     if (exists) return res.status(400).json({ message: 'Ya existe una reposición mensual para ese mes' });
-  } else {
-    // Evitar reposición duplicada de la misma transacción (excepto si la anterior fue rechazada)
+  } else if (purchaseId) {
     const dup = state.repositions.find(
       r => r.purchaseId === purchaseId && r.status !== 'rechazado'
     );
     if (dup) return res.status(400).json({ message: 'Ya existe una reposición para esta transacción' });
+  } else if (hasSelection) {
+    const used = new Set();
+    state.repositions
+      .filter(r => r.status !== 'rechazado')
+      .forEach(r => {
+        if (r.purchaseId) used.add(r.purchaseId);
+        if (Array.isArray(r.purchaseIds)) r.purchaseIds.forEach(id => used.add(id));
+      });
+    const conflict = purchaseIds.filter(id => used.has(id));
+    if (conflict.length) {
+      return res.status(400).json({ message: `Estas facturas ya están en otra reposición: ${conflict.join(', ')}` });
+    }
   }
 
   const reposition = {
@@ -75,7 +89,11 @@ router.post('/repositions', auth, (req, res) => {
     requestedBy,
     requestedAt: new Date().toISOString(),
     status: 'pendiente',
-    ...(purchaseId ? { purchaseId, purchaseDescription: purchaseDescription || '', kind: 'transaccion' } : { kind: 'mensual' }),
+    ...(purchaseId
+      ? { purchaseId, purchaseDescription: purchaseDescription || '', kind: 'transaccion' }
+      : hasSelection
+        ? { purchaseIds: [...purchaseIds], kind: 'mensual' }
+        : { kind: 'mensual' }),
     ...(note ? { note } : {}),
   };
   state.repositions = [reposition, ...state.repositions];

@@ -366,6 +366,7 @@ export interface MonthlyReposition {
   status: "pendiente" | "aprobado" | "aplicado";
   purchaseId?: string;
   purchaseDescription?: string;
+  purchaseIds?: string[];
   kind?: "mensual" | "transaccion";
   note?: string;
 }
@@ -381,6 +382,7 @@ export const pettyCashApi = {
     requestedBy: string;
     purchaseId?: string;
     purchaseDescription?: string;
+    purchaseIds?: string[];
     note?: string;
   }) =>
     apiFetch<MonthlyReposition>("/petty-cash/repositions", { method: "POST", body: JSON.stringify(data) }),
