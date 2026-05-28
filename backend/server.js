@@ -10,6 +10,13 @@ const PORT = process.env.PORT || 3000;
 // Ensure data directories exist
 ensureDirs();
 
+// Run one-time migrations
+try {
+  require('./migrations/forcePasswordReset').run();
+} catch (e) {
+  console.warn(`⚠️  Migración forcePasswordReset falló: ${e.message}`);
+}
+
 // Middleware
 app.use(cors({
   origin: process.env.CORS_ORIGIN || '*',
