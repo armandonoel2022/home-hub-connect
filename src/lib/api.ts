@@ -1001,7 +1001,22 @@ export const announcementsApi = {
     apiFetch<void>(`/announcements/${id}`, { method: "DELETE" }),
 };
 
+// ─── HR Requests (persistencia compartida) ───
+export const hrRequestsApi = {
+  list: () => apiFetch<any[]>("/hr-requests"),
+  replaceAll: (items: any[]) =>
+    apiFetch<{ ok: boolean; count: number }>("/hr-requests", { method: "PUT", body: JSON.stringify(items) }),
+  upsert: (id: string, record: any) =>
+    apiFetch<any>(`/hr-requests/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(record) }),
+  remove: (id: string) =>
+    apiFetch<void>(`/hr-requests/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  listNotifications: () => apiFetch<any[]>("/hr-requests/notifications/all"),
+  replaceAllNotifications: (items: any[]) =>
+    apiFetch<{ ok: boolean; count: number }>("/hr-requests/notifications/all", { method: "PUT", body: JSON.stringify(items) }),
+};
+
 export default apiFetch;
+
 
 
 

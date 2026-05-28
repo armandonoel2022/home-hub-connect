@@ -13,7 +13,7 @@ import {
 } from "@/lib/hrRequestService";
 import { HR_FORM_LABELS, type HRRequest } from "@/lib/hrRequestTypes";
 import {
-  CheckCircle2, Clock, XCircle, FileText, Bell, ArrowRight, Inbox,
+  CheckCircle2, Clock, XCircle, FileText, Bell, ArrowRight, Inbox, Printer,
 } from "lucide-react";
 
 const statusStyle: Record<string, { color: string; icon: any; label: string }> = {
@@ -181,6 +181,15 @@ const MyHRRequests = () => {
                 {r.rejectionReason && (
                   <div className="mt-2 text-xs p-2 rounded bg-red-500/5 border border-red-500/20 text-red-700">
                     <strong>Motivo de rechazo:</strong> {r.rejectionReason}
+                  </div>
+                )}
+                {r.status === "Aprobada" && (
+                  <div className="mt-3">
+                    <Link to={`/rrhh/imprimir/${r.id}`}>
+                      <Button size="sm" variant="outline" className="gap-2">
+                        <Printer className="h-3 w-3" /> Descargar / Imprimir orden
+                      </Button>
+                    </Link>
                   </div>
                 )}
               </Card>

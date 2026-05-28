@@ -24,6 +24,8 @@ export type ModuleKey =
   | "uniforms"
   | "superintAudit"
   | "myHRRequests"
+  | "hrApprovals"
+  | "hrConsolidated"
   | "hrConstancias"
   | "purchaseRequests"
   | "hiringRequests"
@@ -135,6 +137,14 @@ export function canView(module: ModuleKey, user: IntranetUser | null | undefined
         inDept(user, "Operaciones", "Administración", "Gerencia General") ||
         inDeptAlias(user, "comercial")
       );
+
+    // Bandeja de Aprobaciones RRHH — líderes/supervisores + RRHH + admin
+    case "hrApprovals":
+      return isLeader(user) || inDept(user, "Recursos Humanos") || isAdmin(user);
+
+    // Consolidado RRHH por empleado — RRHH + admin
+    case "hrConsolidated":
+      return inDept(user, "Recursos Humanos") || isAdmin(user);
 
     // Constancias RRHH (Auditoría) — SOLO super
     case "hrConstancias":
