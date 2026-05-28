@@ -4225,18 +4225,16 @@ const MinorPurchases = () => {
 
       {/* Diálogo de reposición */}
       <Dialog open={repositionDialogOpen} onOpenChange={setRepositionDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="font-heading">Solicitar Reposición de Caja Chica</DialogTitle>
             <DialogDescription>
-              Selecciona el mes a reponer. La reposición restablece el límite mensual a {fmt(CAJA_CHICA_LIMIT)}.
+              Selecciona el mes y marca las facturas/gastos que se repondrán. El monto a reponer es la suma de las facturas seleccionadas.
               <br />
-              <strong>Flujo:</strong> Solicitar → Aprobar → Aplicar
-              <br />
-              <strong>Autorizados para aplicar:</strong> Chrisnel, Xuxa, Cristy, Armando Noel
+              <strong>Flujo:</strong> Solicitar → Aprobar → Aplicar — <strong>Autorizados para aplicar:</strong> Chrisnel, Xuxa, Cristy, Armando Noel
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 overflow-y-auto pr-1">
             <div className="space-y-2">
               <Label>Mes a reponer</Label>
               <Select value={repositionMonth} onValueChange={setRepositionMonth}>
@@ -4245,7 +4243,6 @@ const MinorPurchases = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {(() => {
-                    // Meses con gasto > 0 sin reposición aplicada (cualquier mes histórico)
                     const monthsWithSpending = Array.from(
                       new Set(
                         purchases
@@ -4257,12 +4254,10 @@ const MinorPurchases = () => {
                       return <SelectItem value={getPreviousYearMonth()} disabled>Sin meses con gastos</SelectItem>;
                     }
                     return monthsWithSpending.map((m) => {
-                      const spent = getSpentForMonth(m);
-                      const existing = repositions.find((r) => r.yearMonth === m);
+                      const eligibleCount = getEligiblePurchasesForMonth(m).length;
                       return (
-                        <SelectItem key={m} value={m} disabled={!!existing}>
-                          {getMonthDisplay(m)} — {fmt(spent)}
-                          {existing && ` (${existing.status})`}
+                        <SelectItem key={m} value={m} disabled={eligibleCount === 0}>
+                          {getMonthDisplay(m)} — {fmt(getSpentForMonth(m))} · {eligibleCount} factura(s) disponible(s)
                         </SelectItem>
                       );
                     });
@@ -4270,16 +4265,89 @@ const MinorPurchases = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="p-4 bg-muted rounded-lg text-center">
-              <p className="text-sm text-muted-foreground">Monto a reponer</p>
-              <p className="text-2xl font-heading font-bold text-primary">{fmt(getSpentForMonth(repositionMonth))}</p>
-              <p className="text-xs text-muted-foreground mt-1">Gastado en {getMonthDisplay(repositionMonth)}</p>
-            </div>
+
+            {(() => {
+              const eligible = getEligiblePurchasesForMonth(repositionMonth);
+              const selectedSum = eligible
+                .filter((p) => selectedRepositionPurchaseIds.has(p.id))
+                .reduce((s, p) => s + p.amount, 0);
+              const allSelected = eligible.length > 0 && eligible.every((p) => selectedRepositionPurchaseIds.has(p.id));
+              const toggleAll = () => {
+                if (allSelected) setSelectedRepositionPurchaseIds(new Set());
+                else setSelectedRepositionPurchaseIds(new Set(eligible.map((p) => p.id)));
+              };
+              const toggleOne = (id: string) => {
+                const next = new Set(selectedRepositionPurchaseIds);
+                if (next.has(id)) next.delete(id); else next.add(id);
+                setSelectedRepositionPurchaseIds(next);
+              };
+              return (
+                <>
+                  <div className="flex items-center justify-between">
+                    <Label>Facturas / gastos elegibles ({eligible.length})</Label>
+                    {eligible.length > 0 && (
+                      <Button type="button" size="sm" variant="ghost" onClick={toggleAll}>
+                        {allSelected ? "Deseleccionar todas" : "Seleccionar todas"}
+                      </Button>
+                    )}
+                  </div>
+                  <div className="border border-border rounded-lg max-h-[40vh] overflow-y-auto">
+                    {eligible.length === 0 ? (
+                      <div className="p-4 text-sm text-muted-foreground text-center">
+                        No hay facturas disponibles para reponer en este mes (ya están todas en otra reposición).
+                      </div>
+                    ) : (
+                      <table className="w-full text-sm">
+                        <thead className="bg-muted/50 sticky top-0">
+                          <tr className="text-xs">
+                            <th className="p-2 w-10"></th>
+                            <th className="p-2 text-left">ID</th>
+                            <th className="p-2 text-left">Fecha</th>
+                            <th className="p-2 text-left">Descripción</th>
+                            <th className="p-2 text-left">Solicitante</th>
+                            <th className="p-2 text-right">Monto</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {eligible.map((p) => (
+                            <tr key={p.id} className="border-t border-border hover:bg-muted/30">
+                              <td className="p-2 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedRepositionPurchaseIds.has(p.id)}
+                                  onChange={() => toggleOne(p.id)}
+                                />
+                              </td>
+                              <td className="p-2 font-mono text-xs">{p.id}</td>
+                              <td className="p-2 text-xs">{fmtDate(p.expenseDate || p.requestedAt)}</td>
+                              <td className="p-2 text-xs">{p.description}</td>
+                              <td className="p-2 text-xs">{p.requestedBy}</td>
+                              <td className="p-2 text-right font-medium">{fmt(p.amount)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                  <div className="p-4 bg-muted rounded-lg flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Seleccionadas</p>
+                      <p className="text-sm font-medium">{selectedRepositionPurchaseIds.size} de {eligible.length} factura(s)</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Monto a reponer</p>
+                      <p className="text-2xl font-heading font-bold text-primary">{fmt(selectedSum)}</p>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="text-xs">
                 Una vez aprobada, debe presionar "Aplicar Reposición" cuando se entregue el dinero físicamente.
-                Esto restablece el límite del mes actual a {fmt(CAJA_CHICA_LIMIT)}.
+                Las facturas seleccionadas quedan vinculadas a esta reposición y aparecen en el reporte Excel.
               </AlertDescription>
             </Alert>
           </div>
@@ -4289,16 +4357,14 @@ const MinorPurchases = () => {
             </Button>
             <Button
               onClick={handleRequestReposition}
-              disabled={
-                getSpentForMonth(repositionMonth) === 0 ||
-                !!repositions.find((r) => r.yearMonth === repositionMonth)
-              }
+              disabled={selectedRepositionPurchaseIds.size === 0}
             >
               Solicitar Reposición
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
 
       {/* ─── Modal: Política y cálculos ─── */}
       <Dialog open={policyDialogOpen} onOpenChange={setPolicyDialogOpen}>
