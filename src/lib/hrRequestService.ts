@@ -1,7 +1,18 @@
 import type { HRRequest, HRNotification } from "./hrRequestTypes";
+import { hrRequestsApi, isApiConfigured } from "./api";
 
 const STORAGE_KEY = "safeone_hr_requests";
 const NOTIF_KEY = "safeone_hr_notifications";
+
+// ─── Sync con backend ───
+let pollHandle: ReturnType<typeof setInterval> | null = null;
+let lastReqHash = "";
+let lastNotifHash = "";
+const hash = (s: string) => {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) | 0; }
+  return String(h);
+};
 
 function getAll(): HRRequest[] {
   try {
@@ -13,11 +24,16 @@ function getAll(): HRRequest[] {
 }
 
 function save(requests: HRRequest[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(requests));
-  // Notify in-app listeners (NotificationOverlay)
+  const json = JSON.stringify(requests);
+  localStorage.setItem(STORAGE_KEY, json);
+  lastReqHash = hash(json);
   try {
     window.dispatchEvent(new CustomEvent("safeone:hr-updated"));
   } catch {}
+  // Push al backend (fire-and-forget)
+  if (isApiConfigured()) {
+    hrRequestsApi.replaceAll(requests).catch(() => {});
+  }
 }
 
 // ─── Notifications ───
@@ -31,10 +47,54 @@ function getAllNotifications(): HRNotification[] {
 }
 
 function saveNotifications(notifs: HRNotification[]) {
-  localStorage.setItem(NOTIF_KEY, JSON.stringify(notifs));
+  const json = JSON.stringify(notifs);
+  localStorage.setItem(NOTIF_KEY, json);
+  lastNotifHash = hash(json);
   try {
     window.dispatchEvent(new CustomEvent("safeone:hr-updated"));
   } catch {}
+  if (isApiConfigured()) {
+    hrRequestsApi.replaceAllNotifications(notifs).catch(() => {});
+  }
+}
+
+// ─── Inicialización y polling con backend ───
+async function pullFromBackend() {
+  if (!isApiConfigured()) return;
+  try {
+    const [reqs, notifs] = await Promise.all([
+      hrRequestsApi.list(),
+      hrRequestsApi.listNotifications(),
+    ]);
+    const reqsJson = JSON.stringify(reqs || []);
+    const notifsJson = JSON.stringify(notifs || []);
+    const reqsHash = hash(reqsJson);
+    const notifsHash = hash(notifsJson);
+    let changed = false;
+    if (reqsHash !== lastReqHash) {
+      localStorage.setItem(STORAGE_KEY, reqsJson);
+      lastReqHash = reqsHash;
+      changed = true;
+    }
+    if (notifsHash !== lastNotifHash) {
+      localStorage.setItem(NOTIF_KEY, notifsJson);
+      lastNotifHash = notifsHash;
+      changed = true;
+    }
+    if (changed) {
+      try { window.dispatchEvent(new CustomEvent("safeone:hr-updated")); } catch {}
+    }
+  } catch { /* silencioso */ }
+}
+
+export function initHRRequestsSync() {
+  if (!isApiConfigured()) return;
+  // Inicializar hashes con lo que tenemos en local
+  try { lastReqHash = hash(localStorage.getItem(STORAGE_KEY) || "[]"); } catch {}
+  try { lastNotifHash = hash(localStorage.getItem(NOTIF_KEY) || "[]"); } catch {}
+  pullFromBackend();
+  if (pollHandle) clearInterval(pollHandle);
+  pollHandle = setInterval(pullFromBackend, 10_000);
 }
 
 export function getNotificationsForUser(userId: string): HRNotification[] {
@@ -67,7 +127,6 @@ function addNotification(forUserId: string, message: string, requestId: string) 
   saveNotifications(all);
 }
 
-/** Notify all RRHH leaders/members. Caller passes a list of user IDs. */
 export function notifyUsers(userIds: string[], message: string, requestId: string) {
   userIds.filter(Boolean).forEach((uid) => addNotification(uid, message, requestId));
 }
@@ -93,12 +152,23 @@ export function getRequestsByUser(userId: string): HRRequest[] {
   return getAll().filter((r) => r.requestedBy === userId);
 }
 
+/** Solicitudes asociadas a un empleado (por id de usuario, código de empleado o nombre). */
+export function getRequestsByEmployee(opts: { userId?: string; employeeCode?: string; fullName?: string }): HRRequest[] {
+  const fn = (opts.fullName || "").trim().toLowerCase();
+  return getAll().filter((r) => {
+    if (opts.userId && r.requestedBy === opts.userId) return true;
+    if (opts.userId && r.beneficiaryId === opts.userId) return true;
+    if (fn && (r.requestedByName || "").toLowerCase() === fn) return true;
+    if (fn && (r.beneficiaryName || "").toLowerCase() === fn) return true;
+    return false;
+  });
+}
+
 export function createHRRequest(request: HRRequest, rrhhUserIds: string[] = []): HRRequest {
   const all = getAll();
   all.unshift(request);
   save(all);
 
-  // Loan requests: skip supervisor — go straight to RRHH for review
   if (request.formType === "prestamos") {
     notifyUsers(
       rrhhUserIds,
@@ -177,7 +247,6 @@ export function approveByRRHH(
 
 // ─── Loan-specific flow ───
 
-/** RRHH (Dilia) escala el préstamo directamente a Gerencia General (Aurelio). */
 export function escalateLoanToGerencia(
   requestId: string,
   rrhhUserId: string,
@@ -212,7 +281,6 @@ export function escalateLoanToGerencia(
   return req;
 }
 
-/** Aurelio aprueba el préstamo (final). Puede sobreescribir monto/plazo (excepción). */
 export function approveLoanByGerencia(
   requestId: string,
   gerenciaUserId: string,
@@ -257,8 +325,6 @@ export function approveLoanByGerencia(
   return req;
 }
 
-
-/** RRHH registra fecha de aplicación y cierra el préstamo. */
 export function applyLoan(
   requestId: string,
   rrhhUserId: string,
@@ -273,7 +339,6 @@ export function applyLoan(
   req.loanApplyDate = applyDate;
   req.loanApplyComment = comment || null;
   req.status = "Aprobada";
-  // Record the final RRHH application as a second touch on rrhhApproval comment
   if (req.rrhhApproval) {
     req.rrhhApproval.comment = `${req.rrhhApproval.comment || ""} | Aplicado por ${rrhhUserName} el ${applyDate}${comment ? ` — ${comment}` : ""}`;
   }
