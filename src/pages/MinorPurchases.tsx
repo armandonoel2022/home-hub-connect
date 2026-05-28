@@ -163,6 +163,7 @@ interface MonthlyReposition {
   status: "pendiente" | "aprobado" | "aplicado";
   purchaseId?: string;
   purchaseDescription?: string;
+  purchaseIds?: string[];
   kind?: "mensual" | "transaccion";
   note?: string;
 }
