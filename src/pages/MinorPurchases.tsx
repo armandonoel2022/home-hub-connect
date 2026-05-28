@@ -1524,46 +1524,70 @@ const MinorPurchases = () => {
 
   const getSpentForMonth = (yearMonth: string) => getTotalSpentInMonth(purchases, yearMonth);
 
+  // Facturas (gastos) de Caja Chica elegibles para una nueva reposición en ese mes.
+  // Excluye las que ya estén en otra reposición activa (pendiente/aprobado/aplicado).
+  const getEligiblePurchasesForMonth = (yearMonth: string): MinorPurchase[] => {
+    const used = new Set<string>();
+    repositions
+      .filter((r) => r.status !== ("rechazado" as any))
+      .forEach((r) => {
+        if (r.purchaseId) used.add(r.purchaseId);
+        if (Array.isArray(r.purchaseIds)) r.purchaseIds.forEach((id) => used.add(id));
+      });
+    return purchases.filter((p) => {
+      if (p.status !== "Aprobado" || p.voided) return false;
+      if (p.paymentMethod !== "Caja Chica") return false;
+      if (getYearMonth(p.expenseDate || p.requestedAt) !== yearMonth) return false;
+      if (used.has(p.id)) return false;
+      return true;
+    });
+  };
+
+  // Re-seleccionar todas las facturas elegibles cuando cambia el mes o se abre el diálogo.
+  useEffect(() => {
+    if (!repositionDialogOpen) return;
+    const eligible = getEligiblePurchasesForMonth(repositionMonth);
+    setSelectedRepositionPurchaseIds(new Set(eligible.map((p) => p.id)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [repositionDialogOpen, repositionMonth, purchases, repositions]);
+
   const handleRequestReposition = async () => {
     if (!user) return;
 
     const targetMonth = repositionMonth;
-    const spent = getSpentForMonth(targetMonth);
+    const eligible = getEligiblePurchasesForMonth(targetMonth);
+    const selected = eligible.filter((p) => selectedRepositionPurchaseIds.has(p.id));
 
-    if (spent === 0) {
+    if (selected.length === 0) {
       toast({
-        title: "No hay gastos en ese mes",
-        description: `${getMonthDisplay(targetMonth)} no registra gastos de Caja Chica aprobados.`,
+        title: "Selecciona facturas",
+        description: "Debes elegir al menos una factura/gasto para la reposición.",
         variant: "destructive",
       });
       return;
     }
 
-    const exists = repositions.find((r) => r.yearMonth === targetMonth);
-    if (exists) {
-      toast({
-        title: "Reposición existente",
-        description: `Ya existe una reposición ${exists.status} para ${getMonthDisplay(targetMonth)}.`,
-        variant: "destructive",
-      });
-      return;
-    }
+    const amount = selected.reduce((s, p) => s + p.amount, 0);
+    const selectedIds = selected.map((p) => p.id);
 
     let newReposition: MonthlyReposition = {
       id: `REP-${Date.now()}`,
       yearMonth: targetMonth,
-      amountReposed: spent,
+      amountReposed: amount,
       requestedBy: user.fullName,
       requestedAt: new Date().toISOString(),
       status: "pendiente",
+      purchaseIds: selectedIds,
+      kind: "mensual",
     };
 
     if (apiMode) {
       try {
         newReposition = await pettyCashApi.createReposition({
           yearMonth: targetMonth,
-          amountReposed: spent,
+          amountReposed: amount,
           requestedBy: user.fullName,
+          purchaseIds: selectedIds,
         });
       } catch (e: any) {
         toast({ title: "Error", description: e.message || "No se pudo registrar.", variant: "destructive" });
@@ -1576,8 +1600,9 @@ const MinorPurchases = () => {
 
     toast({
       title: "Solicitud de reposición registrada",
-      description: `Monto a reponer: RD$ ${spent.toLocaleString("es-DO")} para ${getMonthDisplay(targetMonth)}.`,
+      description: `${selected.length} factura(s) · RD$ ${amount.toLocaleString("es-DO")} — ${getMonthDisplay(targetMonth)}.`,
     });
+
   };
 
   // Reposición individual por transacción (desde el Historial)
