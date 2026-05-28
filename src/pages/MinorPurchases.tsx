@@ -651,13 +651,13 @@ const buildAppliedRepositionsSheet = (
   const push = (row: any[]) => { aoa.push(row); };
 
   // Encabezado
-  push(["SAFEONE SECURITY COMPANY", "", "", "", "", "", ""]);
-  merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+  push(["SAFEONE SECURITY COMPANY", "", "", "", "", "", "", ""]);
+  merges.push({ s: { r, c: 0 }, e: { r, c: 7 } });
   set(r, 0, "SAFEONE SECURITY COMPANY", titleStyle);
   r++;
 
-  push(["REPOSICIONES APLICADAS DE CAJA CHICA", "", "", "", "", "", ""]);
-  merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+  push(["REPOSICIONES APLICADAS DE CAJA CHICA", "", "", "", "", "", "", ""]);
+  merges.push({ s: { r, c: 0 }, e: { r, c: 7 } });
   set(r, 0, "REPOSICIONES APLICADAS DE CAJA CHICA", titleStyle);
   r++;
 
@@ -666,16 +666,16 @@ const buildAppliedRepositionsSheet = (
     : monthsInData.length > 0
       ? `${getMonthDisplay(monthsInData[0]).toUpperCase()} — ${getMonthDisplay(monthsInData[monthsInData.length - 1]).toUpperCase()}`
       : "SIN DATOS";
-  push([periodo, "", "", "", "", "", ""]);
-  merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+  push([periodo, "", "", "", "", "", "", ""]);
+  merges.push({ s: { r, c: 0 }, e: { r, c: 7 } });
   set(r, 0, periodo, titleStyle);
   r++;
 
-  push(["", "", "", "", "", "", ""]); r++;
+  push(["", "", "", "", "", "", "", ""]); r++;
 
   if (applied.length === 0) {
-    push(["Sin reposiciones aplicadas en el periodo.", "", "", "", "", "", ""]);
-    merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+    push(["Sin reposiciones aplicadas en el periodo.", "", "", "", "", "", "", ""]);
+    merges.push({ s: { r, c: 0 }, e: { r, c: 7 } });
     set(r, 0, "Sin reposiciones aplicadas en el periodo.", { ...cellStyle, alignment: { horizontal: "center", vertical: "center" }, font: { italic: true } });
     r++;
   } else {
@@ -688,8 +688,8 @@ const buildAppliedRepositionsSheet = (
 
       // Banner del mes (solo si consolidado o si hay datos)
       if (!singleMonth) {
-        push([`${getMonthDisplay(ym).toUpperCase()}`, "", "", "", "", "", ""]);
-        merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+        push([`${getMonthDisplay(ym).toUpperCase()}`, "", "", "", "", "", "", ""]);
+        merges.push({ s: { r, c: 0 }, e: { r, c: 7 } });
         set(r, 0, `${getMonthDisplay(ym).toUpperCase()}`, monthBannerStyle);
         r++;
       }
@@ -728,29 +728,28 @@ const buildAppliedRepositionsSheet = (
         granCount++;
       });
 
-
-      push(["", "", "", "", "", `TOTAL APLICADO ${getMonthDisplay(ym).toUpperCase()}`, monthTotal]);
-      set(r, 5, `TOTAL APLICADO ${getMonthDisplay(ym).toUpperCase()}`, labelRightBold);
-      set(r, 6, monthTotal, moneyBoldStyle);
+      push(["", "", "", "", "", "", `TOTAL APLICADO ${getMonthDisplay(ym).toUpperCase()}`, monthTotal]);
+      set(r, 6, `TOTAL APLICADO ${getMonthDisplay(ym).toUpperCase()}`, labelRightBold);
+      set(r, 7, monthTotal, moneyBoldStyle);
       r++;
 
-      push(["", "", "", "", "", "", ""]); r++;
+      push(["", "", "", "", "", "", "", ""]); r++;
     });
 
     // Totales generales
-    push(["TOTALES", "", "", "", "", "", ""]);
-    merges.push({ s: { r, c: 0 }, e: { r, c: 6 } });
+    push(["TOTALES", "", "", "", "", "", "", ""]);
+    merges.push({ s: { r, c: 0 }, e: { r, c: 7 } });
     set(r, 0, "TOTALES", monthBannerStyle);
     r++;
 
-    push(["", "", "", "", "", "TOTAL REPOSICIONES APLICADAS RD$", granTotal]);
-    set(r, 5, "TOTAL REPOSICIONES APLICADAS RD$", grandTotalLabel);
-    set(r, 6, granTotal, grandTotalValue);
+    push(["", "", "", "", "", "", "TOTAL REPOSICIONES APLICADAS RD$", granTotal]);
+    set(r, 6, "TOTAL REPOSICIONES APLICADAS RD$", grandTotalLabel);
+    set(r, 7, granTotal, grandTotalValue);
     r++;
 
-    push(["", "", "", "", "", "CANTIDAD DE REPOSICIONES", granCount]);
-    set(r, 5, "CANTIDAD DE REPOSICIONES", labelRightBold);
-    set(r, 6, granCount, { ...cellStyle, font: { bold: true }, alignment: { horizontal: "center", vertical: "center" } });
+    push(["", "", "", "", "", "", "CANTIDAD DE REPOSICIONES", granCount]);
+    set(r, 6, "CANTIDAD DE REPOSICIONES", labelRightBold);
+    set(r, 7, granCount, { ...cellStyle, font: { bold: true }, alignment: { horizontal: "center", vertical: "center" } });
     r++;
   }
 
@@ -759,7 +758,8 @@ const buildAppliedRepositionsSheet = (
     if (!ws[addr]) ws[addr] = { t: typeof info.value === "number" ? "n" : "s", v: info.value };
     if (info.style) (ws[addr] as any).s = info.style;
   });
-  ws["!cols"] = [{ wch: 22 }, { wch: 14 }, { wch: 14 }, { wch: 50 }, { wch: 22 }, { wch: 22 }, { wch: 16 }];
+  ws["!cols"] = [{ wch: 22 }, { wch: 14 }, { wch: 14 }, { wch: 40 }, { wch: 32 }, { wch: 22 }, { wch: 22 }, { wch: 16 }];
+
   ws["!merges"] = merges;
   return ws;
 };
