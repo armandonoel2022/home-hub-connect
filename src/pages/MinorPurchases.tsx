@@ -1199,6 +1199,7 @@ const MinorPurchases = () => {
   const [detail, setDetail] = useState<MinorPurchase | null>(null);
   const [repositionDialogOpen, setRepositionDialogOpen] = useState(false);
   const [repositionMonth, setRepositionMonth] = useState<string>(getPreviousYearMonth());
+  const [selectedRepositionPurchaseIds, setSelectedRepositionPurchaseIds] = useState<Set<string>>(new Set());
   const [otherMonthDialogOpen, setOtherMonthDialogOpen] = useState(false);
   // Selección masiva de reposiciones (aprobar/aplicar en lote)
   const [selectedRepIds, setSelectedRepIds] = useState<Set<string>>(new Set());
