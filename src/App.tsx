@@ -81,6 +81,10 @@ function ProtectedRoutes() {
     import("@/lib/api").then(({ employeesApi }) => {
       employeesApi.getAll().then(setEmployees).catch(() => {});
     });
+    // Inicializar sincronización backend de solicitudes RRHH (compartido entre usuarios)
+    import("@/lib/hrRequestService").then(({ initHRRequestsSync }) => {
+      try { initHRRequestsSync(); } catch {}
+    });
     const t = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(t);
   }, []);
