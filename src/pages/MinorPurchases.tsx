@@ -694,31 +694,40 @@ const buildAppliedRepositionsSheet = (
         r++;
       }
 
-      const headers = ["ID", "Tipo", "Fecha Aplicada", "Descripción / Gasto vinculado", "Solicitado por", "Aplicado por", "Monto"];
+      const headers = ["ID", "Tipo", "Fecha Aplicada", "Descripción / Gasto vinculado", "Facturas incluidas", "Solicitado por", "Aplicado por", "Monto"];
       push(headers);
       headers.forEach((h, c) => set(r, c, h, headerStyle));
       r++;
 
       let monthTotal = 0;
       monthReps.forEach((rep) => {
-        const tipo = rep.kind === "transaccion" ? "Transacción" : "Mensual";
+        const tipo = rep.kind === "transaccion"
+          ? "Transacción"
+          : (Array.isArray(rep.purchaseIds) && rep.purchaseIds.length ? "Selección" : "Mensual");
         const desc = rep.purchaseId
           ? `${rep.purchaseId} — ${rep.purchaseDescription || ""}`
-          : rep.note || "Reposición mensual";
+          : rep.note || (Array.isArray(rep.purchaseIds) && rep.purchaseIds.length ? `Reposición de ${rep.purchaseIds.length} factura(s) seleccionadas` : "Reposición mensual");
+        const facturas = rep.purchaseId
+          ? rep.purchaseId
+          : Array.isArray(rep.purchaseIds) && rep.purchaseIds.length
+            ? rep.purchaseIds.join(", ")
+            : "—";
         const fechaApl = fmtDate(rep.appliedAt || rep.requestedAt);
-        push([rep.id, tipo, fechaApl, desc, rep.requestedBy, rep.appliedBy || "—", rep.amountReposed]);
+        push([rep.id, tipo, fechaApl, desc, facturas, rep.requestedBy, rep.appliedBy || "—", rep.amountReposed]);
         set(r, 0, rep.id, cellStyle);
         set(r, 1, tipo, { ...cellStyle, alignment: { horizontal: "center", vertical: "center" } });
         set(r, 2, fechaApl, dateStyle);
         set(r, 3, desc, cellStyle);
-        set(r, 4, rep.requestedBy, cellStyle);
-        set(r, 5, rep.appliedBy || "—", cellStyle);
-        set(r, 6, rep.amountReposed, moneyStyle);
+        set(r, 4, facturas, { ...cellStyle, alignment: { vertical: "center", wrapText: true } });
+        set(r, 5, rep.requestedBy, cellStyle);
+        set(r, 6, rep.appliedBy || "—", cellStyle);
+        set(r, 7, rep.amountReposed, moneyStyle);
         r++;
         monthTotal += rep.amountReposed;
         granTotal += rep.amountReposed;
         granCount++;
       });
+
 
       push(["", "", "", "", "", `TOTAL APLICADO ${getMonthDisplay(ym).toUpperCase()}`, monthTotal]);
       set(r, 5, `TOTAL APLICADO ${getMonthDisplay(ym).toUpperCase()}`, labelRightBold);
