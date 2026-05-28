@@ -61,6 +61,9 @@ import OperationsPosts from "./pages/OperationsPosts";
 import AuditConsolidated from "./pages/AuditConsolidated";
 import PhotoSync from "./pages/PhotoSync";
 import MyHRRequests from "./pages/MyHRRequests";
+import HRApprovals from "./pages/HRApprovals";
+import HRApprovalPrint from "./pages/HRApprovalPrint";
+import HRConsolidated from "./pages/HRConsolidated";
 import HRConstancias from "./pages/HRConstancias";
 import AdminFolderPermissions from "./pages/AdminFolderPermissions";
 import NotFound from "./pages/NotFound";
@@ -197,6 +200,9 @@ function ProtectedRoutes() {
         <Route path="/operaciones/matriz-mantenimiento" element={<RouteGuard module="maintenanceMatrix"><OperationsMaintenanceMatrix /></RouteGuard>} />
         <Route path="/operaciones/puestos" element={<RouteGuard module="workPosts"><OperationsPosts /></RouteGuard>} />
         <Route path="/rrhh/mis-solicitudes" element={<MyHRRequests />} />
+        <Route path="/rrhh/aprobaciones" element={<RouteGuard module="hrApprovals"><HRApprovals /></RouteGuard>} />
+        <Route path="/rrhh/consolidado" element={<RouteGuard module="hrConsolidated"><HRConsolidated /></RouteGuard>} />
+        <Route path="/rrhh/imprimir/:id" element={<HRApprovalPrint />} />
         <Route path="/rrhh/constancias" element={<RouteGuard module="hrConstancias"><HRConstancias /></RouteGuard>} />
         <Route path="/centro-operaciones" element={<OperationsCenter />} />
         <Route path="/basc" element={<RouteGuard module="basc"><BASC /></RouteGuard>} />
