@@ -1225,7 +1225,7 @@ const OperationsPage = () => {
                 </div>
                 <button onClick={() => setSelected(null)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
               </div>
-              {(selected.photo || selected.weaponPhoto) && (
+              {(selected.photo || selected.weaponPhoto || selected.licensePhoto) && (
                 <div className="px-5 pt-5 flex justify-center gap-4 flex-wrap">
                   {selected.photo && (
                     <div className="text-center">
@@ -1237,6 +1237,12 @@ const OperationsPage = () => {
                     <div className="text-center">
                       <img src={selected.weaponPhoto} alt="Arma" className="w-28 h-28 rounded-xl object-cover border-2 border-border" />
                       <p className="text-[10px] text-muted-foreground mt-1">Arma asignada</p>
+                    </div>
+                  )}
+                  {selected.licensePhoto && (
+                    <div className="text-center">
+                      <img src={selected.licensePhoto} alt="Licencia" className="w-28 h-28 rounded-xl object-cover border-2 border-border" />
+                      <p className="text-[10px] text-muted-foreground mt-1">Licencia (consulta)</p>
                     </div>
                   )}
                 </div>
