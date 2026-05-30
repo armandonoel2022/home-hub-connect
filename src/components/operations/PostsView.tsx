@@ -7,8 +7,9 @@ import type { ArmedPersonnel } from "@/lib/types";
 import { buildPostsFromPersonnel, groupPostsHierarchy, type DerivedPost } from "@/lib/derivedPosts";
 import {
   Building2, ChevronDown, ChevronRight, MapPin, Shield, Users, UserCheck,
-  Crosshair, ArrowRightLeft,
+  Crosshair, ArrowRightLeft, FileText,
 } from "lucide-react";
+import { printPostFicha } from "@/lib/ficha";
 
 const conditionColor = (c: string) => {
   if (c?.includes("buenas") || c === "En condiciones") return "bg-emerald-50 text-emerald-700";
