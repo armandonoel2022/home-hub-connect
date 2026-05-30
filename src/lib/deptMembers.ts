@@ -44,6 +44,20 @@ export function nameSignature(name?: string): string {
   return `${tokens[0]}|${tokens[tokens.length - 1]}`;
 }
 
+function significantNameTokens(name?: string): string[] {
+  return normalizeText(name)
+    .replace(/[^a-z0-9ñ\s]/g, " ")
+    .split(/\s+/)
+    .filter((token) => token.length > 1);
+}
+
+function isLikelySamePerson(shortName?: string, legalName?: string): boolean {
+  const shortTokens = significantNameTokens(shortName);
+  const legalTokens = new Set(significantNameTokens(legalName));
+  if (shortTokens.length < 2 || legalTokens.size < 2) return false;
+  return shortTokens.every((token) => legalTokens.has(token));
+}
+
 /** Traduce un departamento de RRHH al departamento del dashboard. */
 export function mapHrDepartment(raw: string): string {
   const key = normalizeText(raw);
@@ -105,10 +119,13 @@ export function buildDeptMembers(
 
   // 1) Empleados de RRHH (fuente primaria)
   employees.forEach((e) => {
+    const aliasMatches = intranetUsers.filter((u) => isLikelySamePerson(u.fullName, e.fullName));
+    const uniqueAliasMatch = aliasMatches.length === 1 ? aliasMatches[0] : undefined;
     const match =
       (e.employeeCode && usersByCode.get(String(e.employeeCode))) ||
       usersByName.get(normalizeText(e.fullName)) ||
-      usersByNameSig.get(nameSignature(e.fullName));
+      usersByNameSig.get(nameSignature(e.fullName)) ||
+      uniqueAliasMatch;
     if (match) usedUserIds.add(match.id);
 
     members.push({
