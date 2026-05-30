@@ -272,7 +272,13 @@ function PostDetailDialog({
   const { user } = useAuth();
   const uploaderName = user?.fullName || "Operaciones";
   const [supervisorId, setSupervisorId] = useState(post.supervisorId || "");
-  const [gerente, setGerente] = useState(post.gerenteOperaciones || "");
+  // Gerente de Operaciones por defecto = el vigente en RR.HH. (ej. Remit Andrés López, 3895)
+  const defaultGerente = gerentes[0]?.fullName || "";
+  const [gerente, setGerente] = useState(post.gerenteOperaciones || defaultGerente);
+  // Si no había gerente guardado y RR.HH. ya cargó, adopta el gerente vigente
+  useEffect(() => {
+    if (!post.gerenteOperaciones && defaultGerente && !gerente) setGerente(defaultGerente);
+  }, [defaultGerente]); // eslint-disable-line react-hooks/exhaustive-deps
   const [newGuard, setNewGuard] = useState({ guardName: "", shift: "Diurno" as Shift, isLead: false });
   const [newWeapon, setNewWeapon] = useState({ arma: "Escopeta", marca: "", serial: "", capsulas: 0, estatus: "En buenas condiciones" });
   const [handover, setHandover] = useState({ weaponId: "", fromGuard: "", toGuard: "", shift: "Diurno" as Shift, notes: "" });
