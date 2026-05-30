@@ -36,6 +36,8 @@ import {
   Plus,
   File,
   UserMinus,
+  UserPlus,
+  Unlink,
   UserX,
   Clock,
   Cake,
@@ -111,7 +113,7 @@ const DEPT_MULTI_ROUTES: Record<string, { label: string; route: string; icon: an
 const RESTRICTED_DEPT_MULTI = new Set<string>(["Recursos Humanos"]);
 
 const DepartmentGrid = () => {
-  const { user, allUsers, activeUsers, inactiveUsers, offboardUser, reactivateUser } = useAuth();
+  const { user, allUsers, activeUsers, inactiveUsers, offboardUser, reactivateUser, updateUser } = useAuth();
   const { addNotification } = useNotifications();
   const { data: equipment } = useEquipment();
   const { data: phones } = usePhones();
@@ -122,6 +124,7 @@ const DepartmentGrid = () => {
   const [showLeader, setShowLeader] = useState<DepartmentMeta | null>(null);
   const [showFiles, setShowFiles] = useState<string | null>(null);
   const [showTeam, setShowTeam] = useState<string | null>(null);
+  const [showAssign, setShowAssign] = useState<string | null>(null);
   const [showExEmployees, setShowExEmployees] = useState<string | null>(null);
   const [showOffboarding, setShowOffboarding] = useState<string | null>(null);
   const [offboardReason, setOffboardReason] = useState<OffboardingReason>("Renuncia");
@@ -349,6 +352,18 @@ const DepartmentGrid = () => {
 
   const totalFiles = (dept: string) => (deptFolders[dept] || []).reduce((sum, f) => sum + f.files.length, 0);
 
+  // Asignar un colaborador al líder del departamento (persistente vía updateUser)
+  const assignToLeader = async (memberId: string, leaderId: string, memberName: string) => {
+    await updateUser(memberId, { reportsTo: leaderId });
+    toast({ title: "Personal asignado", description: `${memberName} ahora se reporta a este líder.` });
+  };
+
+  // Quitar a un colaborador del equipo del líder (limpia el reporte)
+  const removeFromTeam = async (memberId: string, memberName: string) => {
+    await updateUser(memberId, { reportsTo: "" });
+    toast({ title: "Personal removido", description: `${memberName} ya no se reporta a este líder.` });
+  };
+
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
       <div className="flex items-center gap-3 mb-8">
@@ -359,7 +374,14 @@ const DepartmentGrid = () => {
         {departmentsMeta.map((dept) => {
           const Icon = dept.icon;
           const leaderUser = activeUsers.find((u) => u.department === dept.name && u.isDepartmentLeader);
-          const teamMembers = activeUsers.filter((u) => u.department === dept.name && !u.isDepartmentLeader);
+          // El equipo se define por quién se reporta al líder (no solo por departamento)
+          const teamMembers = activeUsers.filter(
+            (u) => u.department === dept.name && u.id !== leaderUser?.id && leaderUser && u.reportsTo === leaderUser.id
+          );
+          // Colaboradores del departamento que aún no se reportan a este líder (asignables)
+          const assignableMembers = activeUsers.filter(
+            (u) => u.department === dept.name && u.id !== leaderUser?.id && !u.isDepartmentLeader && u.reportsTo !== leaderUser?.id
+          );
           const exEmployees = inactiveUsers.filter((u) => u.department === dept.name);
           const reportsToUser = leaderUser?.reportsTo ? allUsers.find((u) => u.id === leaderUser.reportsTo) : null;
           const isLeaderOrAdmin = user?.isAdmin || (user?.isDepartmentLeader && user?.department === dept.name);
@@ -537,18 +559,69 @@ const DepartmentGrid = () => {
                         )}
                         <span className="text-muted-foreground ml-auto truncate max-w-[100px]">{m.position}</span>
                         {isLeaderOrAdmin && (
-                          <button
-                            onClick={() => setShowOffboarding(m.id)}
-                            className="opacity-0 group-hover/member:opacity-100 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
-                            title="Dar de Baja"
-                          >
-                            <UserMinus className="h-3 w-3" />
-                          </button>
+                          <>
+                            <button
+                              onClick={() => removeFromTeam(m.id, m.fullName)}
+                              className="opacity-0 group-hover/member:opacity-100 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-all"
+                              title="Quitar del equipo (ya no se reporta a este líder)"
+                            >
+                              <Unlink className="h-3 w-3" />
+                            </button>
+                            <button
+                              onClick={() => setShowOffboarding(m.id)}
+                              className="opacity-0 group-hover/member:opacity-100 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                              title="Dar de Baja"
+                            >
+                              <UserMinus className="h-3 w-3" />
+                            </button>
+                          </>
                         )}
                       </div>
                     ))}
+                    {leaderUser && teamMembers.length === 0 && (
+                      <p className="text-[11px] text-muted-foreground text-center py-2">No hay personal asignado a este líder</p>
+                    )}
                     {!leaderUser && teamMembers.length === 0 && (
                       <p className="text-[11px] text-muted-foreground text-center py-2">No hay miembros registrados</p>
+                    )}
+
+                    {/* Asignar personal al líder (solo líder/admin) */}
+                    {isLeaderOrAdmin && leaderUser && (
+                      <div className="pt-2 mt-1 border-t border-border">
+                        <button
+                          onClick={() => setShowAssign(showAssign === dept.name ? null : dept.name)}
+                          className="flex items-center gap-2 text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-gold/10 hover:bg-gold/20 gold-accent-text transition-colors w-full"
+                        >
+                          <UserPlus className="h-3.5 w-3.5" />
+                          Asignar personal a {leaderUser.fullName.split(" ")[0]}
+                        </button>
+                        {showAssign === dept.name && (
+                          <div className="mt-2 space-y-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                            {assignableMembers.length === 0 ? (
+                              <p className="text-[11px] text-muted-foreground text-center py-2">
+                                Todo el personal del departamento ya está asignado
+                              </p>
+                            ) : (
+                              assignableMembers.map((m) => (
+                                <div key={m.id} className="flex items-center gap-2 text-[11px] px-3 py-1.5 rounded-lg bg-muted/40">
+                                  <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0">
+                                    {m.photoUrl ? <img src={m.photoUrl} alt="" className="w-full h-full object-cover" /> : <User className="h-3 w-3 text-muted-foreground" />}
+                                  </div>
+                                  <span className="text-card-foreground">{m.fullName}</span>
+                                  <span className="text-muted-foreground ml-auto truncate max-w-[90px]">{m.position}</span>
+                                  <button
+                                    onClick={() => assignToLeader(m.id, leaderUser.id, m.fullName)}
+                                    className="p-1 rounded hover:bg-gold/20 gold-accent-text transition-all"
+                                    title="Asignar a este líder"
+                                  >
+                                    <Plus className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}
