@@ -114,7 +114,7 @@ const DEPT_MULTI_ROUTES: Record<string, { label: string; route: string; icon: an
 const RESTRICTED_DEPT_MULTI = new Set<string>(["Recursos Humanos"]);
 
 const DepartmentGrid = () => {
-  const { user, allUsers, activeUsers, inactiveUsers, offboardUser, reactivateUser, updateUser } = useAuth();
+  const { user, allUsers, inactiveUsers, offboardUser, reactivateUser, updateUser } = useAuth();
   const { addNotification } = useNotifications();
   const { data: equipment } = useEquipment();
   const { data: phones } = usePhones();
