@@ -352,6 +352,18 @@ const DepartmentGrid = () => {
 
   const totalFiles = (dept: string) => (deptFolders[dept] || []).reduce((sum, f) => sum + f.files.length, 0);
 
+  // Asignar un colaborador al líder del departamento (persistente vía updateUser)
+  const assignToLeader = async (memberId: string, leaderId: string, memberName: string) => {
+    await updateUser(memberId, { reportsTo: leaderId });
+    toast({ title: "Personal asignado", description: `${memberName} ahora se reporta a este líder.` });
+  };
+
+  // Quitar a un colaborador del equipo del líder (limpia el reporte)
+  const removeFromTeam = async (memberId: string, memberName: string) => {
+    await updateUser(memberId, { reportsTo: "" });
+    toast({ title: "Personal removido", description: `${memberName} ya no se reporta a este líder.` });
+  };
+
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
       <div className="flex items-center gap-3 mb-8">
