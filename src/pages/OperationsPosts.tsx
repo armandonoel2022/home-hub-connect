@@ -338,16 +338,14 @@ function PostDetailDialog({
             </h3>
             <div className="space-y-2">
               {post.weapons.map((w) => (
-                <div key={w.id} className="flex items-center gap-2 p-2 border rounded text-sm">
-                  <span className="flex-1">
-                    {w.arma} · {w.marca} · <span className="font-mono">{w.serial}</span>
-                  </span>
-                  <Badge variant="outline" className="text-[10px]">{w.capsulas ?? "?"} cáps.</Badge>
-                  <Badge variant="outline" className="text-[10px]">{w.estatus || "—"}</Badge>
-                  <Button variant="ghost" size="icon" onClick={() => { removeWeapon(post.id, w.id); onChanged(); }}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
+                <WeaponCard
+                  key={w.id}
+                  postId={post.id}
+                  weapon={w}
+                  guards={post.guards}
+                  uploadedBy={uploaderName}
+                  onChanged={onChanged}
+                />
               ))}
             </div>
             <div className="mt-2 grid grid-cols-2 md:grid-cols-6 gap-2">
