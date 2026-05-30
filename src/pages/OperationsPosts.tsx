@@ -245,10 +245,12 @@ const OperationsPosts = () => {
 // ─── Detail Dialog ───
 
 function PostDetailDialog({
-  post, supervisores, onClose, onChanged,
+  post, supervisores, gerentes, vigilantes, onClose, onChanged,
 }: {
   post: WorkPost;
-  supervisores: { id: string; fullName: string }[];
+  supervisores: Person[];
+  gerentes: Person[];
+  vigilantes: Person[];
   onClose: () => void;
   onChanged: () => void;
 }) {
