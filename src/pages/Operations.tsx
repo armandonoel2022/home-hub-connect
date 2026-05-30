@@ -116,6 +116,15 @@ function PersonnelDashboard({ personnel, onFilter, onAssign }: { personnel: Arme
     ];
   }, [personnel]);
 
+  // Métricas por puesto (derivadas del personal armado)
+  const posts = useMemo(() => buildPostsFromPersonnel(personnel), [personnel]);
+  const byPostAgents = useMemo(
+    () => posts
+      .map((p) => ({ name: `${p.cliente} — ${p.nombre}`, value: p.agents.length, weapons: p.weapons.length }))
+      .sort((a, b) => b.value - a.value),
+    [posts]
+  );
+
   // Locations with no assigned personnel (posts without a name)
   const unfilledPosts = useMemo(() => {
     return personnel.filter(p => !p.name || p.name.trim() === "");
