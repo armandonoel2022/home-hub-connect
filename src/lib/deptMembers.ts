@@ -33,6 +33,17 @@ export function normalizeText(s?: string): string {
     .trim();
 }
 
+/**
+ * Firma de nombre tolerante a iniciales/segundos nombres: primer token + último token.
+ * "Samuel A Perez" y "Samuel Aurelio Perez" producen ambos "samuel|perez".
+ * Devuelve "" si no hay al menos 2 tokens (para evitar coincidencias falsas).
+ */
+export function nameSignature(name?: string): string {
+  const tokens = normalizeText(name).split(/\s+/).filter(Boolean);
+  if (tokens.length < 2) return "";
+  return `${tokens[0]}|${tokens[tokens.length - 1]}`;
+}
+
 /** Traduce un departamento de RRHH al departamento del dashboard. */
 export function mapHrDepartment(raw: string): string {
   const key = normalizeText(raw);
@@ -79,9 +90,14 @@ export function buildDeptMembers(
 ): DeptMember[] {
   const usersByCode = new Map<string, IntranetUser>();
   const usersByName = new Map<string, IntranetUser>();
+  // Firma de nombre (primer + último token) para tolerar diferencias de ortografía
+  // como "Samuel A Perez" vs "Samuel Aurelio Perez".
+  const usersByNameSig = new Map<string, IntranetUser>();
   intranetUsers.forEach((u) => {
     if (u.employeeCode) usersByCode.set(String(u.employeeCode), u);
     usersByName.set(normalizeText(u.fullName), u);
+    const sig = nameSignature(u.fullName);
+    if (sig && !usersByNameSig.has(sig)) usersByNameSig.set(sig, u);
   });
 
   const members: DeptMember[] = [];
@@ -91,7 +107,8 @@ export function buildDeptMembers(
   employees.forEach((e) => {
     const match =
       (e.employeeCode && usersByCode.get(String(e.employeeCode))) ||
-      usersByName.get(normalizeText(e.fullName));
+      usersByName.get(normalizeText(e.fullName)) ||
+      usersByNameSig.get(nameSignature(e.fullName));
     if (match) usedUserIds.add(match.id);
 
     members.push({
