@@ -33,6 +33,17 @@ export function normalizeText(s?: string): string {
     .trim();
 }
 
+/**
+ * Firma de nombre tolerante a iniciales/segundos nombres: primer token + último token.
+ * "Samuel A Perez" y "Samuel Aurelio Perez" producen ambos "samuel|perez".
+ * Devuelve "" si no hay al menos 2 tokens (para evitar coincidencias falsas).
+ */
+export function nameSignature(name?: string): string {
+  const tokens = normalizeText(name).split(/\s+/).filter(Boolean);
+  if (tokens.length < 2) return "";
+  return `${tokens[0]}|${tokens[tokens.length - 1]}`;
+}
+
 /** Traduce un departamento de RRHH al departamento del dashboard. */
 export function mapHrDepartment(raw: string): string {
   const key = normalizeText(raw);
