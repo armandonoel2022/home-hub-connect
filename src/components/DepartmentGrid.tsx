@@ -407,6 +407,10 @@ const DepartmentGrid = () => {
 
   // Quitar a un colaborador del equipo del líder (limpia el reporte)
   const removeFromTeam = async (member: DeptMember) => {
+    if (member.isLeader) {
+      toast({ title: "Acción no permitida", description: "Para quitar a un líder, primero cambia el líder del departamento.", variant: "destructive" });
+      return;
+    }
     if (member.employeeCode) await patchEmployee(member.employeeCode, { reportsToCode: "" });
     if (member.intranetUserId) await updateUser(member.intranetUserId, { reportsTo: "" });
     toast({ title: "Personal removido", description: `${member.fullName} ya no se reporta a este líder.` });
@@ -417,11 +421,11 @@ const DepartmentGrid = () => {
     const newLeader = activeMembers.find((m) => m.key === newLeaderKey);
     if (!newLeader) return;
     if (oldLeader && oldLeader.key !== newLeaderKey) {
-      if (oldLeader.employeeCode) await patchEmployee(oldLeader.employeeCode, { isDeptLeader: false });
-      if (oldLeader.intranetUserId) await updateUser(oldLeader.intranetUserId, { isDepartmentLeader: false });
+      if (oldLeader.employeeCode) await patchEmployee(oldLeader.employeeCode, { isDeptLeader: false, reportsToCode: "" });
+      if (oldLeader.intranetUserId) await updateUser(oldLeader.intranetUserId, { isDepartmentLeader: false, reportsTo: "" });
     }
-    if (newLeader.employeeCode) await patchEmployee(newLeader.employeeCode, { isDeptLeader: true });
-    if (newLeader.intranetUserId) await updateUser(newLeader.intranetUserId, { isDepartmentLeader: true, department: deptName });
+    if (newLeader.employeeCode) await patchEmployee(newLeader.employeeCode, { isDeptLeader: true, reportsToCode: "" });
+    if (newLeader.intranetUserId) await updateUser(newLeader.intranetUserId, { isDepartmentLeader: true, reportsTo: "", department: deptName });
     setShowLeaderEdit(null);
     toast({ title: "Líder actualizado", description: `${newLeader.fullName} ahora es el líder de ${deptName}.` });
   };
@@ -444,6 +448,7 @@ const DepartmentGrid = () => {
             .filter(
               (m) =>
                 (!leaderMember || m.key !== leaderMember.key) &&
+                !m.isLeader &&
                 (m.dashboardDept === dept.name || (leaderMember && m.reportsTo === leaderMember.key))
             )
             .sort((a, b) => a.fullName.localeCompare(b.fullName));
