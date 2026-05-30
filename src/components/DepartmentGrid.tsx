@@ -397,10 +397,13 @@ const DepartmentGrid = () => {
 
   // Asignar un colaborador al líder del departamento (persistente en RRHH)
   const assignToLeader = async (member: DeptMember, leader: DeptMember) => {
-    const leaderCode = leader.employeeCode || leader.key;
-    if (member.employeeCode) await patchEmployee(member.employeeCode, { reportsToCode: leaderCode });
-    if (member.intranetUserId && leader.intranetUserId) {
-      await updateUser(member.intranetUserId, { reportsTo: leader.intranetUserId });
+    // Clave canónica del líder: funciona tanto si es empleado de RRHH como usuario de intranet.
+    const leaderKey = leader.employeeCode || leader.key;
+    if (member.employeeCode) await patchEmployee(member.employeeCode, { reportsToCode: leaderKey });
+    if (member.intranetUserId) {
+      // Si el líder tiene cuenta de intranet usamos su id USR; si solo existe en RRHH
+      // guardamos su clave directamente para que el vínculo se resuelva igual.
+      await updateUser(member.intranetUserId, { reportsTo: leader.intranetUserId || leaderKey });
     }
     toast({ title: "Personal asignado", description: `${member.fullName} ahora se reporta a este líder.` });
   };
@@ -420,9 +423,17 @@ const DepartmentGrid = () => {
   const changeLeader = async (deptName: string, newLeaderKey: string, oldLeader?: DeptMember) => {
     const newLeader = activeMembers.find((m) => m.key === newLeaderKey);
     if (!newLeader) return;
-    if (oldLeader && oldLeader.key !== newLeaderKey) {
-      if (oldLeader.employeeCode) await patchEmployee(oldLeader.employeeCode, { isDeptLeader: false, reportsToCode: "" });
-      if (oldLeader.intranetUserId) await updateUser(oldLeader.intranetUserId, { isDepartmentLeader: false, reportsTo: "" });
+    // Quitar el rol de líder a CUALQUIER líder actual del departamento (RRHH o intranet),
+    // no solo al que se muestra, para evitar líderes "fantasma" duplicados.
+    const currentLeaders = activeMembers.filter(
+      (m) => m.isLeader && m.dashboardDept === deptName && m.key !== newLeaderKey,
+    );
+    if (oldLeader && oldLeader.key !== newLeaderKey && !currentLeaders.some((m) => m.key === oldLeader.key)) {
+      currentLeaders.push(oldLeader);
+    }
+    for (const old of currentLeaders) {
+      if (old.employeeCode) await patchEmployee(old.employeeCode, { isDeptLeader: false, reportsToCode: "" });
+      if (old.intranetUserId) await updateUser(old.intranetUserId, { isDepartmentLeader: false, reportsTo: "" });
     }
     if (newLeader.employeeCode) await patchEmployee(newLeader.employeeCode, { isDeptLeader: true, reportsToCode: "" });
     if (newLeader.intranetUserId) await updateUser(newLeader.intranetUserId, { isDepartmentLeader: true, reportsTo: "", department: deptName });
