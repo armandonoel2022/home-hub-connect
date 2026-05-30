@@ -4,13 +4,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useArmedPersonnel } from "@/hooks/useApiHooks";
 import { personnelApi } from "@/lib/api";
 import type { ArmedPersonnel, PersonnelTransfer, ShiftType } from "@/lib/types";
-import { Search, Plus, User, MapPin, X, Phone, Upload, Image, Lock, Trash2, Pencil, Map, List, AlertTriangle, BarChart3, ArrowRightLeft, History, Shield, ChevronDown, ChevronRight, Clock, Package, FileSpreadsheet, AlertCircle, CheckCircle2, Building2 } from "lucide-react";
+import { Search, Plus, User, MapPin, X, Phone, Upload, Image, Lock, Trash2, Pencil, Map, List, AlertTriangle, BarChart3, ArrowRightLeft, History, Shield, ChevronDown, ChevronRight, Clock, Package, FileSpreadsheet, AlertCircle, CheckCircle2, Building2, FileText, IdCard } from "lucide-react";
 import { parseArmedPersonnelXlsx, type ImportRow } from "@/lib/armedPersonnelXlsxImport";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { loadFixedAssets, type FixedAsset } from "@/lib/fixedAssetsData";
 import { buildWeaponAssetMap, getLinkingStats, type LinkedWeaponAsset } from "@/lib/weaponAssetLinking";
 import { buildPostsFromPersonnel } from "@/lib/derivedPosts";
 import PostsView from "@/components/operations/PostsView";
+import { applyWatermark } from "@/lib/watermark";
+import { printAgentFicha } from "@/lib/ficha";
 
 
 const statusColors: Record<string, string> = {
