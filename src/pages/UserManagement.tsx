@@ -11,6 +11,7 @@ import { Navigate } from "react-router-dom";
 import RegistrationRequests from "@/components/RegistrationRequests";
 import BirthdayOverlay from "@/components/BirthdayOverlay";
 import ExportMenu from "@/components/ExportMenu";
+import UserHrReconcile from "@/components/UserHrReconcile";
 // employeesApi ya no se usa aquí (cumpleaños vive en /rrhh/cumpleanos)
 import { toast } from "@/hooks/use-toast";
 
@@ -471,6 +472,13 @@ const UserManagementPage = () => {
             </div>
           ))}
         </div>
+
+        {/* Reconciliación con RRHH */}
+        <div className="px-6 pb-4">
+          <UserHrReconcile />
+        </div>
+
+
 
         {/* Admin Tools — Birthday Test */}
         <div className="px-6 pb-4">
