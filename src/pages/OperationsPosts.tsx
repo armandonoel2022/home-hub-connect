@@ -290,17 +290,30 @@ function PostDetailDialog({
             <div>
               <Label className="text-xs">Supervisor responsable</Label>
               <Select value={supervisorId} onValueChange={setSupervisorId}>
-                <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Seleccionar supervisor" /></SelectTrigger>
                 <SelectContent>
                   {supervisores.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>{s.fullName}</SelectItem>
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.fullName}{s.position ? ` — ${s.position}` : ""}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
               <Label className="text-xs">Gerente de Operaciones</Label>
-              <Input value={gerente} onChange={(e) => setGerente(e.target.value)} placeholder="Nombre del gerente" />
+              {gerentes.length > 0 ? (
+                <Select value={gerente} onValueChange={setGerente}>
+                  <SelectTrigger><SelectValue placeholder="Seleccionar gerente" /></SelectTrigger>
+                  <SelectContent>
+                    {gerentes.map((g) => (
+                      <SelectItem key={g.id} value={g.fullName}>{g.fullName}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input value={gerente} onChange={(e) => setGerente(e.target.value)} placeholder="Nombre del gerente" />
+              )}
             </div>
             <div className="flex items-end">
               <Button size="sm" className="w-full" onClick={saveHeader}>Guardar cabecera</Button>
