@@ -213,6 +213,23 @@ function PersonnelDashboard({ personnel, onFilter, onAssign }: { personnel: Arme
         </div>
       </div>
 
+      {/* Per-Post metrics */}
+      <div className="bg-card border border-border rounded-xl p-4">
+        <h3 className="font-heading font-semibold text-sm text-card-foreground mb-1">Agentes y Armas por Puesto (Top 12)</h3>
+        <p className="text-xs text-muted-foreground mb-3">{byPostAgents.length} puestos activos derivados del personal armado</p>
+        <ResponsiveContainer width="100%" height={Math.max(220, Math.min(byPostAgents.length, 12) * 28)}>
+          <BarChart data={byPostAgents.slice(0, 12)} layout="vertical">
+            <XAxis type="number" fontSize={10} allowDecimals={false} />
+            <YAxis type="category" dataKey="name" width={200} fontSize={9} />
+            <Tooltip />
+            <Bar dataKey="value" name="Agentes" fill="#3b82f6" radius={[0, 4, 4, 0]} className="cursor-pointer" onClick={(entry: any) => onFilter?.({ search: String(entry.name).split(" — ")[0] })} />
+            <Bar dataKey="weapons" name="Armas" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+
+
       {/* Weapon Types */}
       <div className="bg-card border border-border rounded-xl p-4">
         <h3 className="font-heading font-semibold text-sm text-card-foreground mb-3">Tipos de Arma</h3>
