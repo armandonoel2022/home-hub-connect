@@ -138,6 +138,35 @@ const DepartmentGrid = () => {
   const [showDeptMenu, setShowDeptMenu] = useState<string | null>(null);
   const [offboardAssetSummary, setOffboardAssetSummary] = useState<UserAssetSummary | null>(null);
   const [showAssetReturnOverlay, setShowAssetReturnOverlay] = useState<{ userName: string; assets: UserAssetSummary } | null>(null);
+  const [hrEmployees, setHrEmployees] = useState<Employee[]>([]);
+
+  // Cargar empleados de RRHH (fuente principal del organigrama por departamento)
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        let list: Employee[] = [];
+        if (apiMode) {
+          list = await employeesApi.getAll();
+        } else {
+          const res = await fetch("/data/employees_seed.json");
+          if (res.ok) list = await res.json();
+        }
+        if (!cancelled) setHrEmployees(list);
+      } catch {
+        try {
+          const res = await fetch("/data/employees_seed.json");
+          if (res.ok && !cancelled) setHrEmployees(await res.json());
+        } catch { /* ignore */ }
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [apiMode]);
+
+  // Listado unificado de miembros (RRHH + cuentas de intranet)
+  const members = useMemo(() => buildDeptMembers(hrEmployees, allUsers), [hrEmployees, allUsers]);
+  const activeMembers = useMemo(() => members.filter((m) => m.active), [members]);
 
   // Check if user belongs to a department
   const userBelongsToDept = useCallback((deptName: string) => {
