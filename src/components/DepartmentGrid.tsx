@@ -36,6 +36,8 @@ import {
   Plus,
   File,
   UserMinus,
+  UserPlus,
+  Unlink,
   UserX,
   Clock,
   Cake,
