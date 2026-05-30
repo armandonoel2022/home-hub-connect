@@ -351,10 +351,16 @@ function PostDetailDialog({
             </div>
             <div className="mt-2 grid grid-cols-1 md:grid-cols-4 gap-2">
               <Input
-                placeholder="Nombre vigilante"
+                list={`vigilantes-${post.id}`}
+                placeholder="Vigilante / oficial (buscar)"
                 value={newGuard.guardName}
                 onChange={(e) => setNewGuard({ ...newGuard, guardName: e.target.value })}
               />
+              <datalist id={`vigilantes-${post.id}`}>
+                {vigilantes.map((v) => (
+                  <option key={v.id} value={v.fullName} />
+                ))}
+              </datalist>
               <Select value={newGuard.shift} onValueChange={(v) => setNewGuard({ ...newGuard, shift: v as Shift })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{SHIFTS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
