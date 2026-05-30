@@ -1851,6 +1851,36 @@ function EvidenceGallery({
         {block("agent", "Fotos del agente", person.agentPhotos || [])}
         {block("weapon", "Fotos del arma", person.weaponPhotos || [])}
       </div>
+
+      {/* Licencia del arma con marca de agua */}
+      <div className="rounded-lg border border-border p-3">
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-xs font-semibold text-card-foreground uppercase tracking-wider flex items-center gap-1">
+            <IdCard className="h-3.5 w-3.5" /> Licencia del arma
+          </h4>
+          <button
+            onClick={() => licenseInput.current?.click()}
+            disabled={busy}
+            className="text-xs px-2 py-1 rounded bg-gold text-charcoal-dark font-semibold disabled:opacity-50"
+          >
+            {person.licensePhoto ? "Reemplazar" : "+ Subir"}
+          </button>
+        </div>
+        {person.licensePhoto ? (
+          <div className="relative inline-block group">
+            <img src={person.licensePhoto} alt="Licencia" className="max-h-40 rounded border border-border" />
+            <div className="text-[9px] text-muted-foreground mt-1">
+              {person.licensePhotoUploadedAt ? new Date(person.licensePhotoUploadedAt).toLocaleString("es-DO") : ""} · por {person.licensePhotoUploadedBy || "—"}
+            </div>
+            <button onClick={removeLicense} className="absolute top-1 right-1 hidden group-hover:flex p-1 rounded bg-destructive/80 text-white">
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        ) : (
+          <p className="text-[11px] text-muted-foreground">Sube la foto de la licencia. Se marcará con "SOLO PARA CONSULTA".</p>
+        )}
+      </div>
+
       <input
         ref={agentInput}
         type="file"
@@ -1864,6 +1894,13 @@ function EvidenceGallery({
         accept=".jpg,.jpeg,.png"
         className="hidden"
         onChange={(e) => e.target.files?.[0] && upload("weapon", e.target.files[0])}
+      />
+      <input
+        ref={licenseInput}
+        type="file"
+        accept=".jpg,.jpeg,.png"
+        className="hidden"
+        onChange={(e) => e.target.files?.[0] && uploadLicense(e.target.files[0])}
       />
     </div>
   );
