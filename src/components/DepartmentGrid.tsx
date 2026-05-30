@@ -383,26 +383,45 @@ const DepartmentGrid = () => {
 
   const totalFiles = (dept: string) => (deptFolders[dept] || []).reduce((sum, f) => sum + f.files.length, 0);
 
-  // Asignar un colaborador al líder del departamento (persistente vía updateUser)
-  const assignToLeader = async (memberId: string, leaderId: string, memberName: string) => {
-    await updateUser(memberId, { reportsTo: leaderId });
-    toast({ title: "Personal asignado", description: `${memberName} ahora se reporta a este líder.` });
+  // Persistir cambios en el empleado de RRHH (estado local + API)
+  const patchEmployee = useCallback(async (code: string, patch: Partial<Employee>) => {
+    setHrEmployees((prev) => prev.map((e) => (e.employeeCode === code ? { ...e, ...patch } : e)));
+    if (apiMode) {
+      try {
+        await employeesApi.update(code, patch);
+      } catch {
+        toast({ title: "Aviso", description: "No se pudo guardar en el servidor; cambio aplicado localmente.", variant: "destructive" });
+      }
+    }
+  }, [apiMode]);
+
+  // Asignar un colaborador al líder del departamento (persistente en RRHH)
+  const assignToLeader = async (member: DeptMember, leader: DeptMember) => {
+    const leaderCode = leader.employeeCode || leader.key;
+    if (member.employeeCode) await patchEmployee(member.employeeCode, { reportsToCode: leaderCode });
+    if (member.intranetUserId && leader.intranetUserId) {
+      await updateUser(member.intranetUserId, { reportsTo: leader.intranetUserId });
+    }
+    toast({ title: "Personal asignado", description: `${member.fullName} ahora se reporta a este líder.` });
   };
 
   // Quitar a un colaborador del equipo del líder (limpia el reporte)
-  const removeFromTeam = async (memberId: string, memberName: string) => {
-    await updateUser(memberId, { reportsTo: "" });
-    toast({ title: "Personal removido", description: `${memberName} ya no se reporta a este líder.` });
+  const removeFromTeam = async (member: DeptMember) => {
+    if (member.employeeCode) await patchEmployee(member.employeeCode, { reportsToCode: "" });
+    if (member.intranetUserId) await updateUser(member.intranetUserId, { reportsTo: "" });
+    toast({ title: "Personal removido", description: `${member.fullName} ya no se reporta a este líder.` });
   };
 
-  // Cambiar el líder del departamento (solo admin). Se elige del personal activo de RRHH.
-  const changeLeader = async (deptName: string, newLeaderId: string, oldLeaderId?: string) => {
-    const newLeader = activeUsers.find((u) => u.id === newLeaderId);
+  // Cambiar el líder del departamento (solo admin). Se elige del personal de RRHH.
+  const changeLeader = async (deptName: string, newLeaderKey: string, oldLeader?: DeptMember) => {
+    const newLeader = activeMembers.find((m) => m.key === newLeaderKey);
     if (!newLeader) return;
-    if (oldLeaderId && oldLeaderId !== newLeaderId) {
-      await updateUser(oldLeaderId, { isDepartmentLeader: false });
+    if (oldLeader && oldLeader.key !== newLeaderKey) {
+      if (oldLeader.employeeCode) await patchEmployee(oldLeader.employeeCode, { isDeptLeader: false });
+      if (oldLeader.intranetUserId) await updateUser(oldLeader.intranetUserId, { isDepartmentLeader: false });
     }
-    await updateUser(newLeaderId, { isDepartmentLeader: true, department: deptName });
+    if (newLeader.employeeCode) await patchEmployee(newLeader.employeeCode, { isDeptLeader: true });
+    if (newLeader.intranetUserId) await updateUser(newLeader.intranetUserId, { isDepartmentLeader: true, department: deptName });
     setShowLeaderEdit(null);
     toast({ title: "Líder actualizado", description: `${newLeader.fullName} ahora es el líder de ${deptName}.` });
   };
