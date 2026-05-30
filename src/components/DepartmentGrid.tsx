@@ -374,14 +374,19 @@ const DepartmentGrid = () => {
         {departmentsMeta.map((dept) => {
           const Icon = dept.icon;
           const leaderUser = activeUsers.find((u) => u.department === dept.name && u.isDepartmentLeader);
-          // El equipo se define por quién se reporta al líder (no solo por departamento)
+          // El equipo se define SOLO por la línea de reporte (reportsTo), sin importar el departamento
           const teamMembers = activeUsers.filter(
-            (u) => u.department === dept.name && u.id !== leaderUser?.id && leaderUser && u.reportsTo === leaderUser.id
+            (u) => leaderUser && u.id !== leaderUser.id && u.reportsTo === leaderUser.id
           );
-          // Colaboradores del departamento que aún no se reportan a este líder (asignables)
-          const assignableMembers = activeUsers.filter(
-            (u) => u.department === dept.name && u.id !== leaderUser?.id && !u.isDepartmentLeader && u.reportsTo !== leaderUser?.id
-          );
+          // Personal que aún no se reporta a este líder (asignable). Se prioriza el mismo departamento.
+          const assignableMembers = activeUsers
+            .filter((u) => leaderUser && u.id !== leaderUser.id && u.reportsTo !== leaderUser.id)
+            .sort((a, b) => {
+              const aDept = a.department === dept.name ? 0 : 1;
+              const bDept = b.department === dept.name ? 0 : 1;
+              if (aDept !== bDept) return aDept - bDept;
+              return a.fullName.localeCompare(b.fullName);
+            });
           const exEmployees = inactiveUsers.filter((u) => u.department === dept.name);
           const reportsToUser = leaderUser?.reportsTo ? allUsers.find((u) => u.id === leaderUser.reportsTo) : null;
           const isLeaderOrAdmin = user?.isAdmin || (user?.isDepartmentLeader && user?.department === dept.name);
@@ -548,6 +553,9 @@ const DepartmentGrid = () => {
                           {m.photoUrl ? <img src={m.photoUrl} alt="" className="w-full h-full object-cover" /> : <User className="h-3 w-3 text-muted-foreground" />}
                         </div>
                         <span className="text-card-foreground">{m.fullName}</span>
+                        {m.department !== dept.name && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{m.department}</span>
+                        )}
                         {m.extension && (
                           <span className="text-[9px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground">Ext.{m.extension}</span>
                         )}
@@ -597,10 +605,10 @@ const DepartmentGrid = () => {
                           Asignar personal a {leaderUser.fullName.split(" ")[0]}
                         </button>
                         {showAssign === dept.name && (
-                          <div className="mt-2 space-y-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                          <div className="mt-2 space-y-1 max-h-64 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150">
                             {assignableMembers.length === 0 ? (
                               <p className="text-[11px] text-muted-foreground text-center py-2">
-                                Todo el personal del departamento ya está asignado
+                                No hay personal disponible para asignar
                               </p>
                             ) : (
                               assignableMembers.map((m) => (
@@ -608,11 +616,11 @@ const DepartmentGrid = () => {
                                   <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0">
                                     {m.photoUrl ? <img src={m.photoUrl} alt="" className="w-full h-full object-cover" /> : <User className="h-3 w-3 text-muted-foreground" />}
                                   </div>
-                                  <span className="text-card-foreground">{m.fullName}</span>
-                                  <span className="text-muted-foreground ml-auto truncate max-w-[90px]">{m.position}</span>
+                                  <span className="text-card-foreground truncate">{m.fullName}</span>
+                                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">{m.department}</span>
                                   <button
                                     onClick={() => assignToLeader(m.id, leaderUser.id, m.fullName)}
-                                    className="p-1 rounded hover:bg-gold/20 gold-accent-text transition-all"
+                                    className="ml-auto p-1 rounded hover:bg-gold/20 gold-accent-text transition-all shrink-0"
                                     title="Asignar a este líder"
                                   >
                                     <Plus className="h-3.5 w-3.5" />
