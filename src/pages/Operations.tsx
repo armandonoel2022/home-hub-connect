@@ -947,13 +947,14 @@ const OperationsPage = () => {
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 {/* View mode tabs */}
-                {(["dashboard", "list", "map"] as const).map(mode => (
+                {(["dashboard", "puestos", "list", "map"] as const).map(mode => (
                   <button key={mode} onClick={() => setViewMode(mode)}
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${viewMode === mode ? "bg-primary text-primary-foreground" : "bg-muted text-card-foreground hover:bg-border"}`}>
                     {mode === "dashboard" && <BarChart3 className="h-4 w-4" />}
+                    {mode === "puestos" && <Building2 className="h-4 w-4" />}
                     {mode === "list" && <List className="h-4 w-4" />}
                     {mode === "map" && <Map className="h-4 w-4" />}
-                    {mode === "dashboard" ? "Dashboard" : mode === "list" ? "Lista" : "Mapa"}
+                    {mode === "dashboard" ? "Dashboard" : mode === "puestos" ? "Puestos" : mode === "list" ? "Lista" : "Mapa"}
                   </button>
                 ))}
                 <button onClick={() => setShowTransferLog(!showTransferLog)}
