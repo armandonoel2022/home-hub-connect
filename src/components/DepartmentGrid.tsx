@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
@@ -7,7 +7,8 @@ import { getUserAssignedAssets, generateOffboardingTicketDescription } from "@/l
 import type { UserAssetSummary } from "@/lib/assetLinking";
 import AssetReturnOverlay from "@/components/AssetReturnOverlay";
 import { cn } from "@/lib/utils";
-import { isApiConfigured, departmentFoldersApi } from "@/lib/api";
+import { isApiConfigured, departmentFoldersApi, employeesApi, type Employee } from "@/lib/api";
+import { buildDeptMembers, type DeptMember } from "@/lib/deptMembers";
 import { toast } from "@/hooks/use-toast";
 import type { OffboardingReason } from "@/lib/types";
 import {
@@ -113,7 +114,7 @@ const DEPT_MULTI_ROUTES: Record<string, { label: string; route: string; icon: an
 const RESTRICTED_DEPT_MULTI = new Set<string>(["Recursos Humanos"]);
 
 const DepartmentGrid = () => {
-  const { user, allUsers, activeUsers, inactiveUsers, offboardUser, reactivateUser, updateUser } = useAuth();
+  const { user, allUsers, inactiveUsers, offboardUser, reactivateUser, updateUser } = useAuth();
   const { addNotification } = useNotifications();
   const { data: equipment } = useEquipment();
   const { data: phones } = usePhones();
@@ -137,6 +138,35 @@ const DepartmentGrid = () => {
   const [showDeptMenu, setShowDeptMenu] = useState<string | null>(null);
   const [offboardAssetSummary, setOffboardAssetSummary] = useState<UserAssetSummary | null>(null);
   const [showAssetReturnOverlay, setShowAssetReturnOverlay] = useState<{ userName: string; assets: UserAssetSummary } | null>(null);
+  const [hrEmployees, setHrEmployees] = useState<Employee[]>([]);
+
+  // Cargar empleados de RRHH (fuente principal del organigrama por departamento)
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        let list: Employee[] = [];
+        if (apiMode) {
+          list = await employeesApi.getAll();
+        } else {
+          const res = await fetch("/data/employees_seed.json");
+          if (res.ok) list = await res.json();
+        }
+        if (!cancelled) setHrEmployees(list);
+      } catch {
+        try {
+          const res = await fetch("/data/employees_seed.json");
+          if (res.ok && !cancelled) setHrEmployees(await res.json());
+        } catch { /* ignore */ }
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [apiMode]);
+
+  // Listado unificado de miembros (RRHH + cuentas de intranet)
+  const members = useMemo(() => buildDeptMembers(hrEmployees, allUsers), [hrEmployees, allUsers]);
+  const activeMembers = useMemo(() => members.filter((m) => m.active), [members]);
 
   // Check if user belongs to a department
   const userBelongsToDept = useCallback((deptName: string) => {
@@ -353,26 +383,45 @@ const DepartmentGrid = () => {
 
   const totalFiles = (dept: string) => (deptFolders[dept] || []).reduce((sum, f) => sum + f.files.length, 0);
 
-  // Asignar un colaborador al líder del departamento (persistente vía updateUser)
-  const assignToLeader = async (memberId: string, leaderId: string, memberName: string) => {
-    await updateUser(memberId, { reportsTo: leaderId });
-    toast({ title: "Personal asignado", description: `${memberName} ahora se reporta a este líder.` });
+  // Persistir cambios en el empleado de RRHH (estado local + API)
+  const patchEmployee = useCallback(async (code: string, patch: Partial<Employee>) => {
+    setHrEmployees((prev) => prev.map((e) => (e.employeeCode === code ? { ...e, ...patch } : e)));
+    if (apiMode) {
+      try {
+        await employeesApi.update(code, patch);
+      } catch {
+        toast({ title: "Aviso", description: "No se pudo guardar en el servidor; cambio aplicado localmente.", variant: "destructive" });
+      }
+    }
+  }, [apiMode]);
+
+  // Asignar un colaborador al líder del departamento (persistente en RRHH)
+  const assignToLeader = async (member: DeptMember, leader: DeptMember) => {
+    const leaderCode = leader.employeeCode || leader.key;
+    if (member.employeeCode) await patchEmployee(member.employeeCode, { reportsToCode: leaderCode });
+    if (member.intranetUserId && leader.intranetUserId) {
+      await updateUser(member.intranetUserId, { reportsTo: leader.intranetUserId });
+    }
+    toast({ title: "Personal asignado", description: `${member.fullName} ahora se reporta a este líder.` });
   };
 
   // Quitar a un colaborador del equipo del líder (limpia el reporte)
-  const removeFromTeam = async (memberId: string, memberName: string) => {
-    await updateUser(memberId, { reportsTo: "" });
-    toast({ title: "Personal removido", description: `${memberName} ya no se reporta a este líder.` });
+  const removeFromTeam = async (member: DeptMember) => {
+    if (member.employeeCode) await patchEmployee(member.employeeCode, { reportsToCode: "" });
+    if (member.intranetUserId) await updateUser(member.intranetUserId, { reportsTo: "" });
+    toast({ title: "Personal removido", description: `${member.fullName} ya no se reporta a este líder.` });
   };
 
-  // Cambiar el líder del departamento (solo admin). Se elige del personal activo de RRHH.
-  const changeLeader = async (deptName: string, newLeaderId: string, oldLeaderId?: string) => {
-    const newLeader = activeUsers.find((u) => u.id === newLeaderId);
+  // Cambiar el líder del departamento (solo admin). Se elige del personal de RRHH.
+  const changeLeader = async (deptName: string, newLeaderKey: string, oldLeader?: DeptMember) => {
+    const newLeader = activeMembers.find((m) => m.key === newLeaderKey);
     if (!newLeader) return;
-    if (oldLeaderId && oldLeaderId !== newLeaderId) {
-      await updateUser(oldLeaderId, { isDepartmentLeader: false });
+    if (oldLeader && oldLeader.key !== newLeaderKey) {
+      if (oldLeader.employeeCode) await patchEmployee(oldLeader.employeeCode, { isDeptLeader: false });
+      if (oldLeader.intranetUserId) await updateUser(oldLeader.intranetUserId, { isDepartmentLeader: false });
     }
-    await updateUser(newLeaderId, { isDepartmentLeader: true, department: deptName });
+    if (newLeader.employeeCode) await patchEmployee(newLeader.employeeCode, { isDeptLeader: true });
+    if (newLeader.intranetUserId) await updateUser(newLeader.intranetUserId, { isDepartmentLeader: true, department: deptName });
     setShowLeaderEdit(null);
     toast({ title: "Líder actualizado", description: `${newLeader.fullName} ahora es el líder de ${deptName}.` });
   };
@@ -386,22 +435,32 @@ const DepartmentGrid = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {departmentsMeta.map((dept) => {
           const Icon = dept.icon;
-          const leaderUser = activeUsers.find((u) => u.department === dept.name && u.isDepartmentLeader);
-          // El equipo se define SOLO por la línea de reporte (reportsTo), sin importar el departamento
-          const teamMembers = activeUsers.filter(
-            (u) => leaderUser && u.id !== leaderUser.id && u.reportsTo === leaderUser.id
-          );
-          // Personal que aún no se reporta a este líder (asignable). Se prioriza el mismo departamento.
-          const assignableMembers = activeUsers
-            .filter((u) => leaderUser && u.id !== leaderUser.id && u.reportsTo !== leaderUser.id)
-            .sort((a, b) => {
-              const aDept = a.department === dept.name ? 0 : 1;
-              const bDept = b.department === dept.name ? 0 : 1;
-              if (aDept !== bDept) return aDept - bDept;
-              return a.fullName.localeCompare(b.fullName);
-            });
+          // Miembros activos de este departamento (fuente: RRHH + intranet)
+          const deptMembers = activeMembers.filter((m) => m.dashboardDept === dept.name);
+          const leaderMember = deptMembers.find((m) => m.isLeader) || null;
+          // El equipo muestra TODO el personal activo del departamento (excepto el líder),
+          // más quienes reportan a este líder aunque sean de otro departamento.
+          const teamMembers = activeMembers
+            .filter(
+              (m) =>
+                (!leaderMember || m.key !== leaderMember.key) &&
+                (m.dashboardDept === dept.name || (leaderMember && m.reportsTo === leaderMember.key))
+            )
+            .sort((a, b) => a.fullName.localeCompare(b.fullName));
+          // Personal de otros departamentos asignable a este líder.
+          const assignableMembers = activeMembers
+            .filter(
+              (m) =>
+                leaderMember &&
+                m.key !== leaderMember.key &&
+                m.dashboardDept !== dept.name &&
+                m.reportsTo !== leaderMember.key
+            )
+            .sort((a, b) => a.fullName.localeCompare(b.fullName));
           const exEmployees = inactiveUsers.filter((u) => u.department === dept.name);
-          const reportsToUser = leaderUser?.reportsTo ? allUsers.find((u) => u.id === leaderUser.reportsTo) : null;
+          const reportsToUser = leaderMember?.reportsTo
+            ? activeMembers.find((m) => m.key === leaderMember.reportsTo) || null
+            : null;
           const isLeaderOrAdmin = user?.isAdmin || (user?.isDepartmentLeader && user?.department === dept.name);
           return (
             <div key={dept.name} className="card-department group border-2 relative" style={{ borderColor: "hsl(220 15% 30%)" }} id={`dept-${dept.name.toLowerCase().replace(/\s+/g, "-")}`}>
@@ -497,7 +556,7 @@ const DepartmentGrid = () => {
                       Equipo de Trabajo
                     </span>
                     <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gold/20 gold-accent-text">
-                      {teamMembers.length + (leaderUser ? 1 : 0)}
+                      {teamMembers.length + (leaderMember ? 1 : 0)}
                     </span>
                   </button>
                   <button
@@ -550,13 +609,13 @@ const DepartmentGrid = () => {
                         <span className="text-muted-foreground">({reportsToUser.position})</span>
                       </div>
                     )}
-                    {leaderUser && (
+                    {leaderMember && (
                       <div className="flex items-center gap-2 text-[11px] bg-gold/10 rounded-lg px-3 py-2">
                         <Shield className="h-3 w-3 text-gold" />
                         <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0">
-                          {leaderUser.photoUrl ? <img src={leaderUser.photoUrl} alt="" className="w-full h-full object-cover" /> : <User className="h-3 w-3 text-muted-foreground" />}
+                          {leaderMember.photoUrl ? <img src={leaderMember.photoUrl} alt="" className="w-full h-full object-cover" /> : <User className="h-3 w-3 text-muted-foreground" />}
                         </div>
-                        <span className="font-semibold text-card-foreground">{leaderUser.fullName}</span>
+                        <span className="font-semibold text-card-foreground">{leaderMember.fullName}</span>
                         <span className="text-gold text-[10px] font-medium ml-auto">Líder</span>
                         {user?.isAdmin && (
                           <button
@@ -570,26 +629,26 @@ const DepartmentGrid = () => {
                       </div>
                     )}
 
-                    {/* Admin: cambiar / asignar líder del departamento desde el personal activo */}
-                    {user?.isAdmin && (!leaderUser || showLeaderEdit === dept.name) && (
+                    {/* Admin: cambiar / asignar líder del departamento desde el personal de RRHH */}
+                    {user?.isAdmin && (!leaderMember || showLeaderEdit === dept.name) && (
                       <div className="rounded-lg bg-muted/40 px-3 py-2 space-y-1">
                         <div className="flex items-center gap-2 text-[11px] font-semibold text-card-foreground">
                           <Shield className="h-3 w-3 text-gold" />
-                          {leaderUser ? "Cambiar líder del departamento" : "Asignar líder del departamento"}
+                          {leaderMember ? "Cambiar líder del departamento" : "Asignar líder del departamento"}
                         </div>
                         <select
-                          value={leaderUser?.id || ""}
-                          onChange={(e) => e.target.value && changeLeader(dept.name, e.target.value, leaderUser?.id)}
+                          value={leaderMember?.key || ""}
+                          onChange={(e) => e.target.value && changeLeader(dept.name, e.target.value, leaderMember || undefined)}
                           className="w-full text-[11px] rounded-md border border-border bg-background px-2 py-1.5 text-card-foreground"
                         >
                           <option value="">Seleccionar empleado activo…</option>
-                          {activeUsers
+                          {activeMembers
                             .slice()
                             .sort((a, b) => a.fullName.localeCompare(b.fullName))
-                            .map((u) => (
-                              <option key={u.id} value={u.id}>
-                                {u.fullName} — {u.department}
-                                {u.employeeCode ? ` (${u.employeeCode})` : ""}
+                            .map((m) => (
+                              <option key={m.key} value={m.key}>
+                                {m.fullName} — {m.dashboardDept}
+                                {m.employeeCode ? ` (${m.employeeCode})` : ""}
                               </option>
                             ))}
                         </select>
@@ -599,13 +658,13 @@ const DepartmentGrid = () => {
                       </div>
                     )}
                     {teamMembers.map((m) => (
-                      <div key={m.id} className="flex items-center gap-2 text-[11px] px-3 py-1.5 group/member">
+                      <div key={m.key} className="flex items-center gap-2 text-[11px] px-3 py-1.5 group/member">
                         <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0">
                           {m.photoUrl ? <img src={m.photoUrl} alt="" className="w-full h-full object-cover" /> : <User className="h-3 w-3 text-muted-foreground" />}
                         </div>
                         <span className="text-card-foreground">{m.fullName}</span>
-                        {m.department !== dept.name && (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{m.department}</span>
+                        {m.dashboardDept !== dept.name && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{m.dashboardDept}</span>
                         )}
                         {m.extension && (
                           <span className="text-[9px] font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground">Ext.{m.extension}</span>
@@ -620,40 +679,42 @@ const DepartmentGrid = () => {
                         {isLeaderOrAdmin && (
                           <>
                             <button
-                              onClick={() => removeFromTeam(m.id, m.fullName)}
+                              onClick={() => removeFromTeam(m)}
                               className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-muted hover:bg-border text-[10px] font-medium text-muted-foreground hover:text-foreground transition-all"
                               title="Quitar del equipo: solo lo desvincula de este líder. NO lo da de baja ni lo convierte en ex-empleado."
                             >
                               <Unlink className="h-3 w-3" />
                               Quitar
                             </button>
-                            <button
-                              onClick={() => setShowOffboarding(m.id)}
-                              className="opacity-0 group-hover/member:opacity-100 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
-                              title="Dar de Baja (lo marca como ex-empleado)"
-                            >
-                              <UserMinus className="h-3 w-3" />
-                            </button>
+                            {m.intranetUserId && (
+                              <button
+                                onClick={() => setShowOffboarding(m.intranetUserId!)}
+                                className="opacity-0 group-hover/member:opacity-100 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                                title="Dar de Baja (lo marca como ex-empleado)"
+                              >
+                                <UserMinus className="h-3 w-3" />
+                              </button>
+                            )}
                           </>
                         )}
                       </div>
                     ))}
-                    {leaderUser && teamMembers.length === 0 && (
+                    {leaderMember && teamMembers.length === 0 && (
                       <p className="text-[11px] text-muted-foreground text-center py-2">No hay personal asignado a este líder</p>
                     )}
-                    {!leaderUser && teamMembers.length === 0 && (
+                    {!leaderMember && teamMembers.length === 0 && (
                       <p className="text-[11px] text-muted-foreground text-center py-2">No hay miembros registrados</p>
                     )}
 
                     {/* Asignar personal al líder (solo líder/admin) */}
-                    {isLeaderOrAdmin && leaderUser && (
+                    {isLeaderOrAdmin && leaderMember && (
                       <div className="pt-2 mt-1 border-t border-border">
                         <button
                           onClick={() => setShowAssign(showAssign === dept.name ? null : dept.name)}
                           className="flex items-center gap-2 text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-gold/10 hover:bg-gold/20 gold-accent-text transition-colors w-full"
                         >
                           <UserPlus className="h-3.5 w-3.5" />
-                          Asignar personal a {leaderUser.fullName.split(" ")[0]}
+                          Asignar personal a {leaderMember.fullName.split(" ")[0]}
                         </button>
                         {showAssign === dept.name && (
                           <div className="mt-2 space-y-1 max-h-64 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150">
@@ -663,14 +724,14 @@ const DepartmentGrid = () => {
                               </p>
                             ) : (
                               assignableMembers.map((m) => (
-                                <div key={m.id} className="flex items-center gap-2 text-[11px] px-3 py-1.5 rounded-lg bg-muted/40">
+                                <div key={m.key} className="flex items-center gap-2 text-[11px] px-3 py-1.5 rounded-lg bg-muted/40">
                                   <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0">
                                     {m.photoUrl ? <img src={m.photoUrl} alt="" className="w-full h-full object-cover" /> : <User className="h-3 w-3 text-muted-foreground" />}
                                   </div>
                                   <span className="text-card-foreground truncate">{m.fullName}</span>
-                                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">{m.department}</span>
+                                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">{m.dashboardDept}</span>
                                   <button
-                                    onClick={() => assignToLeader(m.id, leaderUser.id, m.fullName)}
+                                    onClick={() => assignToLeader(m, leaderMember)}
                                     className="ml-auto p-1 rounded hover:bg-gold/20 gold-accent-text transition-all shrink-0"
                                     title="Asignar a este líder"
                                   >
@@ -772,9 +833,10 @@ const DepartmentGrid = () => {
 
       {/* Leader Modal */}
       {showLeader && (() => {
-        const leaderUser = allUsers.find((u) => u.department === showLeader.name && u.isDepartmentLeader);
-        const leader = leaderUser
-          ? { name: leaderUser.fullName, position: leaderUser.position, photo: leaderUser.photoUrl, fleetPhone: leaderUser.fleetPhone || "", email: leaderUser.email }
+        const leaderMem = activeMembers.find((m) => m.dashboardDept === showLeader.name && m.isLeader);
+        const leaderAcct = leaderMem?.intranetUserId ? allUsers.find((u) => u.id === leaderMem.intranetUserId) : undefined;
+        const leader = leaderMem
+          ? { name: leaderMem.fullName, position: leaderMem.position, photo: leaderMem.photoUrl || "", fleetPhone: leaderAcct?.fleetPhone || "", email: leaderAcct?.email || "—" }
           : { name: "Sin asignar", position: "—", photo: "", fleetPhone: "", email: "—" };
         return (
           <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">

@@ -651,6 +651,17 @@ export interface Employee {
   tssPendingUnregister?: boolean;
   tssPendingUnregisterAt?: string;
   tssPendingUnregisterReason?: string;
+  // ─── Organigrama / Dashboard de Departamentos ───
+  /** ¿Es el líder del departamento (dashboard)? */
+  isDeptLeader?: boolean;
+  /** Código de empleado del líder al que se reporta (para armar el equipo) */
+  reportsToCode?: string;
+  /** Extensión telefónica interna */
+  extension?: string;
+  /** Equipo asignado (puesto/cliente) */
+  team?: string;
+  /** Turno de trabajo */
+  shift?: string;
 }
 
 export const employeesApi = {
