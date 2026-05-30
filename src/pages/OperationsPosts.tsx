@@ -15,7 +15,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   loadPosts, createPost, updatePost, deletePost,
   addGuard, removeGuard, addWeapon, removeWeapon, recordHandover,
-  type WorkPost, type Shift,
+  addWeaponPhoto, removeWeaponPhoto, setWeaponGuards,
+  type WorkPost, type Shift, type PostWeaponAssignment, type PostGuardAssignment,
 } from "@/lib/postsData";
 import {
   MapPin, Shield, Users, Plus, Trash2, ArrowLeft, RefreshCw, ExternalLink,
