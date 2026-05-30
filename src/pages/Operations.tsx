@@ -9,6 +9,8 @@ import { parseArmedPersonnelXlsx, type ImportRow } from "@/lib/armedPersonnelXls
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { loadFixedAssets, type FixedAsset } from "@/lib/fixedAssetsData";
 import { buildWeaponAssetMap, getLinkingStats, type LinkedWeaponAsset } from "@/lib/weaponAssetLinking";
+import { buildPostsFromPersonnel } from "@/lib/derivedPosts";
+import PostsView from "@/components/operations/PostsView";
 
 
 const statusColors: Record<string, string> = {
