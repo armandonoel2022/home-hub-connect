@@ -1707,6 +1707,35 @@ function EvidenceGallery({
   const [note, setNote] = useState("");
   const agentInput = useRef<HTMLInputElement>(null);
   const weaponInput = useRef<HTMLInputElement>(null);
+  const licenseInput = useRef<HTMLInputElement>(null);
+
+  const uploadLicense = async (file: File) => {
+    setBusy(true);
+    try {
+      const url = await applyWatermark(file, {
+        text: "SOLO PARA CONSULTA",
+        subText: `${person.name || person.employeeCode} · Lic. ${person.licenseNumber || "—"}`,
+      });
+      const saved = await personnelApi.update(person.id, {
+        licensePhoto: url,
+        licensePhotoUploadedAt: new Date().toISOString(),
+        licensePhotoUploadedBy: userName,
+      } as any);
+      onUpdated(saved);
+    } catch (e) {
+      console.error(e);
+      alert("Error al subir la licencia: " + (e as any)?.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeLicense = async () => {
+    if (!confirm("¿Eliminar la foto de la licencia?")) return;
+    const saved = await personnelApi.update(person.id, { licensePhoto: "" } as any);
+    onUpdated(saved);
+  };
+
 
   const upload = async (kind: "agent" | "weapon", file: File) => {
     setBusy(true);
