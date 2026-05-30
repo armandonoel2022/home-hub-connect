@@ -23,25 +23,52 @@ import {
   Building2, UserCheck, Crosshair, History, Image as ImageIcon, X,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { employeesApi, type Employee } from "@/lib/api";
 
 const SHIFTS: Shift[] = ["Diurno", "Nocturno", "24h", "Rotativo"];
 
+type Person = { id: string; fullName: string; position?: string };
+
 const OperationsPosts = () => {
-  const { allUsers } = useAuth();
   const { toast } = useToast();
   const [posts, setPosts] = useState<WorkPost[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [search, setSearch] = useState("");
   const [openCreate, setOpenCreate] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const refresh = () => setPosts(loadPosts());
   useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    employeesApi.getAll({ status: "Activo" })
+      .then(setEmployees)
+      .catch(() => setEmployees([]));
+  }, []);
 
-  const supervisores = useMemo(
-    () => allUsers.filter((u) =>
-      /supervisor|coordinador|operaciones/i.test(u.position || "") || /operaciones/i.test(u.department || "")
-    ),
-    [allUsers]
+  // Supervisores reales = empleados activos con categoría/puesto de Supervisor (19 en RR.HH.)
+  const supervisores = useMemo<Person[]>(
+    () => employees
+      .filter((e) => /supervisor/i.test(e.category || "") || /supervisor/i.test(e.position || ""))
+      .map((e) => ({ id: e.employeeCode, fullName: e.fullName, position: e.position }))
+      .sort((a, b) => a.fullName.localeCompare(b.fullName)),
+    [employees]
+  );
+
+  // Gerentes de Operaciones (ej. Remit Lopez) → cabecera de la jerarquía
+  const gerentes = useMemo<Person[]>(
+    () => employees
+      .filter((e) => /gerente de operaciones/i.test(e.position || ""))
+      .map((e) => ({ id: e.employeeCode, fullName: e.fullName, position: e.position })),
+    [employees]
+  );
+
+  // Vigilantes / oficiales de seguridad para asignar a los puestos
+  const vigilantes = useMemo<Person[]>(
+    () => employees
+      .filter((e) => /vigilante|oficial|operador/i.test(e.category || "") || /vigilante|oficial/i.test(e.position || ""))
+      .map((e) => ({ id: e.employeeCode, fullName: e.fullName, position: e.position }))
+      .sort((a, b) => a.fullName.localeCompare(b.fullName)),
+    [employees]
   );
 
   const filtered = useMemo(() => {
