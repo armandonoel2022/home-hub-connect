@@ -562,15 +562,16 @@ const DepartmentGrid = () => {
                           <>
                             <button
                               onClick={() => removeFromTeam(m.id, m.fullName)}
-                              className="opacity-0 group-hover/member:opacity-100 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-all"
-                              title="Quitar del equipo (ya no se reporta a este líder)"
+                              className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-muted hover:bg-border text-[10px] font-medium text-muted-foreground hover:text-foreground transition-all"
+                              title="Quitar del equipo: solo lo desvincula de este líder. NO lo da de baja ni lo convierte en ex-empleado."
                             >
                               <Unlink className="h-3 w-3" />
+                              Quitar
                             </button>
                             <button
                               onClick={() => setShowOffboarding(m.id)}
                               className="opacity-0 group-hover/member:opacity-100 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
-                              title="Dar de Baja"
+                              title="Dar de Baja (lo marca como ex-empleado)"
                             >
                               <UserMinus className="h-3 w-3" />
                             </button>
