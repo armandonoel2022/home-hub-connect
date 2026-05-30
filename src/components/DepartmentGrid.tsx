@@ -364,6 +364,18 @@ const DepartmentGrid = () => {
     toast({ title: "Personal removido", description: `${memberName} ya no se reporta a este líder.` });
   };
 
+  // Cambiar el líder del departamento (solo admin). Se elige del personal activo de RRHH.
+  const changeLeader = async (deptName: string, newLeaderId: string, oldLeaderId?: string) => {
+    const newLeader = activeUsers.find((u) => u.id === newLeaderId);
+    if (!newLeader) return;
+    if (oldLeaderId && oldLeaderId !== newLeaderId) {
+      await updateUser(oldLeaderId, { isDepartmentLeader: false });
+    }
+    await updateUser(newLeaderId, { isDepartmentLeader: true, department: deptName });
+    setShowLeaderEdit(null);
+    toast({ title: "Líder actualizado", description: `${newLeader.fullName} ahora es el líder de ${deptName}.` });
+  };
+
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
       <div className="flex items-center gap-3 mb-8">
