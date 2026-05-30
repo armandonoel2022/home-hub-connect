@@ -218,6 +218,8 @@ const OperationsPosts = () => {
         <PostDetailDialog
           post={selected}
           supervisores={supervisores}
+          gerentes={gerentes}
+          vigilantes={vigilantes}
           onClose={() => { setSelectedId(null); refresh(); }}
           onChanged={refresh}
         />
