@@ -198,7 +198,7 @@ function ProtectedRoutes() {
         <Route path="/admin/flotilla-mantenimiento" element={<FleetMaintenance />} />
         <Route path="/monitoreo" element={<MonitoringCenter />} />
         <Route path="/operaciones/matriz-mantenimiento" element={<RouteGuard module="maintenanceMatrix"><OperationsMaintenanceMatrix /></RouteGuard>} />
-        <Route path="/operaciones/puestos" element={<RouteGuard module="workPosts"><OperationsPosts /></RouteGuard>} />
+        <Route path="/operaciones/puestos" element={<Navigate to="/operaciones" replace />} />
         <Route path="/rrhh/mis-solicitudes" element={<MyHRRequests />} />
         <Route path="/rrhh/aprobaciones" element={<RouteGuard module="hrApprovals"><HRApprovals /></RouteGuard>} />
         <Route path="/rrhh/consolidado" element={<RouteGuard module="hrConsolidated"><HRConsolidated /></RouteGuard>} />
