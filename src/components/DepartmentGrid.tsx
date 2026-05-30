@@ -124,6 +124,7 @@ const DepartmentGrid = () => {
   const [showLeader, setShowLeader] = useState<DepartmentMeta | null>(null);
   const [showFiles, setShowFiles] = useState<string | null>(null);
   const [showTeam, setShowTeam] = useState<string | null>(null);
+  const [showAssign, setShowAssign] = useState<string | null>(null);
   const [showExEmployees, setShowExEmployees] = useState<string | null>(null);
   const [showOffboarding, setShowOffboarding] = useState<string | null>(null);
   const [offboardReason, setOffboardReason] = useState<OffboardingReason>("Renuncia");
