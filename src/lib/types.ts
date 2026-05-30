@@ -103,6 +103,9 @@ export interface ArmedPersonnel {
   weaponPhoto?: string;
   agentPhotos?: PhotoRecord[];
   weaponPhotos?: PhotoRecord[];
+  licensePhoto?: string;          // foto de la licencia del arma (con marca de agua)
+  licensePhotoUploadedAt?: string;
+  licensePhotoUploadedBy?: string;
   client: string;
   location: string; // puesto
   province: string;
