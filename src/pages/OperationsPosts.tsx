@@ -23,7 +23,7 @@ import {
   Building2, UserCheck, Crosshair, History, Image as ImageIcon, X,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { employeesApi, type Employee } from "@/lib/api";
+import { employeesApi, isApiConfigured, type Employee } from "@/lib/api";
 
 const SHIFTS: Shift[] = ["Diurno", "Nocturno", "24h", "Rotativo"];
 
@@ -40,9 +40,23 @@ const OperationsPosts = () => {
   const refresh = () => setPosts(loadPosts());
   useEffect(() => { refresh(); }, []);
   useEffect(() => {
-    employeesApi.getAll({ status: "Activo" })
-      .then(setEmployees)
-      .catch(() => setEmployees([]));
+    // Carga el directorio de RR.HH. con respaldo al seed público si la API no responde.
+    const loadFromSeed = async () => {
+      try {
+        const res = await fetch("/data/employees_seed.json");
+        if (res.ok) setEmployees(await res.json());
+      } catch { /* noop */ }
+    };
+    (async () => {
+      if (!isApiConfigured()) { await loadFromSeed(); return; }
+      try {
+        const data = await employeesApi.getAll({ status: "Activo" });
+        if (data && data.length > 0) setEmployees(data);
+        else await loadFromSeed();
+      } catch {
+        await loadFromSeed();
+      }
+    })();
   }, []);
 
   // Supervisores reales = empleados activos con categoría/puesto de Supervisor (19 en RR.HH.)
