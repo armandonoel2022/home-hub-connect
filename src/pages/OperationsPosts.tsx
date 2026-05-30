@@ -23,25 +23,52 @@ import {
   Building2, UserCheck, Crosshair, History, Image as ImageIcon, X,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { employeesApi, type Employee } from "@/lib/api";
 
 const SHIFTS: Shift[] = ["Diurno", "Nocturno", "24h", "Rotativo"];
 
+type Person = { id: string; fullName: string; position?: string };
+
 const OperationsPosts = () => {
-  const { allUsers } = useAuth();
   const { toast } = useToast();
   const [posts, setPosts] = useState<WorkPost[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [search, setSearch] = useState("");
   const [openCreate, setOpenCreate] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const refresh = () => setPosts(loadPosts());
   useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    employeesApi.getAll({ status: "Activo" })
+      .then(setEmployees)
+      .catch(() => setEmployees([]));
+  }, []);
 
-  const supervisores = useMemo(
-    () => allUsers.filter((u) =>
-      /supervisor|coordinador|operaciones/i.test(u.position || "") || /operaciones/i.test(u.department || "")
-    ),
-    [allUsers]
+  // Supervisores reales = empleados activos con categoría/puesto de Supervisor (19 en RR.HH.)
+  const supervisores = useMemo<Person[]>(
+    () => employees
+      .filter((e) => /supervisor/i.test(e.category || "") || /supervisor/i.test(e.position || ""))
+      .map((e) => ({ id: e.employeeCode, fullName: e.fullName, position: e.position }))
+      .sort((a, b) => a.fullName.localeCompare(b.fullName)),
+    [employees]
+  );
+
+  // Gerentes de Operaciones (ej. Remit Lopez) → cabecera de la jerarquía
+  const gerentes = useMemo<Person[]>(
+    () => employees
+      .filter((e) => /gerente de operaciones/i.test(e.position || ""))
+      .map((e) => ({ id: e.employeeCode, fullName: e.fullName, position: e.position })),
+    [employees]
+  );
+
+  // Vigilantes / oficiales de seguridad para asignar a los puestos
+  const vigilantes = useMemo<Person[]>(
+    () => employees
+      .filter((e) => /vigilante|oficial|operador/i.test(e.category || "") || /vigilante|oficial/i.test(e.position || ""))
+      .map((e) => ({ id: e.employeeCode, fullName: e.fullName, position: e.position }))
+      .sort((a, b) => a.fullName.localeCompare(b.fullName)),
+    [employees]
   );
 
   const filtered = useMemo(() => {
@@ -191,6 +218,8 @@ const OperationsPosts = () => {
         <PostDetailDialog
           post={selected}
           supervisores={supervisores}
+          gerentes={gerentes}
+          vigilantes={vigilantes}
           onClose={() => { setSelectedId(null); refresh(); }}
           onChanged={refresh}
         />
@@ -216,10 +245,12 @@ const OperationsPosts = () => {
 // ─── Detail Dialog ───
 
 function PostDetailDialog({
-  post, supervisores, onClose, onChanged,
+  post, supervisores, gerentes, vigilantes, onClose, onChanged,
 }: {
   post: WorkPost;
-  supervisores: { id: string; fullName: string }[];
+  supervisores: Person[];
+  gerentes: Person[];
+  vigilantes: Person[];
   onClose: () => void;
   onChanged: () => void;
 }) {
@@ -259,17 +290,30 @@ function PostDetailDialog({
             <div>
               <Label className="text-xs">Supervisor responsable</Label>
               <Select value={supervisorId} onValueChange={setSupervisorId}>
-                <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Seleccionar supervisor" /></SelectTrigger>
                 <SelectContent>
                   {supervisores.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>{s.fullName}</SelectItem>
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.fullName}{s.position ? ` — ${s.position}` : ""}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
               <Label className="text-xs">Gerente de Operaciones</Label>
-              <Input value={gerente} onChange={(e) => setGerente(e.target.value)} placeholder="Nombre del gerente" />
+              {gerentes.length > 0 ? (
+                <Select value={gerente} onValueChange={setGerente}>
+                  <SelectTrigger><SelectValue placeholder="Seleccionar gerente" /></SelectTrigger>
+                  <SelectContent>
+                    {gerentes.map((g) => (
+                      <SelectItem key={g.id} value={g.fullName}>{g.fullName}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input value={gerente} onChange={(e) => setGerente(e.target.value)} placeholder="Nombre del gerente" />
+              )}
             </div>
             <div className="flex items-end">
               <Button size="sm" className="w-full" onClick={saveHeader}>Guardar cabecera</Button>
@@ -307,10 +351,16 @@ function PostDetailDialog({
             </div>
             <div className="mt-2 grid grid-cols-1 md:grid-cols-4 gap-2">
               <Input
-                placeholder="Nombre vigilante"
+                list={`vigilantes-${post.id}`}
+                placeholder="Vigilante / oficial (buscar)"
                 value={newGuard.guardName}
                 onChange={(e) => setNewGuard({ ...newGuard, guardName: e.target.value })}
               />
+              <datalist id={`vigilantes-${post.id}`}>
+                {vigilantes.map((v) => (
+                  <option key={v.id} value={v.fullName} />
+                ))}
+              </datalist>
               <Select value={newGuard.shift} onValueChange={(v) => setNewGuard({ ...newGuard, shift: v as Shift })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{SHIFTS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
