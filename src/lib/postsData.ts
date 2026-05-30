@@ -207,6 +207,42 @@ export function removeWeapon(postId: string, weaponId: string) {
   persist(list);
 }
 
+export function addWeaponPhoto(postId: string, weaponId: string, url: string, uploadedBy?: string) {
+  const list = loadPosts();
+  const post = list.find((p) => p.id === postId);
+  if (!post) return;
+  const weapon = post.weapons.find((w) => w.id === weaponId);
+  if (!weapon) return;
+  weapon.photos = [
+    ...(weapon.photos || []),
+    { id: uid("WPH"), url, uploadedAt: new Date().toISOString(), uploadedBy },
+  ];
+  post.updatedAt = new Date().toISOString();
+  persist(list);
+}
+
+export function removeWeaponPhoto(postId: string, weaponId: string, photoId: string) {
+  const list = loadPosts();
+  const post = list.find((p) => p.id === postId);
+  if (!post) return;
+  const weapon = post.weapons.find((w) => w.id === weaponId);
+  if (!weapon) return;
+  weapon.photos = (weapon.photos || []).filter((ph) => ph.id !== photoId);
+  post.updatedAt = new Date().toISOString();
+  persist(list);
+}
+
+export function setWeaponGuards(postId: string, weaponId: string, guardIds: string[]) {
+  const list = loadPosts();
+  const post = list.find((p) => p.id === postId);
+  if (!post) return;
+  const weapon = post.weapons.find((w) => w.id === weaponId);
+  if (!weapon) return;
+  weapon.assignedGuardIds = guardIds;
+  post.updatedAt = new Date().toISOString();
+  persist(list);
+}
+
 export function recordHandover(postId: string, entry: Omit<PostHandoverEntry, "id" | "at">) {
   const list = loadPosts();
   const post = list.find((p) => p.id === postId);
