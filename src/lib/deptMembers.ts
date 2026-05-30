@@ -136,7 +136,7 @@ export function buildDeptMembers(
       shift: u.shift,
       isLeader: !!u.isDepartmentLeader,
       reportsTo: reportsToKey,
-      active: u.employeeStatus !== "Inactivo",
+      active: true,
     });
   });
 
