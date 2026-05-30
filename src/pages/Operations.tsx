@@ -1360,7 +1360,10 @@ const OperationsPage = () => {
                   </div>
                 )}
               </div>
-              <div className="p-5 border-t border-border flex justify-end gap-2">
+              <div className="p-5 border-t border-border flex justify-end gap-2 flex-wrap">
+                <button onClick={() => printAgentFicha(selected)} className="px-4 py-2 rounded-lg text-sm font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors flex items-center gap-1.5">
+                  <FileText className="h-3.5 w-3.5" /> Ficha del Vigilante
+                </button>
                 <button onClick={() => setTransferTarget(selected)} className="px-4 py-2 rounded-lg text-sm font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors flex items-center gap-1.5">
                   <ArrowRightLeft className="h-3.5 w-3.5" /> Transferir
                 </button>
