@@ -224,6 +224,8 @@ function PostDetailDialog({
   onChanged: () => void;
 }) {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const uploaderName = user?.fullName || "Operaciones";
   const [supervisorId, setSupervisorId] = useState(post.supervisorId || "");
   const [gerente, setGerente] = useState(post.gerenteOperaciones || "");
   const [newGuard, setNewGuard] = useState({ guardName: "", shift: "Diurno" as Shift, isLead: false });
