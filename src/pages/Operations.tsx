@@ -4,13 +4,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useArmedPersonnel } from "@/hooks/useApiHooks";
 import { personnelApi } from "@/lib/api";
 import type { ArmedPersonnel, PersonnelTransfer, ShiftType } from "@/lib/types";
-import { Search, Plus, User, MapPin, X, Phone, Upload, Image, Lock, Trash2, Pencil, Map, List, AlertTriangle, BarChart3, ArrowRightLeft, History, Shield, ChevronDown, ChevronRight, Clock, Package, FileSpreadsheet, AlertCircle, CheckCircle2, Building2 } from "lucide-react";
+import { Search, Plus, User, MapPin, X, Phone, Upload, Image, Lock, Trash2, Pencil, Map, List, AlertTriangle, BarChart3, ArrowRightLeft, History, Shield, ChevronDown, ChevronRight, Clock, Package, FileSpreadsheet, AlertCircle, CheckCircle2, Building2, FileText, IdCard } from "lucide-react";
 import { parseArmedPersonnelXlsx, type ImportRow } from "@/lib/armedPersonnelXlsxImport";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { loadFixedAssets, type FixedAsset } from "@/lib/fixedAssetsData";
 import { buildWeaponAssetMap, getLinkingStats, type LinkedWeaponAsset } from "@/lib/weaponAssetLinking";
 import { buildPostsFromPersonnel } from "@/lib/derivedPosts";
 import PostsView from "@/components/operations/PostsView";
+import { applyWatermark } from "@/lib/watermark";
+import { printAgentFicha } from "@/lib/ficha";
 
 
 const statusColors: Record<string, string> = {
@@ -1223,7 +1225,7 @@ const OperationsPage = () => {
                 </div>
                 <button onClick={() => setSelected(null)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
               </div>
-              {(selected.photo || selected.weaponPhoto) && (
+              {(selected.photo || selected.weaponPhoto || selected.licensePhoto) && (
                 <div className="px-5 pt-5 flex justify-center gap-4 flex-wrap">
                   {selected.photo && (
                     <div className="text-center">
@@ -1235,6 +1237,12 @@ const OperationsPage = () => {
                     <div className="text-center">
                       <img src={selected.weaponPhoto} alt="Arma" className="w-28 h-28 rounded-xl object-cover border-2 border-border" />
                       <p className="text-[10px] text-muted-foreground mt-1">Arma asignada</p>
+                    </div>
+                  )}
+                  {selected.licensePhoto && (
+                    <div className="text-center">
+                      <img src={selected.licensePhoto} alt="Licencia" className="w-28 h-28 rounded-xl object-cover border-2 border-border" />
+                      <p className="text-[10px] text-muted-foreground mt-1">Licencia (consulta)</p>
                     </div>
                   )}
                 </div>
@@ -1358,7 +1366,10 @@ const OperationsPage = () => {
                   </div>
                 )}
               </div>
-              <div className="p-5 border-t border-border flex justify-end gap-2">
+              <div className="p-5 border-t border-border flex justify-end gap-2 flex-wrap">
+                <button onClick={() => printAgentFicha(selected)} className="px-4 py-2 rounded-lg text-sm font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors flex items-center gap-1.5">
+                  <FileText className="h-3.5 w-3.5" /> Ficha del Vigilante
+                </button>
                 <button onClick={() => setTransferTarget(selected)} className="px-4 py-2 rounded-lg text-sm font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors flex items-center gap-1.5">
                   <ArrowRightLeft className="h-3.5 w-3.5" /> Transferir
                 </button>
@@ -1696,6 +1707,35 @@ function EvidenceGallery({
   const [note, setNote] = useState("");
   const agentInput = useRef<HTMLInputElement>(null);
   const weaponInput = useRef<HTMLInputElement>(null);
+  const licenseInput = useRef<HTMLInputElement>(null);
+
+  const uploadLicense = async (file: File) => {
+    setBusy(true);
+    try {
+      const url = await applyWatermark(file, {
+        text: "SOLO PARA CONSULTA",
+        subText: `${person.name || person.employeeCode} · Lic. ${person.licenseNumber || "—"}`,
+      });
+      const saved = await personnelApi.update(person.id, {
+        licensePhoto: url,
+        licensePhotoUploadedAt: new Date().toISOString(),
+        licensePhotoUploadedBy: userName,
+      } as any);
+      onUpdated(saved);
+    } catch (e) {
+      console.error(e);
+      alert("Error al subir la licencia: " + (e as any)?.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeLicense = async () => {
+    if (!confirm("¿Eliminar la foto de la licencia?")) return;
+    const saved = await personnelApi.update(person.id, { licensePhoto: "" } as any);
+    onUpdated(saved);
+  };
+
 
   const upload = async (kind: "agent" | "weapon", file: File) => {
     setBusy(true);
@@ -1811,6 +1851,36 @@ function EvidenceGallery({
         {block("agent", "Fotos del agente", person.agentPhotos || [])}
         {block("weapon", "Fotos del arma", person.weaponPhotos || [])}
       </div>
+
+      {/* Licencia del arma con marca de agua */}
+      <div className="rounded-lg border border-border p-3">
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-xs font-semibold text-card-foreground uppercase tracking-wider flex items-center gap-1">
+            <IdCard className="h-3.5 w-3.5" /> Licencia del arma
+          </h4>
+          <button
+            onClick={() => licenseInput.current?.click()}
+            disabled={busy}
+            className="text-xs px-2 py-1 rounded bg-gold text-charcoal-dark font-semibold disabled:opacity-50"
+          >
+            {person.licensePhoto ? "Reemplazar" : "+ Subir"}
+          </button>
+        </div>
+        {person.licensePhoto ? (
+          <div className="relative inline-block group">
+            <img src={person.licensePhoto} alt="Licencia" className="max-h-40 rounded border border-border" />
+            <div className="text-[9px] text-muted-foreground mt-1">
+              {person.licensePhotoUploadedAt ? new Date(person.licensePhotoUploadedAt).toLocaleString("es-DO") : ""} · por {person.licensePhotoUploadedBy || "—"}
+            </div>
+            <button onClick={removeLicense} className="absolute top-1 right-1 hidden group-hover:flex p-1 rounded bg-destructive/80 text-white">
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        ) : (
+          <p className="text-[11px] text-muted-foreground">Sube la foto de la licencia. Se marcará con "SOLO PARA CONSULTA".</p>
+        )}
+      </div>
+
       <input
         ref={agentInput}
         type="file"
@@ -1824,6 +1894,13 @@ function EvidenceGallery({
         accept=".jpg,.jpeg,.png"
         className="hidden"
         onChange={(e) => e.target.files?.[0] && upload("weapon", e.target.files[0])}
+      />
+      <input
+        ref={licenseInput}
+        type="file"
+        accept=".jpg,.jpeg,.png"
+        className="hidden"
+        onChange={(e) => e.target.files?.[0] && uploadLicense(e.target.files[0])}
       />
     </div>
   );

@@ -7,8 +7,9 @@ import type { ArmedPersonnel } from "@/lib/types";
 import { buildPostsFromPersonnel, groupPostsHierarchy, type DerivedPost } from "@/lib/derivedPosts";
 import {
   Building2, ChevronDown, ChevronRight, MapPin, Shield, Users, UserCheck,
-  Crosshair, ArrowRightLeft,
+  Crosshair, ArrowRightLeft, FileText,
 } from "lucide-react";
+import { printPostFicha } from "@/lib/ficha";
 
 const conditionColor = (c: string) => {
   if (c?.includes("buenas") || c === "En condiciones") return "bg-emerald-50 text-emerald-700";
@@ -40,6 +41,11 @@ function PostCard({ post, onSelectAgent, onTransfer }: {
 
       {open && (
         <div className="border-t border-border p-4 space-y-3 bg-muted/20">
+          <div className="flex justify-end">
+            <button onClick={() => printPostFicha(post)} className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 font-medium transition-colors">
+              <FileText className="h-3.5 w-3.5" /> Ficha del Puesto
+            </button>
+          </div>
           {/* Agentes del puesto */}
           <div>
             <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1"><Users className="h-3 w-3" /> Agentes ({post.agents.length})</p>
