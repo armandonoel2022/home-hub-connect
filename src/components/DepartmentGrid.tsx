@@ -374,7 +374,14 @@ const DepartmentGrid = () => {
         {departmentsMeta.map((dept) => {
           const Icon = dept.icon;
           const leaderUser = activeUsers.find((u) => u.department === dept.name && u.isDepartmentLeader);
-          const teamMembers = activeUsers.filter((u) => u.department === dept.name && !u.isDepartmentLeader);
+          // El equipo se define por quién se reporta al líder (no solo por departamento)
+          const teamMembers = activeUsers.filter(
+            (u) => u.department === dept.name && u.id !== leaderUser?.id && leaderUser && u.reportsTo === leaderUser.id
+          );
+          // Colaboradores del departamento que aún no se reportan a este líder (asignables)
+          const assignableMembers = activeUsers.filter(
+            (u) => u.department === dept.name && u.id !== leaderUser?.id && !u.isDepartmentLeader && u.reportsTo !== leaderUser?.id
+          );
           const exEmployees = inactiveUsers.filter((u) => u.department === dept.name);
           const reportsToUser = leaderUser?.reportsTo ? allUsers.find((u) => u.id === leaderUser.reportsTo) : null;
           const isLeaderOrAdmin = user?.isAdmin || (user?.isDepartmentLeader && user?.department === dept.name);
