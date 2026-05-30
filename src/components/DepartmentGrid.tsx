@@ -435,22 +435,32 @@ const DepartmentGrid = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {departmentsMeta.map((dept) => {
           const Icon = dept.icon;
-          const leaderUser = activeUsers.find((u) => u.department === dept.name && u.isDepartmentLeader);
-          // El equipo se define SOLO por la línea de reporte (reportsTo), sin importar el departamento
-          const teamMembers = activeUsers.filter(
-            (u) => leaderUser && u.id !== leaderUser.id && u.reportsTo === leaderUser.id
-          );
-          // Personal que aún no se reporta a este líder (asignable). Se prioriza el mismo departamento.
-          const assignableMembers = activeUsers
-            .filter((u) => leaderUser && u.id !== leaderUser.id && u.reportsTo !== leaderUser.id)
-            .sort((a, b) => {
-              const aDept = a.department === dept.name ? 0 : 1;
-              const bDept = b.department === dept.name ? 0 : 1;
-              if (aDept !== bDept) return aDept - bDept;
-              return a.fullName.localeCompare(b.fullName);
-            });
+          // Miembros activos de este departamento (fuente: RRHH + intranet)
+          const deptMembers = activeMembers.filter((m) => m.dashboardDept === dept.name);
+          const leaderMember = deptMembers.find((m) => m.isLeader) || null;
+          // El equipo muestra TODO el personal activo del departamento (excepto el líder),
+          // más quienes reportan a este líder aunque sean de otro departamento.
+          const teamMembers = activeMembers
+            .filter(
+              (m) =>
+                (!leaderMember || m.key !== leaderMember.key) &&
+                (m.dashboardDept === dept.name || (leaderMember && m.reportsTo === leaderMember.key))
+            )
+            .sort((a, b) => a.fullName.localeCompare(b.fullName));
+          // Personal de otros departamentos asignable a este líder.
+          const assignableMembers = activeMembers
+            .filter(
+              (m) =>
+                leaderMember &&
+                m.key !== leaderMember.key &&
+                m.dashboardDept !== dept.name &&
+                m.reportsTo !== leaderMember.key
+            )
+            .sort((a, b) => a.fullName.localeCompare(b.fullName));
           const exEmployees = inactiveUsers.filter((u) => u.department === dept.name);
-          const reportsToUser = leaderUser?.reportsTo ? allUsers.find((u) => u.id === leaderUser.reportsTo) : null;
+          const reportsToUser = leaderMember?.reportsTo
+            ? activeMembers.find((m) => m.key === leaderMember.reportsTo) || null
+            : null;
           const isLeaderOrAdmin = user?.isAdmin || (user?.isDepartmentLeader && user?.department === dept.name);
           return (
             <div key={dept.name} className="card-department group border-2 relative" style={{ borderColor: "hsl(220 15% 30%)" }} id={`dept-${dept.name.toLowerCase().replace(/\s+/g, "-")}`}>
