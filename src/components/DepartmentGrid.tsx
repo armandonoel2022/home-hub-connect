@@ -833,9 +833,10 @@ const DepartmentGrid = () => {
 
       {/* Leader Modal */}
       {showLeader && (() => {
-        const leaderUser = allUsers.find((u) => u.department === showLeader.name && u.isDepartmentLeader);
-        const leader = leaderUser
-          ? { name: leaderUser.fullName, position: leaderUser.position, photo: leaderUser.photoUrl, fleetPhone: leaderUser.fleetPhone || "", email: leaderUser.email }
+        const leaderMem = activeMembers.find((m) => m.dashboardDept === showLeader.name && m.isLeader);
+        const leaderAcct = leaderMem?.intranetUserId ? allUsers.find((u) => u.id === leaderMem.intranetUserId) : undefined;
+        const leader = leaderMem
+          ? { name: leaderMem.fullName, position: leaderMem.position, photo: leaderMem.photoUrl || "", fleetPhone: leaderAcct?.fleetPhone || "", email: leaderAcct?.email || "—" }
           : { name: "Sin asignar", position: "—", photo: "", fleetPhone: "", email: "—" };
         return (
           <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
