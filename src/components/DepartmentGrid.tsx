@@ -556,7 +556,7 @@ const DepartmentGrid = () => {
                       Equipo de Trabajo
                     </span>
                     <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gold/20 gold-accent-text">
-                      {teamMembers.length + (leaderUser ? 1 : 0)}
+                      {teamMembers.length + (leaderMember ? 1 : 0)}
                     </span>
                   </button>
                   <button
