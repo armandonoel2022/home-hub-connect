@@ -24,6 +24,15 @@ export interface PostWeaponAssignment {
   capsulas: number | null;
   estatus: string;
   notes?: string;
+  photos?: PostWeaponPhoto[];      // varias fotos por arma
+  assignedGuardIds?: string[];     // agentes que custodian esta arma
+}
+
+export interface PostWeaponPhoto {
+  id: string;
+  url: string;
+  uploadedAt: string;
+  uploadedBy?: string;
 }
 
 export interface PostHandoverEntry {
@@ -194,6 +203,42 @@ export function removeWeapon(postId: string, weaponId: string) {
   const post = list.find((p) => p.id === postId);
   if (!post) return;
   post.weapons = post.weapons.filter((w) => w.id !== weaponId);
+  post.updatedAt = new Date().toISOString();
+  persist(list);
+}
+
+export function addWeaponPhoto(postId: string, weaponId: string, url: string, uploadedBy?: string) {
+  const list = loadPosts();
+  const post = list.find((p) => p.id === postId);
+  if (!post) return;
+  const weapon = post.weapons.find((w) => w.id === weaponId);
+  if (!weapon) return;
+  weapon.photos = [
+    ...(weapon.photos || []),
+    { id: uid("WPH"), url, uploadedAt: new Date().toISOString(), uploadedBy },
+  ];
+  post.updatedAt = new Date().toISOString();
+  persist(list);
+}
+
+export function removeWeaponPhoto(postId: string, weaponId: string, photoId: string) {
+  const list = loadPosts();
+  const post = list.find((p) => p.id === postId);
+  if (!post) return;
+  const weapon = post.weapons.find((w) => w.id === weaponId);
+  if (!weapon) return;
+  weapon.photos = (weapon.photos || []).filter((ph) => ph.id !== photoId);
+  post.updatedAt = new Date().toISOString();
+  persist(list);
+}
+
+export function setWeaponGuards(postId: string, weaponId: string, guardIds: string[]) {
+  const list = loadPosts();
+  const post = list.find((p) => p.id === postId);
+  if (!post) return;
+  const weapon = post.weapons.find((w) => w.id === weaponId);
+  if (!weapon) return;
+  weapon.assignedGuardIds = guardIds;
   post.updatedAt = new Date().toISOString();
   persist(list);
 }

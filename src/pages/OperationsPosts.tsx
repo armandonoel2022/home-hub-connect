@@ -15,11 +15,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   loadPosts, createPost, updatePost, deletePost,
   addGuard, removeGuard, addWeapon, removeWeapon, recordHandover,
-  type WorkPost, type Shift,
+  addWeaponPhoto, removeWeaponPhoto, setWeaponGuards,
+  type WorkPost, type Shift, type PostWeaponAssignment, type PostGuardAssignment,
 } from "@/lib/postsData";
 import {
   MapPin, Shield, Users, Plus, Trash2, ArrowLeft, RefreshCw, ExternalLink,
-  Building2, UserCheck, Crosshair, History,
+  Building2, UserCheck, Crosshair, History, Image as ImageIcon, X,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -223,6 +224,8 @@ function PostDetailDialog({
   onChanged: () => void;
 }) {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const uploaderName = user?.fullName || "Operaciones";
   const [supervisorId, setSupervisorId] = useState(post.supervisorId || "");
   const [gerente, setGerente] = useState(post.gerenteOperaciones || "");
   const [newGuard, setNewGuard] = useState({ guardName: "", shift: "Diurno" as Shift, isLead: false });
@@ -337,16 +340,14 @@ function PostDetailDialog({
             </h3>
             <div className="space-y-2">
               {post.weapons.map((w) => (
-                <div key={w.id} className="flex items-center gap-2 p-2 border rounded text-sm">
-                  <span className="flex-1">
-                    {w.arma} · {w.marca} · <span className="font-mono">{w.serial}</span>
-                  </span>
-                  <Badge variant="outline" className="text-[10px]">{w.capsulas ?? "?"} cáps.</Badge>
-                  <Badge variant="outline" className="text-[10px]">{w.estatus || "—"}</Badge>
-                  <Button variant="ghost" size="icon" onClick={() => { removeWeapon(post.id, w.id); onChanged(); }}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
+                <WeaponCard
+                  key={w.id}
+                  postId={post.id}
+                  weapon={w}
+                  guards={post.guards}
+                  uploadedBy={uploaderName}
+                  onChanged={onChanged}
+                />
               ))}
             </div>
             <div className="mt-2 grid grid-cols-2 md:grid-cols-6 gap-2">
@@ -449,6 +450,122 @@ function PostDetailDialog({
     </Dialog>
   );
 }
+
+// ─── Tarjeta de arma: fotos múltiples + agentes asignados ───
+function WeaponCard({
+  postId, weapon, guards, uploadedBy, onChanged,
+}: {
+  postId: string;
+  weapon: PostWeaponAssignment;
+  guards: PostGuardAssignment[];
+  uploadedBy: string;
+  onChanged: () => void;
+}) {
+  const { toast } = useToast();
+  const photos = weapon.photos || [];
+  const assigned = weapon.assignedGuardIds || [];
+
+  const handleFiles = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const url = ev.target?.result as string;
+        if (url) {
+          addWeaponPhoto(postId, weapon.id, url, uploadedBy);
+          onChanged();
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const toggleGuard = (guardId: string) => {
+    const next = assigned.includes(guardId)
+      ? assigned.filter((id) => id !== guardId)
+      : [...assigned, guardId];
+    setWeaponGuards(postId, weapon.id, next);
+    onChanged();
+  };
+
+  return (
+    <div className="p-3 border rounded space-y-2">
+      <div className="flex items-center gap-2 text-sm">
+        <span className="flex-1">
+          {weapon.arma} · {weapon.marca} · <span className="font-mono">{weapon.serial}</span>
+        </span>
+        <Badge variant="outline" className="text-[10px]">{weapon.capsulas ?? "?"} cáps.</Badge>
+        <Badge variant="outline" className="text-[10px]">{weapon.estatus || "—"}</Badge>
+        <Button variant="ghost" size="icon" onClick={() => { removeWeapon(postId, weapon.id); onChanged(); }}>
+          <Trash2 className="h-4 w-4 text-destructive" />
+        </Button>
+      </div>
+
+      {/* Agentes que custodian el arma */}
+      <div>
+        <Label className="text-[11px] text-muted-foreground flex items-center gap-1 mb-1">
+          <UserCheck className="h-3 w-3" /> Agentes asignados a esta arma
+        </Label>
+        {guards.length === 0 ? (
+          <p className="text-[11px] text-muted-foreground">Agrega vigilantes al puesto para asignarlos.</p>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {guards.map((g) => {
+              const active = assigned.includes(g.id);
+              return (
+                <button
+                  key={g.id}
+                  type="button"
+                  onClick={() => toggleGuard(g.id)}
+                  className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${
+                    active ? "bg-primary text-primary-foreground border-primary" : "bg-muted/40 hover:bg-muted"
+                  }`}
+                >
+                  {g.guardName}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Galería de fotos del arma */}
+      <div>
+        <Label className="text-[11px] text-muted-foreground flex items-center gap-1 mb-1">
+          <ImageIcon className="h-3 w-3" /> Fotos del arma ({photos.length})
+        </Label>
+        <div className="flex flex-wrap gap-2">
+          {photos.map((ph) => (
+            <div key={ph.id} className="relative group">
+              <a href={ph.url} target="_blank" rel="noopener noreferrer">
+                <img src={ph.url} alt="Arma" className="w-16 h-16 object-cover rounded border" />
+              </a>
+              <button
+                type="button"
+                onClick={() => { removeWeaponPhoto(postId, weapon.id, ph.id); onChanged(); }}
+                className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+          <label className="w-16 h-16 flex items-center justify-center rounded border border-dashed cursor-pointer hover:bg-muted/50">
+            <Plus className="h-5 w-5 text-muted-foreground" />
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => { handleFiles(e.target.files); toast({ title: "Foto(s) agregada(s)" }); e.target.value = ""; }}
+            />
+          </label>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 
 function CreatePostDialog({ onClose, onCreate }: { onClose: () => void; onCreate: (i: Partial<WorkPost>) => void }) {
   const [form, setForm] = useState({ cliente: "", nombre: "", provincia: "", coordenada: "" });
