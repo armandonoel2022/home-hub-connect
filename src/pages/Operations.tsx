@@ -941,9 +941,9 @@ const OperationsPage = () => {
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
                 <h1 className="font-heading font-bold text-2xl text-secondary-foreground">
-                  Personal <span className="gold-accent-text">Armado</span>
+                  Operaciones — Personal <span className="gold-accent-text">Armado</span> y Puestos
                 </h1>
-                <p className="text-muted-foreground text-sm mt-1">Control operativo — {totalCount} registros</p>
+                <p className="text-muted-foreground text-sm mt-1">Control operativo unificado — {totalCount} registros</p>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 {/* View mode tabs */}
