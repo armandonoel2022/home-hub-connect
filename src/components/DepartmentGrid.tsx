@@ -374,14 +374,19 @@ const DepartmentGrid = () => {
         {departmentsMeta.map((dept) => {
           const Icon = dept.icon;
           const leaderUser = activeUsers.find((u) => u.department === dept.name && u.isDepartmentLeader);
-          // El equipo se define por quién se reporta al líder (no solo por departamento)
+          // El equipo se define SOLO por la línea de reporte (reportsTo), sin importar el departamento
           const teamMembers = activeUsers.filter(
-            (u) => u.department === dept.name && u.id !== leaderUser?.id && leaderUser && u.reportsTo === leaderUser.id
+            (u) => leaderUser && u.id !== leaderUser.id && u.reportsTo === leaderUser.id
           );
-          // Colaboradores del departamento que aún no se reportan a este líder (asignables)
-          const assignableMembers = activeUsers.filter(
-            (u) => u.department === dept.name && u.id !== leaderUser?.id && !u.isDepartmentLeader && u.reportsTo !== leaderUser?.id
-          );
+          // Personal que aún no se reporta a este líder (asignable). Se prioriza el mismo departamento.
+          const assignableMembers = activeUsers
+            .filter((u) => leaderUser && u.id !== leaderUser.id && u.reportsTo !== leaderUser.id)
+            .sort((a, b) => {
+              const aDept = a.department === dept.name ? 0 : 1;
+              const bDept = b.department === dept.name ? 0 : 1;
+              if (aDept !== bDept) return aDept - bDept;
+              return a.fullName.localeCompare(b.fullName);
+            });
           const exEmployees = inactiveUsers.filter((u) => u.department === dept.name);
           const reportsToUser = leaderUser?.reportsTo ? allUsers.find((u) => u.id === leaderUser.reportsTo) : null;
           const isLeaderOrAdmin = user?.isAdmin || (user?.isDepartmentLeader && user?.department === dept.name);
