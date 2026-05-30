@@ -24,6 +24,15 @@ export interface PostWeaponAssignment {
   capsulas: number | null;
   estatus: string;
   notes?: string;
+  photos?: PostWeaponPhoto[];      // varias fotos por arma
+  assignedGuardIds?: string[];     // agentes que custodian esta arma
+}
+
+export interface PostWeaponPhoto {
+  id: string;
+  url: string;
+  uploadedAt: string;
+  uploadedBy?: string;
 }
 
 export interface PostHandoverEntry {
