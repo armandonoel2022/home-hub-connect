@@ -20,7 +20,7 @@ import {
 } from "@/lib/postsData";
 import {
   MapPin, Shield, Users, Plus, Trash2, ArrowLeft, RefreshCw, ExternalLink,
-  Building2, UserCheck, Crosshair, History,
+  Building2, UserCheck, Crosshair, History, Image as ImageIcon, X,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
