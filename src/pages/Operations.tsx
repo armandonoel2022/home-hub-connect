@@ -4,11 +4,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useArmedPersonnel } from "@/hooks/useApiHooks";
 import { personnelApi } from "@/lib/api";
 import type { ArmedPersonnel, PersonnelTransfer, ShiftType } from "@/lib/types";
-import { Search, Plus, User, MapPin, X, Phone, Upload, Image, Lock, Trash2, Pencil, Map, List, AlertTriangle, BarChart3, ArrowRightLeft, History, Shield, ChevronDown, ChevronRight, Clock, Package, FileSpreadsheet, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Search, Plus, User, MapPin, X, Phone, Upload, Image, Lock, Trash2, Pencil, Map, List, AlertTriangle, BarChart3, ArrowRightLeft, History, Shield, ChevronDown, ChevronRight, Clock, Package, FileSpreadsheet, AlertCircle, CheckCircle2, Building2 } from "lucide-react";
 import { parseArmedPersonnelXlsx, type ImportRow } from "@/lib/armedPersonnelXlsxImport";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { loadFixedAssets, type FixedAsset } from "@/lib/fixedAssetsData";
 import { buildWeaponAssetMap, getLinkingStats, type LinkedWeaponAsset } from "@/lib/weaponAssetLinking";
+import { buildPostsFromPersonnel } from "@/lib/derivedPosts";
+import PostsView from "@/components/operations/PostsView";
 
 
 const statusColors: Record<string, string> = {
@@ -116,6 +118,15 @@ function PersonnelDashboard({ personnel, onFilter, onAssign }: { personnel: Arme
     ];
   }, [personnel]);
 
+  // Métricas por puesto (derivadas del personal armado)
+  const posts = useMemo(() => buildPostsFromPersonnel(personnel), [personnel]);
+  const byPostAgents = useMemo(
+    () => posts
+      .map((p) => ({ name: `${p.cliente} — ${p.nombre}`, value: p.agents.length, weapons: p.weapons.length }))
+      .sort((a, b) => b.value - a.value),
+    [posts]
+  );
+
   // Locations with no assigned personnel (posts without a name)
   const unfilledPosts = useMemo(() => {
     return personnel.filter(p => !p.name || p.name.trim() === "");
@@ -201,6 +212,23 @@ function PersonnelDashboard({ personnel, onFilter, onAssign }: { personnel: Arme
           </ResponsiveContainer>
         </div>
       </div>
+
+      {/* Per-Post metrics */}
+      <div className="bg-card border border-border rounded-xl p-4">
+        <h3 className="font-heading font-semibold text-sm text-card-foreground mb-1">Agentes y Armas por Puesto (Top 12)</h3>
+        <p className="text-xs text-muted-foreground mb-3">{byPostAgents.length} puestos activos derivados del personal armado</p>
+        <ResponsiveContainer width="100%" height={Math.max(220, Math.min(byPostAgents.length, 12) * 28)}>
+          <BarChart data={byPostAgents.slice(0, 12)} layout="vertical">
+            <XAxis type="number" fontSize={10} allowDecimals={false} />
+            <YAxis type="category" dataKey="name" width={200} fontSize={9} />
+            <Tooltip />
+            <Bar dataKey="value" name="Agentes" fill="#3b82f6" radius={[0, 4, 4, 0]} className="cursor-pointer" onClick={(entry: any) => onFilter?.({ search: String(entry.name).split(" — ")[0] })} />
+            <Bar dataKey="weapons" name="Armas" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+
 
       {/* Weapon Types */}
       <div className="bg-card border border-border rounded-xl p-4">
@@ -541,7 +569,7 @@ const OperationsPage = () => {
   const [form, setForm] = useState<Partial<ArmedPersonnel>>({ status: "Activo" });
   const [photoPreview, setPhotoPreview] = useState<string>("");
   const [weaponPhotoPreview, setWeaponPhotoPreview] = useState<string>("");
-  const [viewMode, setViewMode] = useState<"dashboard" | "list" | "map">("dashboard");
+  const [viewMode, setViewMode] = useState<"dashboard" | "puestos" | "list" | "map">("dashboard");
   const [filterProvince, setFilterProvince] = useState("");
   const [filterCondition, setFilterCondition] = useState("");
   const [transferTarget, setTransferTarget] = useState<ArmedPersonnel | null>(null);
@@ -913,19 +941,20 @@ const OperationsPage = () => {
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
                 <h1 className="font-heading font-bold text-2xl text-secondary-foreground">
-                  Personal <span className="gold-accent-text">Armado</span>
+                  Operaciones — Personal <span className="gold-accent-text">Armado</span> y Puestos
                 </h1>
-                <p className="text-muted-foreground text-sm mt-1">Control operativo — {totalCount} registros</p>
+                <p className="text-muted-foreground text-sm mt-1">Control operativo unificado — {totalCount} registros</p>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 {/* View mode tabs */}
-                {(["dashboard", "list", "map"] as const).map(mode => (
+                {(["dashboard", "puestos", "list", "map"] as const).map(mode => (
                   <button key={mode} onClick={() => setViewMode(mode)}
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${viewMode === mode ? "bg-primary text-primary-foreground" : "bg-muted text-card-foreground hover:bg-border"}`}>
                     {mode === "dashboard" && <BarChart3 className="h-4 w-4" />}
+                    {mode === "puestos" && <Building2 className="h-4 w-4" />}
                     {mode === "list" && <List className="h-4 w-4" />}
                     {mode === "map" && <Map className="h-4 w-4" />}
-                    {mode === "dashboard" ? "Dashboard" : mode === "list" ? "Lista" : "Mapa"}
+                    {mode === "dashboard" ? "Dashboard" : mode === "puestos" ? "Puestos" : mode === "list" ? "Lista" : "Mapa"}
                   </button>
                 ))}
                 <button onClick={() => setShowTransferLog(!showTransferLog)}
@@ -1025,7 +1054,25 @@ const OperationsPage = () => {
           </div>
         )}
 
+        {/* PUESTOS VIEW */}
+        {viewMode === "puestos" && (
+          <div className="px-6 py-4 space-y-4">
+            <div className="relative flex-1 min-w-[200px] max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input type="text" placeholder="Buscar puesto, cliente, supervisor, agente..." value={search} onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-card border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" />
+            </div>
+            <PostsView
+              personnel={personnel}
+              search={search}
+              onSelectAgent={(p) => setSelected(p)}
+              onTransfer={(p) => setTransferTarget(p)}
+            />
+          </div>
+        )}
+
         {/* MAP VIEW */}
+
         {viewMode === "map" && (
           <div className="px-6 py-4">
             <PersonnelMap personnel={filtered} onTransfer={(p) => setTransferTarget(p)} />
