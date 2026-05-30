@@ -41,6 +41,11 @@ function PostCard({ post, onSelectAgent, onTransfer }: {
 
       {open && (
         <div className="border-t border-border p-4 space-y-3 bg-muted/20">
+          <div className="flex justify-end">
+            <button onClick={() => printPostFicha(post)} className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 font-medium transition-colors">
+              <FileText className="h-3.5 w-3.5" /> Ficha del Puesto
+            </button>
+          </div>
           {/* Agentes del puesto */}
           <div>
             <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1"><Users className="h-3 w-3" /> Agentes ({post.agents.length})</p>
