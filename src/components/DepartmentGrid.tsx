@@ -397,10 +397,13 @@ const DepartmentGrid = () => {
 
   // Asignar un colaborador al líder del departamento (persistente en RRHH)
   const assignToLeader = async (member: DeptMember, leader: DeptMember) => {
-    const leaderCode = leader.employeeCode || leader.key;
-    if (member.employeeCode) await patchEmployee(member.employeeCode, { reportsToCode: leaderCode });
-    if (member.intranetUserId && leader.intranetUserId) {
-      await updateUser(member.intranetUserId, { reportsTo: leader.intranetUserId });
+    // Clave canónica del líder: funciona tanto si es empleado de RRHH como usuario de intranet.
+    const leaderKey = leader.employeeCode || leader.key;
+    if (member.employeeCode) await patchEmployee(member.employeeCode, { reportsToCode: leaderKey });
+    if (member.intranetUserId) {
+      // Si el líder tiene cuenta de intranet usamos su id USR; si solo existe en RRHH
+      // guardamos su clave directamente para que el vínculo se resuelva igual.
+      await updateUser(member.intranetUserId, { reportsTo: leader.intranetUserId || leaderKey });
     }
     toast({ title: "Personal asignado", description: `${member.fullName} ahora se reporta a este líder.` });
   };
