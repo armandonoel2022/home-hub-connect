@@ -558,6 +558,44 @@ const DepartmentGrid = () => {
                         </div>
                         <span className="font-semibold text-card-foreground">{leaderUser.fullName}</span>
                         <span className="text-gold text-[10px] font-medium ml-auto">Líder</span>
+                        {user?.isAdmin && (
+                          <button
+                            onClick={() => setShowLeaderEdit(showLeaderEdit === dept.name ? null : dept.name)}
+                            className="p-1 rounded hover:bg-gold/20 gold-accent-text transition-all"
+                            title="Cambiar líder del departamento"
+                          >
+                            <Settings className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Admin: cambiar / asignar líder del departamento desde el personal activo */}
+                    {user?.isAdmin && (!leaderUser || showLeaderEdit === dept.name) && (
+                      <div className="rounded-lg bg-muted/40 px-3 py-2 space-y-1">
+                        <div className="flex items-center gap-2 text-[11px] font-semibold text-card-foreground">
+                          <Shield className="h-3 w-3 text-gold" />
+                          {leaderUser ? "Cambiar líder del departamento" : "Asignar líder del departamento"}
+                        </div>
+                        <select
+                          value={leaderUser?.id || ""}
+                          onChange={(e) => e.target.value && changeLeader(dept.name, e.target.value, leaderUser?.id)}
+                          className="w-full text-[11px] rounded-md border border-border bg-background px-2 py-1.5 text-card-foreground"
+                        >
+                          <option value="">Seleccionar empleado activo…</option>
+                          {activeUsers
+                            .slice()
+                            .sort((a, b) => a.fullName.localeCompare(b.fullName))
+                            .map((u) => (
+                              <option key={u.id} value={u.id}>
+                                {u.fullName} — {u.department}
+                                {u.employeeCode ? ` (${u.employeeCode})` : ""}
+                              </option>
+                            ))}
+                        </select>
+                        <p className="text-[10px] text-muted-foreground">
+                          Se alimenta del listado de empleados activos de Recursos Humanos.
+                        </p>
                       </div>
                     )}
                     {teamMembers.map((m) => (
