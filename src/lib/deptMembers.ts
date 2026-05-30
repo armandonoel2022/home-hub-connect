@@ -44,14 +44,14 @@ export function nameSignature(name?: string): string {
   return `${tokens[0]}|${tokens[tokens.length - 1]}`;
 }
 
-function significantNameTokens(name?: string): string[] {
+export function significantNameTokens(name?: string): string[] {
   return normalizeText(name)
     .replace(/[^a-z0-9ñ\s]/g, " ")
     .split(/\s+/)
     .filter((token) => token.length > 1);
 }
 
-function isLikelySamePerson(shortName?: string, legalName?: string, shortDept?: string, legalDept?: string): boolean {
+export function isLikelySamePerson(shortName?: string, legalName?: string, shortDept?: string, legalDept?: string): boolean {
   const shortTokens = significantNameTokens(shortName);
   const legalTokens = significantNameTokens(legalName);
   const legalTokenSet = new Set(legalTokens);
