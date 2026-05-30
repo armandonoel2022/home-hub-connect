@@ -57,7 +57,7 @@ import PayrollExtrasPage from "./pages/PayrollExtras";
 import HRBirthdays from "./pages/HRBirthdays";
 import OperationsInventory from "./pages/OperationsInventory";
 import OperationsMaintenanceMatrix from "./pages/OperationsMaintenanceMatrix";
-import OperationsPosts from "./pages/OperationsPosts";
+
 import AuditConsolidated from "./pages/AuditConsolidated";
 import PhotoSync from "./pages/PhotoSync";
 import MyHRRequests from "./pages/MyHRRequests";
