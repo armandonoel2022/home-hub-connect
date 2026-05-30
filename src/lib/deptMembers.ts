@@ -156,11 +156,13 @@ export function buildDeptMembers(
   intranetUsers.forEach((u) => {
     if (usedUserIds.has(u.id)) return;
     if (u.employeeStatus === "Inactivo") return;
-    // reportsTo de intranet es un id USR; lo traducimos a la clave del líder
+    // reportsTo de intranet puede ser un id USR (lo traducimos a la clave del líder)
+    // o directamente la clave del líder (código de empleado de RRHH) cuando el líder
+    // no tiene cuenta de intranet. En ese caso se usa tal cual.
     let reportsToKey: string | undefined;
     if (u.reportsTo) {
       const leader = intranetUsers.find((x) => x.id === u.reportsTo);
-      reportsToKey = leader?.employeeCode || leader?.id;
+      reportsToKey = leader ? leader.employeeCode || leader.id : u.reportsTo;
     }
     members.push({
       key: u.employeeCode || u.id,
