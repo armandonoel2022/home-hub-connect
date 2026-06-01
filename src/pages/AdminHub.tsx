@@ -159,6 +159,82 @@ const AdminHub = () => {
     );
   }
 
+  // ── Device registrations view ──
+  if (showDevices) {
+    const refreshDevices = () => setDeviceRegs(getDeviceRegistrations());
+    const ackDevice = (id: string) => { acknowledgeDeviceRegistration(id); refreshDevices(); };
+    const sorted = [...deviceRegs].sort((a, b) => Number(a.acknowledged) - Number(b.acknowledged) || (b.registeredAt > a.registeredAt ? 1 : -1));
+    return (
+      <AppLayout>
+        <Navbar />
+        <main className="flex-1 bg-background min-h-screen">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+            <Button variant="ghost" onClick={() => setShowDevices(false)} className="mb-4 gap-2">
+              <ArrowLeft className="h-4 w-4" /> Volver al Hub
+            </Button>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 rounded-xl bg-primary/15 text-primary">
+                <HardDrive className="h-6 w-6" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">Registros de Dispositivos</h1>
+                <p className="text-sm text-muted-foreground">Altas de Flota Celular e Inventario IT (PRO-IT-05)</p>
+              </div>
+            </div>
+
+            {sorted.length === 0 ? (
+              <div className="border rounded-xl p-12 bg-card text-center text-muted-foreground">
+                <Package className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                Aún no hay dispositivos registrados.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {sorted.map((r) => {
+                  const Icon = r.source === "Flota Celular" ? Smartphone : HardDrive;
+                  return (
+                    <div key={r.id} className={cn("border rounded-xl p-4 bg-card", !r.acknowledged && "border-primary/50 ring-1 ring-primary/20")}>
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className="shrink-0 h-9 w-9 rounded-lg bg-muted flex items-center justify-center">
+                          <Icon className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-sm text-foreground truncate">{r.deviceType} · {r.brand} {r.model}</p>
+                          <p className="text-xs text-muted-foreground truncate">{r.source}</p>
+                        </div>
+                        {!r.acknowledged && <Badge className="text-[10px]">Nuevo</Badge>}
+                      </div>
+                      <div className="text-xs text-muted-foreground space-y-1">
+                        <p>Serie: <span className="text-foreground">{r.serial || "—"}</span></p>
+                        {r.imei && <p>IMEI: <span className="text-foreground">{r.imei}</span></p>}
+                        <p>Estado: <span className="text-foreground">{r.status}</span></p>
+                        <p>Asignado a: <span className="text-foreground">{r.assignedTo || r.department || "Sin asignar"}</span></p>
+                        <p>Registrado por {r.registeredBy} — {format(new Date(r.registeredAt), "dd MMM yyyy HH:mm", { locale: es })}</p>
+                        {(r.evidence?.length || 0) > 0 && (
+                          <span className="inline-flex items-center gap-1 text-emerald-600"><Paperclip className="h-3 w-3" /> Constancia adjunta</span>
+                        )}
+                      </div>
+                      <div className="mt-3 flex justify-end gap-2">
+                        <Button size="sm" variant="outline" onClick={() => navigate(r.source === "Flota Celular" ? "/flota-celular" : "/inventario")} className="h-8 text-xs">
+                          Abrir módulo
+                        </Button>
+                        {!r.acknowledged && (
+                          <Button size="sm" onClick={() => ackDevice(r.id)} className="h-8 text-xs">
+                            <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Revisado
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </main>
+        <Footer />
+      </AppLayout>
+    );
+  }
+
   // ── Process detail view ──
   if (selectedProcess) {
     const proc = selectedProcess;
