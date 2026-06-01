@@ -16,7 +16,10 @@
     "birthdayMMDD": "09-25",
     "cedula": "001-0077331-6",
     "tssRegistered": true,
-    "tssRegisteredAt": "2026-01-01T00:00:00.000Z"
+    "tssRegisteredAt": "2026-01-01T00:00:00.000Z",
+    "isDeptLeader": true,
+    "dashboardDept": "Gerencia General",
+    "reportsToCode": ""
   },
   {
     "employeeCode": "532",
@@ -35,7 +38,10 @@
     "birthdayMMDD": "10-14",
     "cedula": "001-1275026-0",
     "tssRegistered": true,
-    "tssRegisteredAt": "2026-01-01T00:00:00.000Z"
+    "tssRegisteredAt": "2026-01-01T00:00:00.000Z",
+    "isDeptLeader": true,
+    "dashboardDept": "Administración",
+    "reportsToCode": "531"
   },
   {
     "employeeCode": "538",
@@ -73,7 +79,8 @@
     "birthdayMMDD": "08-26",
     "cedula": "001-1296921-7",
     "tssRegistered": true,
-    "tssRegisteredAt": "2026-01-01T00:00:00.000Z"
+    "tssRegisteredAt": "2026-01-01T00:00:00.000Z",
+    "reportsToCode": "532"
   },
   {
     "employeeCode": "1520",
@@ -92,7 +99,10 @@
     "birthdayMMDD": "05-24",
     "cedula": "001-1760507-1",
     "tssRegistered": true,
-    "tssRegisteredAt": "2026-01-01T00:00:00.000Z"
+    "tssRegisteredAt": "2026-01-01T00:00:00.000Z",
+    "isDeptLeader": true,
+    "dashboardDept": "Cuentas por Cobrar",
+    "reportsToCode": "532"
   },
   {
     "employeeCode": "1923",
@@ -111,7 +121,10 @@
     "birthdayMMDD": "08-23",
     "cedula": "402-2289638-9",
     "tssRegistered": true,
-    "tssRegisteredAt": "2026-01-01T00:00:00.000Z"
+    "tssRegisteredAt": "2026-01-01T00:00:00.000Z",
+    "isDeptLeader": true,
+    "dashboardDept": "Gerencia Comercial",
+    "reportsToCode": "531"
   },
   {
     "employeeCode": "1967",
@@ -130,7 +143,10 @@
     "birthdayMMDD": "10-18",
     "cedula": "003-0118174-9",
     "tssRegistered": true,
-    "tssRegisteredAt": "2026-01-01T00:00:00.000Z"
+    "tssRegisteredAt": "2026-01-01T00:00:00.000Z",
+    "isDeptLeader": true,
+    "dashboardDept": "Contabilidad",
+    "reportsToCode": "532"
   },
   {
     "employeeCode": "2413",
@@ -149,7 +165,8 @@
     "birthdayMMDD": "11-19",
     "cedula": "004-0023546-1",
     "tssRegistered": true,
-    "tssRegisteredAt": "2026-01-01T00:00:00.000Z"
+    "tssRegisteredAt": "2026-01-01T00:00:00.000Z",
+    "reportsToCode": "532"
   },
   {
     "employeeCode": "3029",
@@ -168,7 +185,10 @@
     "birthdayMMDD": "05-22",
     "cedula": "402-3779272-2",
     "tssRegistered": true,
-    "tssRegisteredAt": "2026-01-01T00:00:00.000Z"
+    "tssRegisteredAt": "2026-01-01T00:00:00.000Z",
+    "isDeptLeader": true,
+    "dashboardDept": "Calidad",
+    "reportsToCode": "1923"
   },
   {
     "employeeCode": "3696",
@@ -187,7 +207,8 @@
     "birthdayMMDD": "05-31",
     "cedula": "402-2517108-7",
     "tssRegistered": true,
-    "tssRegisteredAt": "2026-01-01T00:00:00.000Z"
+    "tssRegisteredAt": "2026-01-01T00:00:00.000Z",
+    "reportsToCode": "1923"
   },
   {
     "employeeCode": "3760",
@@ -206,7 +227,10 @@
     "birthdayMMDD": "07-30",
     "cedula": "402-4224592-2",
     "tssRegistered": true,
-    "tssRegisteredAt": "2026-01-01T00:00:00.000Z"
+    "tssRegisteredAt": "2026-01-01T00:00:00.000Z",
+    "isDeptLeader": true,
+    "dashboardDept": "Servicio al Cliente",
+    "reportsToCode": "1923"
   },
   {
     "employeeCode": "3868",
@@ -225,7 +249,10 @@
     "birthdayMMDD": "02-09",
     "cedula": "001-1630607-7",
     "tssRegistered": true,
-    "tssRegisteredAt": "2026-01-01T00:00:00.000Z"
+    "tssRegisteredAt": "2026-01-01T00:00:00.000Z",
+    "isDeptLeader": true,
+    "dashboardDept": "Recursos Humanos",
+    "reportsToCode": "1923"
   },
   {
     "employeeCode": "3895",
@@ -244,7 +271,10 @@
     "birthdayMMDD": "08-25",
     "cedula": "001-0151641-7",
     "tssRegistered": true,
-    "tssRegisteredAt": "2026-01-01T00:00:00.000Z"
+    "tssRegisteredAt": "2026-01-01T00:00:00.000Z",
+    "isDeptLeader": true,
+    "dashboardDept": "Operaciones",
+    "reportsToCode": "1923"
   },
   {
     "employeeCode": "3898",
@@ -263,7 +293,10 @@
     "birthdayMMDD": "08-15",
     "cedula": "223-0018154-6",
     "tssRegistered": true,
-    "tssRegisteredAt": "2026-01-01T00:00:00.000Z"
+    "tssRegisteredAt": "2026-01-01T00:00:00.000Z",
+    "isDeptLeader": true,
+    "dashboardDept": "Tecnología y Monitoreo",
+    "reportsToCode": "1923"
   },
   {
     "employeeCode": "3904",
@@ -282,7 +315,8 @@
     "birthdayMMDD": "03-26",
     "cedula": "402-2120248-0",
     "tssRegistered": true,
-    "tssRegisteredAt": "2026-01-01T00:00:00.000Z"
+    "tssRegisteredAt": "2026-01-01T00:00:00.000Z",
+    "reportsToCode": "3868"
   },
   {
     "employeeCode": "3905",
@@ -301,7 +335,8 @@
     "birthdayMMDD": "11-11",
     "cedula": "223-0110625-2",
     "tssRegistered": true,
-    "tssRegisteredAt": "2026-01-01T00:00:00.000Z"
+    "tssRegisteredAt": "2026-01-01T00:00:00.000Z",
+    "reportsToCode": "3868"
   },
   {
     "employeeCode": "3908",
@@ -320,7 +355,10 @@
     "birthdayMMDD": "06-21",
     "cedula": "001-1445682-5",
     "tssRegistered": true,
-    "tssRegisteredAt": "2026-01-01T00:00:00.000Z"
+    "tssRegisteredAt": "2026-01-01T00:00:00.000Z",
+    "isDeptLeader": true,
+    "dashboardDept": "Seguridad Electrónica",
+    "reportsToCode": "1923"
   },
   {
     "employeeCode": "3942",
@@ -339,7 +377,8 @@
     "birthdayMMDD": "12-09",
     "cedula": "001-0783719-7",
     "tssRegistered": true,
-    "tssRegisteredAt": "2026-01-01T00:00:00.000Z"
+    "tssRegisteredAt": "2026-01-01T00:00:00.000Z",
+    "reportsToCode": "3895"
   },
   {
     "employeeCode": "3951",
@@ -396,7 +435,8 @@
     "birthdayMMDD": "07-19",
     "cedula": "026-0107419-4",
     "tssRegistered": true,
-    "tssRegisteredAt": "2026-01-01T00:00:00.000Z"
+    "tssRegisteredAt": "2026-01-01T00:00:00.000Z",
+    "reportsToCode": "3868"
   },
   {
     "employeeCode": "4032",
@@ -430,7 +470,8 @@
     "birthdayMMDD": "02-25",
     "cedula": "402-2911579-1",
     "tssRegistered": true,
-    "tssRegisteredAt": "2026-01-01T00:00:00.000Z"
+    "tssRegisteredAt": "2026-01-01T00:00:00.000Z",
+    "reportsToCode": "3898"
   },
   {
     "employeeCode": "1745",
@@ -544,7 +585,8 @@
     "birthdayMMDD": "10-27",
     "cedula": "225-0086488-3",
     "tssRegistered": true,
-    "tssRegisteredAt": "2026-01-01T00:00:00.000Z"
+    "tssRegisteredAt": "2026-01-01T00:00:00.000Z",
+    "reportsToCode": "3898"
   },
   {
     "employeeCode": "3599",
@@ -620,7 +662,8 @@
     "birthdayMMDD": "08-17",
     "cedula": "001-1945552-5",
     "tssRegistered": true,
-    "tssRegisteredAt": "2026-01-01T00:00:00.000Z"
+    "tssRegisteredAt": "2026-01-01T00:00:00.000Z",
+    "reportsToCode": "3898"
   },
   {
     "employeeCode": "3751",
@@ -639,7 +682,8 @@
     "birthdayMMDD": "07-14",
     "cedula": "402-3309103-8",
     "tssRegistered": true,
-    "tssRegisteredAt": "2026-01-01T00:00:00.000Z"
+    "tssRegisteredAt": "2026-01-01T00:00:00.000Z",
+    "reportsToCode": "3898"
   },
   {
     "employeeCode": "3792",
