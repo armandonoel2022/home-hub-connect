@@ -50,6 +50,7 @@ const isFullModule = (procName: string) => FULL_MODULE_PROCESSES.has(procName);
 
 const AdminHub = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const { toast } = useToast();
 
