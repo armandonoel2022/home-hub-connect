@@ -125,8 +125,11 @@ const PhoneFleetPage = () => {
   };
 
   const handleGenerateSheet = async (p: PhoneDevice) => {
-    if (!p.assignedTo) { toast.error("Asigna el dispositivo a un empleado primero"); return; }
-    const emp = activeUsers.find((u) => u.fullName === p.assignedTo);
+    if (!p.assignedTo && !p.department) {
+      toast.error("Asigna el dispositivo a un empleado o departamento primero");
+      return;
+    }
+    const emp = p.assignedTo ? activeUsers.find((u) => u.fullName === p.assignedTo) : undefined;
     await generateAssignmentSheetPDF({
       deviceId: p.id,
       source: "Flota Celular",
@@ -134,7 +137,7 @@ const PhoneFleetPage = () => {
       brand: p.brand, model: p.model, serial: p.serial, imei: p.imei,
       color: p.color, storage: p.storage, ram: p.ram, phoneNumber: p.phoneNumber,
       acquisitionDate: p.acquisitionDate,
-      employeeName: p.assignedTo,
+      employeeName: p.assignedTo || undefined,
       employeeCode: p.assignedToCode || emp?.employeeCode,
       department: p.department || emp?.department,
       position: emp?.position,
