@@ -359,7 +359,92 @@ const PhoneFleetPage = () => {
             </div>
           </div>
         )}
+
+        {detail && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setDetail(null)}>
+            <div className="bg-card rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-5 border-b border-border">
+                <div className="flex items-center gap-2">
+                  {detail.deviceType === "Tablet" ? <Tablet className="h-5 w-5 text-gold" /> : <Smartphone className="h-5 w-5 text-gold" />}
+                  <h2 className="font-heading font-bold text-lg text-card-foreground">{detail.brand} {detail.model}</h2>
+                </div>
+                <button onClick={() => setDetail(null)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
+              </div>
+              <div className="p-5 space-y-4">
+                <div>
+                  <span className={`text-xs font-semibold px-2 py-1 rounded-full ${phoneStatusColors[detail.status] || "bg-gray-100 text-gray-500"}`}>{detail.status}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                  {[
+                    ["ID inventario", detail.id],
+                    ["Tipo", detail.deviceType || "Celular"],
+                    ["Marca", detail.brand || "—"],
+                    ["Modelo", detail.model || "—"],
+                    ["IMEI", detail.imei || "—"],
+                    ["Serie", detail.serial || "—"],
+                    ["Color", detail.color || "—"],
+                    ["Almacenamiento", detail.storage || "—"],
+                    ["RAM", detail.ram || "—"],
+                    ["Línea telefónica", detail.phoneNumber || "—"],
+                    ["Fecha de adquisición", detail.acquisitionDate || "—"],
+                    ["Fecha de asignación", detail.assignedDate || "—"],
+                  ].map(([k, v]) => (
+                    <div key={k}>
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{k}</p>
+                      <p className="text-card-foreground font-medium">{v}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="rounded-lg border border-border bg-muted/30 p-4">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Asignación</p>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                    <div>
+                      <p className="text-[11px] text-muted-foreground">Asignado a</p>
+                      <p className="text-card-foreground font-medium">{detail.assignedTo || "Sin asignar"}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-muted-foreground">Código empleado</p>
+                      <p className="text-card-foreground font-medium">{detail.assignedToCode || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-muted-foreground">Departamento</p>
+                      <p className="text-card-foreground font-medium">{detail.department || "—"}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {detail.notes && (
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Notas</p>
+                    <p className="text-sm text-card-foreground">{detail.notes}</p>
+                  </div>
+                )}
+
+                {(detail.assignmentEvidence?.length || 0) > 0 && (
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">Constancias firmadas</p>
+                    <div className="space-y-1">
+                      {detail.assignmentEvidence!.map((ev, i) => (
+                        <a key={i} href={ev.fileUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-emerald-700 hover:underline">
+                          <Paperclip className="h-3.5 w-3.5" /> {ev.fileName || `Constancia ${i + 1}`}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              {canManage && (
+                <div className="p-5 border-t border-border flex gap-3 justify-end flex-wrap">
+                  <button onClick={() => handleGenerateSheet(detail)} className="px-4 py-2.5 rounded-lg text-sm font-medium border border-border hover:bg-muted transition-colors flex items-center gap-2"><FileText className="h-4 w-4" /> Generar hoja</button>
+                  <button onClick={() => { const d = detail; setDetail(null); openEdit(d); }} className="btn-gold text-sm flex items-center gap-2"><Pencil className="h-4 w-4" /> Editar</button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
+
     </AppLayout>
   );
 };
