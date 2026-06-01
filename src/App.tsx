@@ -13,6 +13,7 @@ import BirthdayOverlay from "@/components/BirthdayOverlay";
 import PanicButton from "@/components/PanicButton";
 import NotificationOverlay from "@/components/NotificationOverlay";
 import HRNotificationOverlay from "@/components/HRNotificationOverlay";
+import DeviceRegisterOverlay from "@/components/DeviceRegisterOverlay";
 import Index from "./pages/Index";
 import Tickets from "./pages/Tickets";
 import Inventory from "./pages/Inventory";
