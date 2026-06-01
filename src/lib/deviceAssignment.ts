@@ -56,7 +56,8 @@ export interface AssignmentSheetData {
   ram?: string;
   phoneNumber?: string;
   acquisitionDate?: string;
-  employeeName: string;
+  /** Nombre del colaborador receptor (opcional si se entrega a un departamento) */
+  employeeName?: string;
   employeeCode?: string;
   department?: string;
   position?: string;
