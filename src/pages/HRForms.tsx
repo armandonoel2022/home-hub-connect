@@ -214,11 +214,13 @@ const HRForms = () => {
     let loanDetails: any = null;
     if (isLoan) {
       const settingsPre = getLoanSettings();
-      if (!resolvedHireDate) {
+      // RRHH puede solicitar a nombre de otro aunque no cumpla la antigüedad mínima.
+      const rrhhOnBehalf = isRRHH && !!beneficiary;
+      if (!resolvedHireDate && !rrhhOnBehalf) {
         toast({ title: "Falta fecha de ingreso", description: "No se pudo verificar la antigüedad del empleado. Contacta a RRHH para actualizar su fecha de ingreso.", variant: "destructive" });
         return;
       }
-      if (tenureMonths < settingsPre.minTenureMonths) {
+      if (tenureMonths < settingsPre.minTenureMonths && !rrhhOnBehalf) {
         toast({
           title: "Antigüedad insuficiente",
           description: `Se requieren al menos ${settingsPre.minTenureMonths} meses de antigüedad para solicitar un préstamo. Antigüedad actual: ${tenureMonths} mes${tenureMonths === 1 ? "" : "es"}.`,
@@ -229,6 +231,7 @@ const HRForms = () => {
       const amount = Number((formData["Monto Solicitado (RD$)"] || "").replace(/[^\d.]/g, ""));
       const termMonths = Number(formData["Plazo de Pago (meses)"]) || 0;
       const salary = Number(formData["Salario Mensual (RD$)"]) || findEmployeeSalary(effectiveRequester?.fullName || "");
+      const frequency: LoanFrequency = (formData["Frecuencia de descuento"] || "").toLowerCase().includes("quincen") ? "quincenal" : "mensual";
       if (!amount || amount <= 0) {
         toast({ title: "Monto requerido", description: "Indica el monto del préstamo solicitado.", variant: "destructive" });
         return;
@@ -243,11 +246,12 @@ const HRForms = () => {
       }
       const settings = getLoanSettings();
       const capacity = calcLoanCapacity(salary, resolvedHireDate, settings.maxInstallmentFraction);
-      const installment = calcMonthlyInstallment(amount, termMonths, settings.annualInterestRatePct);
-      if (installment > capacity.maxInstallment && capacity.maxInstallment > 0) {
+      const plan = calcLoanPlan(amount, termMonths, settings.annualInterestRatePct, frequency);
+      const maxInstallment = maxInstallmentByFrequency(salary, frequency, settings.maxInstallmentFraction);
+      if (plan.installment > maxInstallment && maxInstallment > 0) {
         toast({
-          title: "Cuota excede 1/6 del salario",
-          description: `Cuota calculada RD$${installment.toLocaleString()} > máximo RD$${capacity.maxInstallment.toLocaleString()}. Ajusta el plazo o el monto.`,
+          title: `Cuota excede 1/6 del ingreso ${frequency}`,
+          description: `Cuota ${frequency} RD$${plan.installment.toLocaleString()} > máximo RD$${maxInstallment.toLocaleString()}. Ajusta el plazo o el monto.`,
           variant: "destructive",
         });
         return;
@@ -266,11 +270,17 @@ const HRForms = () => {
         amountRequested: amount,
         termMonths,
         annualInterestRatePct: settings.annualInterestRatePct,
-        monthlyInstallment: installment,
+        monthlyInstallment: plan.installment,
         calculatedMaxAvailable: capacity.maxAvailable,
-        maxInstallment: capacity.maxInstallment,
+        maxInstallment,
         isOverPolicy: overPolicy,
         overrideJustification: formData["Justificación de excepción"] || undefined,
+        frequency,
+        installmentsTotal: plan.installments,
+        totalInterest: plan.totalInterest,
+        totalToPay: plan.totalToPay,
+        tenureExceptionByRRHH: rrhhOnBehalf && tenureMonths < settingsPre.minTenureMonths,
+        payments: [],
       };
     }
 
