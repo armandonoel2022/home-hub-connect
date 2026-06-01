@@ -190,16 +190,24 @@ export async function generateAssignmentSheetPDF(
   y += 4;
   pdf.setFontSize(8.5);
   pdf.setTextColor(40, 40, 40);
-  pdf.text(`${data.employeeName}`, 20, y);
+  pdf.text(`${data.employeeName || data.department || "Departamento solicitante"}`, 20, y);
   pdf.text(`${data.deliveredBy || "Tecnología y Monitoreo"}`, 20 + colW + 4, y);
   y += 4;
   pdf.setTextColor(110, 110, 110);
-  pdf.text("Firma del colaborador (recibe)", 20, y);
+  pdf.text(hasEmployee ? "Firma del colaborador (recibe)" : "Firma del responsable del departamento", 20, y);
   pdf.text("Firma responsable de entrega", 20 + colW + 4, y);
 
-  const fileName = opts?.fileName || `Hoja_Asignacion_${(data.employeeName || "empleado").replace(/\s+/g, "_")}_${data.deviceId}.pdf`;
+  const fileName = opts?.fileName || `Hoja_Asignacion_${(data.employeeName || data.department || "equipo").replace(/\s+/g, "_")}_${data.deviceId}.pdf`;
   if (opts?.open) {
-    pdf.output("dataurlnewwindow");
+    // Abrir en una pestaña nueva de forma fiable (evita bloqueos de "dataurlnewwindow").
+    const blob = pdf.output("blob");
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, "_blank");
+    if (!win) {
+      // Si el navegador bloquea la ventana, descargamos el PDF como respaldo.
+      pdf.save(fileName);
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
   } else {
     pdf.save(fileName);
   }
