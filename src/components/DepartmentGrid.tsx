@@ -52,7 +52,7 @@ interface DeptFolder {
   id: string;
   name: string;
   department: string;
-  files: { id: string; name: string; size: string; uploadedAt: string; uploadedBy?: string }[];
+  files: { id: string; name: string; size: string; uploadedAt: string; uploadedBy?: string; fileUrl?: string }[];
 }
 
 interface DepartmentMeta {
