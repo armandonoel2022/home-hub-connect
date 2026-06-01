@@ -1,30 +1,32 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePhones } from "@/hooks/useApiHooks";
-import type { PhoneDevice, PhoneStatus } from "@/lib/types";
+import type { PhoneDevice, PhoneStatus, MobileDeviceType } from "@/lib/types";
 import { DEPARTMENTS } from "@/lib/types";
-import { Search, Plus, Smartphone, X, Trash2 } from "lucide-react";
-
-const statusColors: Record<PhoneStatus, string> = {
-  Activo: "bg-emerald-50 text-emerald-700",
-  Disponible: "bg-blue-50 text-blue-700",
-  "En Reparación": "bg-amber-50 text-amber-700",
-  "Dado de Baja": "bg-gray-100 text-gray-500",
-};
+import {
+  PHONE_STATUSES, phoneStatusColors, generateAssignmentSheetPDF,
+  addDeviceRegistration, readFileAsDataUrl,
+} from "@/lib/deviceAssignment";
+import { Search, Plus, Smartphone, Tablet, X, Trash2, Pencil, FileText, Upload, Paperclip } from "lucide-react";
+import { toast } from "sonner";
 
 const ALLOWED_DEPARTMENTS = [
   "Tecnología y Monitoreo", "Administración", "Gerencia", "Gerencia General", "Gerencia Comercial",
 ];
 
-const PhoneFleetPage = () => {
-  const { user } = useAuth();
-  const { data: phones, setData: setPhones, create: createPhone, remove: removePhone } = usePhones();
-  const [search, setSearch] = useState("");
-  const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState<Partial<PhoneDevice>>({ status: "Disponible" });
+const emptyForm: Partial<PhoneDevice> = { status: "En Stock", deviceType: "Celular" };
 
-  // Access control: only IT, Admin, and Management
+const PhoneFleetPage = () => {
+  const { user, activeUsers } = useAuth();
+  const { data: phones, setData: setPhones, create: createPhone, update: updatePhone } = usePhones();
+  const [search, setSearch] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<Partial<PhoneDevice>>(emptyForm);
+  const evidenceTarget = useRef<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+
   const hasAccess = user?.isAdmin || ALLOWED_DEPARTMENTS.includes(user?.department || "");
   if (!hasAccess) {
     return (
@@ -40,10 +42,9 @@ const PhoneFleetPage = () => {
     );
   }
 
-  // Non-admins only see their own assigned phone
-  const userPhones = user?.isAdmin
-    ? phones
-    : phones.filter((p) => p.assignedTo === user?.fullName);
+  const canManage = !!user?.isAdmin || user?.department === "Tecnología y Monitoreo";
+
+  const userPhones = canManage ? phones : phones.filter((p) => p.assignedTo === user?.fullName);
 
   const filtered = userPhones.filter(
     (p) =>
@@ -54,28 +55,115 @@ const PhoneFleetPage = () => {
       (p.assignedTo || "").toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleAdd = () => {
-    if (!form.imei || !form.serial || !form.brand || !form.model) return;
-    const newP: PhoneDevice = {
-      id: `PH-${String(phones.length + 1).padStart(3, "0")}`,
-      imei: form.imei || "",
-      serial: form.serial || "",
-      brand: form.brand || "",
-      model: form.model || "",
-      status: (form.status as PhoneStatus) || "Disponible",
-      assignedTo: form.assignedTo || null,
-      department: form.department || null,
-      acquisitionDate: form.acquisitionDate || new Date().toISOString().split("T")[0],
-      phoneNumber: form.phoneNumber || "",
-      notes: form.notes || "",
-    };
-    setPhones([newP, ...phones]);
-    setShowAdd(false);
-    setForm({ status: "Disponible" });
+  const openAdd = () => { setEditingId(null); setForm(emptyForm); setShowForm(true); };
+  const openEdit = (p: PhoneDevice) => { setEditingId(p.id); setForm({ ...p }); setShowForm(true); };
+
+  const onPickEmployee = (name: string) => {
+    const emp = activeUsers.find((u) => u.fullName === name);
+    setForm((f) => ({
+      ...f,
+      assignedTo: name || null,
+      assignedToCode: emp?.employeeCode,
+      department: emp?.department || f.department || null,
+      status: name ? (f.status === "En Stock" ? "Asignado" : f.status) : f.status,
+    }));
+  };
+
+  const handleSave = async () => {
+    if (!form.brand || !form.model || !form.serial) {
+      toast.error("Marca, modelo y serie son obligatorios");
+      return;
+    }
+    if (editingId) {
+      const updated = { ...form, assignedDate: form.assignedTo && !form.assignedDate ? new Date().toISOString().split("T")[0] : form.assignedDate } as Partial<PhoneDevice>;
+      setPhones((prev) => prev.map((p) => (p.id === editingId ? { ...p, ...updated } as PhoneDevice : p)));
+      try { await updatePhone(editingId, updated); } catch { /* local mode */ }
+      toast.success("Dispositivo actualizado");
+    } else {
+      const id = `PH-${String(Date.now()).slice(-6)}`;
+      const newP: PhoneDevice = {
+        id,
+        deviceType: (form.deviceType as MobileDeviceType) || "Celular",
+        imei: form.imei || "",
+        serial: form.serial || "",
+        brand: form.brand || "",
+        model: form.model || "",
+        status: (form.status as PhoneStatus) || "En Stock",
+        assignedTo: form.assignedTo || null,
+        assignedToCode: form.assignedToCode,
+        department: form.department || null,
+        acquisitionDate: form.acquisitionDate || new Date().toISOString().split("T")[0],
+        assignedDate: form.assignedTo ? new Date().toISOString().split("T")[0] : undefined,
+        phoneNumber: form.phoneNumber || "",
+        color: form.color || "",
+        storage: form.storage || "",
+        ram: form.ram || "",
+        notes: form.notes || "",
+        assignmentEvidence: [],
+      };
+      setPhones((prev) => [newP, ...prev]);
+      try { await createPhone(newP); } catch { /* local mode */ }
+      // Disparar overlay/registro para Chrisnel
+      addDeviceRegistration({
+        deviceId: id,
+        source: "Flota Celular",
+        deviceType: newP.deviceType || "Celular",
+        brand: newP.brand,
+        model: newP.model,
+        serial: newP.serial,
+        imei: newP.imei,
+        status: newP.status,
+        assignedTo: newP.assignedTo,
+        department: newP.department,
+        registeredBy: user?.fullName || "Tecnología",
+      });
+      toast.success("Dispositivo registrado · Notificado a Administración");
+    }
+    setShowForm(false);
+    setForm(emptyForm);
+    setEditingId(null);
+  };
+
+  const handleGenerateSheet = async (p: PhoneDevice) => {
+    if (!p.assignedTo) { toast.error("Asigna el dispositivo a un empleado primero"); return; }
+    const emp = activeUsers.find((u) => u.fullName === p.assignedTo);
+    await generateAssignmentSheetPDF({
+      deviceId: p.id,
+      source: "Flota Celular",
+      deviceType: p.deviceType || "Celular",
+      brand: p.brand, model: p.model, serial: p.serial, imei: p.imei,
+      color: p.color, storage: p.storage, ram: p.ram, phoneNumber: p.phoneNumber,
+      acquisitionDate: p.acquisitionDate,
+      employeeName: p.assignedTo,
+      employeeCode: p.assignedToCode || emp?.employeeCode,
+      department: p.department || emp?.department,
+      position: emp?.position,
+      deliveredBy: user?.fullName,
+    }, { open: true });
+  };
+
+  const triggerUpload = (id: string) => { evidenceTarget.current = id; fileInput.current?.click(); };
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const id = evidenceTarget.current;
+    if (!file || !id) return;
+    const dataUrl = await readFileAsDataUrl(file);
+    const evidence = { fileUrl: dataUrl, fileName: file.name, uploadedAt: new Date().toISOString(), uploadedBy: user?.fullName };
+    setPhones((prev) => prev.map((p) => p.id === id ? { ...p, assignmentEvidence: [...(p.assignmentEvidence || []), evidence] } : p));
+    try { const target = phones.find(p => p.id === id); await updatePhone(id, { assignmentEvidence: [...(target?.assignmentEvidence || []), evidence] }); } catch { /* local */ }
+    toast.success("Constancia firmada cargada");
+    if (fileInput.current) fileInput.current.value = "";
+  };
+
+  const handleDelete = (p: PhoneDevice) => {
+    if (window.confirm(`¿Eliminar dispositivo ${p.id}: ${p.brand} ${p.model}?`)) {
+      setPhones((prev) => prev.filter((ph) => ph.id !== p.id));
+    }
   };
 
   return (
     <AppLayout>
+      <input ref={fileInput} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={handleUpload} />
       <div className="min-h-screen">
         <div className="nav-corporate">
           <div className="gold-bar" />
@@ -85,12 +173,11 @@ const PhoneFleetPage = () => {
                 <h1 className="font-heading font-bold text-2xl text-secondary-foreground">
                   Flota <span className="gold-accent-text">Celular</span>
                 </h1>
-                <p className="text-muted-foreground text-sm mt-1">Registro de dispositivos móviles corporativos</p>
+                <p className="text-muted-foreground text-sm mt-1">Celulares y tablets corporativos · Procedimiento PRO-IT-05</p>
               </div>
-              {user?.isAdmin && (
-                <button onClick={() => setShowAdd(true)} className="btn-gold flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  Agregar Dispositivo
+              {canManage && (
+                <button onClick={openAdd} className="btn-gold flex items-center gap-2">
+                  <Plus className="h-4 w-4" /> Agregar Dispositivo
                 </button>
               )}
             </div>
@@ -116,7 +203,7 @@ const PhoneFleetPage = () => {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
-                    {["ID", "Marca / Modelo", "IMEI", "Serial", "Nro. Teléfono", "Estado", "Asignado a", "Departamento", "Adquisición", ...(user?.isAdmin ? [""] : [])].map((h, i) => (
+                    {["Tipo", "Marca / Modelo", "IMEI / Serie", "Especif.", "Línea", "Estado", "Asignado a", "Depto.", "Constancia", ...(canManage ? [""] : [])].map((h, i) => (
                       <th key={`${h}-${i}`} className="text-left px-4 py-3 font-heading font-semibold text-muted-foreground text-xs uppercase tracking-wider whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -124,37 +211,41 @@ const PhoneFleetPage = () => {
                 <tbody>
                   {filtered.map((p) => (
                     <tr key={p.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{p.id}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <Smartphone className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium text-card-foreground">{p.brand} {p.model}</span>
+                          {p.deviceType === "Tablet" ? <Tablet className="h-4 w-4 text-muted-foreground" /> : <Smartphone className="h-4 w-4 text-muted-foreground" />}
+                          <span className="text-xs">{p.deviceType || "Celular"}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs">{p.imei}</td>
-                      <td className="px-4 py-3 font-mono text-xs">{p.serial}</td>
+                      <td className="px-4 py-3"><span className="font-medium text-card-foreground">{p.brand} {p.model}</span></td>
+                      <td className="px-4 py-3 font-mono text-[11px]">
+                        <div>{p.imei || "—"}</div>
+                        <div className="text-muted-foreground">{p.serial}</div>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        {[p.color, p.storage, p.ram].filter(Boolean).join(" · ") || "—"}
+                      </td>
                       <td className="px-4 py-3">{p.phoneNumber || "—"}</td>
                       <td className="px-4 py-3">
-                        <span className={`text-xs font-semibold px-2 py-1 rounded-full ${statusColors[p.status]}`}>
-                          {p.status}
-                        </span>
+                        <span className={`text-xs font-semibold px-2 py-1 rounded-full ${phoneStatusColors[p.status] || "bg-gray-100 text-gray-500"}`}>{p.status}</span>
                       </td>
                       <td className="px-4 py-3">{p.assignedTo || "—"}</td>
-                      <td className="px-4 py-3">{p.department || "—"}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{p.acquisitionDate}</td>
-                      {user?.isAdmin && (
+                      <td className="px-4 py-3 text-xs">{p.department || "—"}</td>
+                      <td className="px-4 py-3">
+                        {(p.assignmentEvidence?.length || 0) > 0 ? (
+                          <a href={p.assignmentEvidence![p.assignmentEvidence!.length - 1].fileUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-emerald-700">
+                            <Paperclip className="h-3.5 w-3.5" /> {p.assignmentEvidence!.length}
+                          </a>
+                        ) : <span className="text-xs text-muted-foreground">—</span>}
+                      </td>
+                      {canManage && (
                         <td className="px-4 py-3">
-                          <button
-                            onClick={() => {
-                              if (window.confirm(`¿Eliminar dispositivo ${p.id}: ${p.brand} ${p.model}?`)) {
-                                setPhones((prev) => prev.filter((ph) => ph.id !== p.id));
-                              }
-                            }}
-                            className="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
-                            title="Eliminar"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          <div className="flex items-center gap-1">
+                            <button onClick={() => handleGenerateSheet(p)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-gold" title="Generar hoja de asignación"><FileText className="h-4 w-4" /></button>
+                            <button onClick={() => triggerUpload(p.id)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-emerald-600" title="Subir constancia firmada"><Upload className="h-4 w-4" /></button>
+                            <button onClick={() => openEdit(p)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-blue-600" title="Editar"><Pencil className="h-4 w-4" /></button>
+                            <button onClick={() => handleDelete(p)} className="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600" title="Eliminar"><Trash2 className="h-4 w-4" /></button>
+                          </div>
                         </td>
                       )}
                     </tr>
@@ -168,34 +259,62 @@ const PhoneFleetPage = () => {
           </div>
         </div>
 
-        {/* Add Modal */}
-        {showAdd && (
+        {showForm && (
           <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
             <div className="bg-card rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
               <div className="flex items-center justify-between p-5 border-b border-border">
-                <h2 className="font-heading font-bold text-lg text-card-foreground">Agregar Dispositivo Móvil</h2>
-                <button onClick={() => setShowAdd(false)} className="p-1 hover:bg-muted rounded-lg">
-                  <X className="h-5 w-5 text-muted-foreground" />
-                </button>
+                <h2 className="font-heading font-bold text-lg text-card-foreground">{editingId ? "Editar Dispositivo" : "Agregar Dispositivo Móvil"}</h2>
+                <button onClick={() => setShowForm(false)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
               </div>
               <div className="p-5 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
+                    <label className="text-sm font-medium text-card-foreground block mb-1.5">Tipo *</label>
+                    <select value={form.deviceType || "Celular"} onChange={(e) => setForm({ ...form, deviceType: e.target.value as MobileDeviceType })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none">
+                      <option value="Celular">Celular</option>
+                      <option value="Tablet">Tablet</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-card-foreground block mb-1.5">Estado</label>
+                    <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as PhoneStatus })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none">
+                      {PHONE_STATUSES.map((s) => <option key={s}>{s}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
                     <label className="text-sm font-medium text-card-foreground block mb-1.5">Marca *</label>
-                    <input type="text" value={form.brand || ""} onChange={(e) => setForm({ ...form, brand: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" placeholder="Samsung, iPhone, etc." />
+                    <input type="text" value={form.brand || ""} onChange={(e) => setForm({ ...form, brand: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" placeholder="Samsung, Apple..." />
                   </div>
                   <div>
                     <label className="text-sm font-medium text-card-foreground block mb-1.5">Modelo *</label>
-                    <input type="text" value={form.model || ""} onChange={(e) => setForm({ ...form, model: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" placeholder="Galaxy A54, iPhone 15, etc." />
+                    <input type="text" value={form.model || ""} onChange={(e) => setForm({ ...form, model: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" placeholder="Galaxy A54..." />
                   </div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-card-foreground block mb-1.5">IMEI *</label>
-                  <input type="text" value={form.imei || ""} onChange={(e) => setForm({ ...form, imei: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" placeholder="15 dígitos" maxLength={15} />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-card-foreground block mb-1.5">IMEI</label>
+                    <input type="text" value={form.imei || ""} onChange={(e) => setForm({ ...form, imei: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" maxLength={20} />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-card-foreground block mb-1.5">Serie *</label>
+                    <input type="text" value={form.serial || ""} onChange={(e) => setForm({ ...form, serial: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" />
+                  </div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Serial *</label>
-                  <input type="text" value={form.serial || ""} onChange={(e) => setForm({ ...form, serial: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" />
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-card-foreground block mb-1.5">Color</label>
+                    <input type="text" value={form.color || ""} onChange={(e) => setForm({ ...form, color: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-card-foreground block mb-1.5">Almacen.</label>
+                    <input type="text" value={form.storage || ""} onChange={(e) => setForm({ ...form, storage: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" placeholder="128 GB" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-card-foreground block mb-1.5">RAM</label>
+                    <input type="text" value={form.ram || ""} onChange={(e) => setForm({ ...form, ram: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" placeholder="6 GB" />
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -203,37 +322,34 @@ const PhoneFleetPage = () => {
                     <input type="text" value={form.phoneNumber || ""} onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-card-foreground block mb-1.5">Estado</label>
-                    <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as PhoneStatus })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none">
-                      {(["Activo", "Disponible", "En Reparación", "Dado de Baja"] as PhoneStatus[]).map((s) => (
-                        <option key={s}>{s}</option>
-                      ))}
-                    </select>
+                    <label className="text-sm font-medium text-card-foreground block mb-1.5">Fecha de Adquisición</label>
+                    <input type="date" value={form.acquisitionDate || ""} onChange={(e) => setForm({ ...form, acquisitionDate: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-card-foreground block mb-1.5">Asignado a</label>
-                    <input type="text" value={form.assignedTo || ""} onChange={(e) => setForm({ ...form, assignedTo: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" />
+                    <label className="text-sm font-medium text-card-foreground block mb-1.5">Asignado a (empleado)</label>
+                    <select value={form.assignedTo || ""} onChange={(e) => onPickEmployee(e.target.value)} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none">
+                      <option value="">Sin asignar (In Stock)</option>
+                      {activeUsers.map((u) => <option key={u.id} value={u.fullName}>{u.fullName}</option>)}
+                    </select>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-card-foreground block mb-1.5">Departamento</label>
                     <select value={form.department || ""} onChange={(e) => setForm({ ...form, department: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none">
                       <option value="">Sin asignar</option>
-                      {DEPARTMENTS.map((d) => (
-                        <option key={d}>{d}</option>
-                      ))}
+                      {DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
                     </select>
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Fecha de Adquisición</label>
-                  <input type="date" value={form.acquisitionDate || ""} onChange={(e) => setForm({ ...form, acquisitionDate: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" />
+                  <label className="text-sm font-medium text-card-foreground block mb-1.5">Notas</label>
+                  <input type="text" value={form.notes || ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" />
                 </div>
               </div>
               <div className="p-5 border-t border-border flex gap-3 justify-end">
-                <button onClick={() => setShowAdd(false)} className="px-5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">Cancelar</button>
-                <button onClick={handleAdd} className="btn-gold text-sm">Agregar</button>
+                <button onClick={() => setShowForm(false)} className="px-5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">Cancelar</button>
+                <button onClick={handleSave} className="btn-gold text-sm">{editingId ? "Guardar" : "Agregar"}</button>
               </div>
             </div>
           </div>
