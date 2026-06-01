@@ -143,8 +143,11 @@ const InventoryPage = () => {
   };
 
   const handleGenerateSheet = async (e: Equipment) => {
-    if (!e.assignedTo) { toast.error("Asigna el equipo a un empleado primero"); return; }
-    const emp = activeUsers.find((u) => u.fullName === e.assignedTo);
+    if (!e.assignedTo && !e.department) {
+      toast.error("Asigna el equipo a un empleado o departamento primero");
+      return;
+    }
+    const emp = e.assignedTo ? activeUsers.find((u) => u.fullName === e.assignedTo) : undefined;
     await generateAssignmentSheetPDF({
       deviceId: e.id,
       source: "Inventario IT",
@@ -152,7 +155,7 @@ const InventoryPage = () => {
       brand: e.brand, model: e.model, serial: e.serial,
       color: e.color, storage: e.storage, ram: e.ram,
       acquisitionDate: e.acquisitionDate,
-      employeeName: e.assignedTo,
+      employeeName: e.assignedTo || undefined,
       employeeCode: e.assignedToCode || emp?.employeeCode,
       department: e.department || emp?.department,
       position: emp?.position,

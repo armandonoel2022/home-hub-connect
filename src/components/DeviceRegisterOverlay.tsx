@@ -110,7 +110,7 @@ const DeviceRegisterOverlay = () => {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => navigate("/admin/hub")}
+            onClick={() => navigate("/admin/hub?view=devices")}
             className="h-8 text-xs"
           >
             Ver en Admin Hub

@@ -56,7 +56,8 @@ export interface AssignmentSheetData {
   ram?: string;
   phoneNumber?: string;
   acquisitionDate?: string;
-  employeeName: string;
+  /** Nombre del colaborador receptor (opcional si se entrega a un departamento) */
+  employeeName?: string;
   employeeCode?: string;
   department?: string;
   position?: string;
@@ -111,17 +112,24 @@ export async function generateAssignmentSheetPDF(
   pdf.text(`Documento generado: ${new Date().toLocaleString("es-DO")}`, W / 2, y, { align: "center" });
   y += 8;
 
-  // Datos del colaborador
+  // Datos del receptor (colaborador o departamento solicitante)
+  const hasEmployee = !!(data.employeeName && data.employeeName.trim());
   autoTable(pdf, {
     startY: y,
     theme: "grid",
-    head: [["DATOS DEL COLABORADOR", ""]],
-    body: [
-      ["Nombre completo", data.employeeName || "—"],
-      ["Código de empleado", data.employeeCode || "—"],
-      ["Departamento", data.department || "—"],
-      ["Puesto / Posición", data.position || "—"],
-    ],
+    head: [[hasEmployee ? "DATOS DEL COLABORADOR" : "DEPARTAMENTO SOLICITANTE", ""]],
+    body: hasEmployee
+      ? [
+          ["Nombre completo", data.employeeName || "—"],
+          ["Código de empleado", data.employeeCode || "—"],
+          ["Departamento", data.department || "—"],
+          ["Puesto / Posición", data.position || "—"],
+        ]
+      : [
+          ["Departamento solicitante", data.department || "—"],
+          ["Responsable / Contacto", data.position || "Por asignar"],
+          ["Nota", "Equipo entregado al departamento; pendiente de asignación a un colaborador."],
+        ],
     headStyles: { fillColor: [30, 58, 95], textColor: 255, fontSize: 9 },
     columnStyles: { 0: { fontStyle: "bold", cellWidth: 55, fillColor: [245, 245, 245] } },
     styles: { fontSize: 9, cellPadding: 2 },
@@ -182,16 +190,24 @@ export async function generateAssignmentSheetPDF(
   y += 4;
   pdf.setFontSize(8.5);
   pdf.setTextColor(40, 40, 40);
-  pdf.text(`${data.employeeName}`, 20, y);
+  pdf.text(`${data.employeeName || data.department || "Departamento solicitante"}`, 20, y);
   pdf.text(`${data.deliveredBy || "Tecnología y Monitoreo"}`, 20 + colW + 4, y);
   y += 4;
   pdf.setTextColor(110, 110, 110);
-  pdf.text("Firma del colaborador (recibe)", 20, y);
+  pdf.text(hasEmployee ? "Firma del colaborador (recibe)" : "Firma del responsable del departamento", 20, y);
   pdf.text("Firma responsable de entrega", 20 + colW + 4, y);
 
-  const fileName = opts?.fileName || `Hoja_Asignacion_${(data.employeeName || "empleado").replace(/\s+/g, "_")}_${data.deviceId}.pdf`;
+  const fileName = opts?.fileName || `Hoja_Asignacion_${(data.employeeName || data.department || "equipo").replace(/\s+/g, "_")}_${data.deviceId}.pdf`;
   if (opts?.open) {
-    pdf.output("dataurlnewwindow");
+    // Abrir en una pestaña nueva de forma fiable (evita bloqueos de "dataurlnewwindow").
+    const blob = pdf.output("blob");
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, "_blank");
+    if (!win) {
+      // Si el navegador bloquea la ventana, descargamos el PDF como respaldo.
+      pdf.save(fileName);
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
   } else {
     pdf.save(fileName);
   }
