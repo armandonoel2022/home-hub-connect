@@ -23,6 +23,7 @@ import {
 import { employeesApi, isApiConfigured, tasksApi, type Employee } from "@/lib/api";
 import { calcDeductions, fmtRD } from "@/lib/payrollCalc";
 import { generatePayslipPDF } from "@/lib/payslipPdf";
+import { getApprovedLoans, loanBalance } from "@/lib/hrRequestService";
 import { parseTssFile, type TssRow } from "@/lib/tssParser";
 import * as XLSX from "xlsx";
 
