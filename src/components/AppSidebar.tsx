@@ -59,6 +59,7 @@ const navItems: NavItem[] = [
   { title: "Auditoría Superintendencia", url: "/operaciones/auditoria", icon: ClipboardCheck, module: "superintAudit" },
   { title: "Mis Solicitudes RRHH", url: "/rrhh/mis-solicitudes", icon: FileCheck, module: "myHRRequests" },
   { title: "Aprobaciones RRHH", url: "/rrhh/aprobaciones", icon: ClipboardCheck, module: "hrApprovals" },
+  { title: "Control de Préstamos", url: "/rrhh/prestamos-control", icon: Banknote, module: "hrApprovals" },
   { title: "Consolidado RRHH", url: "/rrhh/consolidado", icon: ClipboardList, module: "hrConsolidated" },
   { title: "Constancias RRHH (Auditoría)", url: "/rrhh/constancias", icon: ClipboardList, module: "hrConstancias" },
   { title: "Solicitudes Compra", url: "/solicitudes-compra", icon: ShoppingCart, module: "purchaseRequests" },
