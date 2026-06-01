@@ -174,6 +174,8 @@ const HRForms = () => {
   );
   const beneficiary = beneficiaryId ? allUsers.find(u => u.id === beneficiaryId) : null;
   const effectiveRequester = beneficiary || user;
+  // RRHH puede solicitar a nombre de otro aunque no cumpla la antigüedad mínima.
+  const rrhhOnBehalf = isRRHH && !!beneficiary;
 
   // Hire date resuelto: usa el del usuario o, si falta, busca en el directorio de empleados
   const resolvedHireDate = effectiveRequester?.hireDate || findEmployeeHireDate(effectiveRequester?.fullName || "") || null;
