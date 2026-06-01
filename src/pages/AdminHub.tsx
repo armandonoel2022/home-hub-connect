@@ -66,6 +66,17 @@ const AdminHub = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
 
+  // Abrir directamente la vista de Registros de Dispositivos vía ?view=devices
+  useEffect(() => {
+    if (searchParams.get("view") === "devices") {
+      setDeviceRegs(getDeviceRegistrations());
+      setShowDevices(true);
+      searchParams.delete("view");
+      setSearchParams(searchParams, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const refresh = () => {
     setActivities(getAdminActivities());
     setChecklistState(getChecklistState());
