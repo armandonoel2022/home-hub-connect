@@ -533,11 +533,20 @@ const AdminHub = () => {
                 gradient: "from-secondary/40 via-secondary/10 to-transparent",
                 iconBg: "bg-secondary text-secondary-foreground",
               },
+              {
+                label: "Registros de Dispositivos",
+                desc: "Altas de Flota Celular e Inventario IT (PRO-IT-05)",
+                icon: HardDrive,
+                action: "devices" as const,
+                gradient: "from-primary/15 via-primary/5 to-transparent",
+                iconBg: "bg-primary/15 text-primary",
+              },
             ].map(({ label, desc, icon: Icon, to, action, gradient, iconBg }) => (
               <button
                 key={label}
                 onClick={() => {
                   if (action === "keys") setShowKeys(true);
+                  else if (action === "devices") { setDeviceRegs(getDeviceRegistrations()); setShowDevices(true); }
                   else if (to) navigate(to);
                 }}
                 className={`group relative overflow-hidden rounded-xl border bg-gradient-to-br ${gradient} p-4 text-left transition-all hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5`}
