@@ -112,17 +112,24 @@ export async function generateAssignmentSheetPDF(
   pdf.text(`Documento generado: ${new Date().toLocaleString("es-DO")}`, W / 2, y, { align: "center" });
   y += 8;
 
-  // Datos del colaborador
+  // Datos del receptor (colaborador o departamento solicitante)
+  const hasEmployee = !!(data.employeeName && data.employeeName.trim());
   autoTable(pdf, {
     startY: y,
     theme: "grid",
-    head: [["DATOS DEL COLABORADOR", ""]],
-    body: [
-      ["Nombre completo", data.employeeName || "—"],
-      ["Código de empleado", data.employeeCode || "—"],
-      ["Departamento", data.department || "—"],
-      ["Puesto / Posición", data.position || "—"],
-    ],
+    head: [[hasEmployee ? "DATOS DEL COLABORADOR" : "DEPARTAMENTO SOLICITANTE", ""]],
+    body: hasEmployee
+      ? [
+          ["Nombre completo", data.employeeName || "—"],
+          ["Código de empleado", data.employeeCode || "—"],
+          ["Departamento", data.department || "—"],
+          ["Puesto / Posición", data.position || "—"],
+        ]
+      : [
+          ["Departamento solicitante", data.department || "—"],
+          ["Responsable / Contacto", data.position || "Por asignar"],
+          ["Nota", "Equipo entregado al departamento; pendiente de asignación a un colaborador."],
+        ],
     headStyles: { fillColor: [30, 58, 95], textColor: 255, fontSize: 9 },
     columnStyles: { 0: { fontStyle: "bold", cellWidth: 55, fillColor: [245, 245, 245] } },
     styles: { fontSize: 9, cellPadding: 2 },
