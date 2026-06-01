@@ -7,7 +7,7 @@ import { getUserAssignedAssets, generateOffboardingTicketDescription } from "@/l
 import type { UserAssetSummary } from "@/lib/assetLinking";
 import AssetReturnOverlay from "@/components/AssetReturnOverlay";
 import { cn } from "@/lib/utils";
-import { isApiConfigured, departmentFoldersApi, employeesApi, type Employee } from "@/lib/api";
+import { isApiConfigured, departmentFoldersApi, employeesApi, getFileUrl, type Employee } from "@/lib/api";
 import { buildDeptMembers, type DeptMember } from "@/lib/deptMembers";
 import { toast } from "@/hooks/use-toast";
 import type { OffboardingReason } from "@/lib/types";
