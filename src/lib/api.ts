@@ -731,6 +731,8 @@ export interface PayrollItem {
   holidayAmount?: number;
   mealDeduction?: number;
   mealDetail?: MealDetailItem[];
+  loanDeduction?: number;
+  loanDetail?: { id: string; installment: number; frequency?: string }[];
   grossPeriod: number;
   sfs: number;
   afp: number;
