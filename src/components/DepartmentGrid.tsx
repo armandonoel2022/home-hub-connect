@@ -1068,7 +1068,20 @@ const FolderItem = ({
           {folder.files.map((file) => (
             <div key={file.id} className="flex items-center gap-2 text-[11px] py-1 group/file">
               <FileText className="h-3 w-3 text-muted-foreground shrink-0" />
-              <span className="flex-1 text-card-foreground truncate">{file.name}</span>
+              {file.fileUrl ? (
+                <a
+                  href={getFileUrl(file.fileUrl)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download={file.name}
+                  className="flex-1 text-card-foreground truncate hover:underline gold-accent-text"
+                  title={`Abrir/descargar ${file.name}`}
+                >
+                  {file.name}
+                </a>
+              ) : (
+                <span className="flex-1 text-card-foreground truncate">{file.name}</span>
+              )}
               <span className="text-muted-foreground shrink-0">{file.size}</span>
               {file.uploadedBy && <span className="text-muted-foreground shrink-0 text-[10px]">{file.uploadedBy}</span>}
               <button onClick={() => onDeleteFile(file.id)} className="opacity-0 group-hover/file:opacity-100 text-destructive p-0.5">
