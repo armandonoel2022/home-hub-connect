@@ -214,7 +214,7 @@ const PhoneFleetPage = () => {
                 </thead>
                 <tbody>
                   {filtered.map((p) => (
-                    <tr key={p.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                    <tr key={p.id} onClick={() => setDetail(p)} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors cursor-pointer">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           {p.deviceType === "Tablet" ? <Tablet className="h-4 w-4 text-muted-foreground" /> : <Smartphone className="h-4 w-4 text-muted-foreground" />}
