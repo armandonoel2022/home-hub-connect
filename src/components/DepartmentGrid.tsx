@@ -321,24 +321,39 @@ const DepartmentGrid = () => {
     setShowNewFolder(false);
   };
 
+  const readFileAsDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+
   const handleUploadFile = async (dept: string, folderId: string, fileList: FileList | null) => {
     if (!fileList) return;
     for (const f of Array.from(fileList)) {
       const size = f.size > 1024 * 1024 ? `${(f.size / (1024 * 1024)).toFixed(1)} MB` : `${(f.size / 1024).toFixed(0)} KB`;
+      if (f.size > 50 * 1024 * 1024) {
+        toast({ title: "Archivo muy grande", description: `${f.name} supera el límite de 50 MB.`, variant: "destructive" });
+        continue;
+      }
       if (apiMode) {
         try {
-          const savedFile = await departmentFoldersApi.addFile(dept, folderId, { name: f.name, size });
+          const fileData = await readFileAsDataUrl(f);
+          const savedFile = await departmentFoldersApi.addFile(dept, folderId, { name: f.name, size, fileData });
           setDeptFolders(prev => {
             const folders = (prev[dept] || []).map(folder =>
               folder.id === folderId ? { ...folder, files: [...folder.files, savedFile] } : folder
             );
             return { ...prev, [dept]: folders };
           });
+          toast({ title: "✅ Documento guardado", description: `${f.name} se guardó correctamente.` });
         } catch {
           toast({ title: "Error", description: `No se pudo subir ${f.name}`, variant: "destructive" });
         }
       } else {
-        const newFile = { id: `file-${Date.now()}`, name: f.name, size, uploadedAt: new Date().toISOString().split("T")[0] };
+        const fileData = await readFileAsDataUrl(f);
+        const newFile = { id: `file-${Date.now()}`, name: f.name, size, fileUrl: fileData, uploadedAt: new Date().toISOString().split("T")[0] };
         setDeptFolders(prev => {
           const folders = (prev[dept] || []).map(folder =>
             folder.id === folderId ? { ...folder, files: [...folder.files, newFile] } : folder
@@ -348,6 +363,7 @@ const DepartmentGrid = () => {
       }
     }
   };
+
 
   const handleDeleteFile = async (dept: string, folderId: string, fileId: string) => {
     if (apiMode) {
