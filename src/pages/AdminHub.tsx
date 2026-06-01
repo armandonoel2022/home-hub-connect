@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import FixedAssetsManager from "@/components/admin/FixedAssetsManager";
 import KeysManager from "@/components/admin/KeysManager";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
