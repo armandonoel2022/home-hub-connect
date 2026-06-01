@@ -1,91 +1,44 @@
-## Plan: Permisos granulares, jerarquía organizacional y comunicados como overlay
+## Mejoras al módulo de Préstamos (RRHH)
 
-Trabajo amplio que toca permisos en todo el sidebar, jerarquía de reportes, carpetas departamentales con superusuario, y comunicados como overlay global. Lo organizo en 5 tandas para entregar y validar por partes.
+Hoy el préstamo ya pasa por Dilia (RRHH) → Aurelio (Gerencia) → aplicación RRHH, pero hay reglas de negocio incompletas. Estos son los cambios.
 
-### Roles centrales
+### 1. Política de antigüedad (6 meses)
+- El **propio empleado** no puede enviar la solicitud si tiene menos de 6 meses (ya se bloquea — se mantiene).
+- **RRHH puede solicitar a nombre de otro** aunque no cumpla los 6 meses: cuando quien envía es de Recursos Humanos y selecciona a un beneficiario, se omite el bloqueo de antigüedad y se marca la solicitud como "Excepción de antigüedad autorizada por RRHH" (validada contra el nombre leído de la tabla de empleados que ya aparece arriba en el formulario).
 
-- **Superusuario** (`tecnologia@safeone.com.do`): ve y administra TODO, incluso configura quién ve qué carpetas departamentales.
-- **Co-admin TI** (`anoel@safeone.com.do`): mismos privilegios que admin para los módulos TI/usuarios/fotos.
-- **Admin** (`isAdmin: true`): ve todo el contenido pero no necesariamente configura ACL de carpetas.
-- **Líder de departamento** (`isDepartmentLeader: true`): ve su área y aprueba en flujos.
-- **Usuario regular**: solo lo que su departamento/rol permita.
+### 2. Tasa de interés y frecuencia (quincenal vs mensual)
+- Cambiar la tasa anual por defecto de **0% a 30%** (`loanSettings`).
+- Agregar al formulario un selector **Frecuencia de descuento: Quincenal / Mensual**.
+- Calcular la cuota según la frecuencia:
+  - Mensual: cuota = capital + interés, dividido entre los meses de plazo.
+  - Quincenal: el plazo se expresa en quincenas (meses × 2); la cuota quincenal usa la tasa prorrateada por quincena.
+- La **cuota no puede superar 1/6 del ingreso del período** (1/6 del salario mensual para mensual; 1/12 del salario mensual ≈ 1/6 del ingreso quincenal). Si excede, se bloquea con mensaje claro.
 
-Centralizo todo en un único helper `src/lib/permissions.ts` con funciones tipo `canView('inventory', user)`, `canEdit('fleet', user)`, `isSuperUser(user)`, `isCoAdminIT(user)`. El sidebar, el router (guard) y cada página consultan el mismo helper.
+### 3. Flujo de aprobación con overlay
+- La solicitud llega **primero a Dilia Aguasvivas (o la persona que ella designe)** mediante un overlay accionable: el overlay de notificaciones de RRHH permitirá **Aprobar / Rechazar** el préstamo directamente (además del botón "Ver solicitudes").
+- Tras la aprobación de Dilia, pasa a **Crisóstomo Aurelio (Don Aurelio)** con su propio overlay accionable.
+- Se mantiene el paso final de "Aplicación RRHH" (registro de fecha de inicio de descuento).
 
-### Tanda A — Permisos del sidebar y guards de ruta
+### 4. Pantalla de Control de Préstamos
+Nueva ruta `/rrhh/prestamos-control` (visible para RRHH y Gerencia):
+- Lista de todos los préstamos **aprobados** con: empleado, monto prestado, tasa, frecuencia, cuota, plazo, fecha de aplicación.
+- Seguimiento de cobranza: total prestado, total ya descontado (cuotas registradas), saldo pendiente, próxima cuota.
+- Permitir registrar/abonar cuotas cobradas para llevar el control de "lo que se cobra vs. lo que se ha prestado".
+- Totales globales (cartera prestada, cobrada, por cobrar).
 
-Mapa de acceso (resumen, todo configurable en `permissions.ts`):
+### 5. Volante de nómina (TSS) refleja extras y préstamos
+- En el volante de pago (`payslipPdf`), agregar líneas de descuento por **cuota de préstamo aprobada** del período y asegurar que las **horas extra aprobadas** aparezcan como devengado.
+- El armado del volante (Payroll) incluirá las cuotas de préstamo activas y extras aprobados del período en `totalDeductions`/devengado.
 
-| Módulo | Ver | Editar |
-|---|---|---|
-| Dashboard, Directorio, Calendario, Procedimientos, Wiki, Archivos | Todos | — |
-| KPIs | Calidad + asignados | Calidad |
-| Tareas | Todos (sus tareas) | jefe directo ve quién asigna |
-| Tickets IT | Creador + asignado | TI |
-| Inventario IT, Flota Celular, Registro Tareas IT, Sincronizar fotos, Gestión usuarios | TI + super + anoel | mismo |
-| Flota Vehicular | Todos | Admin, TI, Monitoreo |
-| Personal Armado / Puestos / Matriz Mant. / Uniformes / Auditoría Superint. | Operaciones, Admin, Gerencia Gral, Dirección Comercial | Operaciones |
-| Mis Solicitudes RRHH | Cada quien las suyas | — |
-| Constancias RRHH (Auditoría) | solo `tecnologia@safeone.com.do` | — |
-| Solicitudes Compra | Admin, Contabilidad, CxC; creador ve las suyas | — |
-| Solicitudes Personal | Líderes + RRHH (con flag "hacer pública") | RRHH + líder |
-| BASC | Calidad + todos los líderes (lectura) | Calidad |
-| Capacitaciones | Todos | RRHH + super |
-| Encuestas | Todos | RRHH |
-| Gastos Menores | CxC, Contabilidad, Admin | mismo |
-| Seguimiento Clientes Monitoreo | Monitoreo, TI, Dir. Comercial, Admin, CxC, Gerencia Gral, super, anoel | mismo |
-| Auditoría (módulo) | super | super |
+### Detalles técnicos
+- `src/lib/loanSettings.ts`: default `annualInterestRatePct: 30`; nuevas funciones para cuota quincenal/mensual y tope por frecuencia.
+- `src/lib/hrRequestTypes.ts`: `LoanDetails` gana `frequency: 'quincenal'|'mensual'`, `installmentsTotal`, y registro de cobros `payments: [{date, amount, by}]`.
+- `src/pages/HRForms.tsx`: selector de frecuencia, excepción de antigüedad para RRHH-on-behalf, cálculo de cuota por frecuencia.
+- `src/lib/hrRequestService.ts`: helper para registrar abonos de cuota; getters para préstamos aprobados/activos.
+- `src/components/HRNotificationOverlay.tsx`: acciones Aprobar/Rechazar para préstamos según el rol del usuario (Dilia / Aurelio).
+- Nueva `src/pages/LoanControl.tsx` + ruta en `App.tsx` + enlace en el menú de RRHH.
+- `src/lib/payslipPdf.ts` y `src/pages/Payroll.tsx`: incorporar cuota de préstamo y extras aprobados al volante.
 
-- Renombrar "Gerencia Comercial" → "Dirección Comercial" donde aparezca.
-- `AppSidebar.tsx` oculta cada item con `canView(...)`.
-- Crear `RouteGuard` en `App.tsx` que redirige al `/` con toast si el usuario entra por URL directa a algo sin permiso.
-
-### Tanda B — Jerarquía "reporta a" y Equipo de trabajo
-
-- Añadir campo `reportsTo` (userId) a `users.json` (backend `users.js` ya permite passthrough). 
-- En `UserManagement.tsx`: nuevo selector "Reporta a" (lista de usuarios con `isDepartmentLeader` o cualquier usuario).
-- En Dashboard, sección **Equipo de trabajo**: para cada líder mostrar lista de subordinados (`users.filter(u => u.reportsTo === leader.id)`).
-- En **Tareas**: al asignar, guardar `assignedBy`. El jefe directo del asignado ve un badge "asignada por X".
-
-### Tanda C — Carpetas departamentales con ACL configurable por superusuario
-
-Hoy `backend/routes/department-folders.js` ya restringe por `user.department === department` y admin. Cambios:
-
-1. Nuevo archivo `folder-acl.json` administrado solo por `tecnologia@safeone.com.do`:
-   ```json
-   { "Administración": { "viewers": ["user-1","user-2"], "editors": ["user-1"] } }
-   ```
-2. Reemplazar `isMemberOfDept()` por `canViewFolder(user, dept)` y `canEditFolder(user, dept)`:
-   - super → siempre true
-   - admin → ver siempre, editar siempre
-   - si ACL existe → respeta listas
-   - si no hay ACL → fallback al comportamiento actual (mismo departamento)
-3. Endpoints POST/DELETE/upload usan `canEditFolder`.
-4. Nueva página `src/pages/AdminFolderPermissions.tsx` (solo super): tabla departamento × usuarios con checkboxes ver/editar. Ruta `/admin/permisos-carpetas`.
-5. En `DepartmentGrid.tsx` mostrar el módulo solo si `canViewFolder`.
-
-### Tanda D — Comunicados como overlay global + evento en calendario
-
-- Hoy `Announcements.tsx` existe. Añadir:
-  - Al crear un comunicado, marcar `showAsOverlay: true` por defecto y opcionalmente `eventDate`.
-  - Persistir en `announcements.json` (ya existe vía backend, si no, agregar ruta análoga a notifications).
-- Nuevo componente `src/components/AnnouncementOverlay.tsx` (estilo idéntico a `BirthdayOverlay`): polling cada 60s a `/api/announcements/active`, muestra modal con título/cuerpo/imagen, botón "Entendido" que lo marca como leído por usuario (lista `readBy[]`).
-- Montar `<AnnouncementOverlay />` en `App.tsx` junto a `BirthdayOverlay`.
-- Si el comunicado trae `eventDate`, al guardarlo el backend crea automáticamente un evento en `calendar-events.json` con tipo "Comunicado".
-
-### Tanda E — Detalles finales
-
-- Tareas: campo `assignedBy` ya o agregar. UI en `TaskInbox.tsx`: el líder del asignado ve "asignada por …".
-- Solicitudes de Personal: flag `isPublic` (toggle por líder + RRHH); cuando es true aparece en un listado público nuevo.
-- Renombrar "Gerencia Comercial" → "Dirección Comercial" en sidebar, seed de departamentos, dashboards y constantes.
-- Validar `npm run build`.
-
-### Orden de entrega
-
-1. Tanda A (permisos sidebar + guard) — base de todo.
-2. Tanda B (reportsTo + equipo).
-3. Tanda C (carpetas + ACL).
-4. Tanda D (comunicados overlay).
-5. Tanda E (cierre + rebrand Dirección Comercial + build).
-
-Confirmas que arranque por **Tanda A** o quieres que cambie prioridades / agrupe distinto?
+### Preguntas abiertas
+- ¿"La persona que Dilia designe" debe ser configurable (un selector en RRHH) o por ahora fija en Dilia? Asumiré **configurable**: un ajuste donde Dilia elige un delegado que también recibe el overlay.
+- Los abonos de cuota se registrarán manualmente en la pantalla de control (no hay integración bancaria automática).
