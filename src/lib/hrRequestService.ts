@@ -1,4 +1,4 @@
-import type { HRRequest, HRNotification } from "./hrRequestTypes";
+import type { HRRequest, HRNotification, LoanPayment } from "./hrRequestTypes";
 import { hrRequestsApi, isApiConfigured } from "./api";
 
 const STORAGE_KEY = "safeone_hr_requests";
