@@ -30,7 +30,7 @@ import {
   rejectRequest, generateRequestId, getNotificationsForUser, markAllNotificationsRead,
   escalateLoanToGerencia, approveLoanByGerencia, applyLoan,
 } from "@/lib/hrRequestService";
-import { getLoanSettings, saveLoanSettings, calcLoanCapacity, calcMonthlyInstallment } from "@/lib/loanSettings";
+import { getLoanSettings, saveLoanSettings, calcLoanCapacity, calcMonthlyInstallment, calcLoanPlan, maxInstallmentByFrequency, type LoanFrequency } from "@/lib/loanSettings";
 
 type FormType = "vacaciones" | "dias-libres" | "comida" | "ausencias" | "feriados" | "permisos" | "prestamos";
 type FormMode = "print" | "virtual";
