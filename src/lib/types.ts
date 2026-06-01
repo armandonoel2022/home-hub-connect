@@ -40,8 +40,33 @@ export interface TicketComment {
   timestamp: string;
 }
 
-export type EquipmentType = "Computadora" | "Monitor" | "Impresora" | "Equipo de Red" | "Otro";
-export type EquipmentStatus = "Disponible" | "Asignado" | "En Reparación" | "Dado de Baja";
+export type EquipmentType =
+  | "Computadora"
+  | "Laptop"
+  | "Workstation"
+  | "Monitor"
+  | "Impresora"
+  | "Pantalla / TV"
+  | "Proyector"
+  | "Teléfono IP"
+  | "Equipo de Red"
+  | "Otro";
+export type EquipmentStatus =
+  | "Disponible"
+  | "Asignado"
+  | "Prestado"
+  | "En Reparación"
+  | "Dañado"
+  | "Dado de Baja";
+
+/** Evidencia de constancia de asignación firmada (PDF/JPG/PNG) */
+export interface AssignmentEvidence {
+  /** URL relativa del backend o data URL en modo local */
+  fileUrl: string;
+  fileName: string;
+  uploadedAt: string;
+  uploadedBy?: string;
+}
 
 export interface Equipment {
   id: string;
@@ -54,6 +79,15 @@ export interface Equipment {
   department: string | null;
   acquisitionDate: string;
   notes: string;
+  // Especificaciones / metadatos extendidos
+  color?: string;
+  storage?: string;
+  ram?: string;
+  /** Código de empleado al que está asignado (para vínculo confiable) */
+  assignedToCode?: string;
+  /** Constancia(s) de asignación firmada(s) */
+  assignmentEvidence?: AssignmentEvidence[];
+  assignedDate?: string;
 }
 
 export type VehicleStatus = "Activo" | "En Taller" | "Dado de Baja" | "Disponible";
@@ -135,7 +169,17 @@ export interface ArmedPersonnel {
 }
 
 // Phone Fleet
-export type PhoneStatus = "Activo" | "Disponible" | "En Reparación" | "Dado de Baja";
+export type PhoneStatus =
+  | "Activo"
+  | "Asignado"
+  | "En Stock"
+  | "Disponible"
+  | "Prestado"
+  | "En Reparación"
+  | "Dañado"
+  | "Dado de Baja";
+
+export type MobileDeviceType = "Celular" | "Tablet";
 
 export interface PhoneDevice {
   id: string;
@@ -149,6 +193,14 @@ export interface PhoneDevice {
   acquisitionDate: string;
   phoneNumber: string;
   notes: string;
+  // Campos extendidos
+  deviceType?: MobileDeviceType;
+  color?: string;
+  storage?: string;
+  ram?: string;
+  assignedToCode?: string;
+  assignedDate?: string;
+  assignmentEvidence?: AssignmentEvidence[];
 }
 
 // Users

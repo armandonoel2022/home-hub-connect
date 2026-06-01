@@ -1,44 +1,45 @@
-## Mejoras al módulo de Préstamos (RRHH)
+# Digitalización del Procedimiento de Asignación de Equipos (PRO-IT-05)
 
-Hoy el préstamo ya pasa por Dilia (RRHH) → Aurelio (Gerencia) → aplicación RRHH, pero hay reglas de negocio incompletas. Estos son los cambios.
+Basado en PRO-IT-05 y el formulario F-IT-13, voy a convertir la asignación de equipos en un flujo digital completo dentro de la intranet, separando correctamente **Flota Celular** (celulares/tablets) de **Inventario IT** (laptops, workstations, monitores, impresoras, pantallas, proyectores, teléfonos IP), con hoja firmable, evidencias, overlay a Chrisnel y vínculo permanente con el empleado.
 
-### 1. Política de antigüedad (6 meses)
-- El **propio empleado** no puede enviar la solicitud si tiene menos de 6 meses (ya se bloquea — se mantiene).
-- **RRHH puede solicitar a nombre de otro** aunque no cumpla los 6 meses: cuando quien envía es de Recursos Humanos y selecciona a un beneficiario, se omite el bloqueo de antigüedad y se marca la solicitud como "Excepción de antigüedad autorizada por RRHH" (validada contra el nombre leído de la tabla de empleados que ya aparece arriba en el formulario).
+## 1. Registro mejorado de dispositivos móviles (Flota Celular)
+Ampliar el registro de celulares y tablets con todos los campos solicitados:
+- **Tipo** (Celular / Tablet), Marca, Modelo, IMEI, Serie, Color, Almacenamiento, RAM, Fecha de adquisición.
+- **Estado**: En Stock, Asignado, Dañado, En Reparación, Prestado, Dado de Baja.
+- **Asignado a** (empleado) y **Departamento** (ej. vigilantes/supervisores → Operaciones).
+- Carga masiva de data existente (importación) relacionando con el usuario o marcándolos In Stock/Damaged/Reparación/Prestado.
 
-### 2. Tasa de interés y frecuencia (quincenal vs mensual)
-- Cambiar la tasa anual por defecto de **0% a 30%** (`loanSettings`).
-- Agregar al formulario un selector **Frecuencia de descuento: Quincenal / Mensual**.
-- Calcular la cuota según la frecuencia:
-  - Mensual: cuota = capital + interés, dividido entre los meses de plazo.
-  - Quincenal: el plazo se expresa en quincenas (meses × 2); la cuota quincenal usa la tasa prorrateada por quincena.
-- La **cuota no puede superar 1/6 del ingreso del período** (1/6 del salario mensual para mensual; 1/12 del salario mensual ≈ 1/6 del ingreso quincenal). Si excede, se bloquea con mensaje claro.
+## 2. Inventario IT (equipos no móviles)
+En el registro de Inventario IT se manejarán laptops, workstations, monitores, impresoras, pantallas/TV, proyectores, teléfonos IP y otros, con asignación a empleado + departamento y estados equivalentes.
 
-### 3. Flujo de aprobación con overlay
-- La solicitud llega **primero a Dilia Aguasvivas (o la persona que ella designe)** mediante un overlay accionable: el overlay de notificaciones de RRHH permitirá **Aprobar / Rechazar** el préstamo directamente (además del botón "Ver solicitudes").
-- Tras la aprobación de Dilia, pasa a **Crisóstomo Aurelio (Don Aurelio)** con su propio overlay accionable.
-- Se mantiene el paso final de "Aplicación RRHH" (registro de fecha de inicio de descuento).
+## 3. Hoja de Asignación firmable (F-IT-13 digital)
+- Al asignar un dispositivo (de Flota Celular o Inventario IT) a un empleado, se podrá **generar una Hoja de Asignación en PDF** con membrete SafeOne, datos del empleado, datos completos del equipo, cláusulas de custodia (tomadas de PRO-IT-05) y espacio de firma.
+- El empleado firma físicamente; luego se podrá **subir la constancia firmada** (PDF/JPG/PNG) a la intranet, quedando adjunta al registro del dispositivo y al perfil del empleado.
 
-### 4. Pantalla de Control de Préstamos
-Nueva ruta `/rrhh/prestamos-control` (visible para RRHH y Gerencia):
-- Lista de todos los préstamos **aprobados** con: empleado, monto prestado, tasa, frecuencia, cuota, plazo, fecha de aplicación.
-- Seguimiento de cobranza: total prestado, total ya descontado (cuotas registradas), saldo pendiente, próxima cuota.
-- Permitir registrar/abonar cuotas cobradas para llevar el control de "lo que se cobra vs. lo que se ha prestado".
-- Totales globales (cartera prestada, cobrada, por cobrar).
+## 4. Overlay a Chrisnel Fabián + Hub de Administración
+- Al registrar un dispositivo nuevo, se dispara un **overlay para Chrisnel Fabián** notificando el alta para fines de inventario.
+- Al cerrar el overlay, el registro queda en su **Hub de Administración** en una sección "Registros de Dispositivos", con acceso a las evidencias (hoja firmada / fotos).
 
-### 5. Volante de nómina (TSS) refleja extras y préstamos
-- En el volante de pago (`payslipPdf`), agregar líneas de descuento por **cuota de préstamo aprobada** del período y asegurar que las **horas extra aprobadas** aparezcan como devengado.
-- El armado del volante (Payroll) incluirá las cuotas de préstamo activas y extras aprobados del período en `totalDeductions`/devengado.
+## 5. Perfil 360° del empleado (RRHH)
+Al hacer clic sobre un empleado en RRHH se mostrará una ficha ampliada con:
+- Datos generales + foto.
+- **Dispositivos asignados** (Flota Celular e Inventario IT), **armas**, **uniforme**, **linterna**, **macana**, **puesto de trabajo**.
+- Campos **editables** para mejorar la confiabilidad de los datos a medida que se revisan.
+- Las ediciones de dispositivos redirigen al registro correcto: celular/tablet → Flota Celular; laptop/workstation/monitor/impresora/pantalla/proyector → Inventario IT.
 
-### Detalles técnicos
-- `src/lib/loanSettings.ts`: default `annualInterestRatePct: 30`; nuevas funciones para cuota quincenal/mensual y tope por frecuencia.
-- `src/lib/hrRequestTypes.ts`: `LoanDetails` gana `frequency: 'quincenal'|'mensual'`, `installmentsTotal`, y registro de cobros `payments: [{date, amount, by}]`.
-- `src/pages/HRForms.tsx`: selector de frecuencia, excepción de antigüedad para RRHH-on-behalf, cálculo de cuota por frecuencia.
-- `src/lib/hrRequestService.ts`: helper para registrar abonos de cuota; getters para préstamos aprobados/activos.
-- `src/components/HRNotificationOverlay.tsx`: acciones Aprobar/Rechazar para préstamos según el rol del usuario (Dilia / Aurelio).
-- Nueva `src/pages/LoanControl.tsx` + ruta en `App.tsx` + enlace en el menú de RRHH.
-- `src/lib/payslipPdf.ts` y `src/pages/Payroll.tsx`: incorporar cuota de préstamo y extras aprobados al volante.
+## 6. Baja de empleado → ticket automático de retiro
+- Al dar de baja (despido o renuncia), se genera automáticamente un **ticket a Tecnología** listando todos los dispositivos atados al perfil para su retiro (reutilizando la lógica de vinculación de activos existente y el flujo PRO-IT-05 de devolución).
 
-### Preguntas abiertas
-- ¿"La persona que Dilia designe" debe ser configurable (un selector en RRHH) o por ahora fija en Dilia? Asumiré **configurable**: un ajuste donde Dilia elige un delegado que también recibe el overlay.
-- Los abonos de cuota se registrarán manualmente en la pantalla de control (no hay integración bancaria automática).
+---
+
+## Detalles técnicos
+- **Tipos** (`src/lib/types.ts`): extender `PhoneDevice` (type Celular/Tablet, color, storage, ram) y nuevos estados; extender `Equipment`/estados para Inventario IT; añadir tipo de "constancia de asignación".
+- **Flota Celular** (`PhoneFleet.tsx`): nuevos campos en formulario, importación masiva, botón "Generar hoja" y "Subir constancia firmada".
+- **Inventario IT** (`Inventory.tsx`): tipos ampliados (Workstation, Pantalla/TV, Proyector, Teléfono IP), asignación a empleado/departamento, hoja firmable + evidencias.
+- **PDF**: nuevo `src/lib/assignmentSheetPdf.ts` con membrete `safeone-letterhead.png` y cláusulas de PRO-IT-05.
+- **Overlay**: nuevo `DeviceRegisterOverlay` dirigido a Chrisnel + sección en `AdminHub.tsx`.
+- **Perfil empleado** (`EmployeeDirectory.tsx`): ampliar el diálogo de detalle usando `getUserAssignedAssets` (ya existente) + uniformes/linternas + edición inline.
+- **Baja**: enganchar `generateOffboardingTicketDescription` (ya existe) al flujo de offboarding para crear el ticket automáticamente.
+- **Backend**: endpoints para subir constancias (patrón de `department-folders.js`/comprobantes) e importación de flota; persistencia en JSON local.
+
+Es un alcance amplio; lo implementaré por fases en este orden: (1) tipos + Flota Celular mejorada, (2) Inventario IT, (3) hoja PDF + carga de constancia, (4) overlay Chrisnel + Hub, (5) perfil 360° editable, (6) ticket automático de baja.
