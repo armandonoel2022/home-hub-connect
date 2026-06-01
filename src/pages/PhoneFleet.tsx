@@ -24,6 +24,7 @@ const PhoneFleetPage = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Partial<PhoneDevice>>(emptyForm);
+  const [detail, setDetail] = useState<PhoneDevice | null>(null);
   const evidenceTarget = useRef<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
