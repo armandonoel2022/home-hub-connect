@@ -62,6 +62,7 @@ import AuditConsolidated from "./pages/AuditConsolidated";
 import PhotoSync from "./pages/PhotoSync";
 import MyHRRequests from "./pages/MyHRRequests";
 import HRApprovals from "./pages/HRApprovals";
+import LoanControl from "./pages/LoanControl";
 import HRApprovalPrint from "./pages/HRApprovalPrint";
 import HRConsolidated from "./pages/HRConsolidated";
 import HRConstancias from "./pages/HRConstancias";
@@ -201,6 +202,7 @@ function ProtectedRoutes() {
         <Route path="/operaciones/puestos" element={<Navigate to="/operaciones" replace />} />
         <Route path="/rrhh/mis-solicitudes" element={<MyHRRequests />} />
         <Route path="/rrhh/aprobaciones" element={<RouteGuard module="hrApprovals"><HRApprovals /></RouteGuard>} />
+        <Route path="/rrhh/prestamos-control" element={<RouteGuard module="hrApprovals"><LoanControl /></RouteGuard>} />
         <Route path="/rrhh/consolidado" element={<RouteGuard module="hrConsolidated"><HRConsolidated /></RouteGuard>} />
         <Route path="/rrhh/imprimir/:id" element={<HRApprovalPrint />} />
         <Route path="/rrhh/constancias" element={<RouteGuard module="hrConstancias"><HRConstancias /></RouteGuard>} />

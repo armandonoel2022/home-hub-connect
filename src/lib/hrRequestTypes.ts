@@ -37,6 +37,17 @@ export interface HRNotification {
   createdAt: string;
 }
 
+export type LoanFrequency = "mensual" | "quincenal";
+
+/** Abono/cuota cobrada de un préstamo. */
+export interface LoanPayment {
+  id: string;
+  date: string;
+  amount: number;
+  by: string;
+  note?: string;
+}
+
 /** Detalle financiero del préstamo. */
 export interface LoanDetails {
   monthlySalary: number;
@@ -51,6 +62,15 @@ export interface LoanDetails {
   approvedAmount?: number;
   approvedTermMonths?: number;
   approvedInstallment?: number;
+  // Frecuencia de descuento y plan de pagos
+  frequency?: LoanFrequency;
+  installmentsTotal?: number;
+  totalInterest?: number;
+  totalToPay?: number;
+  // Excepción de antigüedad autorizada por RRHH (solicitud a nombre de otro)
+  tenureExceptionByRRHH?: boolean;
+  // Control de cobranza
+  payments?: LoanPayment[];
 }
 
 export interface HRRequest {

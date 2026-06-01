@@ -1,4 +1,4 @@
-import type { HRRequest, HRNotification } from "./hrRequestTypes";
+import type { HRRequest, HRNotification, LoanPayment } from "./hrRequestTypes";
 import { hrRequestsApi, isApiConfigured } from "./api";
 
 const STORAGE_KEY = "safeone_hr_requests";
@@ -379,4 +379,62 @@ export function rejectRequest(
 
 export function generateRequestId(): string {
   return `HR-${Date.now().toString(36).toUpperCase()}`;
+}
+
+// ─── Control de préstamos (cobranza) ───
+
+/** Préstamos aprobados/aplicados (cartera viva). */
+export function getApprovedLoans(): HRRequest[] {
+  return getAll().filter((r) => r.formType === "prestamos" && r.status === "Aprobada");
+}
+
+/** Monto efectivo del préstamo (aprobado por Gerencia o el solicitado). */
+export function loanPrincipal(req: HRRequest): number {
+  const d = req.loanDetails;
+  if (!d) return 0;
+  return d.approvedAmount ?? d.amountRequested ?? 0;
+}
+
+/** Total a pagar (capital + interés) de un préstamo. */
+export function loanTotalToPay(req: HRRequest): number {
+  const d = req.loanDetails;
+  if (!d) return 0;
+  if (d.totalToPay) return d.totalToPay;
+  // fallback: cuota × número de pagos
+  const inst = d.approvedInstallment ?? d.monthlyInstallment ?? 0;
+  const n = d.installmentsTotal ?? d.termMonths ?? 0;
+  return inst * n || loanPrincipal(req);
+}
+
+/** Total cobrado (suma de abonos registrados). */
+export function loanPaid(req: HRRequest): number {
+  return (req.loanDetails?.payments || []).reduce((s, p) => s + (Number(p.amount) || 0), 0);
+}
+
+/** Saldo pendiente por cobrar. */
+export function loanBalance(req: HRRequest): number {
+  return Math.max(0, loanTotalToPay(req) - loanPaid(req));
+}
+
+/** Registra un abono/cuota cobrada de un préstamo aprobado. */
+export function registerLoanPayment(
+  requestId: string,
+  amount: number,
+  by: string,
+  date?: string,
+  note?: string,
+): HRRequest | null {
+  const all = getAll();
+  const req = all.find((r) => r.id === requestId);
+  if (!req || !req.loanDetails) return null;
+  const payment: LoanPayment = {
+    id: `LP-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`,
+    date: date || new Date().toISOString().slice(0, 10),
+    amount: Number(amount) || 0,
+    by,
+    note,
+  };
+  req.loanDetails.payments = [...(req.loanDetails.payments || []), payment];
+  save(all);
+  return req;
 }

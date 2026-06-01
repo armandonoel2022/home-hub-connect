@@ -12,8 +12,10 @@ export interface LoanSettings {
   updatedBy?: string;
 }
 
+export type LoanFrequency = "mensual" | "quincenal";
+
 const DEFAULT: LoanSettings = {
-  annualInterestRatePct: 0,
+  annualInterestRatePct: 30,
   minTenureMonths: 6,
   maxInstallmentFraction: 1 / 6,
 };
@@ -110,4 +112,50 @@ export function calcMonthlyInstallment(amount: number, termMonths: number, annua
   const r = (Number(annualRatePct) || 0) / 100;
   const total = a + (a * r * n) / 12;
   return Math.round(total / n);
+}
+
+/**
+ * Cálculo de cuota según frecuencia de descuento.
+ * El interés total se prorratea por la duración del préstamo (plazo en meses),
+ * independientemente de la frecuencia; sólo cambia en cuántos pagos se reparte.
+ *  - mensual:   n = plazoMeses
+ *  - quincenal: n = plazoMeses × 2 (dos cuotas por mes)
+ */
+export function calcLoanPlan(
+  amount: number,
+  termMonths: number,
+  annualRatePct: number,
+  frequency: LoanFrequency,
+) {
+  const a = Number(amount) || 0;
+  const months = Math.max(1, Number(termMonths) || 1);
+  const r = (Number(annualRatePct) || 0) / 100;
+  const totalInterest = (a * r * months) / 12;
+  const totalToPay = a + totalInterest;
+  const installments = frequency === "quincenal" ? months * 2 : months;
+  const installment = Math.round(totalToPay / installments);
+  return {
+    frequency,
+    months,
+    installments,
+    installment,
+    totalInterest: Math.round(totalInterest),
+    totalToPay: Math.round(totalToPay),
+  };
+}
+
+/**
+ * Cuota máxima permitida por período según la frecuencia.
+ * La política interna limita el descuento a 1/6 del INGRESO del período:
+ *  - mensual:   salario_mensual × fracción (1/6)
+ *  - quincenal: (salario_mensual / 2) × fracción  → mitad del tope mensual
+ */
+export function maxInstallmentByFrequency(
+  monthlySalary: number,
+  frequency: LoanFrequency,
+  fraction = 1 / 6,
+): number {
+  const salary = Number(monthlySalary) || 0;
+  const periodIncome = frequency === "quincenal" ? salary / 2 : salary;
+  return Math.round(periodIncome * fraction);
 }
