@@ -458,9 +458,9 @@ const DepartmentGrid = () => {
           const teamMembers = activeMembers
             .filter(
               (m) =>
-                (!leaderMember || m.key !== leaderMember.key) &&
-                !m.isLeader &&
-                (m.dashboardDept === dept.name || (leaderMember && m.reportsTo === leaderMember.key))
+                leaderMember &&
+                m.key !== leaderMember.key &&
+                m.reportsTo === leaderMember.key
             )
             .sort((a, b) => a.fullName.localeCompare(b.fullName));
           // Personal de otros departamentos asignable a este líder.

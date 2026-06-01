@@ -13,7 +13,7 @@ const router = express.Router();
 
 // Versión del seed: incrementar cuando se actualice employeesSeed.json
 // para forzar refresco del archivo persistido sin perder ediciones manuales.
-const SEED_VERSION = 'v5-2026-05-tss-birth-cedula';
+const SEED_VERSION = 'v6-2026-06-dashboard-org';
 const META_FILE = 'employees.meta.json';
 
 function load() {
@@ -28,7 +28,7 @@ function load() {
     const existing = Array.isArray(raw) ? raw : [];
     const byCode = new Map(existing.map(e => [String(e.employeeCode), e]));
     // Campos cuya última versión proviene SIEMPRE del seed (HR-managed bulk fields).
-    const SEED_AUTHORITATIVE = ['tss', 'tssRegistered', 'tssRegisteredAt', 'cedula', 'hireDate', 'birthDate', 'birthdayMMDD', 'salary', 'payrollType', 'department', 'position', 'bank', 'fullName', 'status'];
+    const SEED_AUTHORITATIVE = ['tss', 'tssRegistered', 'tssRegisteredAt', 'cedula', 'hireDate', 'birthDate', 'birthdayMMDD', 'salary', 'payrollType', 'department', 'position', 'bank', 'fullName', 'status', 'isDeptLeader', 'reportsToCode', 'dashboardDept'];
     const merged = SEED.map(s => {
       const prev = byCode.get(String(s.employeeCode));
       if (!prev) return s;

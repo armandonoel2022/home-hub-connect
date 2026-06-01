@@ -51,14 +51,37 @@ export function significantNameTokens(name?: string): string[] {
     .filter((token) => token.length > 1);
 }
 
+function isNearToken(a: string, b: string): boolean {
+  if (a === b) return true;
+  if (a.length < 4 || b.length < 4 || Math.abs(a.length - b.length) > 1) return false;
+  let i = 0;
+  let j = 0;
+  let edits = 0;
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) {
+      i++;
+      j++;
+      continue;
+    }
+    edits++;
+    if (edits > 1) return false;
+    if (a.length > b.length) i++;
+    else if (b.length > a.length) j++;
+    else {
+      i++;
+      j++;
+    }
+  }
+  return edits + (a.length - i) + (b.length - j) <= 1;
+}
+
 export function isLikelySamePerson(shortName?: string, legalName?: string, shortDept?: string, legalDept?: string): boolean {
   const shortTokens = significantNameTokens(shortName);
   const legalTokens = significantNameTokens(legalName);
-  const legalTokenSet = new Set(legalTokens);
-  if (shortTokens.length < 2 || legalTokenSet.size < 2) return false;
-  const allTokensMatch = shortTokens.every((token) => legalTokenSet.has(token));
+  if (shortTokens.length < 2 || legalTokens.length < 2) return false;
+  const allTokensMatch = shortTokens.every((token) => legalTokens.some((legalToken) => isNearToken(token, legalToken)));
   if (!allTokensMatch) return false;
-  const sameFirstName = shortTokens[0] === legalTokens[0];
+  const sameFirstName = isNearToken(shortTokens[0], legalTokens[0]);
   const sameDepartment = !!shortDept && !!legalDept && mapHrDepartment(shortDept) === mapHrDepartment(legalDept);
   return sameFirstName || sameDepartment;
 }
@@ -139,7 +162,7 @@ export function buildDeptMembers(
       employeeCode: e.employeeCode,
       intranetUserId: match?.id,
       fullName: e.fullName,
-      dashboardDept: mapHrDepartment(e.department),
+      dashboardDept: (e as Employee & { dashboardDept?: string }).dashboardDept || mapHrDepartment(e.department),
       rawDepartment: e.department,
       position: e.position || match?.position || "",
       photoUrl: resolvePhoto(e.photoUrl || e.photo) || resolvePhoto(match?.photoUrl),
