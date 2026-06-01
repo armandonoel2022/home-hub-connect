@@ -138,7 +138,7 @@ const HRForms = () => {
   const rrhhUserIds = allUsers.filter((u) => u.department === "Recursos Humanos").map((u) => u.id);
   // Dilia Aguasvivas — destinataria directa de préstamos
   const diliaApprover = allUsers.find((u) => u.fullName?.toLowerCase().includes("dilia")) || rrhhLeader;
-  const gerenciaApprover = allUsers.find((u) => u.fullName === "Aurelio Pérez");
+  const gerenciaApprover = allUsers.find((u) => (u.fullName || "").toLowerCase().includes("aurelio"));
   const isRRHH = user?.department === "Recursos Humanos";
   const isGerenciaApprover = user?.id === gerenciaApprover?.id;
   const isSupervisor = user?.isDepartmentLeader === true || user?.isAdmin === true;
