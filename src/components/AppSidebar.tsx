@@ -30,6 +30,7 @@ import {
   GraduationCap,
   Shirt,
   ClipboardCheck,
+  Banknote,
   ImagePlus,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
