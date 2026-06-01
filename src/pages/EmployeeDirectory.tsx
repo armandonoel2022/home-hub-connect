@@ -548,8 +548,27 @@ const EmployeeDirectory = () => {
           </DialogHeader>
           {viewing && (() => {
             const armed = findArmedRecord(viewing);
+            const empName = normalize(viewing.fullName);
+            const empCode = viewing.employeeCode;
+            const matchAsset = (code?: string | null, name?: string | null) =>
+              (!!code && !!empCode && code === empCode) || (!!name && normalize(name) === empName);
+            const empEquipment = (equipment || []).filter((e: any) => matchAsset(e.assignedToCode, e.assignedTo));
+            const empPhones = (phones || []).filter((p: any) => matchAsset(p.assignedToCode, p.assignedTo));
+            const empUniforms = (uniformAssignments || []).filter((u) => matchAsset(u.employeeCode, u.employeeName));
+            const empFlashlights = (flashlights || []).filter((f) => matchAsset(f.assignedToCode, f.assignedToName));
+            const photo = resolvePhoto(viewing.photoUrl || (viewing as any).photo);
             return (
               <div className="space-y-4 py-2">
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-16 w-16">
+                    {photo && <AvatarImage src={photo} alt={viewing.fullName} />}
+                    <AvatarFallback className="bg-muted">{initialsOf(viewing.fullName)}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h2 className="font-heading text-xl font-bold text-foreground">{viewing.fullName}</h2>
+                    <p className="text-sm text-muted-foreground">{viewing.position || "—"} · {viewing.department || "—"}</p>
+                  </div>
+                </div>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div className="bg-muted rounded-lg p-3"><span className="text-xs text-muted-foreground block">Código</span><span className="font-mono">{viewing.employeeCode}</span></div>
                   <div className="bg-muted rounded-lg p-3"><span className="text-xs text-muted-foreground block">Estatus</span>{viewing.status}</div>
@@ -558,6 +577,101 @@ const EmployeeDirectory = () => {
                   <div className="bg-muted rounded-lg p-3"><span className="text-xs text-muted-foreground block">Categoría</span>{viewing.category || "—"}</div>
                   <div className="bg-muted rounded-lg p-3"><span className="text-xs text-muted-foreground block">Nómina</span>{viewing.payrollType || "—"}</div>
                 </div>
+
+                {/* ─── Activos asignados (360°) ─── */}
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-foreground text-sm flex items-center gap-2">
+                    <HardDrive className="h-4 w-4 text-gold" /> Activos asignados
+                  </h3>
+
+                  {/* Inventario IT */}
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="bg-muted/60 px-3 py-2 text-xs font-medium flex items-center gap-2">
+                      <HardDrive className="h-3.5 w-3.5" /> Inventario IT ({empEquipment.length})
+                    </div>
+                    {empEquipment.length === 0 ? (
+                      <p className="px-3 py-2 text-xs text-muted-foreground">Sin equipos asignados.</p>
+                    ) : empEquipment.map((e: any) => (
+                      <div key={e.id} className="px-3 py-2 flex items-center justify-between gap-2 border-t text-sm">
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{e.type} · {e.brand} {e.model}</p>
+                          <p className="text-xs text-muted-foreground font-mono truncate">Serie: {e.serial || "—"}</p>
+                        </div>
+                        {canEdit ? (
+                          <Select value={e.status} onValueChange={async (v) => { try { await updateEquipment(e.id, { status: v as any }); toast.success("Estado actualizado"); } catch (err: any) { toast.error(err.message); } }}>
+                            <SelectTrigger className="w-[150px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>{EQUIPMENT_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                          </Select>
+                        ) : (
+                          <Badge variant="outline" className={`text-xs ${equipmentStatusColors[e.status] || ""}`}>{e.status}</Badge>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Flota Celular */}
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="bg-muted/60 px-3 py-2 text-xs font-medium flex items-center gap-2">
+                      <Smartphone className="h-3.5 w-3.5" /> Flota Celular ({empPhones.length})
+                    </div>
+                    {empPhones.length === 0 ? (
+                      <p className="px-3 py-2 text-xs text-muted-foreground">Sin dispositivos móviles asignados.</p>
+                    ) : empPhones.map((p: any) => (
+                      <div key={p.id} className="px-3 py-2 flex items-center justify-between gap-2 border-t text-sm">
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{p.deviceType || "Celular"} · {p.brand} {p.model}</p>
+                          <p className="text-xs text-muted-foreground truncate">{p.phoneNumber || "Sin línea"} · IMEI {p.imei || "—"}</p>
+                        </div>
+                        {canEdit ? (
+                          <Select value={p.status} onValueChange={async (v) => { try { await updatePhone(p.id, { status: v as any }); toast.success("Estado actualizado"); } catch (err: any) { toast.error(err.message); } }}>
+                            <SelectTrigger className="w-[150px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>{PHONE_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                          </Select>
+                        ) : (
+                          <Badge variant="outline" className={`text-xs ${phoneStatusColors[p.status] || ""}`}>{p.status}</Badge>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Uniformes */}
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="bg-muted/60 px-3 py-2 text-xs font-medium flex items-center gap-2">
+                      <Shirt className="h-3.5 w-3.5" /> Uniformes ({empUniforms.length})
+                    </div>
+                    {empUniforms.length === 0 ? (
+                      <p className="px-3 py-2 text-xs text-muted-foreground">Sin uniformes entregados.</p>
+                    ) : empUniforms.map((u) => (
+                      <div key={u.id} className="px-3 py-2 flex items-center justify-between gap-2 border-t text-sm">
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{u.uniformType} · Talla {u.uniformSize}</p>
+                          <p className="text-xs text-muted-foreground truncate">Cant. {u.quantity} · {u.deliveredAt ? new Date(u.deliveredAt).toLocaleDateString("es-DO") : "—"}</p>
+                        </div>
+                        <Badge variant="outline" className="text-xs">{u.condition}</Badge>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Linternas */}
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="bg-muted/60 px-3 py-2 text-xs font-medium flex items-center gap-2">
+                      <Flashlight className="h-3.5 w-3.5" /> Linternas ({empFlashlights.length})
+                    </div>
+                    {empFlashlights.length === 0 ? (
+                      <p className="px-3 py-2 text-xs text-muted-foreground">Sin linternas asignadas.</p>
+                    ) : empFlashlights.map((f) => (
+                      <div key={f.id} className="px-3 py-2 flex items-center justify-between gap-2 border-t text-sm">
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{f.code} · {f.brand} {f.model}</p>
+                          <p className="text-xs text-muted-foreground font-mono truncate">Serie: {f.serial || "—"}</p>
+                        </div>
+                        <Badge variant="outline" className="text-xs">{f.condition}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+
 
                 {armed ? (
                   <div className="border-2 border-amber-200 bg-amber-50 rounded-lg p-4">
