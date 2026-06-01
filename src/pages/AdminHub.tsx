@@ -57,6 +57,8 @@ const AdminHub = () => {
   const [selectedProcess, setSelectedProcess] = useState<AdminProcess | null>(null);
   const [showFixedAssets, setShowFixedAssets] = useState(false);
   const [showKeys, setShowKeys] = useState(false);
+  const [showDevices, setShowDevices] = useState(false);
+  const [deviceRegs, setDeviceRegs] = useState<DeviceRegistration[]>(getDeviceRegistrations);
   const [checklistState, setChecklistState] = useState<ChecklistState>(getChecklistState);
   const [activities, setActivities] = useState<AdminActivityEntry[]>(getAdminActivities);
   const [newNote, setNewNote] = useState("");
