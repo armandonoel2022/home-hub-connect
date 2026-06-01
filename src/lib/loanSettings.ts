@@ -12,8 +12,10 @@ export interface LoanSettings {
   updatedBy?: string;
 }
 
+export type LoanFrequency = "mensual" | "quincenal";
+
 const DEFAULT: LoanSettings = {
-  annualInterestRatePct: 0,
+  annualInterestRatePct: 30,
   minTenureMonths: 6,
   maxInstallmentFraction: 1 / 6,
 };
