@@ -253,6 +253,7 @@ const App = () => {
                 <PanicButton />
                 <NotificationOverlay />
                 <HRNotificationOverlay />
+                <DeviceRegisterOverlay />
                 <AnnouncementOverlay />
                 
               </ChatProvider>
