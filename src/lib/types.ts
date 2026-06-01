@@ -169,7 +169,17 @@ export interface ArmedPersonnel {
 }
 
 // Phone Fleet
-export type PhoneStatus = "Activo" | "Disponible" | "En Reparación" | "Dado de Baja";
+export type PhoneStatus =
+  | "Activo"
+  | "Asignado"
+  | "En Stock"
+  | "Disponible"
+  | "Prestado"
+  | "En Reparación"
+  | "Dañado"
+  | "Dado de Baja";
+
+export type MobileDeviceType = "Celular" | "Tablet";
 
 export interface PhoneDevice {
   id: string;
@@ -183,6 +193,14 @@ export interface PhoneDevice {
   acquisitionDate: string;
   phoneNumber: string;
   notes: string;
+  // Campos extendidos
+  deviceType?: MobileDeviceType;
+  color?: string;
+  storage?: string;
+  ram?: string;
+  assignedToCode?: string;
+  assignedDate?: string;
+  assignmentEvidence?: AssignmentEvidence[];
 }
 
 // Users
