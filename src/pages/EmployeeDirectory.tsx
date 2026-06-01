@@ -19,8 +19,11 @@ import {
   ArrowLeft, Users, Search, Plus, Pencil, Trash2, Save, X,
   Building2, Briefcase, Download, Shield,
 } from "lucide-react";
-import { useArmedPersonnel } from "@/hooks/useApiHooks";
-import type { ArmedPersonnel } from "@/lib/types";
+import { useArmedPersonnel, useEquipment, usePhones } from "@/hooks/useApiHooks";
+import type { ArmedPersonnel, UniformAssignment, FlashlightItem } from "@/lib/types";
+import { uniformAssignmentsApi, flashlightsApi } from "@/lib/api";
+import { equipmentStatusColors, phoneStatusColors, EQUIPMENT_STATUSES, PHONE_STATUSES } from "@/lib/deviceAssignment";
+import { HardDrive, Smartphone, Shirt, Flashlight } from "lucide-react";
 
 function resolvePhoto(url?: string | null): string | undefined {
   if (!url) return undefined;
