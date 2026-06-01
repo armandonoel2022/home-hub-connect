@@ -255,6 +255,19 @@ export default function Payroll() {
     const gross = Number(e.tssReportedSalary) || Number(e.salary) || 0;
     const factor = payFrequency === "quincenal" ? 0.5 : 1;
     const d = calcDeductions(gross);
+    // Cuotas de préstamos activos del empleado (coincidencia por nombre)
+    const nameKey = (e.fullName || "").trim().toLowerCase();
+    const loans = getApprovedLoans().filter(l =>
+      (l.requestedByName || "").trim().toLowerCase() === nameKey
+      && loanBalance(l) > 0
+      && (l.loanDetails?.frequency || "mensual") === payFrequency
+    );
+    const loanDetail = loans.map(l => ({
+      id: l.id,
+      installment: l.loanDetails?.approvedInstallment ?? l.loanDetails?.monthlyInstallment ?? 0,
+      frequency: l.loanDetails?.frequency,
+    }));
+    const loanDeduction = loanDetail.reduce((s, x) => s + (x.installment || 0), 0);
     const item = {
       employeeCode: e.employeeCode, fullName: e.fullName, cedula: e.tss || "",
       department: e.department, position: e.position, bank: e.bank || "",
@@ -262,7 +275,10 @@ export default function Payroll() {
       grossMonthly: gross,
       grossPeriod: gross * factor,
       sfs: d.sfs * factor, afp: d.afp * factor, isr: d.isr * factor,
-      totalDeductions: d.totalDeductions * factor, net: d.net * factor,
+      loanDeduction,
+      loanDetail,
+      totalDeductions: d.totalDeductions * factor + loanDeduction,
+      net: d.net * factor - loanDeduction,
     };
     const run = {
       id: `ADHOC-${e.employeeCode}-${Date.now()}`,
