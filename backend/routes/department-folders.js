@@ -3,7 +3,7 @@
  * Only department members can access their department's folders
  */
 const express = require('express');
-const { readData, writeData, generateId } = require('../config/database');
+const { readData, writeData, generateId, saveFile } = require('../config/database');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
