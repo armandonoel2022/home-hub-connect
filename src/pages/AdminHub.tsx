@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Receipt, Banknote, Calculator, ShoppingCart, Package, FolderOpen,
   ChevronRight, CheckCircle2, Clock, AlertCircle, ClipboardList, Plus,
-  FileText, Search, BarChart3, Trash2, Wrench, KeyRound,
+  FileText, Search, BarChart3, Trash2, Wrench, KeyRound, HardDrive, Smartphone, Paperclip,
 } from "lucide-react";
 import {
   ADMIN_CATEGORIES, ADMIN_PROCESSES,
@@ -26,6 +26,10 @@ import {
   getChecklistState, toggleChecklistItem,
   type AdminProcess, type AdminActivityEntry, type ChecklistState,
 } from "@/lib/adminProcessData";
+import {
+  getDeviceRegistrations, acknowledgeDeviceRegistration,
+  type DeviceRegistration,
+} from "@/lib/deviceAssignment";
 
 const CATEGORY_ICONS: Record<string, any> = {
   facturacion: Receipt,
