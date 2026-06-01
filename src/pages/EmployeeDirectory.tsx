@@ -542,9 +542,9 @@ const EmployeeDirectory = () => {
 
       {/* Detail / Audit Dialog */}
       <Dialog open={!!viewing} onOpenChange={o => { if (!o) setViewing(null); }}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{viewing?.fullName}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2"><Users className="h-5 w-5 text-gold" /> Perfil 360° del Empleado</DialogTitle>
           </DialogHeader>
           {viewing && (() => {
             const armed = findArmedRecord(viewing);
