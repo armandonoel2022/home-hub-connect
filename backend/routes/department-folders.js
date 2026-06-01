@@ -3,7 +3,7 @@
  * Only department members can access their department's folders
  */
 const express = require('express');
-const { readData, writeData, generateId } = require('../config/database');
+const { readData, writeData, generateId, saveFile } = require('../config/database');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
@@ -111,16 +111,31 @@ router.post('/:department/:folderId/files', auth, (req, res) => {
   const allFolders = readData(FILE);
   const folder = allFolders.find(f => f.id === folderId && f.department === department);
   if (!folder) return res.status(404).json({ message: 'Carpeta no encontrada' });
-  
+
+  const fileId = `FILE-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+  // Persist the actual file content to disk (so it can be downloaded later)
+  let fileUrl;
+  if (fileData) {
+    try {
+      const safeName = `${fileId}-${String(name || 'archivo').replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+      saveFile(`departments/${folderId}`, safeName, fileData);
+      fileUrl = `/uploads/departments/${folderId}/${safeName}`;
+    } catch (err) {
+      return res.status(500).json({ message: 'No se pudo guardar el archivo en disco' });
+    }
+  }
+
   const newFile = {
-    id: `FILE-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    id: fileId,
     name,
     size,
+    fileUrl,
     uploadedAt: new Date().toISOString(),
     uploadedBy: req.user.fullName || req.user.id,
     uploadedByUserId: req.user.id,
   };
-  
+
   folder.files.push(newFile);
   writeData(FILE, allFolders);
   res.status(201).json(newFile);

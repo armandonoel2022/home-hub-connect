@@ -7,7 +7,7 @@ import { getUserAssignedAssets, generateOffboardingTicketDescription } from "@/l
 import type { UserAssetSummary } from "@/lib/assetLinking";
 import AssetReturnOverlay from "@/components/AssetReturnOverlay";
 import { cn } from "@/lib/utils";
-import { isApiConfigured, departmentFoldersApi, employeesApi, type Employee } from "@/lib/api";
+import { isApiConfigured, departmentFoldersApi, employeesApi, getFileUrl, type Employee } from "@/lib/api";
 import { buildDeptMembers, type DeptMember } from "@/lib/deptMembers";
 import { toast } from "@/hooks/use-toast";
 import type { OffboardingReason } from "@/lib/types";
@@ -52,7 +52,7 @@ interface DeptFolder {
   id: string;
   name: string;
   department: string;
-  files: { id: string; name: string; size: string; uploadedAt: string; uploadedBy?: string }[];
+  files: { id: string; name: string; size: string; uploadedAt: string; uploadedBy?: string; fileUrl?: string }[];
 }
 
 interface DepartmentMeta {
@@ -321,24 +321,39 @@ const DepartmentGrid = () => {
     setShowNewFolder(false);
   };
 
+  const readFileAsDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+
   const handleUploadFile = async (dept: string, folderId: string, fileList: FileList | null) => {
     if (!fileList) return;
     for (const f of Array.from(fileList)) {
       const size = f.size > 1024 * 1024 ? `${(f.size / (1024 * 1024)).toFixed(1)} MB` : `${(f.size / 1024).toFixed(0)} KB`;
+      if (f.size > 50 * 1024 * 1024) {
+        toast({ title: "Archivo muy grande", description: `${f.name} supera el límite de 50 MB.`, variant: "destructive" });
+        continue;
+      }
       if (apiMode) {
         try {
-          const savedFile = await departmentFoldersApi.addFile(dept, folderId, { name: f.name, size });
+          const fileData = await readFileAsDataUrl(f);
+          const savedFile = await departmentFoldersApi.addFile(dept, folderId, { name: f.name, size, fileData });
           setDeptFolders(prev => {
             const folders = (prev[dept] || []).map(folder =>
               folder.id === folderId ? { ...folder, files: [...folder.files, savedFile] } : folder
             );
             return { ...prev, [dept]: folders };
           });
+          toast({ title: "✅ Documento guardado", description: `${f.name} se guardó correctamente.` });
         } catch {
           toast({ title: "Error", description: `No se pudo subir ${f.name}`, variant: "destructive" });
         }
       } else {
-        const newFile = { id: `file-${Date.now()}`, name: f.name, size, uploadedAt: new Date().toISOString().split("T")[0] };
+        const fileData = await readFileAsDataUrl(f);
+        const newFile = { id: `file-${Date.now()}`, name: f.name, size, fileUrl: fileData, uploadedAt: new Date().toISOString().split("T")[0] };
         setDeptFolders(prev => {
           const folders = (prev[dept] || []).map(folder =>
             folder.id === folderId ? { ...folder, files: [...folder.files, newFile] } : folder
@@ -348,6 +363,7 @@ const DepartmentGrid = () => {
       }
     }
   };
+
 
   const handleDeleteFile = async (dept: string, folderId: string, fileId: string) => {
     if (apiMode) {
@@ -1052,7 +1068,20 @@ const FolderItem = ({
           {folder.files.map((file) => (
             <div key={file.id} className="flex items-center gap-2 text-[11px] py-1 group/file">
               <FileText className="h-3 w-3 text-muted-foreground shrink-0" />
-              <span className="flex-1 text-card-foreground truncate">{file.name}</span>
+              {file.fileUrl ? (
+                <a
+                  href={getFileUrl(file.fileUrl)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download={file.name}
+                  className="flex-1 text-card-foreground truncate hover:underline gold-accent-text"
+                  title={`Abrir/descargar ${file.name}`}
+                >
+                  {file.name}
+                </a>
+              ) : (
+                <span className="flex-1 text-card-foreground truncate">{file.name}</span>
+              )}
               <span className="text-muted-foreground shrink-0">{file.size}</span>
               {file.uploadedBy && <span className="text-muted-foreground shrink-0 text-[10px]">{file.uploadedBy}</span>}
               <button onClick={() => onDeleteFile(file.id)} className="opacity-0 group-hover/file:opacity-100 text-destructive p-0.5">

@@ -495,7 +495,7 @@ export const departmentFoldersApi = {
     }),
   deleteFolder: (department: string, folderId: string) =>
     apiFetch<void>(`/department-folders/${encodeURIComponent(department)}/${folderId}`, { method: "DELETE" }),
-  addFile: (department: string, folderId: string, data: { name: string; size: string }) =>
+  addFile: (department: string, folderId: string, data: { name: string; size: string; fileData?: string }) =>
     apiFetch<any>(`/department-folders/${encodeURIComponent(department)}/${folderId}/files`, {
       method: "POST", body: JSON.stringify(data),
     }),
