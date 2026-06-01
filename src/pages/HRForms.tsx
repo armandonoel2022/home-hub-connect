@@ -841,12 +841,12 @@ const HRForms = () => {
                   </div>
                 )}
                 <div ref={virtualFormRef}>
-                  <RenderForm formType={activeForm} userName={effectiveRequester?.fullName || ""} department={effectiveRequester?.department || ""} showSignature={false} hireDate={resolvedHireDate} suggestedSalary={findEmployeeSalary(effectiveRequester?.fullName || "")} />
+                  <RenderForm formType={activeForm} userName={effectiveRequester?.fullName || ""} department={effectiveRequester?.department || ""} showSignature={false} hireDate={resolvedHireDate} suggestedSalary={findEmployeeSalary(effectiveRequester?.fullName || "")} allowTenureException={rrhhOnBehalf} />
                 </div>
 
                 <div className="mt-6 pt-4 border-t border-border">
                   {(() => {
-                    const loanBlocked = activeForm === "prestamos" && (!resolvedHireDate || tenureMonths < getLoanSettings().minTenureMonths);
+                    const loanBlocked = activeForm === "prestamos" && !rrhhOnBehalf && (!resolvedHireDate || tenureMonths < getLoanSettings().minTenureMonths);
                     return (
                       <>
                         {loanBlocked && (
@@ -854,6 +854,11 @@ const HRForms = () => {
                             {!resolvedHireDate
                               ? "No se pudo verificar la fecha de ingreso del empleado. Solicita a RRHH actualizar el directorio antes de enviar."
                               : `Antigüedad insuficiente: se requieren ${getLoanSettings().minTenureMonths} meses (actual: ${tenureMonths}). No es posible enviar la solicitud.`}
+                          </div>
+                        )}
+                        {activeForm === "prestamos" && rrhhOnBehalf && tenureMonths < getLoanSettings().minTenureMonths && (
+                          <div className="mb-3 rounded-lg p-3 border bg-blue-50 border-blue-200 text-blue-800 text-xs">
+                            Excepción de antigüedad: RRHH solicita a nombre de <strong>{beneficiary?.fullName}</strong> (antigüedad actual: {tenureMonths} mes{tenureMonths === 1 ? "" : "es"}). Quedará registrada como excepción autorizada.
                           </div>
                         )}
                         <Button className="w-full gap-2" onClick={handleVirtualSubmit} disabled={loanBlocked}>
