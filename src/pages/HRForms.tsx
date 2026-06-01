@@ -1329,7 +1329,7 @@ function PermissionsForm({ userName, department, showSignature }: { userName: st
 }
 
 // ── Loan form ──
-function LoanForm({ userName, department, showSignature, hireDate, suggestedSalary }: { userName: string; department: string; showSignature: boolean; hireDate?: string | null; suggestedSalary?: number }) {
+function LoanForm({ userName, department, showSignature, hireDate, suggestedSalary, allowTenureException = false }: { userName: string; department: string; showSignature: boolean; hireDate?: string | null; suggestedSalary?: number; allowTenureException?: boolean }) {
   const settings = getLoanSettings();
   const tenure = (() => {
     if (!hireDate) return { months: 0, label: "Sin fecha de ingreso registrada" };
@@ -1343,17 +1343,19 @@ function LoanForm({ userName, department, showSignature, hireDate, suggestedSala
       : `${months} mes${months !== 1 ? "es" : ""}`;
     return { months, label };
   })();
-  const meetsPolicy = tenure.months >= settings.minTenureMonths;
+  const meetsPolicy = tenure.months >= settings.minTenureMonths || allowTenureException;
 
   const [salary, setSalary] = useState<number>(suggestedSalary || 0);
   const [amount, setAmount] = useState<number>(0);
   const [term, setTerm] = useState<number>(6);
+  const [frequency, setFrequency] = useState<LoanFrequency>("mensual");
   useEffect(() => { if (suggestedSalary) setSalary(suggestedSalary); }, [suggestedSalary]);
 
   const capacity = calcLoanCapacity(salary, hireDate, settings.maxInstallmentFraction);
-  const installment = calcMonthlyInstallment(amount, term, settings.annualInterestRatePct);
+  const plan = calcLoanPlan(amount, term, settings.annualInterestRatePct, frequency);
+  const maxInstallment = maxInstallmentByFrequency(salary, frequency, settings.maxInstallmentFraction);
   const overPolicy = amount > 0 && amount > capacity.maxAvailable;
-  const overInstallment = installment > 0 && capacity.maxInstallment > 0 && installment > capacity.maxInstallment;
+  const overInstallment = plan.installment > 0 && maxInstallment > 0 && plan.installment > maxInstallment;
 
   return (
     <div className="space-y-5">
@@ -1364,8 +1366,13 @@ function LoanForm({ userName, department, showSignature, hireDate, suggestedSala
         <p className="font-semibold">Política de préstamos</p>
         <p className="text-xs mt-1">
           Antigüedad mínima de <strong>{settings.minTenureMonths} meses</strong>. Antigüedad actual: <strong>{tenure.label}</strong>.
-          Tasa anual vigente: <strong>{settings.annualInterestRatePct}%</strong>. Cuota máxima: <strong>1/6 del salario mensual</strong>.
+          Tasa anual vigente: <strong>{settings.annualInterestRatePct}%</strong>. Cuota máxima: <strong>1/6 del ingreso del período</strong>.
         </p>
+        {allowTenureException && tenure.months < settings.minTenureMonths && (
+          <p className="text-xs mt-2 font-semibold text-blue-700">
+            ℹ Excepción de antigüedad: RRHH solicita a nombre del empleado. Quedará registrada como excepción autorizada.
+          </p>
+        )}
         {!meetsPolicy && (
           <p className="text-xs mt-2 font-semibold">
             ⛔ No es posible enviar la solicitud — el empleado aún no cumple la antigüedad mínima requerida.
@@ -1399,18 +1406,26 @@ function LoanForm({ userName, department, showSignature, hireDate, suggestedSala
           </div>
           <div className="pt-2 border-t border-border">
             Monto máx sugerido: <strong>RD${capacity.maxAvailable.toLocaleString()}</strong> ·
-            Cuota máx (1/6 salario): <strong>RD${capacity.maxInstallment.toLocaleString()}</strong>
+            Cuota máx ({frequency === "quincenal" ? "1/6 quincena" : "1/6 salario"}): <strong>RD${maxInstallment.toLocaleString()}</strong>
           </div>
         </div>
       )}
+      <FormField label="Frecuencia de descuento">
+        {/* hidden input para que el submit capture el valor */}
+        <input type="hidden" value={frequency === "quincenal" ? "Quincenal" : "Mensual"} readOnly />
+        <div className="flex gap-2">
+          <Button type="button" variant={frequency === "mensual" ? "default" : "outline"} size="sm" onClick={() => setFrequency("mensual")}>Mensual</Button>
+          <Button type="button" variant={frequency === "quincenal" ? "default" : "outline"} size="sm" onClick={() => setFrequency("quincenal")}>Quincenal</Button>
+        </div>
+      </FormField>
       <div className="grid grid-cols-2 gap-4">
         <FormField label="Monto Solicitado (RD$)"><Input type="number" min={0} value={amount || ""} onChange={e => setAmount(Number(e.target.value))} placeholder="Ej: 15000" /></FormField>
         <FormField label="Plazo de Pago (meses)"><Input type="number" min={1} max={36} value={term || ""} onChange={e => setTerm(Number(e.target.value))} placeholder="Ej: 6" /></FormField>
       </div>
       {amount > 0 && term > 0 && (
         <div className={cn("text-xs rounded p-3 border", overInstallment ? "bg-red-50 border-red-200 text-red-800" : "bg-emerald-50 border-emerald-200 text-emerald-800")}>
-          Cuota mensual estimada: <strong>RD${installment.toLocaleString()}</strong> (interés {settings.annualInterestRatePct}% anual).
-          {overInstallment && " ⚠ Supera 1/6 del salario — ajusta plazo o monto."}
+          Cuota {frequency} estimada: <strong>RD${plan.installment.toLocaleString()}</strong> × {plan.installments} pagos (interés {settings.annualInterestRatePct}% anual · total a pagar RD${plan.totalToPay.toLocaleString()}).
+          {overInstallment && ` ⚠ Supera 1/6 del ingreso ${frequency} — ajusta plazo o monto.`}
         </div>
       )}
       {overPolicy && (
