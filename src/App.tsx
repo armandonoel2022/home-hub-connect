@@ -62,6 +62,7 @@ import AuditConsolidated from "./pages/AuditConsolidated";
 import PhotoSync from "./pages/PhotoSync";
 import MyHRRequests from "./pages/MyHRRequests";
 import HRApprovals from "./pages/HRApprovals";
+import LoanControl from "./pages/LoanControl";
 import HRApprovalPrint from "./pages/HRApprovalPrint";
 import HRConsolidated from "./pages/HRConsolidated";
 import HRConstancias from "./pages/HRConstancias";
