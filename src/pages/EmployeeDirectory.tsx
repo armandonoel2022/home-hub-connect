@@ -51,6 +51,15 @@ const EmployeeDirectory = () => {
   const [formData, setFormData] = useState<Partial<Employee>>({});
   const [viewing, setViewing] = useState<Employee | null>(null);
   const { data: armedPersonnel } = useArmedPersonnel();
+  const { data: equipment, update: updateEquipment } = useEquipment();
+  const { data: phones, update: updatePhone } = usePhones();
+  const [uniformAssignments, setUniformAssignments] = useState<UniformAssignment[]>([]);
+  const [flashlights, setFlashlights] = useState<FlashlightItem[]>([]);
+
+  useEffect(() => {
+    uniformAssignmentsApi.getAll().then(setUniformAssignments).catch(() => {});
+    flashlightsApi.getAll().then(setFlashlights).catch(() => {});
+  }, []);
 
   const normalize = (s: string) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
