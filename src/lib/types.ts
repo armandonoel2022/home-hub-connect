@@ -88,6 +88,30 @@ export interface Equipment {
   /** Constancia(s) de asignación firmada(s) */
   assignmentEvidence?: AssignmentEvidence[];
   assignedDate?: string;
+  /** Código de Activo Fijo (ej. SSC-LAP-29615). Sirve como identificador físico. */
+  fixedAssetCode?: string;
+  // ─ Especificaciones para laptops / workstations / computadoras ─
+  operatingSystem?: string;
+  osLanguage?: string;
+  bios?: string;
+  processor?: string;
+  // ─ Periféricos ─
+  hasMouse?: boolean;
+  hasKeyboard?: boolean;
+  hasMonitor?: boolean;
+  /** ID de un Monitor registrado en el mismo inventario al que está vinculado */
+  linkedMonitorId?: string;
+  // ─ Inventario de software ─
+  softwareInventory?: SoftwareEntry[];
+  softwareUpdatedAt?: string;
+  softwareSource?: string;
+}
+
+/** Entrada del inventario de software instalado en un equipo. */
+export interface SoftwareEntry {
+  name: string;
+  version: string;
+  publisher: string;
 }
 
 export type VehicleStatus = "Activo" | "En Taller" | "Dado de Baja" | "Disponible";

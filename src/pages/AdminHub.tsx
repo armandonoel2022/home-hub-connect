@@ -226,8 +226,8 @@ const AdminHub = () => {
                         )}
                       </div>
                       <div className="mt-3 flex justify-end gap-2">
-                        <Button size="sm" variant="outline" onClick={() => navigate(r.source === "Flota Celular" ? "/flota-celular" : "/inventario")} className="h-8 text-xs">
-                          Abrir módulo
+                        <Button size="sm" variant="outline" onClick={() => navigate(`${r.source === "Flota Celular" ? "/flota-celular" : "/inventario"}?device=${encodeURIComponent(r.deviceId)}`)} className="h-8 text-xs">
+                          Ver ficha
                         </Button>
                         {!r.acknowledged && (
                           <Button size="sm" onClick={() => ackDevice(r.id)} className="h-8 text-xs">
