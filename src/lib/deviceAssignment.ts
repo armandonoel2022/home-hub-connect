@@ -9,7 +9,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import letterhead from "@/assets/safeone-letterhead.png";
-import type { EquipmentStatus, PhoneStatus, AssignmentEvidence } from "./types";
+import type { EquipmentStatus, PhoneStatus, AssignmentEvidence, Equipment, SoftwareEntry } from "./types";
 
 // ─── Catálogos ───
 export const PHONE_STATUSES: PhoneStatus[] = [
