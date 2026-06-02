@@ -28,6 +28,20 @@ const PhoneFleetPage = () => {
   const [detail, setDetail] = useState<PhoneDevice | null>(null);
   const evidenceTarget = useRef<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    const id = searchParams.get("device");
+    if (id && phones.length) {
+      const found = phones.find((p) => p.id === id);
+      if (found) {
+        setDetail(found);
+        searchParams.delete("device");
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phones]);
 
   const hasAccess = user?.isAdmin || ALLOWED_DEPARTMENTS.includes(user?.department || "");
   if (!hasAccess) {
