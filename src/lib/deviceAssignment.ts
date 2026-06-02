@@ -288,3 +288,181 @@ export function readFileAsDataUrl(file: File): Promise<string> {
     fr.readAsDataURL(file);
   });
 }
+
+// ─── Inventario de Software ───
+export interface ParsedSoftwareInventory {
+  equipo?: string;
+  serial?: string;
+  modelo?: string;
+  fecha?: string;
+  apps: SoftwareEntry[];
+}
+
+/**
+ * Parsea un archivo de certificación de software con el formato:
+ *   FECHA: ...
+ *   EQUIPO: SSC-LAP-29615
+ *   SERIAL: ...
+ *   MODELO: ...
+ *   ---
+ *   Nombre - Versión - Fabricante
+ */
+export function parseSoftwareInventory(text: string): ParsedSoftwareInventory {
+  const lines = text.replace(/\uFEFF/g, "").split(/\r?\n/);
+  const result: ParsedSoftwareInventory = { apps: [] };
+  let inApps = false;
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (!inApps) {
+      if (/^-{2,}$/.test(line)) { inApps = true; continue; }
+      const m = line.match(/^(FECHA|EQUIPO|SERIAL|MODELO)\s*:\s*(.*)$/i);
+      if (m) {
+        const key = m[1].toUpperCase();
+        const val = m[2].trim();
+        if (key === "FECHA") result.fecha = val;
+        else if (key === "EQUIPO") result.equipo = val;
+        else if (key === "SERIAL") result.serial = val;
+        else if (key === "MODELO") result.modelo = val;
+        continue;
+      }
+      // Si no hay separador "---" igual empezamos a leer apps cuando hay " - "
+      if (line.includes(" - ")) inApps = true;
+    }
+    if (inApps) {
+      const parts = line.split(" - ");
+      const name = (parts[0] || "").trim();
+      if (!name) continue;
+      const version = (parts[1] || "").trim();
+      const publisher = parts.slice(2).join(" - ").trim();
+      result.apps.push({ name, version, publisher });
+    }
+  }
+  // Eliminar duplicados exactos
+  const seen = new Set<string>();
+  result.apps = result.apps.filter((a) => {
+    const k = `${a.name}|${a.version}|${a.publisher}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+  return result;
+}
+
+/**
+ * Genera la Ficha / Hoja del Equipo registrado (inventario IT) en PDF,
+ * incluyendo especificaciones, periféricos, asignación e inventario de software.
+ */
+export async function generateEquipmentSheetPDF(
+  eq: Equipment,
+  opts?: { open?: boolean; fileName?: string; linkedMonitorLabel?: string }
+) {
+  const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+  const W = pdf.internal.pageSize.getWidth();
+
+  const lh = await loadLetterhead();
+  if (lh) {
+    try { pdf.addImage(lh, "PNG", 0, 0, W, pdf.internal.pageSize.getHeight()); } catch { /* ignore */ }
+  }
+
+  let y = 38;
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(15);
+  pdf.setTextColor(20, 20, 20);
+  pdf.text("FICHA DE EQUIPO — INVENTARIO IT", W / 2, y, { align: "center" });
+  y += 6;
+  pdf.setFontSize(9);
+  pdf.setFont("helvetica", "normal");
+  pdf.setTextColor(90, 90, 90);
+  pdf.text(`Activo Fijo: ${eq.fixedAssetCode || eq.id}  ·  SafeOne Security Company SRL`, W / 2, y, { align: "center" });
+  y += 4;
+  pdf.text(`Documento generado: ${new Date().toLocaleString("es-DO")}`, W / 2, y, { align: "center" });
+  y += 8;
+
+  const specRows: string[][] = [
+    ["Activo Fijo", eq.fixedAssetCode || "—"],
+    ["ID interno", eq.id],
+    ["Tipo", eq.type || "—"],
+    ["Marca / Modelo", `${eq.brand || ""} ${eq.model || ""}`.trim() || "—"],
+    ["Serie", eq.serial || "—"],
+    ["Estado", eq.status || "—"],
+  ];
+  if (eq.color) specRows.push(["Color", eq.color]);
+  if (eq.processor) specRows.push(["Procesador", eq.processor]);
+  if (eq.ram) specRows.push(["RAM", eq.ram]);
+  if (eq.storage) specRows.push(["Almacenamiento", eq.storage]);
+  if (eq.operatingSystem) specRows.push(["Sistema Operativo", eq.operatingSystem]);
+  if (eq.osLanguage) specRows.push(["Idioma", eq.osLanguage]);
+  if (eq.bios) specRows.push(["BIOS", eq.bios]);
+  const perifs = [
+    eq.hasMouse ? "Mouse" : null,
+    eq.hasKeyboard ? "Teclado" : null,
+    eq.hasMonitor ? `Monitor${opts?.linkedMonitorLabel ? ` (${opts.linkedMonitorLabel})` : ""}` : null,
+  ].filter(Boolean);
+  if (perifs.length) specRows.push(["Periféricos", perifs.join(", ")]);
+  if (eq.acquisitionDate) specRows.push(["Fecha de adquisición", eq.acquisitionDate]);
+
+  autoTable(pdf, {
+    startY: y,
+    theme: "grid",
+    head: [["DATOS DEL EQUIPO", ""]],
+    body: specRows,
+    headStyles: { fillColor: [30, 58, 95], textColor: 255, fontSize: 9 },
+    columnStyles: { 0: { fontStyle: "bold", cellWidth: 55, fillColor: [245, 245, 245] } },
+    styles: { fontSize: 9, cellPadding: 2 },
+    margin: { left: 14, right: 14 },
+  });
+  // @ts-ignore
+  y = pdf.lastAutoTable.finalY + 4;
+
+  autoTable(pdf, {
+    startY: y,
+    theme: "grid",
+    head: [["ASIGNACIÓN", ""]],
+    body: [
+      ["Asignado a", eq.assignedTo || "Sin asignar"],
+      ["Código de empleado", eq.assignedToCode || "—"],
+      ["Departamento", eq.department || "—"],
+      ["Fecha de asignación", eq.assignedDate || "—"],
+    ],
+    headStyles: { fillColor: [30, 58, 95], textColor: 255, fontSize: 9 },
+    columnStyles: { 0: { fontStyle: "bold", cellWidth: 55, fillColor: [245, 245, 245] } },
+    styles: { fontSize: 9, cellPadding: 2 },
+    margin: { left: 14, right: 14 },
+  });
+  // @ts-ignore
+  y = pdf.lastAutoTable.finalY + 4;
+
+  // Inventario de software
+  if (eq.softwareInventory && eq.softwareInventory.length) {
+    autoTable(pdf, {
+      startY: y,
+      theme: "striped",
+      head: [["#", "Software", "Versión", "Fabricante"]],
+      body: eq.softwareInventory.map((s, i) => [String(i + 1), s.name, s.version || "—", s.publisher || "—"]),
+      headStyles: { fillColor: [30, 58, 95], textColor: 255, fontSize: 8.5 },
+      styles: { fontSize: 7.5, cellPadding: 1.4 },
+      columnStyles: { 0: { cellWidth: 10 }, 2: { cellWidth: 30 }, 3: { cellWidth: 45 } },
+      margin: { left: 14, right: 14 },
+      didDrawPage: () => {
+        pdf.setFontSize(8); pdf.setTextColor(120, 120, 120);
+      },
+    });
+    // @ts-ignore
+    y = pdf.lastAutoTable.finalY + 2;
+    pdf.setFontSize(7.5);
+    pdf.setTextColor(120, 120, 120);
+    pdf.text(`Inventario de software: ${eq.softwareInventory.length} aplicaciones${eq.softwareUpdatedAt ? ` · actualizado ${new Date(eq.softwareUpdatedAt).toLocaleDateString("es-DO")}` : ""}`, 14, y);
+  }
+
+  const fileName = opts?.fileName || `Ficha_Equipo_${(eq.fixedAssetCode || eq.id).replace(/\s+/g, "_")}.pdf`;
+  if (opts?.open) {
+    const blob = pdf.output("blob");
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, "_blank");
+    if (!win) pdf.save(fileName);
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } else {
+    pdf.save(fileName);
+  }
+}
