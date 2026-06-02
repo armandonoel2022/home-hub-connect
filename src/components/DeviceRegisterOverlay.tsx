@@ -80,8 +80,8 @@ const DeviceRegisterOverlay = () => {
               <div className="mt-0.5 rounded-md bg-muted p-1.5">
                 <Icon className="h-4 w-4 text-gold" />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">
+              <button onClick={() => openSheet(r)} className="flex-1 min-w-0 text-left" title="Abrir ficha del equipo">
+                <p className="text-sm font-medium truncate hover:text-gold">
                   {r.deviceType} · {r.brand} {r.model}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
@@ -97,7 +97,7 @@ const DeviceRegisterOverlay = () => {
                     <FileText className="h-3 w-3" /> Constancia adjunta
                   </span>
                 )}
-              </div>
+              </button>
               <button
                 onClick={() => ackOne(r.id)}
                 title="Marcar como revisado"
