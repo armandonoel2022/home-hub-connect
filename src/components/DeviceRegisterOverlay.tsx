@@ -49,6 +49,12 @@ const DeviceRegisterOverlay = () => {
     acknowledgeDeviceRegistration(id);
     refresh();
   };
+  const openSheet = (r: DeviceRegistration) => {
+    const base = r.source === "Flota Celular" ? "/flota-celular" : "/inventario";
+    acknowledgeDeviceRegistration(r.id);
+    navigate(`${base}?device=${encodeURIComponent(r.deviceId)}`);
+    refresh();
+  };
   const ackAll = () => {
     acknowledgeAllDeviceRegistrations();
     setPending([]);
