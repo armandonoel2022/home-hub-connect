@@ -235,7 +235,7 @@ const InventoryPage = () => {
       color: e.color, storage: e.storage, ram: e.ram,
       acquisitionDate: e.acquisitionDate,
       employeeName: e.assignedTo || undefined,
-      employeeCode: e.assignedToCode || emp?.employeeCode,
+      employeeCode: (() => { const c = resolveEmpCode(e); return c === "—" ? (emp?.employeeCode) : c; })(),
       department: e.department || emp?.department,
       position: emp?.position,
       deliveredBy: user?.fullName,
