@@ -664,7 +664,7 @@ const InventoryPage = () => {
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Asignación</p>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 text-sm">
                       <div><p className="text-[11px] text-muted-foreground">Asignado a</p><p className="text-card-foreground font-medium">{detail.assignedTo || "Sin asignar"}</p></div>
-                      <div><p className="text-[11px] text-muted-foreground">Código empleado</p><p className="text-card-foreground font-medium">{detail.assignedToCode || activeUsers.find((u) => u.fullName === detail.assignedTo)?.employeeCode || "—"}</p></div>
+                      <div><p className="text-[11px] text-muted-foreground">Código empleado</p><p className="text-card-foreground font-medium">{resolveEmpCode(detail)}</p></div>
                       <div><p className="text-[11px] text-muted-foreground">Departamento</p><p className="text-card-foreground font-medium">{detail.department || "—"}</p></div>
                     </div>
                   </div>
