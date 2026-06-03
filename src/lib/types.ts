@@ -101,6 +101,8 @@ export interface Equipment {
   hasMonitor?: boolean;
   /** ID de un Monitor registrado en el mismo inventario al que está vinculado */
   linkedMonitorId?: string;
+  // ─ Fotos del/los dispositivo(s) ─
+  devicePhotos?: AssignmentEvidence[];
   // ─ Inventario de software ─
   softwareInventory?: SoftwareEntry[];
   softwareUpdatedAt?: string;

@@ -12,7 +12,7 @@ import {
 import {
   Search, Plus, Monitor, Printer, Cpu, Wifi, Package, Laptop, Server,
   Tv, Projector, Phone, X, Trash2, Pencil, FileText, Upload, Paperclip,
-  AppWindow, MonitorSmartphone,
+  AppWindow, MonitorSmartphone, Image as ImageIcon,
 } from "lucide-react";
 import ExportMenu from "@/components/ExportMenu";
 import { toast } from "sonner";
@@ -45,7 +45,7 @@ const emptyForm: Partial<Equipment> = { type: "Laptop", status: "Disponible" };
 
 const InventoryPage = () => {
   const { user, activeUsers } = useAuth();
-  const { data: equipment, setData: setEquipment, create: createEquipment, update: updateEquipment } = useEquipment();
+  const { data: equipment, setData: setEquipment, create: createEquipment, update: updateEquipment, remove: removeEquipment } = useEquipment();
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("Todos");
   const [showForm, setShowForm] = useState(false);
@@ -56,6 +56,8 @@ const InventoryPage = () => {
   const fileInput = useRef<HTMLInputElement>(null);
   const softwareTarget = useRef<string | null>(null);
   const softwareInput = useRef<HTMLInputElement>(null);
+  const photoTarget = useRef<string | null>(null);
+  const photoInput = useRef<HTMLInputElement>(null);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const hasAccess = user?.isAdmin || ALLOWED_DEPARTMENTS.includes(user?.department || "");
@@ -130,7 +132,13 @@ const InventoryPage = () => {
     if (!form.fixedAssetCode || !form.fixedAssetCode.trim()) { toast.error("El código de Activo Fijo es obligatorio"); return; }
     const assetCode = form.fixedAssetCode.trim();
     if (editingId) {
-      const updated = { ...form, fixedAssetCode: assetCode, assignedDate: form.assignedTo && !form.assignedDate ? new Date().toISOString().split("T")[0] : form.assignedDate } as Partial<Equipment>;
+      const emp = form.assignedTo ? activeUsers.find((u) => u.fullName === form.assignedTo) : undefined;
+      const updated = {
+        ...form,
+        fixedAssetCode: assetCode,
+        assignedToCode: form.assignedToCode || emp?.employeeCode,
+        assignedDate: form.assignedTo && !form.assignedDate ? new Date().toISOString().split("T")[0] : form.assignedDate,
+      } as Partial<Equipment>;
       setEquipment((prev) => prev.map((e) => (e.id === editingId ? { ...e, ...updated } as Equipment : e)));
       try { await updateEquipment(editingId, updated); } catch { /* local */ }
       toast.success("Equipo actualizado");
@@ -248,10 +256,29 @@ const InventoryPage = () => {
     if (softwareInput.current) softwareInput.current.value = "";
   };
 
+  const triggerPhotoUpload = (id: string) => { photoTarget.current = id; photoInput.current?.click(); };
+  const handlePhotoUpload = async (ev: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(ev.target.files || []);
+    const id = photoTarget.current;
+    if (!files.length || !id) return;
+    const photos = await Promise.all(files.map(async (file) => ({
+      fileUrl: await readFileAsDataUrl(file),
+      fileName: file.name,
+      uploadedAt: new Date().toISOString(),
+      uploadedBy: user?.fullName,
+    })));
+    setEquipment((prev) => prev.map((e) => e.id === id ? { ...e, devicePhotos: [...(e.devicePhotos || []), ...photos] } : e));
+    setDetail((d) => (d && d.id === id ? { ...d, devicePhotos: [...(d.devicePhotos || []), ...photos] } : d));
+    try { const target = equipment.find((e) => e.id === id); await updateEquipment(id, { devicePhotos: [...(target?.devicePhotos || []), ...photos] }); } catch { /* local */ }
+    toast.success(`${photos.length} foto(s) cargada(s)`);
+    if (photoInput.current) photoInput.current.value = "";
+  };
+
   return (
     <AppLayout>
       <input ref={fileInput} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={handleUpload} />
       <input ref={softwareInput} type="file" accept=".txt,.csv,.log" className="hidden" onChange={handleSoftwareUpload} />
+      <input ref={photoInput} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload} />
       <div className="min-h-screen">
         <div className="nav-corporate">
           <div className="gold-bar" />
@@ -379,7 +406,7 @@ const InventoryPage = () => {
                               <button onClick={() => handleGenerateSheet(eq)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-gold" title="Generar hoja de asignación"><FileText className="h-4 w-4" /></button>
                               <button onClick={() => triggerUpload(eq.id)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-emerald-600" title="Subir constancia firmada"><Upload className="h-4 w-4" /></button>
                               <button onClick={() => openEdit(eq)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-blue-600" title="Editar"><Pencil className="h-4 w-4" /></button>
-                              <button onClick={() => { if (window.confirm(`¿Eliminar equipo ${eq.fixedAssetCode || eq.id}: ${eq.brand} ${eq.model}?`)) setEquipment((prev) => prev.filter((e) => e.id !== eq.id)); }} className="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600" title="Eliminar"><Trash2 className="h-4 w-4" /></button>
+                              <button onClick={async () => { if (window.confirm(`¿Eliminar equipo ${eq.fixedAssetCode || eq.id}: ${eq.brand} ${eq.model}?`)) { setEquipment((prev) => prev.filter((e) => e.id !== eq.id)); try { await removeEquipment(eq.id); toast.success("Equipo eliminado"); } catch { toast.error("No se pudo eliminar"); } } }} className="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600" title="Eliminar"><Trash2 className="h-4 w-4" /></button>
                             </div>
                           </td>
                         )}
@@ -403,7 +430,7 @@ const InventoryPage = () => {
               <div className="p-5 space-y-4">
                 <div>
                   <label className="text-sm font-medium text-card-foreground block mb-1.5">Activo Fijo (ID) *</label>
-                  <input type="text" value={form.fixedAssetCode || ""} onChange={(e) => setForm({ ...form, fixedAssetCode: e.target.value })} disabled={!!editingId} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm font-mono focus:ring-2 focus:ring-gold outline-none disabled:opacity-60" placeholder="SSC-LAP-29615" />
+                  <input type="text" value={form.fixedAssetCode || ""} onChange={(e) => setForm({ ...form, fixedAssetCode: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm font-mono focus:ring-2 focus:ring-gold outline-none" placeholder="SSC-LAP-29615" />
                   <p className="text-[11px] text-muted-foreground mt-1">Este código de Activo Fijo identifica el equipo en el inventario.</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -593,10 +620,33 @@ const InventoryPage = () => {
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Asignación</p>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 text-sm">
                       <div><p className="text-[11px] text-muted-foreground">Asignado a</p><p className="text-card-foreground font-medium">{detail.assignedTo || "Sin asignar"}</p></div>
-                      <div><p className="text-[11px] text-muted-foreground">Código empleado</p><p className="text-card-foreground font-medium">{detail.assignedToCode || "—"}</p></div>
+                      <div><p className="text-[11px] text-muted-foreground">Código empleado</p><p className="text-card-foreground font-medium">{detail.assignedToCode || activeUsers.find((u) => u.fullName === detail.assignedTo)?.employeeCode || "—"}</p></div>
                       <div><p className="text-[11px] text-muted-foreground">Departamento</p><p className="text-card-foreground font-medium">{detail.department || "—"}</p></div>
                     </div>
                   </div>
+
+                  {/* Fotos del dispositivo */}
+                  <div className="rounded-lg border border-border p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><ImageIcon className="h-3.5 w-3.5" /> Fotos del dispositivo {(detail.devicePhotos?.length || 0) > 0 && `(${detail.devicePhotos!.length})`}</p>
+                      {canManage && (
+                        <button onClick={() => triggerPhotoUpload(detail.id)} className="text-xs inline-flex items-center gap-1 text-blue-700 hover:underline"><Upload className="h-3.5 w-3.5" /> Subir fotos</button>
+                      )}
+                    </div>
+                    {(detail.devicePhotos?.length || 0) > 0 ? (
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                        {detail.devicePhotos!.map((p, i) => (
+                          <a key={i} href={p.fileUrl} target="_blank" rel="noreferrer" className="block aspect-square rounded-lg overflow-hidden border border-border hover:ring-2 hover:ring-gold">
+                            <img src={p.fileUrl} alt={p.fileName || `Foto ${i + 1}`} className="w-full h-full object-cover" />
+                          </a>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Sin fotos cargadas.</p>
+                    )}
+                  </div>
+
+
 
                   {/* Inventario de software */}
                   <div className="rounded-lg border border-border p-4">
