@@ -643,9 +643,20 @@ const InventoryPage = () => {
                         <span className={detail.hasKeyboard ? "text-emerald-700" : "text-muted-foreground"}>{detail.hasKeyboard ? "✓" : "✗"} Teclado</span>
                         <span className={detail.hasMonitor ? "text-emerald-700" : "text-muted-foreground"}>{detail.hasMonitor ? "✓" : "✗"} Monitor</span>
                       </div>
-                      {detail.hasMonitor && detail.linkedMonitorId && (
-                        <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1.5"><MonitorSmartphone className="h-3.5 w-3.5" /> Vinculado a: <span className="text-card-foreground font-medium">{monitorLabel(detail.linkedMonitorId)}</span></p>
-                      )}
+                      {detail.hasMonitor && detail.linkedMonitorId && (() => {
+                        const linked = equipment.find((e) => e.id === detail.linkedMonitorId);
+                        return (
+                          <button
+                            type="button"
+                            disabled={!linked}
+                            onClick={() => linked && setDetail(linked)}
+                            className="text-xs mt-2 inline-flex items-center gap-1.5 text-blue-700 hover:underline disabled:text-muted-foreground disabled:no-underline disabled:cursor-default"
+                          >
+                            <MonitorSmartphone className="h-3.5 w-3.5" /> Vinculado a: <span className="font-medium">{monitorLabel(detail.linkedMonitorId)}</span>
+                            {linked && <ExternalLink className="h-3 w-3" />}
+                          </button>
+                        );
+                      })()}
                     </div>
                   )}
 
