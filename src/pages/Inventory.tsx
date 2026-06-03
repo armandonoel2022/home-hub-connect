@@ -56,6 +56,8 @@ const InventoryPage = () => {
   const fileInput = useRef<HTMLInputElement>(null);
   const softwareTarget = useRef<string | null>(null);
   const softwareInput = useRef<HTMLInputElement>(null);
+  const photoTarget = useRef<string | null>(null);
+  const photoInput = useRef<HTMLInputElement>(null);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const hasAccess = user?.isAdmin || ALLOWED_DEPARTMENTS.includes(user?.department || "");
