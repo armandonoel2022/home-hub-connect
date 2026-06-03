@@ -132,7 +132,13 @@ const InventoryPage = () => {
     if (!form.fixedAssetCode || !form.fixedAssetCode.trim()) { toast.error("El código de Activo Fijo es obligatorio"); return; }
     const assetCode = form.fixedAssetCode.trim();
     if (editingId) {
-      const updated = { ...form, fixedAssetCode: assetCode, assignedDate: form.assignedTo && !form.assignedDate ? new Date().toISOString().split("T")[0] : form.assignedDate } as Partial<Equipment>;
+      const emp = form.assignedTo ? activeUsers.find((u) => u.fullName === form.assignedTo) : undefined;
+      const updated = {
+        ...form,
+        fixedAssetCode: assetCode,
+        assignedToCode: form.assignedToCode || emp?.employeeCode,
+        assignedDate: form.assignedTo && !form.assignedDate ? new Date().toISOString().split("T")[0] : form.assignedDate,
+      } as Partial<Equipment>;
       setEquipment((prev) => prev.map((e) => (e.id === editingId ? { ...e, ...updated } as Equipment : e)));
       try { await updateEquipment(editingId, updated); } catch { /* local */ }
       toast.success("Equipo actualizado");
