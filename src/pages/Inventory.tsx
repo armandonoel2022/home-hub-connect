@@ -12,8 +12,9 @@ import {
 import {
   Search, Plus, Monitor, Printer, Cpu, Wifi, Package, Laptop, Server,
   Tv, Projector, Phone, X, Trash2, Pencil, FileText, Upload, Paperclip,
-  AppWindow, MonitorSmartphone, Image as ImageIcon,
+  AppWindow, MonitorSmartphone, Image as ImageIcon, MapPin, ExternalLink,
 } from "lucide-react";
+import { employeesApi, type Employee } from "@/lib/api";
 import ExportMenu from "@/components/ExportMenu";
 import { toast } from "sonner";
 
