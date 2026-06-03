@@ -488,15 +488,24 @@ const InventoryPage = () => {
                     <label className="text-sm font-medium text-card-foreground block mb-1.5">Color</label>
                     <input type="text" value={form.color || ""} onChange={(e) => setForm({ ...form, color: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" />
                   </div>
+                  {isComputer && (
+                    <>
+                      <div>
+                        <label className="text-sm font-medium text-card-foreground block mb-1.5">Almacen.</label>
+                        <input type="text" value={form.storage || ""} onChange={(e) => setForm({ ...form, storage: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" placeholder="512 GB SSD" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-card-foreground block mb-1.5">RAM</label>
+                        <input type="text" value={form.ram || ""} onChange={(e) => setForm({ ...form, ram: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" placeholder="16 GB" />
+                      </div>
+                    </>
+                  )}
                   <div>
-                    <label className="text-sm font-medium text-card-foreground block mb-1.5">Almacen.</label>
-                    <input type="text" value={form.storage || ""} onChange={(e) => setForm({ ...form, storage: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" placeholder="512 GB SSD" />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-card-foreground block mb-1.5">RAM</label>
-                    <input type="text" value={form.ram || ""} onChange={(e) => setForm({ ...form, ram: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" placeholder="16 GB" />
+                    <label className="text-sm font-medium text-card-foreground block mb-1.5 flex items-center gap-1"><MapPin className="h-3.5 w-3.5 text-muted-foreground" /> Ubicación actual</label>
+                    <input type="text" value={form.currentLocation || ""} onChange={(e) => setForm({ ...form, currentLocation: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" placeholder="Oficina, Almacén..." />
                   </div>
                 </div>
+
 
                 {isComputer && (
                   <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-4">
