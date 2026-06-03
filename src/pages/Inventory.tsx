@@ -60,6 +60,27 @@ const InventoryPage = () => {
   const photoTarget = useRef<string | null>(null);
   const photoInput = useRef<HTMLInputElement>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const [employees, setEmployees] = useState<Employee[]>([]);
+
+  useEffect(() => {
+    employeesApi.getAll().then(setEmployees).catch(() => {});
+  }, []);
+
+  const normName = (s?: string | null) =>
+    (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+  // Resuelve el código de empleado por código guardado, luego por nombre en
+  // el directorio de empleados (employees.json) y por último en los usuarios.
+  const resolveEmpCode = (e?: { assignedToCode?: string; assignedTo?: string | null }) => {
+    if (!e) return "—";
+    if (e.assignedToCode) return e.assignedToCode;
+    const target = normName(e.assignedTo);
+    if (!target) return "—";
+    const emp = employees.find((x) => normName(x.fullName) === target);
+    if (emp?.employeeCode) return emp.employeeCode;
+    const usr = activeUsers.find((u) => normName(u.fullName) === target);
+    return usr?.employeeCode || "—";
+  };
 
   const hasAccess = user?.isAdmin || ALLOWED_DEPARTMENTS.includes(user?.department || "");
 
