@@ -617,14 +617,15 @@ const InventoryPage = () => {
                       ["Tipo", detail.type],
                       ["Serie", detail.serial || "—"],
                       ["Color", detail.color || "—"],
-                      ["RAM", detail.ram || "—"],
-                      ["Almacenamiento", detail.storage || "—"],
                       ...(isComp ? [
+                        ["RAM", detail.ram || "—"],
+                        ["Almacenamiento", detail.storage || "—"],
                         ["Procesador", detail.processor || "—"],
                         ["Sistema Operativo", detail.operatingSystem || "—"],
                         ["Idioma", detail.osLanguage || "—"],
                         ["BIOS", detail.bios || "—"],
                       ] as [string, string][] : []),
+                      ["Ubicación actual", detail.currentLocation || "—"],
                       ["Fecha adquisición", detail.acquisitionDate || "—"],
                     ].map(([k, v]) => (
                       <div key={k}>
