@@ -256,6 +256,24 @@ const InventoryPage = () => {
     if (softwareInput.current) softwareInput.current.value = "";
   };
 
+  const triggerPhotoUpload = (id: string) => { photoTarget.current = id; photoInput.current?.click(); };
+  const handlePhotoUpload = async (ev: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(ev.target.files || []);
+    const id = photoTarget.current;
+    if (!files.length || !id) return;
+    const photos = await Promise.all(files.map(async (file) => ({
+      fileUrl: await readFileAsDataUrl(file),
+      fileName: file.name,
+      uploadedAt: new Date().toISOString(),
+      uploadedBy: user?.fullName,
+    })));
+    setEquipment((prev) => prev.map((e) => e.id === id ? { ...e, devicePhotos: [...(e.devicePhotos || []), ...photos] } : e));
+    setDetail((d) => (d && d.id === id ? { ...d, devicePhotos: [...(d.devicePhotos || []), ...photos] } : d));
+    try { const target = equipment.find((e) => e.id === id); await updateEquipment(id, { devicePhotos: [...(target?.devicePhotos || []), ...photos] }); } catch { /* local */ }
+    toast.success(`${photos.length} foto(s) cargada(s)`);
+    if (photoInput.current) photoInput.current.value = "";
+  };
+
   return (
     <AppLayout>
       <input ref={fileInput} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={handleUpload} />
