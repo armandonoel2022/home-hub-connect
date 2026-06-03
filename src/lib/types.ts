@@ -83,6 +83,8 @@ export interface Equipment {
   color?: string;
   storage?: string;
   ram?: string;
+  /** Ubicación física actual del dispositivo (oficina, almacén, etc.) */
+  currentLocation?: string;
   /** Código de empleado al que está asignado (para vínculo confiable) */
   assignedToCode?: string;
   /** Constancia(s) de asignación firmada(s) */
