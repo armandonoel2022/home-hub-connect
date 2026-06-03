@@ -45,7 +45,7 @@ const emptyForm: Partial<Equipment> = { type: "Laptop", status: "Disponible" };
 
 const InventoryPage = () => {
   const { user, activeUsers } = useAuth();
-  const { data: equipment, setData: setEquipment, create: createEquipment, update: updateEquipment } = useEquipment();
+  const { data: equipment, setData: setEquipment, create: createEquipment, update: updateEquipment, remove: removeEquipment } = useEquipment();
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("Todos");
   const [showForm, setShowForm] = useState(false);
