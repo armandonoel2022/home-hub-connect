@@ -406,7 +406,7 @@ const InventoryPage = () => {
                               <button onClick={() => handleGenerateSheet(eq)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-gold" title="Generar hoja de asignación"><FileText className="h-4 w-4" /></button>
                               <button onClick={() => triggerUpload(eq.id)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-emerald-600" title="Subir constancia firmada"><Upload className="h-4 w-4" /></button>
                               <button onClick={() => openEdit(eq)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-blue-600" title="Editar"><Pencil className="h-4 w-4" /></button>
-                              <button onClick={() => { if (window.confirm(`¿Eliminar equipo ${eq.fixedAssetCode || eq.id}: ${eq.brand} ${eq.model}?`)) setEquipment((prev) => prev.filter((e) => e.id !== eq.id)); }} className="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600" title="Eliminar"><Trash2 className="h-4 w-4" /></button>
+                              <button onClick={async () => { if (window.confirm(`¿Eliminar equipo ${eq.fixedAssetCode || eq.id}: ${eq.brand} ${eq.model}?`)) { setEquipment((prev) => prev.filter((e) => e.id !== eq.id)); try { await removeEquipment(eq.id); toast.success("Equipo eliminado"); } catch { toast.error("No se pudo eliminar"); } } }} className="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600" title="Eliminar"><Trash2 className="h-4 w-4" /></button>
                             </div>
                           </td>
                         )}
