@@ -186,6 +186,7 @@ const InventoryPage = () => {
         acquisitionDate: form.acquisitionDate || new Date().toISOString().split("T")[0],
         assignedDate: form.assignedTo ? new Date().toISOString().split("T")[0] : undefined,
         color: form.color || "",
+        currentLocation: form.currentLocation || "",
         storage: form.storage || "",
         ram: form.ram || "",
         notes: form.notes || "",
