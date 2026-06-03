@@ -625,6 +625,29 @@ const InventoryPage = () => {
                     </div>
                   </div>
 
+                  {/* Fotos del dispositivo */}
+                  <div className="rounded-lg border border-border p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><ImageIcon className="h-3.5 w-3.5" /> Fotos del dispositivo {(detail.devicePhotos?.length || 0) > 0 && `(${detail.devicePhotos!.length})`}</p>
+                      {canManage && (
+                        <button onClick={() => triggerPhotoUpload(detail.id)} className="text-xs inline-flex items-center gap-1 text-blue-700 hover:underline"><Upload className="h-3.5 w-3.5" /> Subir fotos</button>
+                      )}
+                    </div>
+                    {(detail.devicePhotos?.length || 0) > 0 ? (
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                        {detail.devicePhotos!.map((p, i) => (
+                          <a key={i} href={p.fileUrl} target="_blank" rel="noreferrer" className="block aspect-square rounded-lg overflow-hidden border border-border hover:ring-2 hover:ring-gold">
+                            <img src={p.fileUrl} alt={p.fileName || `Foto ${i + 1}`} className="w-full h-full object-cover" />
+                          </a>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Sin fotos cargadas.</p>
+                    )}
+                  </div>
+
+
+
                   {/* Inventario de software */}
                   <div className="rounded-lg border border-border p-4">
                     <div className="flex items-center justify-between mb-2">
