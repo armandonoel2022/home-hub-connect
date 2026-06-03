@@ -278,6 +278,7 @@ const InventoryPage = () => {
     <AppLayout>
       <input ref={fileInput} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={handleUpload} />
       <input ref={softwareInput} type="file" accept=".txt,.csv,.log" className="hidden" onChange={handleSoftwareUpload} />
+      <input ref={photoInput} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload} />
       <div className="min-h-screen">
         <div className="nav-corporate">
           <div className="gold-bar" />
