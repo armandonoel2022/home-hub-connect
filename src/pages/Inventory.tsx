@@ -430,7 +430,7 @@ const InventoryPage = () => {
               <div className="p-5 space-y-4">
                 <div>
                   <label className="text-sm font-medium text-card-foreground block mb-1.5">Activo Fijo (ID) *</label>
-                  <input type="text" value={form.fixedAssetCode || ""} onChange={(e) => setForm({ ...form, fixedAssetCode: e.target.value })} disabled={!!editingId} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm font-mono focus:ring-2 focus:ring-gold outline-none disabled:opacity-60" placeholder="SSC-LAP-29615" />
+                  <input type="text" value={form.fixedAssetCode || ""} onChange={(e) => setForm({ ...form, fixedAssetCode: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm font-mono focus:ring-2 focus:ring-gold outline-none" placeholder="SSC-LAP-29615" />
                   <p className="text-[11px] text-muted-foreground mt-1">Este código de Activo Fijo identifica el equipo en el inventario.</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
