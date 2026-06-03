@@ -400,6 +400,7 @@ export async function generateEquipmentSheetPDF(
     eq.hasMonitor ? `Monitor${opts?.linkedMonitorLabel ? ` (${opts.linkedMonitorLabel})` : ""}` : null,
   ].filter(Boolean);
   if (perifs.length) specRows.push(["Periféricos", perifs.join(", ")]);
+  if (eq.currentLocation) specRows.push(["Ubicación actual", eq.currentLocation]);
   if (eq.acquisitionDate) specRows.push(["Fecha de adquisición", eq.acquisitionDate]);
 
   autoTable(pdf, {

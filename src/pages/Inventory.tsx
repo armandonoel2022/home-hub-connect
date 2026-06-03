@@ -12,8 +12,9 @@ import {
 import {
   Search, Plus, Monitor, Printer, Cpu, Wifi, Package, Laptop, Server,
   Tv, Projector, Phone, X, Trash2, Pencil, FileText, Upload, Paperclip,
-  AppWindow, MonitorSmartphone, Image as ImageIcon,
+  AppWindow, MonitorSmartphone, Image as ImageIcon, MapPin, ExternalLink,
 } from "lucide-react";
+import { employeesApi, type Employee } from "@/lib/api";
 import ExportMenu from "@/components/ExportMenu";
 import { toast } from "sonner";
 
@@ -59,6 +60,27 @@ const InventoryPage = () => {
   const photoTarget = useRef<string | null>(null);
   const photoInput = useRef<HTMLInputElement>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const [employees, setEmployees] = useState<Employee[]>([]);
+
+  useEffect(() => {
+    employeesApi.getAll().then(setEmployees).catch(() => {});
+  }, []);
+
+  const normName = (s?: string | null) =>
+    (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+  // Resuelve el código de empleado por código guardado, luego por nombre en
+  // el directorio de empleados (employees.json) y por último en los usuarios.
+  const resolveEmpCode = (e?: { assignedToCode?: string; assignedTo?: string | null }) => {
+    if (!e) return "—";
+    if (e.assignedToCode) return e.assignedToCode;
+    const target = normName(e.assignedTo);
+    if (!target) return "—";
+    const emp = employees.find((x) => normName(x.fullName) === target);
+    if (emp?.employeeCode) return emp.employeeCode;
+    const usr = activeUsers.find((u) => normName(u.fullName) === target);
+    return usr?.employeeCode || "—";
+  };
 
   const hasAccess = user?.isAdmin || ALLOWED_DEPARTMENTS.includes(user?.department || "");
 
@@ -164,6 +186,7 @@ const InventoryPage = () => {
         acquisitionDate: form.acquisitionDate || new Date().toISOString().split("T")[0],
         assignedDate: form.assignedTo ? new Date().toISOString().split("T")[0] : undefined,
         color: form.color || "",
+        currentLocation: form.currentLocation || "",
         storage: form.storage || "",
         ram: form.ram || "",
         notes: form.notes || "",
@@ -212,7 +235,7 @@ const InventoryPage = () => {
       color: e.color, storage: e.storage, ram: e.ram,
       acquisitionDate: e.acquisitionDate,
       employeeName: e.assignedTo || undefined,
-      employeeCode: e.assignedToCode || emp?.employeeCode,
+      employeeCode: (() => { const c = resolveEmpCode(e); return c === "—" ? (emp?.employeeCode) : c; })(),
       department: e.department || emp?.department,
       position: emp?.position,
       deliveredBy: user?.fullName,
@@ -466,15 +489,24 @@ const InventoryPage = () => {
                     <label className="text-sm font-medium text-card-foreground block mb-1.5">Color</label>
                     <input type="text" value={form.color || ""} onChange={(e) => setForm({ ...form, color: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" />
                   </div>
+                  {isComputer && (
+                    <>
+                      <div>
+                        <label className="text-sm font-medium text-card-foreground block mb-1.5">Almacen.</label>
+                        <input type="text" value={form.storage || ""} onChange={(e) => setForm({ ...form, storage: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" placeholder="512 GB SSD" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-card-foreground block mb-1.5">RAM</label>
+                        <input type="text" value={form.ram || ""} onChange={(e) => setForm({ ...form, ram: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" placeholder="16 GB" />
+                      </div>
+                    </>
+                  )}
                   <div>
-                    <label className="text-sm font-medium text-card-foreground block mb-1.5">Almacen.</label>
-                    <input type="text" value={form.storage || ""} onChange={(e) => setForm({ ...form, storage: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" placeholder="512 GB SSD" />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-card-foreground block mb-1.5">RAM</label>
-                    <input type="text" value={form.ram || ""} onChange={(e) => setForm({ ...form, ram: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" placeholder="16 GB" />
+                    <label className="text-sm font-medium text-card-foreground block mb-1.5 flex items-center gap-1"><MapPin className="h-3.5 w-3.5 text-muted-foreground" /> Ubicación actual</label>
+                    <input type="text" value={form.currentLocation || ""} onChange={(e) => setForm({ ...form, currentLocation: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none" placeholder="Oficina, Almacén..." />
                   </div>
                 </div>
+
 
                 {isComputer && (
                   <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-4">
@@ -585,14 +617,15 @@ const InventoryPage = () => {
                       ["Tipo", detail.type],
                       ["Serie", detail.serial || "—"],
                       ["Color", detail.color || "—"],
-                      ["RAM", detail.ram || "—"],
-                      ["Almacenamiento", detail.storage || "—"],
                       ...(isComp ? [
+                        ["RAM", detail.ram || "—"],
+                        ["Almacenamiento", detail.storage || "—"],
                         ["Procesador", detail.processor || "—"],
                         ["Sistema Operativo", detail.operatingSystem || "—"],
                         ["Idioma", detail.osLanguage || "—"],
                         ["BIOS", detail.bios || "—"],
                       ] as [string, string][] : []),
+                      ["Ubicación actual", detail.currentLocation || "—"],
                       ["Fecha adquisición", detail.acquisitionDate || "—"],
                     ].map(([k, v]) => (
                       <div key={k}>
@@ -610,9 +643,20 @@ const InventoryPage = () => {
                         <span className={detail.hasKeyboard ? "text-emerald-700" : "text-muted-foreground"}>{detail.hasKeyboard ? "✓" : "✗"} Teclado</span>
                         <span className={detail.hasMonitor ? "text-emerald-700" : "text-muted-foreground"}>{detail.hasMonitor ? "✓" : "✗"} Monitor</span>
                       </div>
-                      {detail.hasMonitor && detail.linkedMonitorId && (
-                        <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1.5"><MonitorSmartphone className="h-3.5 w-3.5" /> Vinculado a: <span className="text-card-foreground font-medium">{monitorLabel(detail.linkedMonitorId)}</span></p>
-                      )}
+                      {detail.hasMonitor && detail.linkedMonitorId && (() => {
+                        const linked = equipment.find((e) => e.id === detail.linkedMonitorId);
+                        return (
+                          <button
+                            type="button"
+                            disabled={!linked}
+                            onClick={() => linked && setDetail(linked)}
+                            className="text-xs mt-2 inline-flex items-center gap-1.5 text-blue-700 hover:underline disabled:text-muted-foreground disabled:no-underline disabled:cursor-default"
+                          >
+                            <MonitorSmartphone className="h-3.5 w-3.5" /> Vinculado a: <span className="font-medium">{monitorLabel(detail.linkedMonitorId)}</span>
+                            {linked && <ExternalLink className="h-3 w-3" />}
+                          </button>
+                        );
+                      })()}
                     </div>
                   )}
 
@@ -620,7 +664,7 @@ const InventoryPage = () => {
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Asignación</p>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 text-sm">
                       <div><p className="text-[11px] text-muted-foreground">Asignado a</p><p className="text-card-foreground font-medium">{detail.assignedTo || "Sin asignar"}</p></div>
-                      <div><p className="text-[11px] text-muted-foreground">Código empleado</p><p className="text-card-foreground font-medium">{detail.assignedToCode || activeUsers.find((u) => u.fullName === detail.assignedTo)?.employeeCode || "—"}</p></div>
+                      <div><p className="text-[11px] text-muted-foreground">Código empleado</p><p className="text-card-foreground font-medium">{resolveEmpCode(detail)}</p></div>
                       <div><p className="text-[11px] text-muted-foreground">Departamento</p><p className="text-card-foreground font-medium">{detail.department || "—"}</p></div>
                     </div>
                   </div>
