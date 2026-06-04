@@ -184,9 +184,9 @@ export default function PayrollExtrasPage() {
                     <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
                   </div>
                 </div>
-                {(form.type === "overtime" || form.type === "night") && (
+                {(form.type === "overtime" || form.type === "night" || form.type === "late") && (
                   <div>
-                    <Label>Horas</Label>
+                    <Label>{form.type === "late" ? "Horas tardías a descontar" : "Horas"}</Label>
                     <Input type="number" step="0.25" value={form.hours} onChange={(e) => setForm({ ...form, hours: e.target.value })} />
                   </div>
                 )}
