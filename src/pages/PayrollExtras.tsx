@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Clock, Moon, CalendarDays, UtensilsCrossed, Trash2, Send, ArrowLeft } from "lucide-react";
+import { Clock, Moon, CalendarDays, UtensilsCrossed, Trash2, Send, ArrowLeft, TimerOff } from "lucide-react";
 import { payrollExtrasApi, employeesApi, isApiConfigured, type PayrollExtra, type Employee } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 
@@ -17,6 +17,7 @@ const TYPE_META: Record<PayrollExtra["type"], { label: string; icon: any; color:
   night: { label: "Horas nocturnas", icon: Moon, color: "text-purple-600" },
   holiday: { label: "Día feriado trabajado", icon: CalendarDays, color: "text-amber-600" },
   meal: { label: "Almuerzo descontable", icon: UtensilsCrossed, color: "text-orange-600" },
+  late: { label: "Horas tardías (descuento por retraso de relevo)", icon: TimerOff, color: "text-red-600" },
 };
 
 export default function PayrollExtrasPage() {
