@@ -320,17 +320,34 @@ export default function Payroll() {
       frequency: l.loanDetails?.frequency,
     }));
     const loanDeduction = loanDetail.reduce((s, x) => s + (x.installment || 0), 0);
+
+    // Horas extras / nocturnas / feriados / almuerzos / horas tardías del período
+    const x = computeExtras(e, detailExtras, gross);
+    const grossPeriodBase = gross * factor;
+    const grossPeriod = grossPeriodBase + x.extraEarnings;
+    const totalDeductions = d.totalDeductions * factor + loanDeduction + x.extraDeductions;
+
     const item = {
       employeeCode: e.employeeCode, fullName: e.fullName, cedula: e.tss || "",
       department: e.department, position: e.position, bank: e.bank || "",
       category: e.category || e.payrollType,
+      isSecurityAgent: x.isAgent,
+      monthlyDivisor: x.divisor,
+      normalDailyHours: x.dailyHours,
+      hourlyRate: x.hourlyRate,
       grossMonthly: gross,
-      grossPeriod: gross * factor,
+      grossPeriodBase,
+      overtimeHours: x.overtimeHours, overtimeAmount: x.overtimeAmount,
+      nightHours: x.nightHours, nightAmount: x.nightAmount,
+      holidayDays: x.holidayDays, holidayAmount: x.holidayAmount,
+      lateHours: x.lateHours, lateDeduction: x.lateDeduction,
+      mealDeduction: x.mealDeduction, mealDetail: x.mealDetail,
+      grossPeriod,
       sfs: d.sfs * factor, afp: d.afp * factor, isr: d.isr * factor,
       loanDeduction,
       loanDetail,
-      totalDeductions: d.totalDeductions * factor + loanDeduction,
-      net: d.net * factor - loanDeduction,
+      totalDeductions,
+      net: grossPeriod - totalDeductions,
     };
     const run = {
       id: `ADHOC-${e.employeeCode}-${Date.now()}`,
@@ -343,7 +360,7 @@ export default function Payroll() {
       createdBy: user?.fullName || "Sistema",
       closed: false,
       items: [item],
-      totals: { gross: item.grossPeriod, sfs: item.sfs, afp: item.afp, isr: item.isr, deductions: item.totalDeductions, net: item.net, count: 1 },
+      totals: { gross: item.grossPeriod, sfs: item.sfs, afp: item.afp, isr: item.isr, overtime: x.overtimeAmount, night: x.nightAmount, holiday: x.holidayAmount, meals: x.mealDeduction, deductions: item.totalDeductions, net: item.net, count: 1 },
     };
     return { run, item };
   };
