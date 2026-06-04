@@ -759,7 +759,7 @@ export interface PayrollExtra {
   id: string;
   employeeCode: string;
   employeeName: string;
-  type: "overtime" | "night" | "holiday" | "meal";
+  type: "overtime" | "night" | "holiday" | "meal" | "late";
   date: string;
   hours?: number;
   days?: number;
