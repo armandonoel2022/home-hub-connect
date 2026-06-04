@@ -561,6 +561,7 @@ const EmployeeDirectory = () => {
           </DialogHeader>
           {viewing && (() => {
             const armed = findArmedRecord(viewing);
+            const armedCandidate = isArmedCandidate(viewing);
             const empName = normalize(viewing.fullName);
             const empCode = viewing.employeeCode;
             const matchAsset = (code?: string | null, name?: string | null) =>
