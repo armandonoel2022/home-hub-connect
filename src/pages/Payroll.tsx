@@ -20,12 +20,51 @@ import {
   ArrowLeft, AlertTriangle, CheckCircle2, UserX, Calculator, Mail,
   Download, Search, Save, ShieldCheck, ShieldOff, Briefcase, FileUp, Ghost,
 } from "lucide-react";
-import { employeesApi, isApiConfigured, tasksApi, type Employee } from "@/lib/api";
+import { employeesApi, isApiConfigured, tasksApi, payrollExtrasApi, type Employee, type PayrollExtra } from "@/lib/api";
 import { calcDeductions, fmtRD } from "@/lib/payrollCalc";
 import { generatePayslipPDF } from "@/lib/payslipPdf";
 import { getApprovedLoans, loanBalance } from "@/lib/hrRequestService";
 import { parseTssFile, type TssRow } from "@/lib/tssParser";
 import * as XLSX from "xlsx";
+
+/** Recargos y divisores legales (espejo de PayrollExtras). */
+function computeExtras(e: Employee, extras: PayrollExtra[], grossMonthly: number) {
+  const isAgent =
+    e.category === "Vigilante" ||
+    e.category === "Supervisor" ||
+    e.payrollType === "Operaciones" ||
+    e.payrollType === "Vgilantes Horas" ||
+    e.department === "Operaciones";
+  const divisor = isAgent ? 26 : 23.83;
+  const dailyHours = isAgent ? 10 : 8;
+  const hourlyRate = grossMonthly > 0 ? grossMonthly / divisor / dailyHours : 0;
+
+  let overtimeHours = 0, nightHours = 0, holidayDays = 0, lateHours = 0, mealDeduction = 0;
+  const mealDetail: { date: string; description: string; amount: number }[] = [];
+  extras.forEach((x) => {
+    if (x.type === "overtime") overtimeHours += Number(x.hours) || 0;
+    else if (x.type === "night") nightHours += Number(x.hours) || 0;
+    else if (x.type === "holiday") holidayDays += Number(x.days) || 0;
+    else if (x.type === "late") lateHours += Number(x.hours) || 0;
+    else if (x.type === "meal") {
+      const amt = Number(x.amount) || 0;
+      mealDeduction += amt;
+      mealDetail.push({ date: x.date, description: x.description || "Almuerzo", amount: amt });
+    }
+  });
+  const overtimeAmount = overtimeHours * hourlyRate * 1.35;
+  const nightAmount = nightHours * hourlyRate * 1.15;
+  const holidayAmount = holidayDays * dailyHours * hourlyRate * 2;
+  const lateDeduction = lateHours * hourlyRate;
+  return {
+    isAgent, divisor, dailyHours, hourlyRate,
+    overtimeHours, overtimeAmount, nightHours, nightAmount,
+    holidayDays, holidayAmount, lateHours, lateDeduction,
+    mealDeduction, mealDetail,
+    extraEarnings: overtimeAmount + nightAmount + holidayAmount,
+    extraDeductions: lateDeduction + mealDeduction,
+  };
+}
 
 function normalizeCedula(c?: string) { return String(c || "").replace(/\D/g, ""); }
 function normalizeName(n?: string) {
@@ -85,6 +124,7 @@ export default function Payroll() {
   const [payDate, setPayDate] = useState(new Date().toISOString().slice(0, 10));
   const [payFrequency, setPayFrequency] = useState<"monthly" | "quincenal">("quincenal");
   const [saving, setSaving] = useState(false);
+  const [detailExtras, setDetailExtras] = useState<PayrollExtra[]>([]);
 
   // Validación contra archivo TSS
   const [validation, setValidation] = useState<null | {
@@ -125,6 +165,17 @@ export default function Payroll() {
       setUnregisterReason("");
     }
   }, [detail]);
+
+  // Cargar horas extras/feriados/almuerzos/horas tardías del período para el volante
+  useEffect(() => {
+    if (!detail) { setDetailExtras([]); return; }
+    let cancelled = false;
+    payrollExtrasApi
+      .list({ employeeCode: detail.employeeCode, period: payDate.slice(0, 7) })
+      .then((r) => { if (!cancelled) setDetailExtras(r || []); })
+      .catch(() => { if (!cancelled) setDetailExtras([]); });
+    return () => { cancelled = true; };
+  }, [detail, payDate]);
 
   const stats = useMemo(() => {
     const active = employees.filter(e => e.status === "Activo");
@@ -269,17 +320,34 @@ export default function Payroll() {
       frequency: l.loanDetails?.frequency,
     }));
     const loanDeduction = loanDetail.reduce((s, x) => s + (x.installment || 0), 0);
+
+    // Horas extras / nocturnas / feriados / almuerzos / horas tardías del período
+    const x = computeExtras(e, detailExtras, gross);
+    const grossPeriodBase = gross * factor;
+    const grossPeriod = grossPeriodBase + x.extraEarnings;
+    const totalDeductions = d.totalDeductions * factor + loanDeduction + x.extraDeductions;
+
     const item = {
       employeeCode: e.employeeCode, fullName: e.fullName, cedula: e.tss || "",
       department: e.department, position: e.position, bank: e.bank || "",
       category: e.category || e.payrollType,
+      isSecurityAgent: x.isAgent,
+      monthlyDivisor: x.divisor,
+      normalDailyHours: x.dailyHours,
+      hourlyRate: x.hourlyRate,
       grossMonthly: gross,
-      grossPeriod: gross * factor,
+      grossPeriodBase,
+      overtimeHours: x.overtimeHours, overtimeAmount: x.overtimeAmount,
+      nightHours: x.nightHours, nightAmount: x.nightAmount,
+      holidayDays: x.holidayDays, holidayAmount: x.holidayAmount,
+      lateHours: x.lateHours, lateDeduction: x.lateDeduction,
+      mealDeduction: x.mealDeduction, mealDetail: x.mealDetail,
+      grossPeriod,
       sfs: d.sfs * factor, afp: d.afp * factor, isr: d.isr * factor,
       loanDeduction,
       loanDetail,
-      totalDeductions: d.totalDeductions * factor + loanDeduction,
-      net: d.net * factor - loanDeduction,
+      totalDeductions,
+      net: grossPeriod - totalDeductions,
     };
     const run = {
       id: `ADHOC-${e.employeeCode}-${Date.now()}`,
@@ -292,7 +360,7 @@ export default function Payroll() {
       createdBy: user?.fullName || "Sistema",
       closed: false,
       items: [item],
-      totals: { gross: item.grossPeriod, sfs: item.sfs, afp: item.afp, isr: item.isr, deductions: item.totalDeductions, net: item.net, count: 1 },
+      totals: { gross: item.grossPeriod, sfs: item.sfs, afp: item.afp, isr: item.isr, overtime: x.overtimeAmount, night: x.nightAmount, holiday: x.holidayAmount, meals: x.mealDeduction, deductions: item.totalDeductions, net: item.net, count: 1 },
     };
     return { run, item };
   };
@@ -462,16 +530,26 @@ export default function Payroll() {
     const gross = Number(editTss.tssReportedSalary) || Number(detail.salary) || 0;
     const factor = payFrequency === "quincenal" ? 0.5 : 1;
     const d = calcDeductions(gross);
+    const x = computeExtras(detail, detailExtras, gross);
+    const grossBase = gross * factor;
+    const grossPeriod = grossBase + x.extraEarnings;
+    const total = d.totalDeductions * factor + x.extraDeductions;
     return {
       gross,
-      grossPeriod: gross * factor,
+      grossBase,
+      grossPeriod,
       sfs: d.sfs * factor,
       afp: d.afp * factor,
       isr: d.isr * factor,
-      total: d.totalDeductions * factor,
-      net: d.net * factor,
+      overtimeHours: x.overtimeHours, overtimeAmount: x.overtimeAmount,
+      nightHours: x.nightHours, nightAmount: x.nightAmount,
+      holidayDays: x.holidayDays, holidayAmount: x.holidayAmount,
+      lateHours: x.lateHours, lateDeduction: x.lateDeduction,
+      mealDeduction: x.mealDeduction,
+      total,
+      net: grossPeriod - total,
     };
-  }, [detail, editTss.tssReportedSalary, payFrequency]);
+  }, [detail, editTss.tssReportedSalary, payFrequency, detailExtras]);
 
   const detailStatus = detail ? classifyEmployee(detail) : null;
 
@@ -917,14 +995,35 @@ export default function Payroll() {
                     <CardContent className="pt-4">
                       <Table>
                         <TableBody>
-                          <Row label="Salario bruto del período" value={fmtRD(liveCalc.grossPeriod)} />
+                          <Row label="Salario base del período" value={fmtRD(liveCalc.grossBase)} />
+                          {liveCalc.overtimeAmount > 0 && (
+                            <Row label={`Horas extras (${liveCalc.overtimeHours}h × 1.35)`} value={`+ ${fmtRD(liveCalc.overtimeAmount)}`} />
+                          )}
+                          {liveCalc.nightAmount > 0 && (
+                            <Row label={`Horas nocturnas (${liveCalc.nightHours}h × 1.15)`} value={`+ ${fmtRD(liveCalc.nightAmount)}`} />
+                          )}
+                          {liveCalc.holidayAmount > 0 && (
+                            <Row label={`Feriados trabajados (${liveCalc.holidayDays} día(s))`} value={`+ ${fmtRD(liveCalc.holidayAmount)}`} />
+                          )}
+                          <Row label="Total devengado del período" value={fmtRD(liveCalc.grossPeriod)} />
                           <Row label="SFS (3.04%)" value={`- ${fmtRD(liveCalc.sfs)}`} muted />
                           <Row label="AFP (2.87%)" value={`- ${fmtRD(liveCalc.afp)}`} muted />
                           <Row label="ISR" value={`- ${fmtRD(liveCalc.isr)}`} muted />
+                          {liveCalc.mealDeduction > 0 && (
+                            <Row label="Descuento por almuerzos" value={`- ${fmtRD(liveCalc.mealDeduction)}`} muted />
+                          )}
+                          {liveCalc.lateDeduction > 0 && (
+                            <Row label={`Descuento horas tardías (${liveCalc.lateHours}h)`} value={`- ${fmtRD(liveCalc.lateDeduction)}`} muted />
+                          )}
                           <Row label="Total deducciones" value={`- ${fmtRD(liveCalc.total)}`} />
                           <Row label="Neto a recibir" value={fmtRD(liveCalc.net)} bold />
                         </TableBody>
                       </Table>
+                      {detailExtras.length > 0 && (
+                        <p className="text-[11px] text-muted-foreground mt-2">
+                          Incluye {detailExtras.length} registro(s) de horas extras/feriados/almuerzos del período {payDate.slice(0, 7)}.
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
                 )}

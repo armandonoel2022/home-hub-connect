@@ -71,6 +71,19 @@ const EmployeeDirectory = () => {
     return armedPersonnel.find(a => normalize(a.name) === target);
   };
 
+  // Solo el personal de Operaciones (vigilantes, supervisores y el Gerente de
+  // Operaciones) se relaciona con armamento. Los administrativos no.
+  const isArmedCandidate = (emp: Employee): boolean => {
+    if (!emp) return false;
+    const cat = normalize((emp as any).category || "");
+    const dept = normalize(emp.department || "");
+    const payroll = normalize((emp as any).payrollType || "");
+    if (cat === "vigilante" || cat === "supervisor") return true;
+    if (dept === "operaciones") return true;
+    if (payroll === "operaciones" || payroll === "vgilantes horas") return true;
+    return false;
+  };
+
   const canEdit = !!user && (
     user.isAdmin ||
     user.department === "Recursos Humanos"
@@ -548,6 +561,7 @@ const EmployeeDirectory = () => {
           </DialogHeader>
           {viewing && (() => {
             const armed = findArmedRecord(viewing);
+            const armedCandidate = isArmedCandidate(viewing);
             const empName = normalize(viewing.fullName);
             const empCode = viewing.employeeCode;
             const matchAsset = (code?: string | null, name?: string | null) =>
@@ -711,11 +725,11 @@ const EmployeeDirectory = () => {
                       </Button>
                     )}
                   </div>
-                ) : (
-                  <div className="border border-border bg-muted/40 rounded-lg p-3 text-xs text-muted-foreground">
-                    Este empleado no figura en Personal Armado.
+                ) : armedCandidate ? (
+                  <div className="border border-amber-200 bg-amber-50/60 rounded-lg p-3 text-xs text-amber-800">
+                    Pertenece a Operaciones pero no figura en Personal Armado. Verifica su registro de arma y licencia.
                   </div>
-                )}
+                ) : null}
               </div>
             );
           })()}
