@@ -91,6 +91,9 @@ export async function generatePayslipPDF(run: PayrollRun, item: PayrollItem, opt
   if ((item.mealDeduction || 0) > 0) {
     body.push([`Descuento por almuerzos (${(item.mealDetail || []).length} solicitudes)`, "", fmtRD(item.mealDeduction || 0).replace("DOP", "").trim()]);
   }
+  if ((item.lateDeduction || 0) > 0) {
+    body.push([`Descuento por horas tardías (${item.lateHours || 0}h × tarifa)`, "", fmtRD(item.lateDeduction || 0).replace("DOP", "").trim()]);
+  }
   if ((item.loanDeduction || 0) > 0) {
     const freq = (item.loanDetail || [])[0]?.frequency;
     body.push([`Cuota de préstamo${freq ? ` (${freq})` : ""}`, "", fmtRD(item.loanDeduction || 0).replace("DOP", "").trim()]);
