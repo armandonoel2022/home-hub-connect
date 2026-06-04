@@ -71,6 +71,19 @@ const EmployeeDirectory = () => {
     return armedPersonnel.find(a => normalize(a.name) === target);
   };
 
+  // Solo el personal de Operaciones (vigilantes, supervisores y el Gerente de
+  // Operaciones) se relaciona con armamento. Los administrativos no.
+  const isArmedCandidate = (emp: Employee): boolean => {
+    if (!emp) return false;
+    const cat = normalize((emp as any).category || "");
+    const dept = normalize(emp.department || "");
+    const payroll = normalize((emp as any).payrollType || "");
+    if (cat === "vigilante" || cat === "supervisor") return true;
+    if (dept === "operaciones") return true;
+    if (payroll === "operaciones" || payroll === "vgilantes horas") return true;
+    return false;
+  };
+
   const canEdit = !!user && (
     user.isAdmin ||
     user.department === "Recursos Humanos"
