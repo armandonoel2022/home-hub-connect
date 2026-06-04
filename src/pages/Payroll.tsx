@@ -166,6 +166,17 @@ export default function Payroll() {
     }
   }, [detail]);
 
+  // Cargar horas extras/feriados/almuerzos/horas tardías del período para el volante
+  useEffect(() => {
+    if (!detail) { setDetailExtras([]); return; }
+    let cancelled = false;
+    payrollExtrasApi
+      .list({ employeeCode: detail.employeeCode, period: payDate.slice(0, 7) })
+      .then((r) => { if (!cancelled) setDetailExtras(r || []); })
+      .catch(() => { if (!cancelled) setDetailExtras([]); });
+    return () => { cancelled = true; };
+  }, [detail, payDate]);
+
   const stats = useMemo(() => {
     const active = employees.filter(e => e.status === "Activo");
     const inactive = employees.filter(e => e.status !== "Activo");
