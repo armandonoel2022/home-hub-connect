@@ -725,11 +725,11 @@ const EmployeeDirectory = () => {
                       </Button>
                     )}
                   </div>
-                ) : (
-                  <div className="border border-border bg-muted/40 rounded-lg p-3 text-xs text-muted-foreground">
-                    Este empleado no figura en Personal Armado.
+                ) : armedCandidate ? (
+                  <div className="border border-amber-200 bg-amber-50/60 rounded-lg p-3 text-xs text-amber-800">
+                    Pertenece a Operaciones pero no figura en Personal Armado. Verifica su registro de arma y licencia.
                   </div>
-                )}
+                ) : null}
               </div>
             );
           })()}
