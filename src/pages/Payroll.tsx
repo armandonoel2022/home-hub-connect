@@ -995,14 +995,35 @@ export default function Payroll() {
                     <CardContent className="pt-4">
                       <Table>
                         <TableBody>
-                          <Row label="Salario bruto del período" value={fmtRD(liveCalc.grossPeriod)} />
+                          <Row label="Salario base del período" value={fmtRD(liveCalc.grossBase)} />
+                          {liveCalc.overtimeAmount > 0 && (
+                            <Row label={`Horas extras (${liveCalc.overtimeHours}h × 1.35)`} value={`+ ${fmtRD(liveCalc.overtimeAmount)}`} />
+                          )}
+                          {liveCalc.nightAmount > 0 && (
+                            <Row label={`Horas nocturnas (${liveCalc.nightHours}h × 1.15)`} value={`+ ${fmtRD(liveCalc.nightAmount)}`} />
+                          )}
+                          {liveCalc.holidayAmount > 0 && (
+                            <Row label={`Feriados trabajados (${liveCalc.holidayDays} día(s))`} value={`+ ${fmtRD(liveCalc.holidayAmount)}`} />
+                          )}
+                          <Row label="Total devengado del período" value={fmtRD(liveCalc.grossPeriod)} />
                           <Row label="SFS (3.04%)" value={`- ${fmtRD(liveCalc.sfs)}`} muted />
                           <Row label="AFP (2.87%)" value={`- ${fmtRD(liveCalc.afp)}`} muted />
                           <Row label="ISR" value={`- ${fmtRD(liveCalc.isr)}`} muted />
+                          {liveCalc.mealDeduction > 0 && (
+                            <Row label="Descuento por almuerzos" value={`- ${fmtRD(liveCalc.mealDeduction)}`} muted />
+                          )}
+                          {liveCalc.lateDeduction > 0 && (
+                            <Row label={`Descuento horas tardías (${liveCalc.lateHours}h)`} value={`- ${fmtRD(liveCalc.lateDeduction)}`} muted />
+                          )}
                           <Row label="Total deducciones" value={`- ${fmtRD(liveCalc.total)}`} />
                           <Row label="Neto a recibir" value={fmtRD(liveCalc.net)} bold />
                         </TableBody>
                       </Table>
+                      {detailExtras.length > 0 && (
+                        <p className="text-[11px] text-muted-foreground mt-2">
+                          Incluye {detailExtras.length} registro(s) de horas extras/feriados/almuerzos del período {payDate.slice(0, 7)}.
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
                 )}
