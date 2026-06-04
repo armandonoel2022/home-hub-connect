@@ -124,6 +124,7 @@ export default function Payroll() {
   const [payDate, setPayDate] = useState(new Date().toISOString().slice(0, 10));
   const [payFrequency, setPayFrequency] = useState<"monthly" | "quincenal">("quincenal");
   const [saving, setSaving] = useState(false);
+  const [detailExtras, setDetailExtras] = useState<PayrollExtra[]>([]);
 
   // Validación contra archivo TSS
   const [validation, setValidation] = useState<null | {
