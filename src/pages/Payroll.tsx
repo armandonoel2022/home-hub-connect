@@ -530,16 +530,26 @@ export default function Payroll() {
     const gross = Number(editTss.tssReportedSalary) || Number(detail.salary) || 0;
     const factor = payFrequency === "quincenal" ? 0.5 : 1;
     const d = calcDeductions(gross);
+    const x = computeExtras(detail, detailExtras, gross);
+    const grossBase = gross * factor;
+    const grossPeriod = grossBase + x.extraEarnings;
+    const total = d.totalDeductions * factor + x.extraDeductions;
     return {
       gross,
-      grossPeriod: gross * factor,
+      grossBase,
+      grossPeriod,
       sfs: d.sfs * factor,
       afp: d.afp * factor,
       isr: d.isr * factor,
-      total: d.totalDeductions * factor,
-      net: d.net * factor,
+      overtimeHours: x.overtimeHours, overtimeAmount: x.overtimeAmount,
+      nightHours: x.nightHours, nightAmount: x.nightAmount,
+      holidayDays: x.holidayDays, holidayAmount: x.holidayAmount,
+      lateHours: x.lateHours, lateDeduction: x.lateDeduction,
+      mealDeduction: x.mealDeduction,
+      total,
+      net: grossPeriod - total,
     };
-  }, [detail, editTss.tssReportedSalary, payFrequency]);
+  }, [detail, editTss.tssReportedSalary, payFrequency, detailExtras]);
 
   const detailStatus = detail ? classifyEmployee(detail) : null;
 
