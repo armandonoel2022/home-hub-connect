@@ -20,12 +20,51 @@ import {
   ArrowLeft, AlertTriangle, CheckCircle2, UserX, Calculator, Mail,
   Download, Search, Save, ShieldCheck, ShieldOff, Briefcase, FileUp, Ghost,
 } from "lucide-react";
-import { employeesApi, isApiConfigured, tasksApi, type Employee } from "@/lib/api";
+import { employeesApi, isApiConfigured, tasksApi, payrollExtrasApi, type Employee, type PayrollExtra } from "@/lib/api";
 import { calcDeductions, fmtRD } from "@/lib/payrollCalc";
 import { generatePayslipPDF } from "@/lib/payslipPdf";
 import { getApprovedLoans, loanBalance } from "@/lib/hrRequestService";
 import { parseTssFile, type TssRow } from "@/lib/tssParser";
 import * as XLSX from "xlsx";
+
+/** Recargos y divisores legales (espejo de PayrollExtras). */
+function computeExtras(e: Employee, extras: PayrollExtra[], grossMonthly: number) {
+  const isAgent =
+    e.category === "Vigilante" ||
+    e.category === "Supervisor" ||
+    e.payrollType === "Operaciones" ||
+    e.payrollType === "Vgilantes Horas" ||
+    e.department === "Operaciones";
+  const divisor = isAgent ? 26 : 23.83;
+  const dailyHours = isAgent ? 10 : 8;
+  const hourlyRate = grossMonthly > 0 ? grossMonthly / divisor / dailyHours : 0;
+
+  let overtimeHours = 0, nightHours = 0, holidayDays = 0, lateHours = 0, mealDeduction = 0;
+  const mealDetail: { date: string; description: string; amount: number }[] = [];
+  extras.forEach((x) => {
+    if (x.type === "overtime") overtimeHours += Number(x.hours) || 0;
+    else if (x.type === "night") nightHours += Number(x.hours) || 0;
+    else if (x.type === "holiday") holidayDays += Number(x.days) || 0;
+    else if (x.type === "late") lateHours += Number(x.hours) || 0;
+    else if (x.type === "meal") {
+      const amt = Number(x.amount) || 0;
+      mealDeduction += amt;
+      mealDetail.push({ date: x.date, description: x.description || "Almuerzo", amount: amt });
+    }
+  });
+  const overtimeAmount = overtimeHours * hourlyRate * 1.35;
+  const nightAmount = nightHours * hourlyRate * 1.15;
+  const holidayAmount = holidayDays * dailyHours * hourlyRate * 2;
+  const lateDeduction = lateHours * hourlyRate;
+  return {
+    isAgent, divisor, dailyHours, hourlyRate,
+    overtimeHours, overtimeAmount, nightHours, nightAmount,
+    holidayDays, holidayAmount, lateHours, lateDeduction,
+    mealDeduction, mealDetail,
+    extraEarnings: overtimeAmount + nightAmount + holidayAmount,
+    extraDeductions: lateDeduction + mealDeduction,
+  };
+}
 
 function normalizeCedula(c?: string) { return String(c || "").replace(/\D/g, ""); }
 function normalizeName(n?: string) {
