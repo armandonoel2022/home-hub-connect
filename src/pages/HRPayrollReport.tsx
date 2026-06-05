@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Download, ClipboardList, Filter, CheckCircle2, Trash2, Clock } from "lucide-react";
+import { ArrowLeft, Download, ClipboardList, Filter, CheckCircle2, Trash2, Clock, FileSpreadsheet } from "lucide-react";
 import { getOpsReports, REPORT_TYPE_LABEL, type OpsReportType } from "@/lib/opsReportsStorage";
 import { payrollExtrasApi, type PayrollExtra } from "@/lib/api";
+import { getCutoffForDate } from "@/lib/payrollPeriods";
 import { useToast } from "@/hooks/use-toast";
+import * as XLSX from "xlsx";
 
 const EXTRA_TYPE_LABEL: Record<PayrollExtra["type"], string> = {
   overtime: "Horas extras",
