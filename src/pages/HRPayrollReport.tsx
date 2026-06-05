@@ -150,6 +150,29 @@ const HRPayrollReport = () => {
     URL.revokeObjectURL(url);
   };
 
+  const exportExtrasExcel = () => {
+    const data = extras.map((r) => {
+      const c = getCutoffForDate(r.date);
+      return {
+        Fecha: r.date,
+        Corte: c.label,
+        "Fecha de pago": c.payLabel,
+        Codigo: r.employeeCode,
+        Empleado: r.employeeName,
+        Tipo: EXTRA_TYPE_LABEL[r.type],
+        Horas: r.type === "overtime" || r.type === "night" || r.type === "late" ? r.hours || 0 : "",
+        Dias: r.type === "holiday" ? r.days || 0 : "",
+        Monto: r.type === "meal" || r.type === "incentive" ? r.amount || 0 : "",
+        Descripcion: r.description || "",
+        Estado: r.status,
+        "Reportado por": r.registeredBy,
+      };
+    });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), "Novedades líderes");
+    XLSX.writeFile(wb, `Novedades_Nomina_${month}.xlsx`);
+  };
+
   if (!allowed) return <Navigate to="/" replace />;
 
   return (
