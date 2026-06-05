@@ -395,6 +395,8 @@ router.post('/runs/generate', auth, (req, res) => {
       holidayAmount: round2(holidayAmount),
       mealDeduction: round2(mealDeduction),
       mealDetail,
+      incentiveAmount: round2(incentiveAmount),
+      incentiveDetail,
       grossPeriod: round2(grossPeriod),
       sfs: round2(ded.sfs * factor),
       afp: round2(ded.afp * factor),
