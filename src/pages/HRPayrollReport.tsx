@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Download, ClipboardList, Filter, CheckCircle2, Trash2, Clock } from "lucide-react";
+import { ArrowLeft, Download, ClipboardList, Filter, CheckCircle2, Trash2, Clock, FileSpreadsheet } from "lucide-react";
 import { getOpsReports, REPORT_TYPE_LABEL, type OpsReportType } from "@/lib/opsReportsStorage";
 import { payrollExtrasApi, type PayrollExtra } from "@/lib/api";
+import { getCutoffForDate } from "@/lib/payrollPeriods";
 import { useToast } from "@/hooks/use-toast";
+import * as XLSX from "xlsx";
 
 const EXTRA_TYPE_LABEL: Record<PayrollExtra["type"], string> = {
   overtime: "Horas extras",
@@ -19,6 +21,7 @@ const EXTRA_TYPE_LABEL: Record<PayrollExtra["type"], string> = {
   holiday: "Feriado trabajado",
   meal: "Almuerzo descontable",
   late: "Horas tardías (descuento)",
+  incentive: "Incentivo",
 };
 
 const HRPayrollReport = () => {
@@ -147,6 +150,29 @@ const HRPayrollReport = () => {
     URL.revokeObjectURL(url);
   };
 
+  const exportExtrasExcel = () => {
+    const data = extras.map((r) => {
+      const c = getCutoffForDate(r.date);
+      return {
+        Fecha: r.date,
+        Corte: c.label,
+        "Fecha de pago": c.payLabel,
+        Codigo: r.employeeCode,
+        Empleado: r.employeeName,
+        Tipo: EXTRA_TYPE_LABEL[r.type],
+        Horas: r.type === "overtime" || r.type === "night" || r.type === "late" ? r.hours || 0 : "",
+        Dias: r.type === "holiday" ? r.days || 0 : "",
+        Monto: r.type === "meal" || r.type === "incentive" ? r.amount || 0 : "",
+        Descripcion: r.description || "",
+        Estado: r.status,
+        "Reportado por": r.registeredBy,
+      };
+    });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), "Novedades líderes");
+    XLSX.writeFile(wb, `Novedades_Nomina_${month}.xlsx`);
+  };
+
   if (!allowed) return <Navigate to="/" replace />;
 
   return (
@@ -167,6 +193,9 @@ const HRPayrollReport = () => {
                 Reportes de Centro de Monitoreo y Operaciones para nómina
               </p>
             </div>
+            <Button onClick={exportExtrasExcel} variant="outline" className="gap-2" disabled={extras.length === 0}>
+              <FileSpreadsheet className="h-4 w-4" /> Excel novedades
+            </Button>
             <Button onClick={exportCSV} className="gap-2">
               <Download className="h-4 w-4" /> Exportar CSV
             </Button>

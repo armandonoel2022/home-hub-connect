@@ -39,13 +39,19 @@ function computeExtras(e: Employee, extras: PayrollExtra[], grossMonthly: number
   const dailyHours = isAgent ? 10 : 8;
   const hourlyRate = grossMonthly > 0 ? grossMonthly / divisor / dailyHours : 0;
 
-  let overtimeHours = 0, nightHours = 0, holidayDays = 0, lateHours = 0, mealDeduction = 0;
+  let overtimeHours = 0, nightHours = 0, holidayDays = 0, lateHours = 0, mealDeduction = 0, incentiveAmount = 0;
   const mealDetail: { date: string; description: string; amount: number }[] = [];
+  const incentiveDetail: { date: string; description: string; amount: number }[] = [];
   extras.forEach((x) => {
     if (x.type === "overtime") overtimeHours += Number(x.hours) || 0;
     else if (x.type === "night") nightHours += Number(x.hours) || 0;
     else if (x.type === "holiday") holidayDays += Number(x.days) || 0;
     else if (x.type === "late") lateHours += Number(x.hours) || 0;
+    else if (x.type === "incentive") {
+      const amt = Number(x.amount) || 0;
+      incentiveAmount += amt;
+      incentiveDetail.push({ date: x.date, description: x.description || "Incentivo", amount: amt });
+    }
     else if (x.type === "meal") {
       const amt = Number(x.amount) || 0;
       mealDeduction += amt;
@@ -60,8 +66,8 @@ function computeExtras(e: Employee, extras: PayrollExtra[], grossMonthly: number
     isAgent, divisor, dailyHours, hourlyRate,
     overtimeHours, overtimeAmount, nightHours, nightAmount,
     holidayDays, holidayAmount, lateHours, lateDeduction,
-    mealDeduction, mealDetail,
-    extraEarnings: overtimeAmount + nightAmount + holidayAmount,
+    mealDeduction, mealDetail, incentiveAmount, incentiveDetail,
+    extraEarnings: overtimeAmount + nightAmount + holidayAmount + incentiveAmount,
     extraDeductions: lateDeduction + mealDeduction,
   };
 }
@@ -341,6 +347,7 @@ export default function Payroll() {
       nightHours: x.nightHours, nightAmount: x.nightAmount,
       holidayDays: x.holidayDays, holidayAmount: x.holidayAmount,
       lateHours: x.lateHours, lateDeduction: x.lateDeduction,
+      incentiveAmount: x.incentiveAmount, incentiveDetail: x.incentiveDetail,
       mealDeduction: x.mealDeduction, mealDetail: x.mealDetail,
       grossPeriod,
       sfs: d.sfs * factor, afp: d.afp * factor, isr: d.isr * factor,

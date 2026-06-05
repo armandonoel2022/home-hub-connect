@@ -733,6 +733,8 @@ export interface PayrollItem {
   mealDetail?: MealDetailItem[];
   lateHours?: number;
   lateDeduction?: number;
+  incentiveAmount?: number;
+  incentiveDetail?: MealDetailItem[];
   loanDeduction?: number;
   loanDetail?: { id: string; installment: number; frequency?: string }[];
   grossPeriod: number;
@@ -761,7 +763,7 @@ export interface PayrollExtra {
   id: string;
   employeeCode: string;
   employeeName: string;
-  type: "overtime" | "night" | "holiday" | "meal" | "late";
+  type: "overtime" | "night" | "holiday" | "meal" | "late" | "incentive";
   date: string;
   hours?: number;
   days?: number;

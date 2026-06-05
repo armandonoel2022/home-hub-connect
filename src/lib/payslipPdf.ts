@@ -83,6 +83,9 @@ export async function generatePayslipPDF(run: PayrollRun, item: PayrollItem, opt
   if ((item.holidayAmount || 0) > 0) {
     body.push([`Días feriados trabajados (${item.holidayDays || 0} día(s))`, fmtRD(item.holidayAmount || 0).replace("DOP", "").trim(), ""]);
   }
+  if ((item.incentiveAmount || 0) > 0) {
+    body.push([`Incentivos / bonos (${(item.incentiveDetail || []).length} concepto(s))`, fmtRD(item.incentiveAmount || 0).replace("DOP", "").trim(), ""]);
+  }
   body.push(
     ["SFS (Seguro Familiar Salud) 3.04%", "", fmtRD(item.sfs).replace("DOP", "").trim()],
     ["AFP (Pensiones) 2.87%", "", fmtRD(item.afp).replace("DOP", "").trim()],
