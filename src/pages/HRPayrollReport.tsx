@@ -19,6 +19,7 @@ const EXTRA_TYPE_LABEL: Record<PayrollExtra["type"], string> = {
   holiday: "Feriado trabajado",
   meal: "Almuerzo descontable",
   late: "Horas tardías (descuento)",
+  incentive: "Incentivo",
 };
 
 const HRPayrollReport = () => {
