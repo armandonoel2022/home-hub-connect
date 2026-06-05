@@ -193,6 +193,9 @@ const HRPayrollReport = () => {
                 Reportes de Centro de Monitoreo y Operaciones para nómina
               </p>
             </div>
+            <Button onClick={exportExtrasExcel} variant="outline" className="gap-2" disabled={extras.length === 0}>
+              <FileSpreadsheet className="h-4 w-4" /> Excel novedades
+            </Button>
             <Button onClick={exportCSV} className="gap-2">
               <Download className="h-4 w-4" /> Exportar CSV
             </Button>
