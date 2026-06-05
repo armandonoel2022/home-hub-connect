@@ -3,27 +3,32 @@ import AppLayout from "@/components/AppLayout";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNotifications } from "@/contexts/NotificationContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Clock, Moon, CalendarDays, UtensilsCrossed, Trash2, Send, ArrowLeft, TimerOff } from "lucide-react";
+import { Clock, Moon, CalendarDays, UtensilsCrossed, Trash2, Send, ArrowLeft, TimerOff, Gift, FileSpreadsheet, CalendarCheck } from "lucide-react";
 import { payrollExtrasApi, employeesApi, isApiConfigured, type PayrollExtra, type Employee } from "@/lib/api";
+import { getCutoffForDate } from "@/lib/payrollPeriods";
 import { useNavigate } from "react-router-dom";
+import * as XLSX from "xlsx";
 
 const TYPE_META: Record<PayrollExtra["type"], { label: string; icon: any; color: string }> = {
   overtime: { label: "Horas extras", icon: Clock, color: "text-blue-600" },
   night: { label: "Horas nocturnas", icon: Moon, color: "text-purple-600" },
   holiday: { label: "Día feriado trabajado", icon: CalendarDays, color: "text-amber-600" },
+  incentive: { label: "Incentivo / bono", icon: Gift, color: "text-emerald-600" },
   meal: { label: "Almuerzo descontable", icon: UtensilsCrossed, color: "text-orange-600" },
   late: { label: "Horas tardías (descuento por retraso de relevo)", icon: TimerOff, color: "text-red-600" },
 };
 
 export default function PayrollExtrasPage() {
-  const { user } = useAuth();
+  const { user, activeUsers } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { addNotification } = useNotifications();
   const isHR = user?.isAdmin || user?.department === "Recursos Humanos";
   const isLeader = !!(user as any)?.isDepartmentLeader || isHR;
 
@@ -75,6 +80,16 @@ export default function PayrollExtrasPage() {
     return employees.filter((e: any) => e.status === "Activo" && e.department === user?.department);
   }, [employees, isHR, user]);
 
+  // Corte y fecha de pago calculados a partir de la fecha del registro
+  const cutoff = useMemo(() => getCutoffForDate(form.date), [form.date]);
+
+  // Localiza a Dilia Aguasvivas (encargada de cargar la nómina) o, en su defecto, a RRHH
+  const findPayrollOwner = () => {
+    const dilia = activeUsers.find((u) => (u.fullName || "").toLowerCase().includes("dilia"));
+    if (dilia) return [dilia];
+    return activeUsers.filter((u) => u.department === "Recursos Humanos");
+  };
+
   const submit = async () => {
     if (!form.employeeCode || !form.type || !form.date) {
       toast({ title: "Faltan datos", description: "Empleado, tipo y fecha son obligatorios.", variant: "destructive" });
@@ -92,7 +107,23 @@ export default function PayrollExtrasPage() {
         amount: form.amount ? Number(form.amount) : 0,
         description: form.description,
       });
-      toast({ title: "Registrado", description: "Enviado a RRHH para nómina." });
+
+      // Notifica a Dilia (o RRHH) con el corte y la fecha de pago correspondientes
+      try {
+        const owners = findPayrollOwner();
+        owners.forEach((owner) => {
+          addNotification({
+            type: "info",
+            title: "Nómina · Novedad para el próximo corte",
+            message: `${user?.fullName || "Un líder"} reportó "${TYPE_META[form.type].label}" para ${emp?.fullName || form.employeeCode}. Corte ${cutoff.label}. A pagar el ${cutoff.payLabel}. Recuerda incluirlo en la próxima nómina.`,
+            relatedId: `EXTRA-${form.employeeCode}-${form.date}`,
+            forUserId: owner.id,
+            actionUrl: "/rrhh/reporte-nomina",
+          });
+        });
+      } catch {}
+
+      toast({ title: "Registrado", description: `Enviado a RRHH. Corte ${cutoff.label} · pago ${cutoff.payLabel}.` });
       setForm({ ...form, hours: "", days: "", amount: "", description: "" });
       refresh();
     } catch (e: any) {
@@ -108,6 +139,29 @@ export default function PayrollExtrasPage() {
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     }
+  };
+
+  const exportExcel = () => {
+    const data = list.map((r) => {
+      const c = getCutoffForDate(r.date);
+      return {
+        Fecha: r.date,
+        Corte: c.label,
+        "Fecha de pago": c.payLabel,
+        Codigo: r.employeeCode,
+        Empleado: r.employeeName,
+        Tipo: TYPE_META[r.type].label,
+        Horas: r.type === "overtime" || r.type === "night" || r.type === "late" ? r.hours || 0 : "",
+        Dias: r.type === "holiday" ? r.days || 0 : "",
+        Monto: r.type === "meal" || r.type === "incentive" ? r.amount || 0 : "",
+        Descripcion: r.description || "",
+        Estado: r.status,
+        "Reportado por": r.registeredBy,
+      };
+    });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), "Novedades nómina");
+    XLSX.writeFile(wb, `Novedades_Nomina_${period}.xlsx`);
   };
 
   if (!isLeader) {
@@ -139,11 +193,20 @@ export default function PayrollExtrasPage() {
           </button>
           <div className="mb-6">
             <h1 className="text-2xl font-heading font-bold text-foreground flex items-center gap-2">
-              <Clock className="h-6 w-6 text-gold" /> Horas extras, nocturnas, feriados y almuerzos
+              <Clock className="h-6 w-6 text-gold" /> Horas extras, feriados, incentivos y descuentos
             </h1>
             <p className="text-sm text-muted-foreground">
-              Los registros llegan a RRHH y se reflejan automáticamente en el volante de pago del período.
+              Los registros llegan a RRHH (Dilia Aguasvivas) y se reflejan automáticamente en el volante de pago del corte.
             </p>
+          </div>
+
+          {/* Aviso de cortes */}
+          <div className="mb-6 rounded-xl border border-gold/30 bg-gold/5 p-4 flex items-start gap-3">
+            <CalendarCheck className="h-5 w-5 text-gold mt-0.5 shrink-0" />
+            <div className="text-sm text-muted-foreground">
+              <p className="font-semibold text-foreground">Cortes de nómina</p>
+              <p>Corte 1: del <strong>01 al 15</strong> → se paga el <strong>22</strong> · Corte 2: del <strong>16 al fin de mes</strong> → se paga el <strong>7</strong> del mes siguiente (7 días después del corte).</p>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -184,6 +247,12 @@ export default function PayrollExtrasPage() {
                     <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
                   </div>
                 </div>
+
+                {/* Corte calculado */}
+                <div className="rounded-lg bg-muted/50 border border-border px-3 py-2 text-xs text-muted-foreground">
+                  Corte: <strong className="text-foreground">{cutoff.label}</strong> · Fecha de pago: <strong className="text-foreground">{cutoff.payLabel}</strong>
+                </div>
+
                 {(form.type === "overtime" || form.type === "night" || form.type === "late") && (
                   <div>
                     <Label>{form.type === "late" ? "Horas tardías a descontar" : "Horas"}</Label>
@@ -192,13 +261,13 @@ export default function PayrollExtrasPage() {
                 )}
                 {form.type === "holiday" && (
                   <div>
-                    <Label>Días feriados</Label>
+                    <Label>Días feriados (se paga 100% adicional del día)</Label>
                     <Input type="number" step="0.5" value={form.days} onChange={(e) => setForm({ ...form, days: e.target.value })} />
                   </div>
                 )}
-                {form.type === "meal" && (
+                {(form.type === "meal" || form.type === "incentive") && (
                   <div>
-                    <Label>Monto a descontar (RD$)</Label>
+                    <Label>{form.type === "incentive" ? "Monto del incentivo (RD$)" : "Monto a descontar (RD$)"}</Label>
                     <Input type="number" step="1" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
                   </div>
                 )}
@@ -207,7 +276,7 @@ export default function PayrollExtrasPage() {
                   <Input
                     value={form.description}
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
-                    placeholder={form.type === "meal" ? "Ej: Plato del día, ensalada, etc." : "Motivo, turno cubierto, etc."}
+                    placeholder={form.type === "meal" ? "Ej: Plato del día, ensalada, etc." : form.type === "incentive" ? "Ej: Bono por desempeño" : "Motivo, turno cubierto, etc."}
                   />
                 </div>
                 <Button onClick={submit} className="w-full gap-2">
@@ -215,16 +284,21 @@ export default function PayrollExtrasPage() {
                 </Button>
                 <p className="text-[10px] text-muted-foreground">
                   Cálculo: agentes de seguridad = salario / 26 / 10h; administrativos = salario / 23.83 / 8h.
-                  Recargos: horas extras 35%, nocturnas 15%, feriados 100%.
+                  Recargos: horas extras 35%, nocturnas 15%, feriados 100% adicional. Los incentivos se suman al devengado.
                 </p>
               </div>
             </div>
 
             {/* Listado del período */}
             <div className="bg-card border border-border rounded-xl p-5">
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-3 gap-2">
                 <h2 className="font-heading font-bold text-card-foreground">Registros del período</h2>
-                <Input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} className="w-40" />
+                <div className="flex items-center gap-2">
+                  <Input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} className="w-40" />
+                  <Button size="sm" variant="outline" className="gap-1.5" onClick={exportExcel} disabled={list.length === 0}>
+                    <FileSpreadsheet className="h-4 w-4" /> Excel
+                  </Button>
+                </div>
               </div>
               <div className="overflow-auto max-h-[500px]">
                 <table className="w-full text-xs">
@@ -247,7 +321,7 @@ export default function PayrollExtrasPage() {
                         <td className="px-2 py-1.5">{r.employeeName}</td>
                         <td className="px-2 py-1.5">{TYPE_META[r.type].label}</td>
                         <td className="px-2 py-1.5 text-right font-mono">
-                          {r.type === "meal" ? `RD$ ${r.amount}` :
+                          {r.type === "meal" || r.type === "incentive" ? `RD$ ${r.amount}` :
                            r.type === "holiday" ? `${r.days} día(s)` :
                            `${r.hours}h`}
                         </td>
