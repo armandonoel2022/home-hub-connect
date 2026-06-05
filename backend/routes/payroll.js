@@ -333,7 +333,9 @@ router.post('/runs/generate', auth, (req, res) => {
     let nightHours = 0, nightAmount = 0;
     let holidayDays = 0, holidayAmount = 0;
     let mealDeduction = 0;
+    let incentiveAmount = 0;
     const mealDetail = [];
+    const incentiveDetail = [];
 
     empExtras.forEach(x => {
       const hourly = factors.hourlyRate;
@@ -350,8 +352,12 @@ router.post('/runs/generate', auth, (req, res) => {
       } else if (x.type === 'holiday') {
         const d = Number(x.days) || 1;
         holidayDays += d;
-        // Día feriado trabajado: 100% adicional sobre la jornada normal
-        holidayAmount += x.amount ? Number(x.amount) : d * factors.normalDailyHours * hourly;
+        // Día feriado trabajado: pago del día + 100% adicional (doble pago)
+        holidayAmount += x.amount ? Number(x.amount) : d * factors.normalDailyHours * hourly * 2;
+      } else if (x.type === 'incentive') {
+        const a = Number(x.amount) || 0;
+        incentiveAmount += a;
+        incentiveDetail.push({ date: x.date, description: x.description || 'Incentivo', amount: round2(a) });
       } else if (x.type === 'meal') {
         const a = Number(x.amount) || 0;
         mealDeduction += a;
@@ -361,7 +367,7 @@ router.post('/runs/generate', auth, (req, res) => {
 
     const ded = calcDeductions(grossMonthly);
     const grossPeriodBase = grossMonthly * factor;
-    const earningsExtra = overtimeAmount + nightAmount + holidayAmount;
+    const earningsExtra = overtimeAmount + nightAmount + holidayAmount + incentiveAmount;
     const grossPeriod = grossPeriodBase + earningsExtra;
     const totalDeductions = ded.totalDeductions * factor + mealDeduction;
     const net = grossPeriod - totalDeductions;
