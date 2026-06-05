@@ -347,6 +347,7 @@ export default function Payroll() {
       nightHours: x.nightHours, nightAmount: x.nightAmount,
       holidayDays: x.holidayDays, holidayAmount: x.holidayAmount,
       lateHours: x.lateHours, lateDeduction: x.lateDeduction,
+      incentiveAmount: x.incentiveAmount, incentiveDetail: x.incentiveDetail,
       mealDeduction: x.mealDeduction, mealDetail: x.mealDetail,
       grossPeriod,
       sfs: d.sfs * factor, afp: d.afp * factor, isr: d.isr * factor,
