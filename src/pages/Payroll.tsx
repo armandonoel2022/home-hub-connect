@@ -29,12 +29,13 @@ import * as XLSX from "xlsx";
 
 /** Recargos y divisores legales (espejo de PayrollExtras). */
 function computeExtras(e: Employee, extras: PayrollExtra[], grossMonthly: number) {
-  const isAgent =
-    e.category === "Vigilante" ||
-    e.category === "Supervisor" ||
-    e.payrollType === "Operaciones" ||
-    e.payrollType === "Vgilantes Horas" ||
-    e.department === "Operaciones";
+  // Regla SafeOne/Superintendencia: TODO el personal NO administrativo
+  // (vigilantes, supervisores, operadores de monitoreo, operativos, etc.)
+  // se calcula con salario / 26 días / 10h. Solo los administrativos usan /23.83 / 8h.
+  const isAdministrative =
+    /administrativ/i.test(String(e.category || "")) ||
+    /administrativ/i.test(String(e.payrollType || ""));
+  const isAgent = !isAdministrative;
   const divisor = isAgent ? 26 : 23.83;
   const dailyHours = isAgent ? 10 : 8;
   const hourlyRate = grossMonthly > 0 ? grossMonthly / divisor / dailyHours : 0;
