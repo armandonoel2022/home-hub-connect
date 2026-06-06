@@ -87,6 +87,7 @@ app.use('/api/folder-acl', require('./routes/folder-acl'));
 app.use('/api/announcements', require('./routes/announcements'));
 app.use('/api/calendar-events', require('./routes/calendar-events'));
 app.use('/api/hr-requests', require('./routes/hr-requests'));
+app.use('/api/general-sql', require('./routes/general-sql'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({
