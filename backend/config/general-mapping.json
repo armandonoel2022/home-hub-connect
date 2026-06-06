@@ -1,0 +1,23 @@
+{
+  "_comment": "Mapeo de la tabla de nómina del software GENERAL. Ajusta 'schema', 'table' y 'columns' a tu base de datos real. Las claves de 'columns' son los campos internos de la intranet; los valores son los nombres reales de columna en SQL Server.",
+  "schema": "dbo",
+  "table": "Nomina",
+  "primaryKey": "Id",
+  "columns": {
+    "id": "Id",
+    "employeeCode": "CodigoEmpleado",
+    "fullName": "Nombre",
+    "cedula": "Cedula",
+    "department": "Departamento",
+    "position": "Cargo",
+    "period": "Periodo",
+    "salary": "Salario",
+    "overtimeHours": "HorasExtras",
+    "overtimeAmount": "MontoHorasExtras",
+    "holidayDays": "DiasFeriados",
+    "holidayAmount": "MontoFeriados",
+    "incentiveAmount": "Incentivos",
+    "deductions": "Deducciones",
+    "net": "NetoPagar"
+  }
+}
