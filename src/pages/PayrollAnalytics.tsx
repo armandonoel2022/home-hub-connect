@@ -386,7 +386,7 @@ const KpiCard = ({ label, value, sub, danger }: { label: string; value: string; 
   </div>
 );
 
-const Pill = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+const Pill = ({ children, className }: { children: ReactNode; className?: string }) => (
   <span className={`px-2 py-1 rounded-full font-semibold ${className}`}>{children}</span>
 );
 
