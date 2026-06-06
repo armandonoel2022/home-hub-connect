@@ -32,6 +32,7 @@ import {
   ClipboardCheck,
   Banknote,
   ImagePlus,
+  BrainCircuit,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -62,6 +63,7 @@ const navItems: NavItem[] = [
   { title: "Aprobaciones RRHH", url: "/rrhh/aprobaciones", icon: ClipboardCheck, module: "hrApprovals" },
   { title: "Control de Préstamos", url: "/rrhh/prestamos-control", icon: Banknote, module: "hrApprovals" },
   { title: "Consolidado RRHH", url: "/rrhh/consolidado", icon: ClipboardList, module: "hrConsolidated" },
+  { title: "Nómina Analítica (GENERAL)", url: "/rrhh/nomina-analitica", icon: BrainCircuit, module: "hrConsolidated" },
   { title: "Constancias RRHH (Auditoría)", url: "/rrhh/constancias", icon: ClipboardList, module: "hrConstancias" },
   { title: "Solicitudes Compra", url: "/solicitudes-compra", icon: ShoppingCart, module: "purchaseRequests" },
   { title: "Solicitudes Personal", url: "/solicitudes-personal", icon: Users, module: "hiringRequests" },

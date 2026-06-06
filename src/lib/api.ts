@@ -1032,6 +1032,64 @@ export const hrRequestsApi = {
     apiFetch<{ ok: boolean; count: number }>("/hr-requests/notifications/all", { method: "PUT", body: JSON.stringify(items) }),
 };
 
+// ─── GENERAL (gSafeOne) — Nómina Analítica (solo lectura) ───
+export interface GeneralSqlStatus {
+  configured: boolean;
+  connected: boolean;
+  writeEnabled?: boolean;
+  auth?: string;
+  host?: string | null;
+  database?: string | null;
+  message?: string;
+}
+export interface GeneralPeriod {
+  OID: number | string;
+  Fecha?: string;
+  Mes?: number;
+  Ano?: number;
+  Cerrado?: boolean;
+  FechaDesde?: string;
+  FechaHasta?: string;
+  Nomina?: string;
+}
+export interface PayrollAnalysis {
+  generatedAt: string;
+  summary: {
+    empleados: number; brutoTotal: number; netoTotal: number;
+    deduccionesTotal: number; anomalias: number; anomaliasAltas: number;
+  };
+  anomalies: Array<{
+    severity: "high" | "medium" | "info"; type: string; empleado: string;
+    codigo: string; departamento?: any; message: string; delta?: number;
+  }>;
+  reconciliation: {
+    summary: { total: number; ok: number; discrepancia: number; faltanteExcel: number; noReportado: number };
+    rows: Array<{
+      empleado: string; reportadoExtra: number; excelExtra: number; difExtra: number;
+      reportadoFeriado: number; excelFeriado: number; difFeriado: number; status: string;
+    }>;
+  };
+  history: Array<{ label: string; total: number; projected?: boolean }>;
+  prediction: {
+    trend: string; slope: number; avgGrowthPct?: number; r2: number;
+    projection: Array<{ label: string; total: number; projected?: boolean }>;
+  };
+}
+export const generalSqlApi = {
+  status: () => apiFetch<GeneralSqlStatus>("/general-sql/status"),
+  tables: () => apiFetch<Array<{ schema: string; name: string }>>("/general-sql/tables"),
+  columns: (table: string) =>
+    apiFetch<Array<{ name: string; type: string; nullable: string }>>(`/general-sql/columns/${encodeURIComponent(table)}`),
+  periods: () => apiFetch<GeneralPeriod[]>("/general-sql/periods"),
+  payroll: (pagoOID: string | number) =>
+    apiFetch<{ count: number; totals: any; items: any[] }>(`/general-sql/payroll/${encodeURIComponent(String(pagoOID))}`),
+  overtime: (desde: string, hasta: string) =>
+    apiFetch<any[]>(`/general-sql/overtime?desde=${desde}&hasta=${hasta}`),
+  holidays: (ano: number) => apiFetch<any[]>(`/general-sql/holidays?ano=${ano}`),
+  analyze: (body: { current: string | number; previous?: string | number; excelRows?: any[] }) =>
+    apiFetch<PayrollAnalysis>("/general-sql/analyze", { method: "POST", body: JSON.stringify(body) }),
+};
+
 export default apiFetch;
 
 

@@ -55,6 +55,7 @@ import Kiosk from "./pages/Kiosk";
 import EmployeeDirectory from "./pages/EmployeeDirectory";
 import Payroll from "./pages/Payroll";
 import PayrollExtrasPage from "./pages/PayrollExtras";
+import PayrollAnalytics from "./pages/PayrollAnalytics";
 import HRBirthdays from "./pages/HRBirthdays";
 import OperationsInventory from "./pages/OperationsInventory";
 import OperationsMaintenanceMatrix from "./pages/OperationsMaintenanceMatrix";
@@ -194,6 +195,7 @@ function ProtectedRoutes() {
         <Route path="/rrhh/nomina" element={<Payroll />} />
         <Route path="/rrhh/beneficios" element={<HRBenefits />} />
         <Route path="/rrhh/horas-extras" element={<PayrollExtrasPage />} />
+        <Route path="/rrhh/nomina-analitica" element={<PayrollAnalytics />} />
         <Route path="/rrhh/cumpleanos" element={<HRBirthdays />} />
         <Route path="/admin/formularios" element={<RouteGuard module="adminForms"><AdminForms /></RouteGuard>} />
         <Route path="/admin/hub" element={<RouteGuard module="adminHub"><AdminHub /></RouteGuard>} />
