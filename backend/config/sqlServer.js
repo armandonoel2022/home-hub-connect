@@ -1,69 +1,95 @@
 /**
- * Conexión opcional a SQL Server (software GENERAL).
+ * Conexión de SOLO LECTURA a SQL Server (base gSafeOne del software GENERAL).
  *
- * Se carga de forma perezosa: si el paquete `mssql` no está instalado o las
- * variables de entorno no están configuradas, el resto de la intranet sigue
- * funcionando con normalidad (almacenamiento JSON local).
+ * Servidor: SAFEONE-SERVER\SQL2019 — Autenticación de Windows (por defecto).
+ *
+ * Carga perezosa: si el driver no está instalado o las variables no están
+ * configuradas, el resto de la intranet sigue funcionando con JSON local.
  *
  * Variables de entorno (.env del backend):
- *   GENERAL_SQL_HOST=localhost
- *   GENERAL_SQL_PORT=1433
- *   GENERAL_SQL_INSTANCE=SQLEXPRESS        (opcional, instancia nombrada)
- *   GENERAL_SQL_DB=GENERAL
- *   GENERAL_SQL_USER=sa
- *   GENERAL_SQL_PASSWORD=********
- *   GENERAL_SQL_ENCRYPT=false              (true si el servidor lo exige)
+ *   GENERAL_SQL_AUTH=windows            (windows | sql)
+ *   GENERAL_SQL_HOST=SAFEONE-SERVER\SQL2019
+ *   GENERAL_SQL_DB=gSafeOne
+ *   GENERAL_SQL_USER=sa                 (solo si AUTH=sql)
+ *   GENERAL_SQL_PASSWORD=********       (solo si AUTH=sql)
+ *   GENERAL_SQL_ENCRYPT=false
  *   GENERAL_SQL_TRUST_CERT=true
- *   GENERAL_SQL_WRITE=false                (true habilita INSERT/UPDATE/DELETE)
+ *
+ * Windows Auth requiere el driver nativo:  npm install msnodesqlv8 mssql
+ * SQL Login usa solo:                       npm install mssql
  */
 
-let mssql = null;
+let driver = null;
 let pool = null;
 let lastError = null;
+
+function authMode() {
+  return String(process.env.GENERAL_SQL_AUTH || 'windows').toLowerCase();
+}
 
 function isConfigured() {
   return !!(process.env.GENERAL_SQL_HOST && process.env.GENERAL_SQL_DB);
 }
 
+// Solo lectura por ahora. La escritura llegará con tablas staging separadas.
 function writeEnabled() {
-  return String(process.env.GENERAL_SQL_WRITE || '').toLowerCase() === 'true';
+  return false;
 }
 
 function loadDriver() {
-  if (mssql) return mssql;
+  if (driver) return driver;
   try {
-    mssql = require('mssql');
+    if (authMode() === 'windows') {
+      driver = require('mssql/msnodesqlv8');
+    } else {
+      driver = require('mssql');
+    }
   } catch (e) {
-    lastError = "Paquete 'mssql' no instalado. Ejecuta: npm install mssql";
+    lastError =
+      authMode() === 'windows'
+        ? "Drivers no instalados. Ejecuta en /backend: npm install mssql msnodesqlv8"
+        : "Paquete 'mssql' no instalado. Ejecuta en /backend: npm install mssql";
     throw new Error(lastError);
   }
-  return mssql;
+  return driver;
 }
 
 function buildConfig() {
   const sql = loadDriver();
+  const encrypt = String(process.env.GENERAL_SQL_ENCRYPT || 'false').toLowerCase() === 'true';
+  const trust = String(process.env.GENERAL_SQL_TRUST_CERT || 'true').toLowerCase() === 'true';
+
+  if (authMode() === 'windows') {
+    // Driver nativo msnodesqlv8 con Trusted Connection (Autenticación de Windows)
+    const connStr =
+      `Driver={ODBC Driver 17 for SQL Server};Server=${process.env.GENERAL_SQL_HOST};` +
+      `Database=${process.env.GENERAL_SQL_DB};Trusted_Connection=Yes;` +
+      `TrustServerCertificate=${trust ? 'Yes' : 'No'};`;
+    return {
+      connectionString: connStr,
+      pool: { max: 5, min: 0, idleTimeoutMillis: 30000 },
+      _sql: sql,
+    };
+  }
+
+  // Autenticación SQL (usuario/contraseña)
   return {
     server: process.env.GENERAL_SQL_HOST,
     port: Number(process.env.GENERAL_SQL_PORT) || 1433,
     database: process.env.GENERAL_SQL_DB,
     user: process.env.GENERAL_SQL_USER,
     password: process.env.GENERAL_SQL_PASSWORD,
-    options: {
-      encrypt: String(process.env.GENERAL_SQL_ENCRYPT || 'false').toLowerCase() === 'true',
-      trustServerCertificate: String(process.env.GENERAL_SQL_TRUST_CERT || 'true').toLowerCase() === 'true',
-      instanceName: process.env.GENERAL_SQL_INSTANCE || undefined,
-      enableArithAbort: true,
-    },
+    options: { encrypt, trustServerCertificate: trust, enableArithAbort: true },
     pool: { max: 5, min: 0, idleTimeoutMillis: 30000 },
     connectionTimeout: 8000,
-    requestTimeout: 20000,
+    requestTimeout: 30000,
     _sql: sql,
   };
 }
 
 async function getPool() {
   if (!isConfigured()) {
-    throw new Error('Conexión a GENERAL no configurada (faltan variables GENERAL_SQL_*).');
+    throw new Error('Conexión a gSafeOne no configurada (faltan variables GENERAL_SQL_*).');
   }
   if (pool && pool.connected) return pool;
   const cfg = buildConfig();
@@ -74,11 +100,11 @@ async function getPool() {
   return pool;
 }
 
-/**
- * Ejecuta una consulta parametrizada.
- * params: { name: value } → se enlazan como @name (previene inyección SQL).
- */
+/** Consulta parametrizada (params: { name: value } → @name). SOLO SELECT. */
 async function query(text, params = {}) {
+  if (!/^\s*(select|with)\b/i.test(text)) {
+    throw new Error('Solo se permiten consultas de lectura (SELECT).');
+  }
   const p = await getPool();
   const req = p.request();
   Object.entries(params).forEach(([k, v]) => req.input(k, v));
@@ -90,13 +116,11 @@ async function status() {
   const base = {
     configured: isConfigured(),
     writeEnabled: writeEnabled(),
+    auth: authMode(),
     host: process.env.GENERAL_SQL_HOST || null,
     database: process.env.GENERAL_SQL_DB || null,
-    instance: process.env.GENERAL_SQL_INSTANCE || null,
   };
-  if (!isConfigured()) {
-    return { ...base, connected: false, message: 'No configurado' };
-  }
+  if (!isConfigured()) return { ...base, connected: false, message: 'No configurado' };
   try {
     const rows = await query('SELECT 1 AS ok');
     return { ...base, connected: rows.length > 0, message: 'Conexión exitosa' };
@@ -114,32 +138,24 @@ async function listTables() {
   );
 }
 
-async function listColumns(schema, table) {
+async function listColumns(table) {
   return query(
     `SELECT COLUMN_NAME AS [name], DATA_TYPE AS [type], IS_NULLABLE AS [nullable]
      FROM INFORMATION_SCHEMA.COLUMNS
-     WHERE TABLE_SCHEMA = @schema AND TABLE_NAME = @table
+     WHERE TABLE_NAME = @table
      ORDER BY ORDINAL_POSITION`,
-    { schema, table }
+    { table }
   );
-}
-
-/** Valida un identificador (tabla/columna) para uso seguro en SQL dinámico. */
-function safeIdent(name) {
-  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(String(name || ''))) {
-    throw new Error(`Identificador inválido: ${name}`);
-  }
-  return name;
 }
 
 module.exports = {
   isConfigured,
   writeEnabled,
+  authMode,
   getPool,
   query,
   status,
   listTables,
   listColumns,
-  safeIdent,
   getLastError: () => lastError,
 };
