@@ -16,7 +16,7 @@ import {
 } from "@/lib/api";
 import {
   ResponsiveContainer, ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ReferenceLine,
+  Tooltip, Legend,
 } from "recharts";
 import * as XLSX from "xlsx";
 
