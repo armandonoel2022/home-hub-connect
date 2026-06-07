@@ -26,6 +26,7 @@ export type ModuleKey =
   | "myHRRequests"
   | "hrApprovals"
   | "hrConsolidated"
+  | "generalNomina"
   | "hrConstancias"
   | "purchaseRequests"
   | "hiringRequests"
