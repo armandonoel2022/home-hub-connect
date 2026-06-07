@@ -170,6 +170,67 @@ const LoanControl = () => {
             })}
           </div>
         )}
+
+        {/* Préstamos en GENERAL (gSafeOne) */}
+        <Card className="p-4 space-y-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Database className="h-5 w-5 text-primary" />
+              <div>
+                <h2 className="font-semibold">Préstamos en GENERAL (gSafeOne)</h2>
+                <p className="text-xs text-muted-foreground">Lectura directa de la tabla Prestamo del software GENERAL.</p>
+              </div>
+            </div>
+            <Button size="sm" variant="outline" onClick={loadGeneralLoans} disabled={genLoading}>
+              {genLoading ? "Cargando…" : showGen ? "Recargar" : "Cargar desde GENERAL"}
+            </Button>
+          </div>
+
+          {genError && <p className="text-sm text-destructive">{genError}</p>}
+
+          {showGen && !genError && genTotals && (
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-lg border p-3"><div className="text-xs text-muted-foreground">Prestado</div><div className="text-lg font-bold">{rd(genTotals.prestado)}</div></div>
+              <div className="rounded-lg border p-3"><div className="text-xs text-muted-foreground">Cobrado</div><div className="text-lg font-bold text-emerald-600">{rd(genTotals.cobrado)}</div></div>
+              <div className="rounded-lg border p-3"><div className="text-xs text-muted-foreground">Saldo</div><div className="text-lg font-bold text-amber-600">{rd(genTotals.saldo)}</div></div>
+            </div>
+          )}
+
+          {showGen && !genError && genLoans && (
+            genLoans.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No hay préstamos en GENERAL.</p>
+            ) : (
+              <div className="overflow-x-auto max-h-[420px]">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-card">
+                    <tr className="text-left text-muted-foreground border-b">
+                      <th className="py-2 pr-2">Código</th>
+                      <th className="py-2 px-2">Empleado</th>
+                      <th className="py-2 px-2">Fecha</th>
+                      <th className="py-2 px-2 text-right">Monto</th>
+                      <th className="py-2 px-2 text-right">Cuota</th>
+                      <th className="py-2 px-2 text-right">Pagado</th>
+                      <th className="py-2 pl-2 text-right">Saldo</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {genLoans.map((l) => (
+                      <tr key={String(l.oid)}>
+                        <td className="py-1.5 pr-2 font-mono">{l.codigo || "—"}</td>
+                        <td className="py-1.5 px-2">{l.empleado || "—"}</td>
+                        <td className="py-1.5 px-2">{l.fecha ? new Date(l.fecha).toLocaleDateString("es-DO") : "—"}</td>
+                        <td className="py-1.5 px-2 text-right">{rd(l.monto)}</td>
+                        <td className="py-1.5 px-2 text-right">{rd(l.cuota)}</td>
+                        <td className="py-1.5 px-2 text-right text-emerald-600">{rd(l.pagado)}</td>
+                        <td className="py-1.5 pl-2 text-right text-amber-600">{rd(l.saldo)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          )}
+        </Card>
       </div>
       <Footer />
 
