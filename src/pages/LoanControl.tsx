@@ -14,8 +14,9 @@ import {
   getApprovedLoans, loanPrincipal, loanTotalToPay, loanPaid, loanBalance,
   registerLoanPayment,
 } from "@/lib/hrRequestService";
+import { generalSqlApi, type GeneralLoan } from "@/lib/api";
 import type { HRRequest } from "@/lib/hrRequestTypes";
-import { Banknote, Wallet, TrendingDown, HandCoins, Plus } from "lucide-react";
+import { Banknote, Wallet, TrendingDown, HandCoins, Plus, Database } from "lucide-react";
 
 const rd = (n: number) => `RD$${(Math.round(n) || 0).toLocaleString()}`;
 
