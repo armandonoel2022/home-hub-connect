@@ -28,6 +28,21 @@ const LoanControl = () => {
   const [payAmount, setPayAmount] = useState("");
   const [payDate, setPayDate] = useState(new Date().toISOString().slice(0, 10));
   const [payNote, setPayNote] = useState("");
+  const [genLoans, setGenLoans] = useState<GeneralLoan[] | null>(null);
+  const [genTotals, setGenTotals] = useState<{ prestado: number; cobrado: number; saldo: number } | null>(null);
+  const [genLoading, setGenLoading] = useState(false);
+  const [genError, setGenError] = useState("");
+  const [showGen, setShowGen] = useState(false);
+
+  const loadGeneralLoans = () => {
+    setShowGen(true);
+    setGenLoading(true);
+    setGenError("");
+    generalSqlApi.loans()
+      .then((res) => { setGenLoans(res.items); setGenTotals(res.totals); })
+      .catch((e) => setGenError(String(e?.message || e)))
+      .finally(() => setGenLoading(false));
+  };
 
   useEffect(() => {
     const h = () => setTick((t) => t + 1);
