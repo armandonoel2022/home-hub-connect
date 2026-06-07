@@ -274,29 +274,27 @@ router.get('/loans', auth, guard, async (req, res) => {
 });
 
 // ─── Armamento (números de serie de armas) ───
+// Usamos SELECT * y mapeo flexible porque los nombres de columnas de Armamento
+// pueden variar. Para ver el esquema exacto: GET /general-sql/columns/Armamento
 router.get('/weapons', auth, guard, async (req, res) => {
   try {
-    const rows = await sql.query(
-      `SELECT a.OID, a.Serie, a.NumeroSerie, a.Modelo, a.Registro,
-              ma.Descripcion AS Marca, ca.Descripcion AS Calibre,
-              ta.Descripcion AS Tipo, ea.Descripcion AS Estatus
-       FROM Armamento a
-       LEFT JOIN MarcaArma ma ON ma.OID = a.Marca
-       LEFT JOIN CalibreArma ca ON ca.OID = a.Calibre
-       LEFT JOIN TipoArma ta ON ta.OID = a.Tipo
-       LEFT JOIN EstatusArma ea ON ea.OID = a.Estatus
-       WHERE a.GCRecord IS NULL
-       ORDER BY a.Serie`
-    );
+    const rows = await sql.query(`SELECT * FROM Armamento WHERE GCRecord IS NULL`);
+    const pick = (r, ...names) => {
+      for (const n of names) {
+        const key = Object.keys(r).find(k => k.toLowerCase() === n.toLowerCase());
+        if (key && r[key] != null && r[key] !== '') return r[key];
+      }
+      return null;
+    };
     res.json(rows.map(r => ({
-      oid: r.OID,
-      serie: r.Serie || r.NumeroSerie || null,
-      modelo: r.Modelo || null,
-      registro: r.Registro || null,
-      marca: r.Marca || null,
-      calibre: r.Calibre || null,
-      tipo: r.Tipo || null,
-      estatus: r.Estatus || null,
+      oid: pick(r, 'OID'),
+      serie: pick(r, 'Serie', 'NumeroSerie', 'NoSerie', 'Serial'),
+      modelo: pick(r, 'Modelo', 'Descripcion'),
+      registro: pick(r, 'Registro', 'NoRegistro'),
+      marca: pick(r, 'Marca'),
+      calibre: pick(r, 'Calibre'),
+      tipo: pick(r, 'Tipo'),
+      estatus: pick(r, 'Estatus'),
     })));
   } catch (e) { res.status(502).json({ message: e.message }); }
 });
