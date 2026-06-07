@@ -1086,9 +1086,29 @@ export const generalSqlApi = {
   overtime: (desde: string, hasta: string) =>
     apiFetch<any[]>(`/general-sql/overtime?desde=${desde}&hasta=${hasta}`),
   holidays: (ano: number) => apiFetch<any[]>(`/general-sql/holidays?ano=${ano}`),
+  employees: (incluirInactivos = true) =>
+    apiFetch<GeneralEmployee[]>(`/general-sql/employees?inactivos=${incluirInactivos}`),
+  loans: () => apiFetch<{ count: number; totals: { prestado: number; cobrado: number; saldo: number }; items: GeneralLoan[] }>("/general-sql/loans"),
+  weapons: () => apiFetch<GeneralWeapon[]>("/general-sql/weapons"),
   analyze: (body: { current: string | number; previous?: string | number; excelRows?: any[] }) =>
     apiFetch<PayrollAnalysis>("/general-sql/analyze", { method: "POST", body: JSON.stringify(body) }),
 };
+
+export interface GeneralEmployee {
+  oid: number | string; codigo?: string; nombre: string; cedula?: string;
+  salario: number; tarifa: number; fechaIngreso?: string;
+  puestoOID?: any; deptOID?: any; activo: boolean;
+}
+export interface GeneralLoan {
+  oid: number | string; codigo?: string; empleado: string; fecha?: string;
+  monto: number; cuota: number; pagado: number; saldo: number;
+  meses: number; interes: number; tasaInteres: number;
+}
+export interface GeneralWeapon {
+  oid: number | string; serie?: string | null; modelo?: string | null;
+  registro?: string | null; marca?: string | null; calibre?: string | null;
+  tipo?: string | null; estatus?: string | null;
+}
 
 export default apiFetch;
 

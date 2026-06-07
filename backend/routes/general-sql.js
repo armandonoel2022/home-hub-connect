@@ -216,4 +216,87 @@ router.post('/analyze', auth, guard, async (req, res) => {
   } catch (e) { res.status(502).json({ message: e.message }); }
 });
 
+// ─── Empleados (incluye inactivos) ───
+// GENERAL marca el estatus en EmpleadoActivo / campo Activo. Devolvemos todos
+// para que TSS y otros listados muestren también el personal inactivo.
+router.get('/employees', auth, guard, async (req, res) => {
+  const incluirInactivos = String(req.query.inactivos || 'true').toLowerCase() !== 'false';
+  try {
+    const rows = await sql.query(
+      `SELECT e.OID, e.Codigo, e.Nombre1, e.Apellido1, e.Cedula, e.Salario,
+              e.Tarifa, e.FechaIngreso, e.Puesto AS PuestoOID, e.Departamento AS DeptOID,
+              CASE WHEN ea.Empleado IS NOT NULL THEN 1 ELSE 0 END AS Activo
+       FROM Empleado e
+       LEFT JOIN EmpleadoActivo ea ON ea.Empleado = e.OID AND ea.GCRecord IS NULL
+       WHERE e.GCRecord IS NULL
+       ORDER BY e.Apellido1, e.Nombre1`
+    );
+    const mapped = rows.map(r => ({
+      oid: r.OID, codigo: r.Codigo, nombre: fullName(r), cedula: r.Cedula,
+      salario: Number(r.Salario) || 0, tarifa: Number(r.Tarifa) || 0,
+      fechaIngreso: r.FechaIngreso, puestoOID: r.PuestoOID, deptOID: r.DeptOID,
+      activo: !!r.Activo,
+    }));
+    res.json(incluirInactivos ? mapped : mapped.filter(m => m.activo));
+  } catch (e) { res.status(502).json({ message: e.message }); }
+});
+
+// ─── Préstamos (tabla Prestamo) ───
+router.get('/loans', auth, guard, async (req, res) => {
+  try {
+    const rows = await sql.query(
+      `SELECT pr.OID, pr.Fecha, pr.Monto, pr.Cuota, pr.Pagado, pr.Interes,
+              pr.Meses, pr.TasaInteres, e.Codigo, e.Nombre1, e.Apellido1
+       FROM Prestamo pr
+       LEFT JOIN Empleado e ON e.OID = pr.Empleado
+       WHERE pr.GCRecord IS NULL
+       ORDER BY pr.Fecha DESC`
+    );
+    const items = rows.map(r => {
+      const monto = Number(r.Monto) || 0;
+      const pagado = Number(r.Pagado) || 0;
+      return {
+        oid: r.OID, codigo: r.Codigo, empleado: fullName(r),
+        fecha: r.Fecha, monto, cuota: Number(r.Cuota) || 0, pagado,
+        saldo: round2(monto - pagado), meses: Number(r.Meses) || 0,
+        interes: Number(r.Interes) || 0, tasaInteres: Number(r.TasaInteres) || 0,
+      };
+    });
+    const totals = items.reduce((a, i) => ({
+      prestado: a.prestado + i.monto, cobrado: a.cobrado + i.pagado, saldo: a.saldo + i.saldo,
+    }), { prestado: 0, cobrado: 0, saldo: 0 });
+    res.json({
+      count: items.length,
+      totals: { prestado: round2(totals.prestado), cobrado: round2(totals.cobrado), saldo: round2(totals.saldo) },
+      items,
+    });
+  } catch (e) { res.status(502).json({ message: e.message }); }
+});
+
+// ─── Armamento (números de serie de armas) ───
+// Usamos SELECT * y mapeo flexible porque los nombres de columnas de Armamento
+// pueden variar. Para ver el esquema exacto: GET /general-sql/columns/Armamento
+router.get('/weapons', auth, guard, async (req, res) => {
+  try {
+    const rows = await sql.query(`SELECT * FROM Armamento WHERE GCRecord IS NULL`);
+    const pick = (r, ...names) => {
+      for (const n of names) {
+        const key = Object.keys(r).find(k => k.toLowerCase() === n.toLowerCase());
+        if (key && r[key] != null && r[key] !== '') return r[key];
+      }
+      return null;
+    };
+    res.json(rows.map(r => ({
+      oid: pick(r, 'OID'),
+      serie: pick(r, 'Serie', 'NumeroSerie', 'NoSerie', 'Serial'),
+      modelo: pick(r, 'Modelo', 'Descripcion'),
+      registro: pick(r, 'Registro', 'NoRegistro'),
+      marca: pick(r, 'Marca'),
+      calibre: pick(r, 'Calibre'),
+      tipo: pick(r, 'Tipo'),
+      estatus: pick(r, 'Estatus'),
+    })));
+  } catch (e) { res.status(502).json({ message: e.message }); }
+});
+
 module.exports = router;

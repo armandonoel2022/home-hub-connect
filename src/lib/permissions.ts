@@ -26,6 +26,7 @@ export type ModuleKey =
   | "myHRRequests"
   | "hrApprovals"
   | "hrConsolidated"
+  | "generalNomina"
   | "hrConstancias"
   | "purchaseRequests"
   | "hiringRequests"
@@ -145,6 +146,14 @@ export function canView(module: ModuleKey, user: IntranetUser | null | undefined
     // Consolidado RRHH por empleado — RRHH + admin
     case "hrConsolidated":
       return inDept(user, "Recursos Humanos") || isAdmin(user);
+
+    // Nómina Analítica (GENERAL/gSafeOne) — RRHH, Tecnología y Monitoreo, líderes y admin
+    case "generalNomina":
+      return (
+        isAdmin(user) ||
+        isLeader(user) ||
+        inDept(user, "Recursos Humanos", "Tecnología", "Tecnología y Monitoreo")
+      );
 
     // Constancias RRHH (Auditoría) — SOLO super
     case "hrConstancias":

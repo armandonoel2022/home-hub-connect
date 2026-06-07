@@ -69,6 +69,8 @@ const PayrollAnalytics = () => {
     );
   }, [allowed]);
 
+  const [autoRan, setAutoRan] = useState(false);
+
   useEffect(() => {
     if (!status?.connected) return;
     generalSqlApi.periods().then((p) => {
@@ -77,6 +79,15 @@ const PayrollAnalytics = () => {
       if (p[1]) setPrevious(String(p[1].OID));
     }).catch((e) => toast({ title: "Error al leer períodos", description: String(e.message || e), variant: "destructive" }));
   }, [status?.connected]);
+
+  // Análisis automático: en cuanto hay último período cargado, ejecuta el
+  // comparativo contra el anterior y carga los 12 meses + predicción.
+  useEffect(() => {
+    if (autoRan || !current) return;
+    setAutoRan(true);
+    runAnalysis();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current]);
 
   if (!allowed) return <Navigate to="/" replace />;
 
