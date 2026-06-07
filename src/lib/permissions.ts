@@ -147,6 +147,14 @@ export function canView(module: ModuleKey, user: IntranetUser | null | undefined
     case "hrConsolidated":
       return inDept(user, "Recursos Humanos") || isAdmin(user);
 
+    // Nómina Analítica (GENERAL/gSafeOne) — RRHH, Tecnología y Monitoreo, líderes y admin
+    case "generalNomina":
+      return (
+        isAdmin(user) ||
+        isLeader(user) ||
+        inDept(user, "Recursos Humanos", "Tecnología", "Tecnología y Monitoreo")
+      );
+
     // Constancias RRHH (Auditoría) — SOLO super
     case "hrConstancias":
       return isSuperUser(user);
