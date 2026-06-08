@@ -1,6 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
 import FixedAssetsManager from "@/components/admin/FixedAssetsManager";
 import KeysManager from "@/components/admin/KeysManager";
+import AdminHubAccessManager from "@/components/admin/AdminHubAccessManager";
+import {
+  canAccessAdminModule, canManageAdminHubAccess, type AdminModuleKey,
+} from "@/lib/adminHubAccess";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import Navbar from "@/components/Navbar";
