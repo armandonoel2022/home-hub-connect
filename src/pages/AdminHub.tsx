@@ -520,11 +520,17 @@ const AdminHub = () => {
             <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="shrink-0">
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <div>
+            <div className="flex-1">
               <h1 className="text-2xl font-bold text-foreground">Hub de Administración</h1>
               <p className="text-sm text-muted-foreground">Gestión integral de los procesos administrativos</p>
             </div>
+            {canManageAccess && (
+              <Button variant="outline" className="gap-2 shrink-0" onClick={() => setShowAccess(true)}>
+                <ShieldCheck className="h-4 w-4" /> Permisos de Acceso
+              </Button>
+            )}
           </div>
+
 
           {/* Accesos destacados */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 mb-6">
