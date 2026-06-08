@@ -141,7 +141,7 @@ const HRForms = () => {
   const gerenciaApprover = allUsers.find((u) => (u.fullName || "").toLowerCase().includes("aurelio"));
   const isRRHH = user?.department === "Recursos Humanos";
   const isGerenciaApprover = user?.id === gerenciaApprover?.id;
-  const isSupervisor = user?.isDepartmentLeader === true || user?.isAdmin === true;
+  const isSupervisor = user?.isDepartmentLeader === true || user?.isAdmin === true || user?.department === "Recursos Humanos";
 
   // ── Employees seed (para lookup de salario al solicitar préstamo) ──
   const [employees, setEmployees] = useState<Array<{ employeeCode: string; fullName: string; salary: number; department: string; status?: string; hireDate?: string }>>([]);
