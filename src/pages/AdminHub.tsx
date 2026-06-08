@@ -718,8 +718,10 @@ const AdminHub = () => {
               })}
             </div>
           )}
+          </>)}
         </div>
       </main>
+
       <Footer />
     </AppLayout>
   );
