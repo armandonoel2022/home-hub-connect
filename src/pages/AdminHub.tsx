@@ -1,6 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
 import FixedAssetsManager from "@/components/admin/FixedAssetsManager";
 import KeysManager from "@/components/admin/KeysManager";
+import AdminHubAccessManager from "@/components/admin/AdminHubAccessManager";
+import {
+  canAccessAdminModule, canManageAdminHubAccess, type AdminModuleKey,
+} from "@/lib/adminHubAccess";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import Navbar from "@/components/Navbar";
@@ -18,7 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Receipt, Banknote, Calculator, ShoppingCart, Package, FolderOpen,
   ChevronRight, CheckCircle2, Clock, AlertCircle, ClipboardList, Plus,
-  FileText, Search, BarChart3, Trash2, Wrench, KeyRound, HardDrive, Smartphone, Paperclip,
+  FileText, Search, BarChart3, Trash2, Wrench, KeyRound, HardDrive, Smartphone, Paperclip, ShieldCheck,
 } from "lucide-react";
 import {
   ADMIN_CATEGORIES, ADMIN_PROCESSES,
@@ -59,6 +63,8 @@ const AdminHub = () => {
   const [showFixedAssets, setShowFixedAssets] = useState(false);
   const [showKeys, setShowKeys] = useState(false);
   const [showDevices, setShowDevices] = useState(false);
+  const [showAccess, setShowAccess] = useState(false);
+  const canManageAccess = canManageAdminHubAccess(user);
   const [deviceRegs, setDeviceRegs] = useState<DeviceRegistration[]>(getDeviceRegistrations);
   const [checklistState, setChecklistState] = useState<ChecklistState>(getChecklistState);
   const [activities, setActivities] = useState<AdminActivityEntry[]>(getAdminActivities);
@@ -240,6 +246,24 @@ const AdminHub = () => {
                 })}
               </div>
             )}
+          </div>
+        </main>
+        <Footer />
+      </AppLayout>
+    );
+  }
+
+  // ── Admin Hub access management view ──
+  if (showAccess && canManageAccess) {
+    return (
+      <AppLayout>
+        <Navbar />
+        <main className="flex-1 bg-background min-h-screen">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+            <Button variant="ghost" onClick={() => setShowAccess(false)} className="mb-4 gap-2">
+              <ArrowLeft className="h-4 w-4" /> Volver al Hub
+            </Button>
+            <AdminHubAccessManager />
           </div>
         </main>
         <Footer />
@@ -496,20 +520,27 @@ const AdminHub = () => {
             <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="shrink-0">
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <div>
+            <div className="flex-1">
               <h1 className="text-2xl font-bold text-foreground">Hub de Administración</h1>
               <p className="text-sm text-muted-foreground">Gestión integral de los procesos administrativos</p>
             </div>
+            {canManageAccess && (
+              <Button variant="outline" className="gap-2 shrink-0" onClick={() => setShowAccess(true)}>
+                <ShieldCheck className="h-4 w-4" /> Permisos de Acceso
+              </Button>
+            )}
           </div>
+
 
           {/* Accesos destacados */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 mb-6">
-            {[
+            {([
               {
                 label: "Órdenes de Compra / Servicio",
                 desc: "Generar OC y OS con numeración automática",
                 icon: FileText,
                 to: "/admin/formularios",
+                mod: "purchaseOrders" as AdminModuleKey,
                 gradient: "from-primary/15 via-primary/5 to-transparent",
                 iconBg: "bg-primary/15 text-primary",
               },
@@ -518,6 +549,7 @@ const AdminHub = () => {
                 desc: "Gastos menores con límite mensual y reposiciones",
                 icon: Receipt,
                 to: "/gastos-menores",
+                mod: "pettyCash" as AdminModuleKey,
                 gradient: "from-accent/20 via-accent/5 to-transparent",
                 iconBg: "bg-accent/20 text-accent-foreground",
               },
@@ -526,6 +558,7 @@ const AdminHub = () => {
                 desc: "Inventario, asignación, copias y revisiones",
                 icon: KeyRound,
                 action: "keys" as const,
+                mod: "keys" as AdminModuleKey,
                 gradient: "from-amber-500/15 via-amber-500/5 to-transparent",
                 iconBg: "bg-amber-500/15 text-amber-600",
               },
@@ -534,6 +567,7 @@ const AdminHub = () => {
                 desc: "Tarjetas asignadas, límites y cargos mensuales",
                 icon: Receipt,
                 to: "/admin/tarjetas-corporativas",
+                mod: "corporateCards" as AdminModuleKey,
                 gradient: "from-primary/15 via-primary/5 to-transparent",
                 iconBg: "bg-primary/15 text-primary",
               },
@@ -542,6 +576,7 @@ const AdminHub = () => {
                 desc: "Reparaciones y gastos de la flotilla",
                 icon: Wrench,
                 to: "/admin/flotilla-mantenimiento",
+                mod: "fleetMaintenance" as AdminModuleKey,
                 gradient: "from-secondary/40 via-secondary/10 to-transparent",
                 iconBg: "bg-secondary text-secondary-foreground",
               },
@@ -550,15 +585,28 @@ const AdminHub = () => {
                 desc: "Altas de Flota Celular e Inventario IT (PRO-IT-05)",
                 icon: HardDrive,
                 action: "devices" as const,
+                mod: "deviceRegistrations" as AdminModuleKey,
                 gradient: "from-primary/15 via-primary/5 to-transparent",
                 iconBg: "bg-primary/15 text-primary",
               },
-            ].map(({ label, desc, icon: Icon, to, action, gradient, iconBg }) => (
+              {
+                label: "Activos Fijos",
+                desc: "Inventario y gestión de activos fijos",
+                icon: Package,
+                action: "fixedAssets" as const,
+                mod: "fixedAssets" as AdminModuleKey,
+                gradient: "from-emerald-500/15 via-emerald-500/5 to-transparent",
+                iconBg: "bg-emerald-500/15 text-emerald-600",
+              },
+            ] as Array<{ label: string; desc: string; icon: any; to?: string; action?: "keys" | "devices" | "fixedAssets"; mod: AdminModuleKey; gradient: string; iconBg: string }>)
+              .filter(({ mod }) => canAccessAdminModule(user, mod))
+              .map(({ label, desc, icon: Icon, to, action, gradient, iconBg }) => (
               <button
                 key={label}
                 onClick={() => {
                   if (action === "keys") setShowKeys(true);
                   else if (action === "devices") { setDeviceRegs(getDeviceRegistrations()); setShowDevices(true); }
+                  else if (action === "fixedAssets") setShowFixedAssets(true);
                   else if (to) navigate(to);
                 }}
                 className={`group relative overflow-hidden rounded-xl border bg-gradient-to-br ${gradient} p-4 text-left transition-all hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5`}
@@ -576,6 +624,9 @@ const AdminHub = () => {
             ))}
           </div>
 
+
+          {/* Procesos y categorías — solo para administradores del Hub */}
+          {canManageAccess && (<>
           {/* Search */}
           <div className="relative mb-6">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -667,8 +718,10 @@ const AdminHub = () => {
               })}
             </div>
           )}
+          </>)}
         </div>
       </main>
+
       <Footer />
     </AppLayout>
   );

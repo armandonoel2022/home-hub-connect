@@ -1,4 +1,5 @@
 import type { IntranetUser } from "@/lib/types";
+import { canAccessAnyAdminModule } from "@/lib/adminHubAccess";
 
 /**
  * Sistema central de permisos por módulo.
@@ -193,12 +194,16 @@ export function canView(module: ModuleKey, user: IntranetUser | null | undefined
     case "techTasks":
       return isITSuper(user);
 
-    // Auditoría / Reportes / Admin Hub / Admin Forms — admin
+    // Auditoría / Reportes / Admin Forms — admin
     case "auditLog":
     case "reports":
-    case "adminHub":
     case "adminForms":
       return isAdmin(user);
+
+    // Admin Hub — admin, Chrisnel, o cualquier usuario con módulos delegados
+    case "adminHub":
+      return isAdmin(user) || canAccessAnyAdminModule(user);
+
 
     // Gestión de permisos de carpetas — sólo super
     case "folderPermissions":
