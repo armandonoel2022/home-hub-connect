@@ -625,6 +625,8 @@ const AdminHub = () => {
           </div>
 
 
+          {/* Procesos y categorías — solo para administradores del Hub */}
+          {canManageAccess && (<>
           {/* Search */}
           <div className="relative mb-6">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
