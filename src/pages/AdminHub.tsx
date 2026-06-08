@@ -22,7 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Receipt, Banknote, Calculator, ShoppingCart, Package, FolderOpen,
   ChevronRight, CheckCircle2, Clock, AlertCircle, ClipboardList, Plus,
-  FileText, Search, BarChart3, Trash2, Wrench, KeyRound, HardDrive, Smartphone, Paperclip,
+  FileText, Search, BarChart3, Trash2, Wrench, KeyRound, HardDrive, Smartphone, Paperclip, ShieldCheck,
 } from "lucide-react";
 import {
   ADMIN_CATEGORIES, ADMIN_PROCESSES,
