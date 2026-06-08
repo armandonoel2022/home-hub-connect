@@ -528,12 +528,13 @@ const AdminHub = () => {
 
           {/* Accesos destacados */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 mb-6">
-            {[
+            {([
               {
                 label: "Órdenes de Compra / Servicio",
                 desc: "Generar OC y OS con numeración automática",
                 icon: FileText,
                 to: "/admin/formularios",
+                mod: "purchaseOrders" as AdminModuleKey,
                 gradient: "from-primary/15 via-primary/5 to-transparent",
                 iconBg: "bg-primary/15 text-primary",
               },
@@ -542,6 +543,7 @@ const AdminHub = () => {
                 desc: "Gastos menores con límite mensual y reposiciones",
                 icon: Receipt,
                 to: "/gastos-menores",
+                mod: "pettyCash" as AdminModuleKey,
                 gradient: "from-accent/20 via-accent/5 to-transparent",
                 iconBg: "bg-accent/20 text-accent-foreground",
               },
@@ -550,6 +552,7 @@ const AdminHub = () => {
                 desc: "Inventario, asignación, copias y revisiones",
                 icon: KeyRound,
                 action: "keys" as const,
+                mod: "keys" as AdminModuleKey,
                 gradient: "from-amber-500/15 via-amber-500/5 to-transparent",
                 iconBg: "bg-amber-500/15 text-amber-600",
               },
@@ -558,6 +561,7 @@ const AdminHub = () => {
                 desc: "Tarjetas asignadas, límites y cargos mensuales",
                 icon: Receipt,
                 to: "/admin/tarjetas-corporativas",
+                mod: "corporateCards" as AdminModuleKey,
                 gradient: "from-primary/15 via-primary/5 to-transparent",
                 iconBg: "bg-primary/15 text-primary",
               },
@@ -566,6 +570,7 @@ const AdminHub = () => {
                 desc: "Reparaciones y gastos de la flotilla",
                 icon: Wrench,
                 to: "/admin/flotilla-mantenimiento",
+                mod: "fleetMaintenance" as AdminModuleKey,
                 gradient: "from-secondary/40 via-secondary/10 to-transparent",
                 iconBg: "bg-secondary text-secondary-foreground",
               },
@@ -574,15 +579,28 @@ const AdminHub = () => {
                 desc: "Altas de Flota Celular e Inventario IT (PRO-IT-05)",
                 icon: HardDrive,
                 action: "devices" as const,
+                mod: "deviceRegistrations" as AdminModuleKey,
                 gradient: "from-primary/15 via-primary/5 to-transparent",
                 iconBg: "bg-primary/15 text-primary",
               },
-            ].map(({ label, desc, icon: Icon, to, action, gradient, iconBg }) => (
+              {
+                label: "Activos Fijos",
+                desc: "Inventario y gestión de activos fijos",
+                icon: Package,
+                action: "fixedAssets" as const,
+                mod: "fixedAssets" as AdminModuleKey,
+                gradient: "from-emerald-500/15 via-emerald-500/5 to-transparent",
+                iconBg: "bg-emerald-500/15 text-emerald-600",
+              },
+            ] as const)
+              .filter(({ mod }) => canAccessAdminModule(user, mod))
+              .map(({ label, desc, icon: Icon, to, action, gradient, iconBg }) => (
               <button
                 key={label}
                 onClick={() => {
                   if (action === "keys") setShowKeys(true);
                   else if (action === "devices") { setDeviceRegs(getDeviceRegistrations()); setShowDevices(true); }
+                  else if (action === "fixedAssets") setShowFixedAssets(true);
                   else if (to) navigate(to);
                 }}
                 className={`group relative overflow-hidden rounded-xl border bg-gradient-to-br ${gradient} p-4 text-left transition-all hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5`}
@@ -599,6 +617,7 @@ const AdminHub = () => {
               </button>
             ))}
           </div>
+
 
           {/* Search */}
           <div className="relative mb-6">
