@@ -168,7 +168,17 @@ const HRForms = () => {
   const [beneficiaryId, setBeneficiaryId] = useState<string>("");
   const teamMembers = useMemo(() =>
     isSupervisor && user
-      ? allUsers.filter(u => u.id !== user.id && (u.reportsTo === user.id || (user.isAdmin && u.department === user.department)))
+      ? allUsers.filter(u =>
+          u.id !== user.id &&
+          (u.employeeStatus !== "Inactivo") &&
+          (
+            u.reportsTo === user.id ||
+            // Líderes de departamento y admins pueden solicitar para cualquier miembro de su área
+            ((user.isAdmin || user.isDepartmentLeader) && u.department === user.department) ||
+            // RRHH puede solicitar a nombre de cualquier empleado
+            user.department === "Recursos Humanos"
+          )
+        )
       : [],
     [allUsers, user, isSupervisor]
   );
