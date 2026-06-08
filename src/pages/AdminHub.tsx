@@ -592,7 +592,7 @@ const AdminHub = () => {
                 gradient: "from-emerald-500/15 via-emerald-500/5 to-transparent",
                 iconBg: "bg-emerald-500/15 text-emerald-600",
               },
-            ] as const)
+            ] as Array<{ label: string; desc: string; icon: any; to?: string; action?: "keys" | "devices" | "fixedAssets"; mod: AdminModuleKey; gradient: string; iconBg: string }>)
               .filter(({ mod }) => canAccessAdminModule(user, mod))
               .map(({ label, desc, icon: Icon, to, action, gradient, iconBg }) => (
               <button
