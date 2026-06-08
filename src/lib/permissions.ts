@@ -1,4 +1,5 @@
 import type { IntranetUser } from "@/lib/types";
+import { canAccessAnyAdminModule } from "@/lib/adminHubAccess";
 
 /**
  * Sistema central de permisos por módulo.
