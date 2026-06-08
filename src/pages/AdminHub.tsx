@@ -253,6 +253,24 @@ const AdminHub = () => {
     );
   }
 
+  // ── Admin Hub access management view ──
+  if (showAccess && canManageAccess) {
+    return (
+      <AppLayout>
+        <Navbar />
+        <main className="flex-1 bg-background min-h-screen">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+            <Button variant="ghost" onClick={() => setShowAccess(false)} className="mb-4 gap-2">
+              <ArrowLeft className="h-4 w-4" /> Volver al Hub
+            </Button>
+            <AdminHubAccessManager />
+          </div>
+        </main>
+        <Footer />
+      </AppLayout>
+    );
+  }
+
   // ── Process detail view ──
   if (selectedProcess) {
     const proc = selectedProcess;
