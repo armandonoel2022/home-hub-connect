@@ -63,6 +63,8 @@ const AdminHub = () => {
   const [showFixedAssets, setShowFixedAssets] = useState(false);
   const [showKeys, setShowKeys] = useState(false);
   const [showDevices, setShowDevices] = useState(false);
+  const [showAccess, setShowAccess] = useState(false);
+  const canManageAccess = canManageAdminHubAccess(user);
   const [deviceRegs, setDeviceRegs] = useState<DeviceRegistration[]>(getDeviceRegistrations);
   const [checklistState, setChecklistState] = useState<ChecklistState>(getChecklistState);
   const [activities, setActivities] = useState<AdminActivityEntry[]>(getAdminActivities);
