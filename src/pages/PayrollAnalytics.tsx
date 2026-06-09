@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Database, TrendingUp, AlertTriangle, CheckCircle2, Upload,
   RefreshCw, Activity, Server, FileSpreadsheet, BrainCircuit, ShieldAlert,
-  Users, Search, History, X,
+  Users, Search, History,
 } from "lucide-react";
 import {
   generalSqlApi, type GeneralSqlStatus, type GeneralPeriod, type PayrollAnalysis,
