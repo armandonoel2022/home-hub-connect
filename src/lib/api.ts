@@ -1074,6 +1074,23 @@ export interface PayrollAnalysis {
     trend: string; slope: number; avgGrowthPct?: number; r2: number;
     projection: Array<{ label: string; total: number; projected?: boolean }>;
   };
+  items?: PayrollEmployeeItem[];
+  meta?: { amountColumn: string | null; filteredTipoPago: boolean };
+}
+export interface PayrollEmployeeItem {
+  empleadoOID: number | string;
+  codigo?: string;
+  nombre: string;
+  departamento?: any;
+  salario: number;
+  bruto: number;
+  deducciones: number;
+  neto: number;
+  lineas: number;
+}
+export interface PayrollHistoryEntry {
+  pagoOID: number | string; ano?: number; mes?: number; fecha?: string;
+  tipoPago?: number | null; monto: number; lineas: number;
 }
 export const generalSqlApi = {
   status: () => apiFetch<GeneralSqlStatus>("/general-sql/status"),
