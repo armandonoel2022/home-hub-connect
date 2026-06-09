@@ -78,14 +78,11 @@ function detectAnomalies(current, previous = []) {
       });
     }
 
-    // 5) Deducciones cero con salario > 0 (posible omisión TSS)
-    if ((Number(r.salario) || 0) > 0 && (Number(r.deducciones) || 0) === 0) {
-      anomalies.push({
-        severity: 'high', type: 'deduccion', empleado: r.nombre, codigo: code,
-        departamento: r.departamento,
-        message: `Sin deducciones AFP/SFS teniendo salario. Revisar cumplimiento TSS.`,
-      });
-    }
+    // 5) Deducciones cero con salario > 0 (posible omisión TSS).
+    //    Solo aplica cuando realmente leemos deducciones (AFP/SFS) en el detalle.
+    //    Actualmente PagoD no expone deducciones (viven en otra tabla), por lo
+    //    que esta regla queda desactivada para no generar falsos positivos.
+    // if ((Number(r.salario) || 0) > 0 && (Number(r.deducciones) || 0) === 0) { ... }
   });
 
   // 6) Empleados que salieron de la nómina
