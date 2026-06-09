@@ -416,6 +416,63 @@ const PayrollAnalytics = () => {
                       )}
                     </div>
                   </div>
+
+                  {/* Desglose de nómina por empleado */}
+                  <div className="rounded-xl border border-border bg-card p-5 mt-6">
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                      <h2 className="font-heading font-bold text-card-foreground flex items-center gap-2">
+                        <Users className="h-5 w-5 text-gold" /> Nómina por empleado
+                        <span className="text-xs font-normal text-muted-foreground">
+                          ({filteredItems.length} de {analysis.items?.length || 0})
+                        </span>
+                      </h2>
+                      <div className="relative w-full sm:w-72">
+                        <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          value={empSearch}
+                          onChange={(e) => setEmpSearch(e.target.value)}
+                          placeholder="Buscar por nombre o código…"
+                          className="pl-9 h-9"
+                        />
+                      </div>
+                    </div>
+                    {(analysis.items?.length || 0) === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No se encontró desglose. Verifica la columna de importe detectada
+                        {analysis.meta?.amountColumn ? ` (${analysis.meta.amountColumn})` : ""}.
+                      </p>
+                    ) : (
+                      <div className="overflow-x-auto max-h-[480px]">
+                        <table className="w-full text-sm">
+                          <thead className="sticky top-0 bg-card">
+                            <tr className="text-left text-muted-foreground border-b border-border">
+                              <th className="py-2 pr-2">Código</th>
+                              <th className="py-2 px-2">Empleado</th>
+                              <th className="py-2 px-2 text-right">Neto a pagar</th>
+                              <th className="py-2 pl-2 text-center">Histórico</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border">
+                            {filteredItems.map((it) => (
+                              <tr key={String(it.empleadoOID)} className="hover:bg-muted/30">
+                                <td className="py-1.5 pr-2 font-mono text-xs">{it.codigo}</td>
+                                <td className="py-1.5 px-2 font-medium">{it.nombre}</td>
+                                <td className="py-1.5 px-2 text-right font-semibold">{money(it.neto)}</td>
+                                <td className="py-1.5 pl-2 text-center">
+                                  <Button
+                                    variant="ghost" size="sm" className="h-7 gap-1 text-xs"
+                                    onClick={() => openHistory(it.empleadoOID, it.nombre)}
+                                  >
+                                    <History className="h-3.5 w-3.5" /> Ver
+                                  </Button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
             </>
