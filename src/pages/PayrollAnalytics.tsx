@@ -164,6 +164,34 @@ const PayrollAnalytics = () => {
     ];
   }, [analysis]);
 
+  const filteredItems = useMemo(() => {
+    const items = analysis?.items || [];
+    const q = empSearch.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter(
+      (i) => i.nombre.toLowerCase().includes(q) || String(i.codigo || "").toLowerCase().includes(q)
+    );
+  }, [analysis, empSearch]);
+
+  const openHistory = async (oid: string | number, nombre: string) => {
+    setHistEmp({ oid, nombre });
+    setHistory(null);
+    setHistLoading(true);
+    try {
+      setHistory(await generalSqlApi.employeeHistory(oid));
+    } catch (e: any) {
+      toast({ title: "Error al leer histórico", description: String(e.message || e), variant: "destructive" });
+    } finally {
+      setHistLoading(false);
+    }
+  };
+
+  const TIPO_PAGO_LABEL: Record<number, string> = {
+    1: "Pago Normal", 2: "Vig. Salario", 3: "Vig. Horas", 4: "Regalía",
+    5: "Día Feriado", 6: "Adicional", 7: "Incentivo", 8: "Prestación",
+    9: "Vacaciones", 10: "Novedades", 11: "Bonificación",
+  };
+
   const notConfigured = status && !status.configured;
   const notConnected = status && status.configured && !status.connected;
 
