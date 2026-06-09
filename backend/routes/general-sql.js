@@ -251,8 +251,42 @@ router.post('/analyze', auth, guard, async (req, res) => {
       reconciliation,
       history,
       prediction,
+      // Desglose por empleado (una fila por persona, ordenado por neto desc)
+      items: currentRows.slice().sort((a, b) => b.neto - a.neto),
+      meta: { amountColumn: (await pagoDMeta()).amount, filteredTipoPago: await pagoHasTipoPago() },
     });
   } catch (e) { res.status(502).json({ message: e.message }); }
+});
+
+// ─── Histórico de pagos de un empleado ───
+router.get('/employee-history/:empleadoOID', auth, guard, async (req, res) => {
+  try {
+    const meta = await pagoDMeta();
+    const amt = meta.amount ? `ISNULL(d.[${meta.amount}],0)` : '0';
+    const hasTP = await pagoHasTipoPago();
+    const rows = await sql.query(
+      `SELECT TOP 36 p.OID, p.Ano, p.Mes, p.Fecha${hasTP ? ', p.TipoPago AS TipoPago' : ''},
+              SUM(${amt}) AS Monto, COUNT(*) AS Lineas
+       FROM Pago p
+       JOIN PagoD d ON d.Pago = p.OID AND d.GCRecord IS NULL
+       WHERE d.Empleado = @emp AND p.GCRecord IS NULL
+       GROUP BY p.OID, p.Ano, p.Mes, p.Fecha${hasTP ? ', p.TipoPago' : ''}
+       ORDER BY p.Ano DESC, p.Mes DESC`,
+      { emp: req.params.empleadoOID }
+    );
+    res.json(rows.map(r => ({
+      pagoOID: r.OID, ano: r.Ano, mes: r.Mes, fecha: r.Fecha,
+      tipoPago: r.TipoPago ?? null, monto: round2(r.Monto), lineas: Number(r.Lineas) || 0,
+    })));
+  } catch (e) { res.status(502).json({ message: e.message }); }
+});
+
+// ─── Diagnóstico: muestra primeras filas de cualquier tabla (solo lectura) ───
+router.get('/peek/:table', auth, guard, async (req, res) => {
+  const t = String(req.params.table || '').replace(/[^A-Za-z0-9_]/g, '');
+  if (!t) return res.status(400).json({ message: 'tabla inválida' });
+  try { res.json(await sql.query(`SELECT TOP 5 * FROM [${t}]`)); }
+  catch (e) { res.status(502).json({ message: e.message }); }
 });
 
 // ─── Empleados (incluye inactivos) ───
