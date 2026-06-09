@@ -187,19 +187,24 @@ router.get('/holidays', auth, guard, async (req, res) => {
 });
 
 // ─── Tendencia / proyección de costo ───
+// Solo Pago Normal (TipoPago=1) para mantener períodos homogéneos; al mezclar
+// regalía, vacaciones, feriados, etc. la regresión no encuentra una serie
+// comparable y la proyección queda vacía.
 async function buildHistory() {
+  const meta = await pagoDMeta();
+  const amt = meta.amount ? `ISNULL(d.[${meta.amount}],0)` : '0';
+  const hasTP = await pagoHasTipoPago();
+  const where = `p.GCRecord IS NULL` + (hasTP ? ` AND p.TipoPago = 1` : '');
   const rows = await sql.query(
-    `SELECT TOP 12 p.OID, p.Ano, p.Mes,
-            SUM(ISNULL(d.Salario,0)+ISNULL(d.Incentivo,0)+ISNULL(d.Comision,0)
-                -ISNULL(d.AFP,0)-ISNULL(d.SFS,0)) AS Neto
+    `SELECT TOP 12 p.Ano, p.Mes, SUM(${amt}) AS Total
      FROM Pago p
      JOIN PagoD d ON d.Pago = p.OID AND d.GCRecord IS NULL
-     WHERE p.GCRecord IS NULL
-     GROUP BY p.OID, p.Ano, p.Mes
+     WHERE ${where}
+     GROUP BY p.Ano, p.Mes
      ORDER BY p.Ano DESC, p.Mes DESC`
   );
   // Orden cronológico ascendente para la regresión
-  return rows.reverse().map(r => ({ label: `${r.Ano}-${String(r.Mes).padStart(2, '0')}`, total: round2(r.Neto) }));
+  return rows.reverse().map(r => ({ label: `${r.Ano}-${String(r.Mes).padStart(2, '0')}`, total: round2(r.Total) }));
 }
 
 // reportadas en la intranet (líderes → Dilia) para conciliar contra Excel
