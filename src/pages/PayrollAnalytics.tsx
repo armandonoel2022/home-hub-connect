@@ -67,6 +67,10 @@ const PayrollAnalytics = () => {
   const [excelName, setExcelName] = useState<string>("");
   const [analysis, setAnalysis] = useState<PayrollAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
+  const [empSearch, setEmpSearch] = useState("");
+  const [histEmp, setHistEmp] = useState<{ oid: string | number; nombre: string } | null>(null);
+  const [history, setHistory] = useState<PayrollHistoryEntry[] | null>(null);
+  const [histLoading, setHistLoading] = useState(false);
 
   useEffect(() => {
     if (!allowed) return;
