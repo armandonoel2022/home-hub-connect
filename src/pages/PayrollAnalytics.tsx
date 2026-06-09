@@ -10,10 +10,16 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Database, TrendingUp, AlertTriangle, CheckCircle2, Upload,
   RefreshCw, Activity, Server, FileSpreadsheet, BrainCircuit, ShieldAlert,
+  Users, Search, History,
 } from "lucide-react";
 import {
   generalSqlApi, type GeneralSqlStatus, type GeneralPeriod, type PayrollAnalysis,
+  type PayrollHistoryEntry,
 } from "@/lib/api";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
   ResponsiveContainer, ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend,
@@ -61,6 +67,10 @@ const PayrollAnalytics = () => {
   const [excelName, setExcelName] = useState<string>("");
   const [analysis, setAnalysis] = useState<PayrollAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
+  const [empSearch, setEmpSearch] = useState("");
+  const [histEmp, setHistEmp] = useState<{ oid: string | number; nombre: string } | null>(null);
+  const [history, setHistory] = useState<PayrollHistoryEntry[] | null>(null);
+  const [histLoading, setHistLoading] = useState(false);
 
   useEffect(() => {
     if (!allowed) return;
@@ -153,6 +163,34 @@ const PayrollAnalytics = () => {
       ...analysis.prediction.projection.map((p) => ({ label: p.label, proyeccion: p.total })),
     ];
   }, [analysis]);
+
+  const filteredItems = useMemo(() => {
+    const items = analysis?.items || [];
+    const q = empSearch.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter(
+      (i) => i.nombre.toLowerCase().includes(q) || String(i.codigo || "").toLowerCase().includes(q)
+    );
+  }, [analysis, empSearch]);
+
+  const openHistory = async (oid: string | number, nombre: string) => {
+    setHistEmp({ oid, nombre });
+    setHistory(null);
+    setHistLoading(true);
+    try {
+      setHistory(await generalSqlApi.employeeHistory(oid));
+    } catch (e: any) {
+      toast({ title: "Error al leer histórico", description: String(e.message || e), variant: "destructive" });
+    } finally {
+      setHistLoading(false);
+    }
+  };
+
+  const TIPO_PAGO_LABEL: Record<number, string> = {
+    1: "Pago Normal", 2: "Vig. Salario", 3: "Vig. Horas", 4: "Regalía",
+    5: "Día Feriado", 6: "Adicional", 7: "Incentivo", 8: "Prestación",
+    9: "Vacaciones", 10: "Novedades", 11: "Bonificación",
+  };
 
   const notConfigured = status && !status.configured;
   const notConnected = status && status.configured && !status.connected;
@@ -378,6 +416,63 @@ const PayrollAnalytics = () => {
                       )}
                     </div>
                   </div>
+
+                  {/* Desglose de nómina por empleado */}
+                  <div className="rounded-xl border border-border bg-card p-5 mt-6">
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                      <h2 className="font-heading font-bold text-card-foreground flex items-center gap-2">
+                        <Users className="h-5 w-5 text-gold" /> Nómina por empleado
+                        <span className="text-xs font-normal text-muted-foreground">
+                          ({filteredItems.length} de {analysis.items?.length || 0})
+                        </span>
+                      </h2>
+                      <div className="relative w-full sm:w-72">
+                        <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          value={empSearch}
+                          onChange={(e) => setEmpSearch(e.target.value)}
+                          placeholder="Buscar por nombre o código…"
+                          className="pl-9 h-9"
+                        />
+                      </div>
+                    </div>
+                    {(analysis.items?.length || 0) === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No se encontró desglose. Verifica la columna de importe detectada
+                        {analysis.meta?.amountColumn ? ` (${analysis.meta.amountColumn})` : ""}.
+                      </p>
+                    ) : (
+                      <div className="overflow-x-auto max-h-[480px]">
+                        <table className="w-full text-sm">
+                          <thead className="sticky top-0 bg-card">
+                            <tr className="text-left text-muted-foreground border-b border-border">
+                              <th className="py-2 pr-2">Código</th>
+                              <th className="py-2 px-2">Empleado</th>
+                              <th className="py-2 px-2 text-right">Neto a pagar</th>
+                              <th className="py-2 pl-2 text-center">Histórico</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border">
+                            {filteredItems.map((it) => (
+                              <tr key={String(it.empleadoOID)} className="hover:bg-muted/30">
+                                <td className="py-1.5 pr-2 font-mono text-xs">{it.codigo}</td>
+                                <td className="py-1.5 px-2 font-medium">{it.nombre}</td>
+                                <td className="py-1.5 px-2 text-right font-semibold">{money(it.neto)}</td>
+                                <td className="py-1.5 pl-2 text-center">
+                                  <Button
+                                    variant="ghost" size="sm" className="h-7 gap-1 text-xs"
+                                    onClick={() => openHistory(it.empleadoOID, it.nombre)}
+                                  >
+                                    <History className="h-3.5 w-3.5" /> Ver
+                                  </Button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
             </>
@@ -385,6 +480,51 @@ const PayrollAnalytics = () => {
         </div>
         <Footer />
       </div>
+
+      {/* Histórico de pagos por empleado */}
+      <Dialog open={!!histEmp} onOpenChange={(o) => !o && setHistEmp(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5 text-gold" /> Histórico de pagos — {histEmp?.nombre}
+            </DialogTitle>
+          </DialogHeader>
+          {histLoading ? (
+            <p className="text-sm text-muted-foreground py-6 text-center">Cargando histórico…</p>
+          ) : !history || history.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-6 text-center">Sin pagos registrados.</p>
+          ) : (
+            <div className="overflow-x-auto max-h-[60vh]">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-background">
+                  <tr className="text-left text-muted-foreground border-b border-border">
+                    <th className="py-2 pr-2">Período</th>
+                    <th className="py-2 px-2">Tipo</th>
+                    <th className="py-2 px-2">Fecha</th>
+                    <th className="py-2 pl-2 text-right">Monto</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {history.map((h, i) => (
+                    <tr key={i} className="hover:bg-muted/30">
+                      <td className="py-1.5 pr-2 font-mono text-xs">
+                        {h.ano}-{String(h.mes || 0).padStart(2, "0")}
+                      </td>
+                      <td className="py-1.5 px-2">
+                        {h.tipoPago != null ? (TIPO_PAGO_LABEL[h.tipoPago] || `Tipo ${h.tipoPago}`) : "—"}
+                      </td>
+                      <td className="py-1.5 px-2">
+                        {h.fecha ? new Date(h.fecha).toLocaleDateString("es-DO") : "—"}
+                      </td>
+                      <td className="py-1.5 pl-2 text-right font-semibold">{money(h.monto)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 };

@@ -34,37 +34,71 @@ function guard(req, res, next) {
 
 const fullName = (r) => [r.Nombre1, r.Apellido1].filter(Boolean).join(' ').trim();
 
-function mapPayrollRow(r) {
-  const salario = Number(r.Salario) || 0;
-  const incentivo = Number(r.Incentivo) || 0;
-  const comision = Number(r.Comision) || 0;
-  const afp = Number(r.AFP) || 0;
-  const sfs = Number(r.SFS) || 0;
-  const bruto = salario + incentivo + comision;
-  const deducciones = afp + sfs;
-  return {
-    pagoDetalleOID: r.OID,
-    empleadoOID: r.EmpleadoOID,
-    codigo: r.Codigo,
-    nombre: fullName(r),
-    departamento: r.DeptOID ?? null,
-    salario, incentivo, comision, afp, sfs,
-    bruto: round2(bruto),
-    deducciones: round2(deducciones),
-    neto: round2(bruto - deducciones),
-  };
+// ─── Descubrimiento dinámico de columnas de PagoD ───
+// La estructura de XAF varía: PagoD suele tener varias filas por empleado
+// (una por concepto/TipoPago) y la columna de importe puede llamarse
+// Monto / Valor / Importe / Neto / Total… Descubrimos la columna real una vez
+// y la cacheamos para agregar correctamente por empleado.
+const NUMERIC_RE = /int|decimal|numeric|money|float|real/;
+let _pagoDMeta = null;
+let _pagoHasTipoPago = null;
+
+async function pagoDMeta() {
+  if (_pagoDMeta) return _pagoDMeta;
+  const cols = await sql.listColumns('PagoD');
+  const numeric = cols
+    .filter((c) => NUMERIC_RE.test(String(c.type).toLowerCase()))
+    .map((c) => c.name);
+  const skip = /^oid$|optimisticlock|gcrecord|objecttype|^pago$|^empleado$|^tipopago$|cantidad|horas|dias|orden|secuencia|^id$|version/i;
+  const candidates = numeric.filter((n) => !skip.test(n));
+  const priority = [/^neto$/i, /^monto$/i, /^valor$/i, /^importe$/i, /^totalpagar$/i, /^total$/i, /salario|sueldo/i, /pago/i];
+  let amount = null;
+  for (const re of priority) {
+    const hit = candidates.find((n) => re.test(n));
+    if (hit) { amount = hit; break; }
+  }
+  if (!amount) amount = candidates[0] || null;
+  _pagoDMeta = { amount, candidates, numeric };
+  return _pagoDMeta;
 }
 
+async function pagoHasTipoPago() {
+  if (_pagoHasTipoPago !== null) return _pagoHasTipoPago;
+  const cols = await sql.listColumns('Pago');
+  _pagoHasTipoPago = cols.some((c) => String(c.name).toLowerCase() === 'tipopago');
+  return _pagoHasTipoPago;
+}
+
+// Lee la nómina AGREGADA por empleado (una fila por persona) para un Pago.
 async function readPayroll(pagoOID) {
+  const meta = await pagoDMeta();
+  const sumExpr = meta.amount ? `ISNULL(d.[${meta.amount}],0)` : '0';
   const rows = await sql.query(
-    `SELECT d.OID, e.OID AS EmpleadoOID, e.Codigo, e.Nombre1, e.Apellido1,
-            e.Departamento AS DeptOID, d.Salario, d.Incentivo, d.Comision, d.AFP, d.SFS
+    `SELECT e.OID AS EmpleadoOID, MAX(e.Codigo) AS Codigo,
+            MAX(e.Nombre1) AS Nombre1, MAX(e.Apellido1) AS Apellido1,
+            MAX(e.Departamento) AS DeptOID, MAX(ISNULL(e.Salario,0)) AS Salario,
+            SUM(${sumExpr}) AS Monto, COUNT(*) AS Lineas
      FROM PagoD d
      JOIN Empleado e ON e.OID = d.Empleado
-     WHERE d.Pago = @pago AND d.GCRecord IS NULL`,
+     WHERE d.Pago = @pago AND d.GCRecord IS NULL
+     GROUP BY e.OID`,
     { pago: pagoOID }
   );
-  return rows.map(mapPayrollRow);
+  return rows.map((r) => {
+    const monto = Number(r.Monto) || 0;
+    const salario = Number(r.Salario) || 0;
+    return {
+      empleadoOID: r.EmpleadoOID,
+      codigo: r.Codigo,
+      nombre: fullName(r),
+      departamento: r.DeptOID ?? null,
+      salario,
+      bruto: round2(monto),
+      deducciones: 0,
+      neto: round2(monto),
+      lineas: Number(r.Lineas) || 0,
+    };
+  });
 }
 
 // ─── Estado / descubrimiento ───
@@ -153,19 +187,24 @@ router.get('/holidays', auth, guard, async (req, res) => {
 });
 
 // ─── Tendencia / proyección de costo ───
+// Solo Pago Normal (TipoPago=1) para mantener períodos homogéneos; al mezclar
+// regalía, vacaciones, feriados, etc. la regresión no encuentra una serie
+// comparable y la proyección queda vacía.
 async function buildHistory() {
+  const meta = await pagoDMeta();
+  const amt = meta.amount ? `ISNULL(d.[${meta.amount}],0)` : '0';
+  const hasTP = await pagoHasTipoPago();
+  const where = `p.GCRecord IS NULL` + (hasTP ? ` AND p.TipoPago = 1` : '');
   const rows = await sql.query(
-    `SELECT TOP 12 p.OID, p.Ano, p.Mes,
-            SUM(ISNULL(d.Salario,0)+ISNULL(d.Incentivo,0)+ISNULL(d.Comision,0)
-                -ISNULL(d.AFP,0)-ISNULL(d.SFS,0)) AS Neto
+    `SELECT TOP 12 p.Ano, p.Mes, SUM(${amt}) AS Total
      FROM Pago p
      JOIN PagoD d ON d.Pago = p.OID AND d.GCRecord IS NULL
-     WHERE p.GCRecord IS NULL
-     GROUP BY p.OID, p.Ano, p.Mes
+     WHERE ${where}
+     GROUP BY p.Ano, p.Mes
      ORDER BY p.Ano DESC, p.Mes DESC`
   );
   // Orden cronológico ascendente para la regresión
-  return rows.reverse().map(r => ({ label: `${r.Ano}-${String(r.Mes).padStart(2, '0')}`, total: round2(r.Neto) }));
+  return rows.reverse().map(r => ({ label: `${r.Ano}-${String(r.Mes).padStart(2, '0')}`, total: round2(r.Total) }));
 }
 
 // reportadas en la intranet (líderes → Dilia) para conciliar contra Excel
@@ -212,8 +251,42 @@ router.post('/analyze', auth, guard, async (req, res) => {
       reconciliation,
       history,
       prediction,
+      // Desglose por empleado (una fila por persona, ordenado por neto desc)
+      items: currentRows.slice().sort((a, b) => b.neto - a.neto),
+      meta: { amountColumn: (await pagoDMeta()).amount, filteredTipoPago: await pagoHasTipoPago() },
     });
   } catch (e) { res.status(502).json({ message: e.message }); }
+});
+
+// ─── Histórico de pagos de un empleado ───
+router.get('/employee-history/:empleadoOID', auth, guard, async (req, res) => {
+  try {
+    const meta = await pagoDMeta();
+    const amt = meta.amount ? `ISNULL(d.[${meta.amount}],0)` : '0';
+    const hasTP = await pagoHasTipoPago();
+    const rows = await sql.query(
+      `SELECT TOP 36 p.OID, p.Ano, p.Mes, p.Fecha${hasTP ? ', p.TipoPago AS TipoPago' : ''},
+              SUM(${amt}) AS Monto, COUNT(*) AS Lineas
+       FROM Pago p
+       JOIN PagoD d ON d.Pago = p.OID AND d.GCRecord IS NULL
+       WHERE d.Empleado = @emp AND p.GCRecord IS NULL
+       GROUP BY p.OID, p.Ano, p.Mes, p.Fecha${hasTP ? ', p.TipoPago' : ''}
+       ORDER BY p.Ano DESC, p.Mes DESC`,
+      { emp: req.params.empleadoOID }
+    );
+    res.json(rows.map(r => ({
+      pagoOID: r.OID, ano: r.Ano, mes: r.Mes, fecha: r.Fecha,
+      tipoPago: r.TipoPago ?? null, monto: round2(r.Monto), lineas: Number(r.Lineas) || 0,
+    })));
+  } catch (e) { res.status(502).json({ message: e.message }); }
+});
+
+// ─── Diagnóstico: muestra primeras filas de cualquier tabla (solo lectura) ───
+router.get('/peek/:table', auth, guard, async (req, res) => {
+  const t = String(req.params.table || '').replace(/[^A-Za-z0-9_]/g, '');
+  if (!t) return res.status(400).json({ message: 'tabla inválida' });
+  try { res.json(await sql.query(`SELECT TOP 5 * FROM [${t}]`)); }
+  catch (e) { res.status(502).json({ message: e.message }); }
 });
 
 // ─── Empleados (incluye inactivos) ───
