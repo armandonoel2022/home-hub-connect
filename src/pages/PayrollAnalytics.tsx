@@ -10,10 +10,16 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Database, TrendingUp, AlertTriangle, CheckCircle2, Upload,
   RefreshCw, Activity, Server, FileSpreadsheet, BrainCircuit, ShieldAlert,
+  Users, Search, History, X,
 } from "lucide-react";
 import {
   generalSqlApi, type GeneralSqlStatus, type GeneralPeriod, type PayrollAnalysis,
+  type PayrollHistoryEntry,
 } from "@/lib/api";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
   ResponsiveContainer, ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend,
