@@ -480,6 +480,51 @@ const PayrollAnalytics = () => {
         </div>
         <Footer />
       </div>
+
+      {/* Histórico de pagos por empleado */}
+      <Dialog open={!!histEmp} onOpenChange={(o) => !o && setHistEmp(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5 text-gold" /> Histórico de pagos — {histEmp?.nombre}
+            </DialogTitle>
+          </DialogHeader>
+          {histLoading ? (
+            <p className="text-sm text-muted-foreground py-6 text-center">Cargando histórico…</p>
+          ) : !history || history.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-6 text-center">Sin pagos registrados.</p>
+          ) : (
+            <div className="overflow-x-auto max-h-[60vh]">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-background">
+                  <tr className="text-left text-muted-foreground border-b border-border">
+                    <th className="py-2 pr-2">Período</th>
+                    <th className="py-2 px-2">Tipo</th>
+                    <th className="py-2 px-2">Fecha</th>
+                    <th className="py-2 pl-2 text-right">Monto</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {history.map((h, i) => (
+                    <tr key={i} className="hover:bg-muted/30">
+                      <td className="py-1.5 pr-2 font-mono text-xs">
+                        {h.ano}-{String(h.mes || 0).padStart(2, "0")}
+                      </td>
+                      <td className="py-1.5 px-2">
+                        {h.tipoPago != null ? (TIPO_PAGO_LABEL[h.tipoPago] || `Tipo ${h.tipoPago}`) : "—"}
+                      </td>
+                      <td className="py-1.5 px-2">
+                        {h.fecha ? new Date(h.fecha).toLocaleDateString("es-DO") : "—"}
+                      </td>
+                      <td className="py-1.5 pl-2 text-right font-semibold">{money(h.monto)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 };
