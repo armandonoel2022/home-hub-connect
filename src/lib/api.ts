@@ -1109,6 +1109,9 @@ export const generalSqlApi = {
   weapons: () => apiFetch<GeneralWeapon[]>("/general-sql/weapons"),
   analyze: (body: { current: string | number; previous?: string | number; excelRows?: any[] }) =>
     apiFetch<PayrollAnalysis>("/general-sql/analyze", { method: "POST", body: JSON.stringify(body) }),
+  employeeHistory: (empleadoOID: string | number) =>
+    apiFetch<PayrollHistoryEntry[]>(`/general-sql/employee-history/${encodeURIComponent(String(empleadoOID))}`),
+  peek: (table: string) => apiFetch<any[]>(`/general-sql/peek/${encodeURIComponent(table)}`),
 };
 
 export interface GeneralEmployee {
