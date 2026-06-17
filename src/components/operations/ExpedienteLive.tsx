@@ -615,10 +615,16 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
   const ov: ExpedienteOverlayEntry = (serie && ctx.overlay[serie]) || {};
   const [estatus, setEstatus] = useState(ov.estatus ?? puesto.arma?.estatus ?? "");
   const [noLicencia, setNoLicencia] = useState(ov.noLicencia ?? puesto.arma?.noLicencia ?? "");
+  const [marca, setMarca] = useState(ov.marca ?? puesto.arma?.marca ?? "");
+  const [tipo, setTipo] = useState(ov.tipo ?? puesto.arma?.tipo ?? "");
+  const [calibre, setCalibre] = useState(ov.calibre ?? puesto.arma?.calibre ?? "");
+  const [categoria, setCategoria] = useState(ov.categoria ?? puesto.arma?.categoria ?? "");
+  const [propietario, setPropietario] = useState(ov.propietario ?? puesto.arma?.propietario ?? "");
   const [nota, setNota] = useState(ov.nota ?? "");
   const [saving, setSaving] = useState(false);
   const [movs, setMovs] = useState<ExpedienteMovement[]>([]);
   const [showTransfer, setShowTransfer] = useState(false);
+  const [lightbox, setLightbox] = useState<string | null>(null);
 
   useEffect(() => {
     if (serie) expedienteOverlayApi.movements({ serie }).then(setMovs).catch(() => setMovs([]));
