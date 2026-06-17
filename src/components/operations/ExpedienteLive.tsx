@@ -218,7 +218,7 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
         <p className="text-xs text-muted-foreground">
           El modo vivo lee del último reporte diario de la base de datos gSafeOne. Verifica la conexión o usa el modo Manual.
         </p>
-        <Button size="sm" variant="outline" onClick={load}><RefreshCw className="h-4 w-4 mr-1" /> Reintentar</Button>
+        <Button size="sm" variant="outline" onClick={() => load(selectedDate || undefined)}><RefreshCw className="h-4 w-4 mr-1" /> Reintentar</Button>
       </Card>
     );
   }
@@ -228,7 +228,7 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
       {error && (
         <Card className="p-3 flex items-start gap-2 border-amber-300 bg-amber-50 text-amber-800 text-xs">
           <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-          <span>GENERAL no está disponible; mostrando datos de Operaciones (Personal Armado y Puestos). <button onClick={load} className="underline font-medium">Reintentar</button></span>
+          <span>GENERAL no está disponible; mostrando datos de Operaciones (Personal Armado y Puestos). <button onClick={() => load(selectedDate || undefined)} className="underline font-medium">Reintentar</button></span>
         </Card>
       )}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
@@ -261,7 +261,7 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
         <Input placeholder="Buscar cliente, vigilante o serial…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs h-9" />
         <div className="ml-auto flex gap-2">
           <Button size="sm" variant="outline" onClick={exportSchema}><Download className="h-4 w-4 mr-1" /> Exportar esquema</Button>
-          <Button size="sm" variant="outline" onClick={load}><RefreshCw className="h-4 w-4 mr-1" /> Recargar</Button>
+          <Button size="sm" variant="outline" onClick={() => load(selectedDate || undefined)}><RefreshCw className="h-4 w-4 mr-1" /> Recargar</Button>
         </div>
       </div>
 
