@@ -480,6 +480,7 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
                                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${p.vigilante ? "bg-emerald-500" : "bg-muted-foreground"}`} />
                                 <span className="truncate">{p.vigilante || "Sin asignar"}</span>
                               </button>
+                              {p.tanda && <Badge variant="outline" className="text-[10px] shrink-0">{p.tanda}</Badge>}
                               {p.horas > 0 && <span className="text-muted-foreground shrink-0">{p.horas}h</span>}
                               {p.requiereArma && (
                                 <button
