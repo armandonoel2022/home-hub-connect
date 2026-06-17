@@ -29,6 +29,17 @@ function mapsHref(addr: string): string {
   return `https://www.google.com/maps?q=${encodeURIComponent(addr)}`;
 }
 
+// Normaliza una fecha de GENERAL (ISO o Date) a 'YYYY-MM-DD' para <input type=date>.
+function toInputDate(v: string | null | undefined): string {
+  if (!v) return "";
+  const s = String(v);
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toISOString().slice(0, 10);
+}
+
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const r = new FileReader();
@@ -81,6 +92,8 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [filter, setFilter] = useState<FilterKey>("todos");
 
   // dialogs
@@ -101,12 +114,13 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
     } catch { /* overlay opcional */ }
   };
 
-  const load = async () => {
+  const load = async (fecha?: string) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await generalSqlApi.expediente();
+      const res = await generalSqlApi.expediente(fecha || undefined);
       setData(res);
+      if (res.fecha) setSelectedDate(toInputDate(res.fecha));
       await loadOverlay();
     } catch (e) {
       const msg = (e as Error)?.message || "No se pudo conectar con GENERAL";
@@ -117,7 +131,13 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
     }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+  useEffect(() => {
+    load();
+    generalSqlApi.expedienteDates()
+      .then((d) => setAvailableDates((d || []).map(toInputDate)))
+      .catch(() => { /* selector opcional */ });
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, []);
 
   const { data: personnel } = useArmedPersonnel();
 
@@ -198,7 +218,7 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
         <p className="text-xs text-muted-foreground">
           El modo vivo lee del último reporte diario de la base de datos gSafeOne. Verifica la conexión o usa el modo Manual.
         </p>
-        <Button size="sm" variant="outline" onClick={load}><RefreshCw className="h-4 w-4 mr-1" /> Reintentar</Button>
+        <Button size="sm" variant="outline" onClick={() => load(selectedDate || undefined)}><RefreshCw className="h-4 w-4 mr-1" /> Reintentar</Button>
       </Card>
     );
   }
@@ -208,7 +228,7 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
       {error && (
         <Card className="p-3 flex items-start gap-2 border-amber-300 bg-amber-50 text-amber-800 text-xs">
           <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-          <span>GENERAL no está disponible; mostrando datos de Operaciones (Personal Armado y Puestos). <button onClick={load} className="underline font-medium">Reintentar</button></span>
+          <span>GENERAL no está disponible; mostrando datos de Operaciones (Personal Armado y Puestos). <button onClick={() => load(selectedDate || undefined)} className="underline font-medium">Reintentar</button></span>
         </Card>
       )}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
@@ -226,6 +246,20 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
           Reporte: <span className="font-medium">{data?.fecha ? new Date(data.fecha).toLocaleDateString("es-DO") : "—"}</span>
           {canEdit && <Badge variant="secondary" className="ml-2 text-[10px]">Edición habilitada</Badge>}
         </div>
+        <div className="inline-flex items-center gap-1">
+          <Input
+            type="date"
+            value={selectedDate}
+            max={new Date().toISOString().slice(0, 10)}
+            onChange={(e) => { setSelectedDate(e.target.value); load(e.target.value || undefined); }}
+            list="expediente-dates"
+            className="h-9 w-[150px]"
+            title="Fecha del reporte (por defecto ayer; puedes ir hacia atrás hasta hoy)"
+          />
+          <datalist id="expediente-dates">
+            {availableDates.map((d) => <option key={d} value={d} />)}
+          </datalist>
+        </div>
         <div className="flex gap-1 flex-wrap">
           {([
             ["todos", "Todos"],
@@ -241,7 +275,7 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
         <Input placeholder="Buscar cliente, vigilante o serial…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs h-9" />
         <div className="ml-auto flex gap-2">
           <Button size="sm" variant="outline" onClick={exportSchema}><Download className="h-4 w-4 mr-1" /> Exportar esquema</Button>
-          <Button size="sm" variant="outline" onClick={load}><RefreshCw className="h-4 w-4 mr-1" /> Recargar</Button>
+          <Button size="sm" variant="outline" onClick={() => load(selectedDate || undefined)}><RefreshCw className="h-4 w-4 mr-1" /> Recargar</Button>
         </div>
       </div>
 
@@ -446,6 +480,7 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
                                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${p.vigilante ? "bg-emerald-500" : "bg-muted-foreground"}`} />
                                 <span className="truncate">{p.vigilante || "Sin asignar"}</span>
                               </button>
+                              {p.tanda && <Badge variant="outline" className="text-[10px] shrink-0">{p.tanda}</Badge>}
                               {p.horas > 0 && <span className="text-muted-foreground shrink-0">{p.horas}h</span>}
                               {p.requiereArma && (
                                 <button

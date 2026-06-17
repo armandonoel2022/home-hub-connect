@@ -1113,7 +1113,9 @@ export const generalSqlApi = {
     apiFetch<PayrollHistoryEntry[]>(`/general-sql/employee-history/${encodeURIComponent(String(empleadoOID))}`),
   peek: (table: string) => apiFetch<any[]>(`/general-sql/peek/${encodeURIComponent(table)}`),
   expedienteStatus: () => apiFetch<{ fecha: string | null }>("/general-sql/expediente/status"),
-  expediente: () => apiFetch<GeneralExpediente>("/general-sql/expediente"),
+  expedienteDates: () => apiFetch<string[]>("/general-sql/expediente/dates"),
+  expediente: (fecha?: string) =>
+    apiFetch<GeneralExpediente>(`/general-sql/expediente${fecha ? `?fecha=${encodeURIComponent(fecha)}` : ""}`),
   schemaKeys: () => apiFetch<Array<{ tabla: string; tipo: string; columna: string; restriccion: string }>>("/general-sql/schema-keys"),
 };
 
@@ -1195,6 +1197,7 @@ export interface GeneralExpedientePuesto {
   lineaOID: number;
   puesto: string;
   localidad?: string;
+  tanda?: string;
   puestoCodigo: number | null;
   vigilante: string;
   vigilanteOID: number | null;

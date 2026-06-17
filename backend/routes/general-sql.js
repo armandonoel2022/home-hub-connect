@@ -442,9 +442,25 @@ router.get('/weapons', auth, guard, async (req, res) => {
 });
 
 // ─── Expediente de Clientes (vivo desde GENERAL) ───
-// Lee el ÚLTIMO Reporte Diario digitado (típicamente el de ayer) y arma el
-// 360° por cliente: Cliente → Puestos cubiertos → Vigilante + Arma + Horas.
-// No existe tabla Localidad en gSafeOne; se agrupa Cliente → Puesto(rol).
+// Arma el 360° por cliente a partir del Reporte Diario, replicando la
+// estructura oficial del query de Operaciones:
+//   ReportePuesto → ReporteDiarioD → ReporteDiario (Zona/Tanda/Fecha)
+//   ReportePuesto → HoraContratada (Puesto) → Cliente
+//   ReportePuesto → Empleado (Vigilante) · Armamento (Arma)
+// Jerarquía resultante:  Cliente → Zona(Localidad) → Puesto → Tanda(Turno).
+//
+// Por defecto muestra el ÚLTIMO reporte digitado (típicamente el de ayer);
+// admite ?fecha=YYYY-MM-DD para navegar hacia atrás hasta el día de hoy.
+
+function normalizeDateParam(v) {
+  if (!v) return null;
+  const s = String(v).trim();
+  let m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = /^(\d{4})(\d{2})(\d{2})$/.exec(s);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  return null;
+}
 
 async function latestReportDate() {
   const rows = await sql.query(
@@ -483,26 +499,47 @@ router.get('/expediente/status', auth, guard, async (req, res) => {
   } catch (e) { res.status(502).json({ message: e.message }); }
 });
 
+// Fechas disponibles para el selector (últimos reportes hasta hoy, desc).
+router.get('/expediente/dates', auth, guard, async (req, res) => {
+  try {
+    const rows = await sql.query(
+      `SELECT DISTINCT TOP 60 CAST(Fecha AS DATE) AS Fecha
+       FROM ReporteDiario
+       WHERE GCRecord IS NULL AND CAST(Fecha AS DATE) <= CAST(GETDATE() AS DATE)
+       ORDER BY CAST(Fecha AS DATE) DESC`
+    );
+    res.json(rows.map((r) => r.Fecha));
+  } catch (e) { res.status(502).json({ message: e.message }); }
+});
+
 router.get('/expediente', auth, guard, async (req, res) => {
   try {
-    const fecha = await latestReportDate();
+    // Fecha solicitada (YYYY-MM-DD / YYYYMMDD) o, por defecto, el último reporte.
+    const pedida = normalizeDateParam(req.query.fecha);
+    const fecha = pedida || (await latestReportDate());
     if (!fecha) return res.json({ fecha: null, clientes: [], totals: {} });
 
+    // Estructura oficial: ReportePuesto → HoraContratada (Puesto) → Cliente,
+    // con Zona (localidad) y Tanda (turno) del ReporteDiario.
     const rows = await sql.query(
-      `SELECT rp.OID AS LineaOID, rp.Cliente AS ClienteOID, rp.Puesto AS PuestoOID,
-              rp.Vigilante AS VigilanteOID, rp.Horas, rp.Incentivo, rp.Arma AS ArmaOID,
+      `SELECT rp.OID AS LineaOID, rp.Horas, rp.Incentivo, rp.Arma AS ArmaOID,
               rp.Novedad AS NovedadOID, rp.Comentario,
-              c.Codigo AS ClienteCodigo, c.Nombre AS ClienteNombre, c.Direccion,
-              c.Telefono, c.Email, c.RNC, c.Cedula, c.Contacto, c.Inactivo,
-              pu.Codigo AS PuestoCodigo, pu.Descripcion AS PuestoDesc,
-              e.OID AS VigilanteOID, e.Codigo AS VigilanteCodigo, e.Nombre1, e.Apellido1, e.Cedula AS VigilanteCedula
-       FROM ReporteDiario rd
-       JOIN ReporteDiarioD rdd ON rdd.ReporteDiario = rd.OID
-       JOIN ReportePuesto rp ON rp.ReporteDiarioD = rdd.OID AND rp.GCRecord IS NULL
-       LEFT JOIN Cliente c ON c.OID = rp.Cliente
-       LEFT JOIN Puesto pu ON pu.OID = rp.Puesto
-       LEFT JOIN Empleado e ON e.OID = rp.Vigilante
-       WHERE rd.GCRecord IS NULL AND rd.Fecha = @fecha`,
+              c.OID AS ClienteOID, c.Codigo AS ClienteCodigo, c.Nombre AS ClienteNombre,
+              c.Direccion, c.Telefono, c.Email, c.RNC, c.Cedula, c.Contacto, c.Inactivo,
+              h.OID AS PuestoOID, h.Codigo AS PuestoCodigo, h.Descripcion AS PuestoDesc,
+              z.Descripcion AS Zona, t.Descripcion AS Tanda,
+              e.OID AS VigilanteOID, e.Codigo AS VigilanteCodigo,
+              e.Nombre1, e.Apellido1, e.Cedula AS VigilanteCedula
+       FROM ReportePuesto rp
+       JOIN ReporteDiarioD rd ON rp.ReporteDiarioD = rd.OID
+       JOIN ReporteDiario r ON rd.ReporteDiario = r.OID
+       JOIN HoraContratada h ON rp.Puesto = h.OID
+       JOIN Cliente c ON h.Cliente = c.OID
+       LEFT JOIN Empleado e ON rp.Vigilante = e.OID
+       LEFT JOIN Zona z ON rd.Zona = z.OID
+       LEFT JOIN Tanda t ON rd.Tanda = t.OID
+       WHERE rp.GCRecord IS NULL AND r.GCRecord IS NULL
+         AND CAST(r.Fecha AS DATE) = CAST(@fecha AS DATE)`,
       { fecha }
     );
 
@@ -529,10 +566,13 @@ router.get('/expediente', auth, guard, async (req, res) => {
       }
       const arma = r.ArmaOID != null ? weapons.get(Number(r.ArmaOID)) : null;
       const vigilante = [r.Nombre1, r.Apellido1].filter(Boolean).join(' ').trim();
+      const tanda = r.Tanda && r.Tanda !== 'NULL' ? String(r.Tanda).trim() : '';
       byClient.get(cid).puestos.push({
         lineaOID: r.LineaOID,
         puesto: r.PuestoDesc || `Puesto ${r.PuestoCodigo ?? ''}`.trim(),
         puestoCodigo: r.PuestoCodigo,
+        localidad: r.Zona && r.Zona !== 'NULL' ? String(r.Zona).trim() : 'Sede Principal',
+        tanda,
         vigilante: vigilante || '—',
         vigilanteOID: r.VigilanteOID ?? null,
         vigilanteCodigo: r.VigilanteCodigo ?? null,
