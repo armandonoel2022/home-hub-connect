@@ -346,29 +346,98 @@ router.get('/loans', auth, guard, async (req, res) => {
   } catch (e) { res.status(502).json({ message: e.message }); }
 });
 
-// ─── Armamento (números de serie de armas) ───
-// Usamos SELECT * y mapeo flexible porque los nombres de columnas de Armamento
-// pueden variar. Para ver el esquema exacto: GET /general-sql/columns/Armamento
+// ─── Catálogos (Marca / Tipo / Calibre / Categoria) ───
+// En Armamento estos campos son códigos numéricos (FK). Resolvemos el texto
+// contra la tabla de catálogo correspondiente, con descubrimiento dinámico del
+// nombre de tabla y de la columna descriptiva, cacheado por proceso.
+const _catalogCache = new Map(); // candidateKey → Map(oid→texto)
+
+async function tableExists(name) {
+  try {
+    const rows = await sql.query(
+      `SELECT 1 AS ok FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = @t`,
+      { t: name }
+    );
+    return rows.length > 0;
+  } catch (_) { return false; }
+}
+
+async function catalogMap(candidates) {
+  const key = candidates.join('|');
+  if (_catalogCache.has(key)) return _catalogCache.get(key);
+  const map = new Map();
+  for (const tbl of candidates) {
+    if (!(await tableExists(tbl))) continue;
+    try {
+      const rows = await sql.query(`SELECT * FROM [${tbl}]`);
+      if (!rows.length) { continue; }
+      const sample = rows[0];
+      const skip = /optimisticlock|gcrecord|objecttype|^oid$|^codigo$|^id$/i;
+      const descCol =
+        Object.keys(sample).find((k) => /descrip|nombre|name/i.test(k)) ||
+        Object.keys(sample).find((k) => !skip.test(k) && typeof sample[k] === 'string');
+      for (const r of rows) {
+        const oid = r.OID ?? r.Oid ?? r.oid;
+        if (oid == null) continue;
+        const txt = descCol ? r[descCol] : null;
+        if (txt != null && txt !== '' && txt !== 'NULL') map.set(Number(oid), String(txt).trim());
+      }
+      break;
+    } catch (_) { /* probar siguiente candidato */ }
+  }
+  _catalogCache.set(key, map);
+  return map;
+}
+
+const cleanStr = (v) => (v == null || v === 'NULL' || v === '' ? null : v);
+
+// Lee todas las armas de Armamento con sus catálogos resueltos.
+async function readWeapons() {
+  const rows = await sql.query(`SELECT * FROM Armamento WHERE GCRecord IS NULL`);
+  const [marcaCat, tipoCat, calCat, catCat] = await Promise.all([
+    catalogMap(['Marca', 'MarcaArma', 'Marcas']),
+    catalogMap(['TipoArma', 'Tipo', 'TipoArmamento']),
+    catalogMap(['Calibre', 'Calibres']),
+    catalogMap(['Categoria', 'CategoriaArma', 'Categorias']),
+  ]);
+  const pick = (r, ...names) => {
+    for (const n of names) {
+      const key = Object.keys(r).find((k) => k.toLowerCase() === n.toLowerCase());
+      if (key && r[key] != null && r[key] !== '' && r[key] !== 'NULL') return r[key];
+    }
+    return null;
+  };
+  const resolve = (cat, code) => {
+    if (code == null) return null;
+    return cat.get(Number(code)) || String(code);
+  };
+  return rows.map((r) => {
+    const marcaCode = pick(r, 'Marca');
+    const tipoCode = pick(r, 'Tipo');
+    const calCode = pick(r, 'Calibre');
+    const catCode = pick(r, 'Categoria');
+    return {
+      oid: pick(r, 'OID'),
+      codigo: pick(r, 'Codigo'),
+      serie: cleanStr(pick(r, 'Serie', 'NumeroSerie', 'NoSerie', 'Serial')),
+      marca: resolve(marcaCat, marcaCode),
+      tipo: resolve(tipoCat, tipoCode),
+      calibre: resolve(calCat, calCode),
+      categoria: resolve(catCat, catCode),
+      noLicencia: cleanStr(pick(r, 'NoLicencia', 'Licencia', 'NoRegistro', 'Registro')),
+      estatus: cleanStr(pick(r, 'Estatus')),
+      permanente: pick(r, 'Permanente') === 1 || pick(r, 'Permanente') === true,
+      vence: cleanStr(pick(r, 'Vence')),
+      nota: cleanStr(pick(r, 'Nota')),
+      propietario: cleanStr(pick(r, 'Propietario')),
+    };
+  });
+}
+
+// ─── Armamento (números de serie de armas, catálogos resueltos) ───
 router.get('/weapons', auth, guard, async (req, res) => {
   try {
-    const rows = await sql.query(`SELECT * FROM Armamento WHERE GCRecord IS NULL`);
-    const pick = (r, ...names) => {
-      for (const n of names) {
-        const key = Object.keys(r).find(k => k.toLowerCase() === n.toLowerCase());
-        if (key && r[key] != null && r[key] !== '') return r[key];
-      }
-      return null;
-    };
-    res.json(rows.map(r => ({
-      oid: pick(r, 'OID'),
-      serie: pick(r, 'Serie', 'NumeroSerie', 'NoSerie', 'Serial'),
-      modelo: pick(r, 'Modelo', 'Descripcion'),
-      registro: pick(r, 'Registro', 'NoRegistro'),
-      marca: pick(r, 'Marca'),
-      calibre: pick(r, 'Calibre'),
-      tipo: pick(r, 'Tipo'),
-      estatus: pick(r, 'Estatus'),
-    })));
+    res.json(await readWeapons());
   } catch (e) { res.status(502).json({ message: e.message }); }
 });
 
@@ -384,27 +453,23 @@ async function latestReportDate() {
   return rows[0]?.Fecha || null;
 }
 
-// Mapa OID→arma usando SELECT * flexible (los nombres de Armamento varían).
+// Mapa OID→arma enriquecida (serie, marca, tipo, calibre, licencia, estatus…).
 async function weaponsMap() {
   const map = new Map();
   try {
-    const rows = await sql.query(`SELECT * FROM Armamento WHERE GCRecord IS NULL`);
-    const pick = (r, ...names) => {
-      for (const n of names) {
-        const key = Object.keys(r).find((k) => k.toLowerCase() === n.toLowerCase());
-        if (key && r[key] != null && r[key] !== '') return r[key];
-      }
-      return null;
-    };
-    for (const r of rows) {
-      const oid = pick(r, 'OID');
-      if (oid == null) continue;
-      map.set(Number(oid), {
-        serie: pick(r, 'Serie', 'NumeroSerie', 'NoSerie', 'Serial'),
-        modelo: pick(r, 'Modelo', 'Descripcion'),
-        marca: pick(r, 'Marca'),
-        registro: pick(r, 'Registro', 'NoRegistro'),
-        calibre: pick(r, 'Calibre'),
+    const weapons = await readWeapons();
+    for (const w of weapons) {
+      if (w.oid == null) continue;
+      map.set(Number(w.oid), {
+        serie: w.serie,
+        modelo: w.marca || w.tipo,
+        marca: w.marca,
+        tipo: w.tipo,
+        calibre: w.calibre,
+        categoria: w.categoria,
+        noLicencia: w.noLicencia,
+        estatus: w.estatus,
+        propietario: w.propietario,
       });
     }
   } catch (_) { /* Armamento puede no existir; se ignora */ }
