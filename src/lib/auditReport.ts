@@ -4,6 +4,7 @@
  * into PDF and Excel exports.
  */
 import jsPDF from "jspdf";
+import { displayCaliber } from "@/lib/expedienteHelpers";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import type {
@@ -121,7 +122,7 @@ export function exportAuditReportPDF(bundles: AuditAgentBundle[], meta: ReportMe
     doc.text(`Tipo: ${a.weaponType || "—"}`, 90, y + 6);
     doc.text(`Serial: ${a.weaponSerial || "—"}`, 90, y + 11);
     doc.text(`Marca: ${a.weaponBrand || "—"}`, 90, y + 16);
-    doc.text(`Calibre: ${a.weaponCaliber || "—"}`, 90, y + 21);
+    doc.text(`Calibre: ${displayCaliber(a.weaponCaliber)}`, 90, y + 21);
     doc.text(`Condición: ${a.weaponCondition || "—"}`, 90, y + 26);
     doc.text(`Licencia: ${a.licenseNumber || "—"} (vence ${a.licenseExpiry || "—"})`, 90, y + 31);
     y += 42;
@@ -257,7 +258,7 @@ export function exportAuditReportExcel(bundles: AuditAgentBundle[], meta: Report
     Tipo: a.weaponType,
     Serial: a.weaponSerial,
     Marca: a.weaponBrand,
-    Calibre: a.weaponCaliber,
+    Calibre: displayCaliber(a.weaponCaliber),
     Munición: a.ammunitionCount,
     Condición: a.weaponCondition,
     Licencia: a.licenseNumber,
