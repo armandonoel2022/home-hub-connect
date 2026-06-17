@@ -395,10 +395,10 @@ const cleanStr = (v) => (v == null || v === 'NULL' || v === '' ? null : v);
 async function readWeapons() {
   const rows = await sql.query(`SELECT * FROM Armamento WHERE GCRecord IS NULL`);
   const [marcaCat, tipoCat, calCat, catCat] = await Promise.all([
-    catalogMap(['Marca', 'MarcaArma', 'Marcas']),
-    catalogMap(['TipoArma', 'Tipo', 'TipoArmamento']),
-    catalogMap(['Calibre', 'Calibres']),
-    catalogMap(['Categoria', 'CategoriaArma', 'Categorias']),
+    catalogMap(['MarcaArma', 'Marca', 'Marcas']),
+    catalogMap(['TipoArma', 'TipoArmamento', 'Tipo']),
+    catalogMap(['Calibre', 'CalibreArma', 'Calibres']),
+    catalogMap(['CategoriaArma', 'Categoria', 'Categorias']),
   ]);
   const pick = (r, ...names) => {
     for (const n of names) {
