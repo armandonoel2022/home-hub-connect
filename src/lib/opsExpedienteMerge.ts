@@ -70,6 +70,7 @@ function makeOpsPuesto(info: OpsPostInfo, w?: OpsWeapon): GeneralExpedientePuest
   return {
     lineaOID: nextOid(),
     puesto: info.puesto,
+    localidad: info.localidad,
     puestoCodigo: null,
     vigilante: w?.vigilante || info.vigilantes[0] || "",
     vigilanteOID: null,
