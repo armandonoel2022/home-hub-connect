@@ -1266,7 +1266,7 @@ const OperationsPage = () => {
                     ["Cel. Personal", selected.personalPhone || "—"],
                     ["Tipo de Arma", selected.weaponType || "—"],
                     ["Marca", selected.weaponBrand || "—"],
-                    ["Tipo Munición", selected.weaponCaliber || "—"],
+                    ["Tipo Munición", displayCaliber(selected.weaponCaliber)],
                     ["Cápsulas", String(selected.ammunitionCount)],
                     ["Serial Arma", selected.weaponSerial || "—"],
                     ["Estado del Arma", selected.weaponCondition || "—"],
