@@ -1119,7 +1119,7 @@ const OperationsPage = () => {
                         <td className="px-3 py-2">
                           {p.weaponCaliber && (
                             <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${p.weaponCaliber === "Letal" ? "bg-red-50 text-red-700" : "bg-blue-50 text-blue-700"}`}>
-                              {p.weaponCaliber}
+                              {displayCaliber(p.weaponCaliber)}
                             </span>
                           )}
                         </td>
