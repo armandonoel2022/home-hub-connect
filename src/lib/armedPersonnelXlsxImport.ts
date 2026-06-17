@@ -37,12 +37,7 @@ function normalizeKey(s: string): string {
  * Parse the Matriz_de_Levantamiento xlsx into ArmedPersonnel rows.
  * The file has a blank first column and a header row that may not be at row 0.
  */
-export async function parseArmedPersonnelXlsx(file: File): Promise<ImportRow[]> {
-  const buf = await file.arrayBuffer();
-  const wb = XLSX.read(buf, { type: "array" });
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: false });
-
+function parseSheet(rows: any[][], sheetOffset: number): ImportRow[] {
   // Find header row (contains "Cliente" and "Puesto")
   let headerRowIdx = -1;
   for (let i = 0; i < Math.min(rows.length, 20); i++) {
@@ -52,7 +47,7 @@ export async function parseArmedPersonnelXlsx(file: File): Promise<ImportRow[]> 
       break;
     }
   }
-  if (headerRowIdx === -1) throw new Error("No se encontró la fila de encabezados (debe contener Cliente y Puesto).");
+  if (headerRowIdx === -1) return [];
 
   const headers: string[] = rows[headerRowIdx].map((h: any) => HEADER_ALIASES[normalizeKey(h)] || "");
 
@@ -96,7 +91,33 @@ export async function parseArmedPersonnelXlsx(file: File): Promise<ImportRow[]> 
     });
 
     if (!rec.client && !rec.location && !rec.name) continue;
-    out.push({ ...rec, _rowIndex: r + 1 });
+    out.push({ ...rec, _rowIndex: sheetOffset + r + 1 });
+  }
+  return out;
+}
+
+/**
+ * Parse the Matriz_de_Levantamiento xlsx into ArmedPersonnel rows.
+ * The workbook may contain MULTIPLE sheets (e.g. "Armas Menos Letales" y
+ * "Armas Letales"); every sheet is parsed and all weapon rows are combined so
+ * that ALL weapons of each post are taken into account.
+ */
+export async function parseArmedPersonnelXlsx(file: File): Promise<ImportRow[]> {
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type: "array" });
+
+  const out: ImportRow[] = [];
+  wb.SheetNames.forEach((name, sheetIdx) => {
+    const ws = wb.Sheets[name];
+    if (!ws) return;
+    const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: false });
+    // Offset keeps _rowIndex unique across sheets.
+    const parsed = parseSheet(rows, sheetIdx * 100000);
+    out.push(...parsed);
+  });
+
+  if (out.length === 0) {
+    throw new Error("No se encontró la fila de encabezados (debe contener Cliente y Puesto) en ninguna pestaña.");
   }
   return out;
 }
