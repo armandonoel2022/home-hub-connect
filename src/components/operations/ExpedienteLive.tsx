@@ -13,7 +13,7 @@ import {
   generalSqlApi, expedienteOverlayApi, getFileUrl, employeesApi,
   type GeneralExpediente, type GeneralExpedienteCliente, type GeneralExpedientePuesto,
   type ExpedienteOverlayMap, type ExpedienteOverlayEntry, type ExpedienteMovement,
-  type GeneralWeapon, type Employee,
+  type GeneralWeapon, type Employee, type GeneralWeaponDetail,
 } from "@/lib/api";
 import type { ArmedPersonnel } from "@/lib/types";
 import { exportToPDF, exportToExcel } from "@/lib/exportUtils";
@@ -940,7 +940,7 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
               </Button>
             )}
           </div>
-          <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs rounded-lg border border-border p-3">
             <Field label="Código" value={puesto.vigilanteCodigo ?? emp?.employeeCode} />
             <Field label="Cédula" value={puesto.vigilanteCedula ?? (emp as any)?.cedula} />
             {emp?.status && <Field label="Estatus" value={emp.status} />}
@@ -957,48 +957,56 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
             {puesto.comentario && <Field label="Comentario" value={puesto.comentario} />}
           </div>
 
-          {puesto.requiereArma && (() => {
-            const ov = puesto.armaSerial ? ctx.overlay[puesto.armaSerial] : undefined;
-            const arma = applyWeaponOverride(puesto.arma, ov);
-            const fotos = ov?.fotosArma || [];
-            const tipo = arma?.tipo || armed?.weaponType || puesto.armaModelo;
-            const serial = arma?.serie || puesto.armaSerial || armed?.weaponSerial;
-            const calibre = displayCaliber(arma?.calibre || armed?.weaponCaliber);
-            const estado = arma?.estatus || armed?.weaponCondition;
-            return (
-              <div className="rounded-lg border border-gold/40 bg-gold/5 p-3 space-y-2">
-                <div className="flex items-center justify-between">
+          {hasWeaponData && (
+            <div className="rounded-lg border border-gold/40 bg-gold/5 p-4 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
                   <p className="text-xs font-semibold inline-flex items-center gap-1 text-gold-foreground"><Shield className="h-3.5 w-3.5" /> Arma asignada · Auditoría</p>
-                  <button
-                    onClick={() => { onClose(); ctx.openWeapon(puesto, cliente); }}
-                    className="text-[11px] inline-flex items-center gap-1 text-primary hover:underline"
-                    title="Ver / editar arma"
-                  >
-                    <Pencil className="h-3 w-3" /> Ver / editar
-                  </button>
+                  <p className="text-[11px] text-muted-foreground">Datos cruzados desde GENERAL, Personal Armado y la capa editable de la intranet.</p>
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <Field label="Tipo de Arma" value={tipo} />
-                  <Field label="Serial" value={serial} />
-                  <Field label="Marca" value={arma?.marca} />
-                  <Field label="Calibre" value={calibre} />
-                  <Field label="Categoría" value={arma?.categoria} />
-                  <Field label="No. Licencia" value={arma?.noLicencia} />
-                  <Field label="Estado Arma" value={estado} />
-                  <Field label="Propietario" value={arma?.propietario} />
-                  {armed?.ammunitionCount != null && <Field label="Munición" value={`${armed.ammunitionCount} cápsulas`} />}
-                  {armed?.province && <Field label="Provincia" value={armed.province} />}
-                </div>
-                {fotos.length > 0 && (
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    {fotos.map((u) => (
-                      <img key={u} src={getFileUrl(u)} alt="Arma" className="h-16 w-16 object-cover rounded border" />
-                    ))}
-                  </div>
-                )}
+                <Button size="sm" variant="outline" className="h-8 shrink-0" onClick={() => { onClose(); ctx.openWeapon(puesto, cliente); }}>
+                  <Pencil className="h-3.5 w-3.5 mr-1" /> {ctx.canEdit ? "Editar arma" : "Ver arma"}
+                </Button>
               </div>
-            );
-          })()}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                <Field label="Tipo de Arma" value={tipoArma} />
+                <Field label="Serial" value={serialArma} />
+                <Field label="Marca" value={arma?.marca} />
+                <Field label="Calibre" value={calibreArma} />
+                <Field label="Categoría" value={arma?.categoria} />
+                <Field label="No. Licencia" value={arma?.noLicencia} />
+                <Field label="Estado Arma" value={estadoArma} />
+                <Field label="Propietario" value={arma?.propietario} />
+                {armed?.ammunitionCount != null && <Field label="Munición" value={`${armed.ammunitionCount} cápsulas`} />}
+                {armed?.province && <Field label="Provincia" value={armed.province} />}
+              </div>
+              <div className="space-y-2">
+                <p className="text-[11px] font-semibold text-muted-foreground inline-flex items-center gap-1"><Camera className="h-3.5 w-3.5" /> Fotos y licencia</p>
+                <div className="flex flex-wrap gap-2">
+                  {fotosArma.map((u) => (
+                    <button key={u} onClick={() => setLightbox(getFileUrl(u))} className="h-20 w-20 overflow-hidden rounded-md border border-border bg-background hover:border-primary" title="Ver foto del arma">
+                      <img src={getFileUrl(u)} alt="Foto del arma" className="h-full w-full object-cover" />
+                    </button>
+                  ))}
+                  {fotoLicenciaFrente && (
+                    <button onClick={() => setLightbox(getFileUrl(fotoLicenciaFrente))} className="h-20 w-28 overflow-hidden rounded-md border border-border bg-background hover:border-primary" title="Ver licencia frente">
+                      <img src={getFileUrl(fotoLicenciaFrente)} alt="Licencia frente" className="h-full w-full object-cover" />
+                    </button>
+                  )}
+                  {fotoLicenciaDorso && (
+                    <button onClick={() => setLightbox(getFileUrl(fotoLicenciaDorso))} className="h-20 w-28 overflow-hidden rounded-md border border-border bg-background hover:border-primary" title="Ver licencia dorso">
+                      <img src={getFileUrl(fotoLicenciaDorso)} alt="Licencia dorso" className="h-full w-full object-cover" />
+                    </button>
+                  )}
+                  {!fotosArma.length && !fotoLicenciaFrente && !fotoLicenciaDorso && (
+                    <button onClick={() => { onClose(); ctx.openWeapon(puesto, cliente); }} className="h-20 min-w-[160px] rounded-md border border-dashed border-border px-3 text-[11px] text-muted-foreground hover:border-primary hover:text-primary">
+                      <Upload className="h-4 w-4 mx-auto mb-1" /> Agregar fotos del arma
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
