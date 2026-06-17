@@ -113,6 +113,107 @@ async function query(text, params = {}) {
   return result.recordset || [];
 }
 
+/**
+ * Escritura a GENERAL (gSafeOne) BLINDADA: solo procede con la bandera de
+ * entorno GENERAL_SQL_WRITE=true Y meta.confirm === true. TODA escritura queda
+ * registrada en el Audit Log y genera una notificación a administradores,
+ * ocurra antes (intención) y después (resultado) de ejecutarse.
+ *
+ * @param {string} text  SQL de escritura (UPDATE/INSERT/DELETE/MERGE)
+ * @param {object} params  Parámetros nombrados (@name)
+ * @param {object} meta  { confirm, user, reason, module, targetName }
+ */
+async function execWrite(text, params = {}, meta = {}) {
+  const reason = meta.reason || '';
+  const actor = meta.user || {};
+  const isWriteStmt = /^\s*(update|insert|delete|merge)\b/i.test(text);
+  if (!isWriteStmt) {
+    throw new Error('execWrite solo acepta sentencias de escritura (UPDATE/INSERT/DELETE/MERGE).');
+  }
+
+  // Registrar SIEMPRE la intención (incluso si luego se rechaza).
+  logDbWrite({
+    phase: 'intento',
+    text, params, reason, actor,
+    moduleName: meta.module || 'general-sql',
+    targetName: meta.targetName || '',
+    allowed: writeEnabled() && meta.confirm === true,
+  });
+
+  if (!writeEnabled()) {
+    throw new Error('Escritura a GENERAL deshabilitada. Defina GENERAL_SQL_WRITE=true para habilitarla.');
+  }
+  if (meta.confirm !== true) {
+    throw new Error('Escritura a GENERAL requiere confirmación explícita (meta.confirm = true).');
+  }
+
+  const p = await getPool();
+  const req = p.request();
+  Object.entries(params).forEach(([k, v]) => req.input(k, v));
+  const result = await req.query(text);
+  const affected = (result.rowsAffected || []).reduce((a, b) => a + b, 0);
+
+  // Registrar el resultado.
+  logDbWrite({
+    phase: 'ejecutado',
+    text, params, reason, actor,
+    moduleName: meta.module || 'general-sql',
+    targetName: meta.targetName || '',
+    allowed: true,
+    affected,
+  });
+
+  return { affected, recordset: result.recordset || [] };
+}
+
+// Audit Log + notificación a administradores para cualquier escritura a GENERAL.
+function logDbWrite(info) {
+  try {
+    const { readData, writeData, generateId } = require('./database');
+
+    const sqlPreview = String(info.text || '').replace(/\s+/g, ' ').slice(0, 500);
+    const detail = [
+      `[${info.phase}]`,
+      info.allowed ? 'permitido' : 'BLOQUEADO',
+      info.reason ? `motivo: ${info.reason}` : '',
+      `SQL: ${sqlPreview}`,
+      info.affected != null ? `filas: ${info.affected}` : '',
+      `params: ${JSON.stringify(info.params || {})}`,
+    ].filter(Boolean).join(' · ');
+
+    const logs = readData('audit-log.json');
+    logs.push({
+      id: generateId('AUD', logs),
+      userId: info.actor.id || 'system',
+      userName: info.actor.fullName || info.actor.name || 'Sistema',
+      action: 'db-write',
+      module: info.moduleName || 'general-sql',
+      targetId: 'gSafeOne',
+      targetName: info.targetName || 'Base GENERAL',
+      details: detail,
+      ip: info.actor.ip || null,
+      timestamp: new Date().toISOString(),
+    });
+    writeData('audit-log.json', logs);
+
+    // Notificar a administradores (broadcast).
+    const notifs = readData('notifications.json');
+    notifs.push({
+      id: generateId('NOT', notifs),
+      forUserId: 'ADMINS',
+      type: 'security',
+      title: info.allowed ? 'Escritura en base GENERAL' : 'Intento de escritura en GENERAL bloqueado',
+      message: detail.slice(0, 240),
+      read: false,
+      createdAt: new Date().toISOString(),
+    });
+    writeData('notifications.json', notifs);
+  } catch (e) {
+    // Nunca dejar que el logging rompa la operación principal.
+    console.error('logDbWrite error:', e.message);
+  }
+}
+
 async function status() {
   const base = {
     configured: isConfigured(),
