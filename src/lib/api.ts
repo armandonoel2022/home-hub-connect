@@ -1203,6 +1203,8 @@ export interface GeneralExpedientePuesto {
   vigilanteOID: number | null;
   vigilanteCodigo: number | null;
   vigilanteCedula: string | null;
+  vigilanteFechaNacimiento?: string | null;
+  vigilanteEdad?: number | null;
   horas: number;
   incentivo: number;
   requiereArma: boolean;
