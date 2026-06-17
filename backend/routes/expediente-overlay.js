@@ -188,4 +188,34 @@ router.post('/movements', auth, editGuard, jsonLarge, (req, res) => {
   res.status(201).json(mov);
 });
 
+// ─── Líneas ocultas del expediente (eliminar registros duplicados/erróneos) ───
+// Se ocultan por una clave estable (cliente|puesto|vigilante) para que el
+// ocultamiento persista aunque el OID del reporte diario cambie cada día.
+function readHidden() {
+  const data = readData(HIDDEN_FILE);
+  if (Array.isArray(data)) return { keys: data };
+  return data && Array.isArray(data.keys) ? data : { keys: [] };
+}
+
+router.get('/hidden/all', auth, readGuard, (req, res) => {
+  res.json(readHidden().keys);
+});
+
+router.post('/hidden', auth, editGuard, jsonLarge, (req, res) => {
+  const key = String((req.body || {}).key || '').trim();
+  if (!key) return res.status(400).json({ message: 'key requerida' });
+  const hidden = readHidden();
+  if (!hidden.keys.includes(key)) hidden.keys.push(key);
+  writeData(HIDDEN_FILE, hidden);
+  res.json(hidden.keys);
+});
+
+router.delete('/hidden', auth, editGuard, jsonLarge, (req, res) => {
+  const key = String((req.body || {}).key || '').trim();
+  const hidden = readHidden();
+  hidden.keys = hidden.keys.filter((k) => k !== key);
+  writeData(HIDDEN_FILE, hidden);
+  res.json(hidden.keys);
+});
+
 module.exports = router;
