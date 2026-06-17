@@ -21,6 +21,8 @@ export type ModuleKey =
   | "phoneFleet"
   | "armedPersonnel"
   | "workPosts"
+  | "clientExpediente"
+  | "weaponVault"
   | "maintenanceMatrix"
   | "uniforms"
   | "superintAudit"
