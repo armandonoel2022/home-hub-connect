@@ -1117,17 +1117,33 @@ export const generalSqlApi = {
   schemaKeys: () => apiFetch<Array<{ tabla: string; tipo: string; columna: string; restriccion: string }>>("/general-sql/schema-keys"),
 };
 
+export interface GeneralWeaponDetail {
+  oid: number | null;
+  serie: string | null;
+  marca: string | null;
+  tipo: string | null;
+  calibre: string | null;
+  categoria: string | null;
+  noLicencia: string | null;
+  estatus: string | null;
+  propietario: string | null;
+}
+
 export interface GeneralExpedientePuesto {
   lineaOID: number;
   puesto: string;
   puestoCodigo: number | null;
   vigilante: string;
+  vigilanteOID: number | null;
   vigilanteCodigo: number | null;
+  vigilanteCedula: string | null;
   horas: number;
   incentivo: number;
   requiereArma: boolean;
+  armaOID: number | null;
   armaSerial: string | null;
   armaModelo: string | null;
+  arma: GeneralWeaponDetail | null;
   novedad: boolean;
   comentario: string;
 }
