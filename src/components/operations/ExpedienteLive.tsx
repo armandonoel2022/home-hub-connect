@@ -103,12 +103,13 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
     } catch { /* overlay opcional */ }
   };
 
-  const load = async () => {
+  const load = async (fecha?: string) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await generalSqlApi.expediente();
+      const res = await generalSqlApi.expediente(fecha || undefined);
       setData(res);
+      if (res.fecha) setSelectedDate(toInputDate(res.fecha));
       await loadOverlay();
     } catch (e) {
       const msg = (e as Error)?.message || "No se pudo conectar con GENERAL";
@@ -119,7 +120,13 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
     }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+  useEffect(() => {
+    load();
+    generalSqlApi.expedienteDates()
+      .then((d) => setAvailableDates((d || []).map(toInputDate)))
+      .catch(() => { /* selector opcional */ });
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, []);
 
   const { data: personnel } = useArmedPersonnel();
 
