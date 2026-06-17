@@ -143,11 +143,12 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
 
   const { data: personnel } = useArmedPersonnel();
 
-  // Fusiona GENERAL con Operaciones (Personal Armado + Puestos).
+  // Fusiona GENERAL con Operaciones (Personal Armado + Puestos) y enriquece
+  // las armas con el catálogo Armamento de SQL (marca, categoría, calibre, licencia).
   const mergedData = useMemo<GeneralExpediente | null>(() => {
     if (!data && (!personnel || personnel.length === 0)) return data;
-    return mergeOperacionesIntoExpediente(data, personnel || [], loadPosts());
-  }, [data, personnel]);
+    return mergeOperacionesIntoExpediente(data, personnel || [], loadPosts(), sqlWeapons);
+  }, [data, personnel, sqlWeapons]);
 
   const filtered = useMemo<GeneralExpedienteCliente[]>(() => {
     if (!mergedData) return [];
