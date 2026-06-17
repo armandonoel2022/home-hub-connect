@@ -132,7 +132,15 @@ const ClientExpediente = () => {
                 if (confirm(`¿Eliminar el puesto "${p.nombre}"?`)) { deletePost(p.id); refresh(); }
               }}
               onReport={(p) => setReportDialog(p)}
-              onPrint={() => generateExpedientePDF(client, { open: true })}
+              onPrint={async () => {
+                try {
+                  toast({ title: "Generando expediente…" });
+                  await generateExpedientePDF(client, { open: true });
+                } catch (e) {
+                  console.error("Error generando expediente PDF", e);
+                  toast({ title: "No se pudo generar el expediente", description: String((e as Error)?.message || e), variant: "destructive" });
+                }
+              }}
               tick={tick}
             />
           ))}
