@@ -548,7 +548,8 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
                       <div className="space-y-1">
                         {pg.rows.map((p) => {
                           const ov = p.armaSerial ? ctx.overlay[p.armaSerial] : undefined;
-                          const estatus = ov?.estatus ?? p.arma?.estatus ?? null;
+                          const arma = applyWeaponOverride(p.arma, ov);
+                          const estatus = arma?.estatus ?? null;
                           const fotos = ov?.fotosArma?.length || 0;
                           return (
                             <div key={p.lineaOID} className="flex flex-wrap items-center gap-2 text-xs border-b border-border/50 pb-1 last:border-0 last:pb-0">
@@ -569,13 +570,26 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
                                   title="Ver / editar arma"
                                 >
                                   <span className="truncate">
-                                    {[p.arma?.tipo || p.armaModelo, p.armaSerial].filter(Boolean).join(" · ") || "Armado"}
+                                    {[arma?.tipo || p.armaModelo, p.armaSerial].filter(Boolean).join(" · ") || "Armado"}
                                   </span>
                                   {estatus && <span className={`px-1.5 py-0.5 rounded ${statusColor(estatus)}`}>{estatus}</span>}
                                   {fotos > 0 && <Badge variant="outline" className="text-[9px]">{fotos}📷</Badge>}
                                 </button>
                               )}
                               {p.novedad && <Badge variant="destructive" className="text-[10px] shrink-0">Novedad</Badge>}
+                              {ctx.canEdit && (
+                                <button
+                                  onClick={() => {
+                                    if (confirm(`¿Eliminar este registro del expediente?\n\n${p.vigilante || "Sin asignar"} · ${pg.nombre}\n\nSe ocultará para todos los usuarios (se puede restaurar desde el archivo de auditoría).`)) {
+                                      ctx.hideLine(client, p);
+                                    }
+                                  }}
+                                  className="shrink-0 text-muted-foreground hover:text-destructive"
+                                  title="Eliminar registro (duplicado/erróneo)"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              )}
                             </div>
                           );
                         })}
