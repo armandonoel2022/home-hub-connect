@@ -88,6 +88,11 @@ app.use('/api/announcements', require('./routes/announcements'));
 app.use('/api/calendar-events', require('./routes/calendar-events'));
 app.use('/api/hr-requests', require('./routes/hr-requests'));
 app.use('/api/general-sql', require('./routes/general-sql'));
+app.use('/api/ops-clients', require('./routes/ops-clients'));
+app.use('/api/ops-locations', require('./routes/ops-locations'));
+app.use('/api/ops-posts', require('./routes/ops-posts'));
+app.use('/api/ops-daily-reports', require('./routes/ops-daily-reports'));
+app.use('/api/vault-movements', require('./routes/vault-movements'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({

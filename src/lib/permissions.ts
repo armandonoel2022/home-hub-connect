@@ -21,6 +21,8 @@ export type ModuleKey =
   | "phoneFleet"
   | "armedPersonnel"
   | "workPosts"
+  | "clientExpediente"
+  | "weaponVault"
   | "maintenanceMatrix"
   | "uniforms"
   | "superintAudit"
@@ -131,6 +133,8 @@ export function canView(module: ModuleKey, user: IntranetUser | null | undefined
     // Módulos de Operaciones — Operaciones + Admin + Gerencia Gral + Dir. Comercial
     case "armedPersonnel":
     case "workPosts":
+    case "clientExpediente":
+    case "weaponVault":
     case "maintenanceMatrix":
     case "uniforms":
     case "superintAudit":

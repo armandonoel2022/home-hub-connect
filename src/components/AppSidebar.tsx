@@ -33,6 +33,8 @@ import {
   Banknote,
   ImagePlus,
   BrainCircuit,
+  FolderTree,
+  Lock,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -56,6 +58,8 @@ const navItems: NavItem[] = [
   { title: "Flotilla Vehicular", url: "/flotilla", icon: Truck, module: "fleet" },
   { title: "Flota Celular", url: "/flota-celular", icon: Smartphone, module: "phoneFleet" },
   { title: "Operaciones (Personal y Puestos)", url: "/operaciones", icon: Shield, module: "armedPersonnel" },
+  { title: "Expediente de Clientes", url: "/operaciones/expediente", icon: FolderTree, module: "clientExpediente" },
+  { title: "Bóveda de Armas", url: "/operaciones/boveda", icon: Lock, module: "weaponVault" },
   { title: "Matriz de Levantamiento", url: "/operaciones/matriz-mantenimiento", icon: Shield, module: "maintenanceMatrix" },
   { title: "Uniformes y Linternas", url: "/operaciones/inventario", icon: Shirt, module: "uniforms" },
   { title: "Auditoría Superintendencia", url: "/operaciones/auditoria", icon: ClipboardCheck, module: "superintAudit" },

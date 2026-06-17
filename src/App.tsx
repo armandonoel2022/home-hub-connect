@@ -38,6 +38,8 @@ import Wiki from "./pages/Wiki";
 import TaskInbox from "./pages/TaskInbox";
 import MonitoringCenter from "./pages/MonitoringCenter";
 import OperationsCenter from "./pages/OperationsCenter";
+import ClientExpediente from "./pages/ClientExpediente";
+import WeaponVault from "./pages/WeaponVault";
 import LoginPage from "./pages/Login";
 import RegisterPage from "./pages/Register";
 import MinorPurchases from "./pages/MinorPurchases";
@@ -202,6 +204,8 @@ function ProtectedRoutes() {
         <Route path="/admin/flotilla-mantenimiento" element={<FleetMaintenance />} />
         <Route path="/monitoreo" element={<MonitoringCenter />} />
         <Route path="/operaciones/matriz-mantenimiento" element={<RouteGuard module="maintenanceMatrix"><OperationsMaintenanceMatrix /></RouteGuard>} />
+        <Route path="/operaciones/expediente" element={<RouteGuard module="clientExpediente"><ClientExpediente /></RouteGuard>} />
+        <Route path="/operaciones/boveda" element={<RouteGuard module="weaponVault"><WeaponVault /></RouteGuard>} />
         <Route path="/operaciones/puestos" element={<Navigate to="/operaciones" replace />} />
         <Route path="/rrhh/mis-solicitudes" element={<MyHRRequests />} />
         <Route path="/rrhh/aprobaciones" element={<RouteGuard module="hrApprovals"><HRApprovals /></RouteGuard>} />

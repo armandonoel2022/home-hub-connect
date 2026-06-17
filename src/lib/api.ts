@@ -1130,7 +1130,24 @@ export interface GeneralWeapon {
   tipo?: string | null; estatus?: string | null;
 }
 
+// ─── Operaciones: Expediente Digital (clientes, localidades, puestos, reporte diario, bóveda) ───
+function crudApi<T extends { id: string }>(path: string) {
+  return {
+    list: () => apiFetch<T[]>(`/${path}`),
+    create: (data: Partial<T>) => apiFetch<T>(`/${path}`, { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<T>) => apiFetch<T>(`/${path}/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    remove: (id: string) => apiFetch<void>(`/${path}/${id}`, { method: "DELETE" }),
+  };
+}
+
+export const opsClientsApi = crudApi<{ id: string }>("ops-clients");
+export const opsLocationsApi = crudApi<{ id: string }>("ops-locations");
+export const opsPostsApi = crudApi<{ id: string }>("ops-posts");
+export const opsDailyReportsApi = crudApi<{ id: string }>("ops-daily-reports");
+export const vaultMovementsApi = crudApi<{ id: string }>("vault-movements");
+
 export default apiFetch;
+
 
 
 
