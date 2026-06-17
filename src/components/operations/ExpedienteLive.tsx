@@ -406,6 +406,9 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
                       </button>
                     )}
                     {p.novedad && <Badge variant="destructive" className="text-[10px] shrink-0">Novedad</Badge>}
+                    {(p.origen === "operaciones" || p.armaOrigen === "operaciones") && (
+                      <Badge variant="secondary" className="text-[10px] shrink-0">Operaciones</Badge>
+                    )}
                   </div>
                 );
               })}
