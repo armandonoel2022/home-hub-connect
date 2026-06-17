@@ -11,12 +11,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
 import {
-  getApprovedLoans, loanPrincipal, loanTotalToPay, loanPaid, loanBalance,
+  getApprovedLoans, getAllLoanRequests, loanPrincipal, loanTotalToPay, loanPaid, loanBalance,
   registerLoanPayment,
 } from "@/lib/hrRequestService";
+import { generateAmortizationPDF, amortizationInputFromRequest } from "@/lib/loanAmortizationPdf";
 import { generalSqlApi, type GeneralLoan } from "@/lib/api";
-import type { HRRequest } from "@/lib/hrRequestTypes";
-import { Banknote, Wallet, TrendingDown, HandCoins, Plus, Database } from "lucide-react";
+import type { HRRequest, HRRequestStatus } from "@/lib/hrRequestTypes";
+import { Banknote, Wallet, TrendingDown, HandCoins, Plus, Database, FileText, ListChecks } from "lucide-react";
 
 const rd = (n: number) => `RD$${(Math.round(n) || 0).toLocaleString()}`;
 
