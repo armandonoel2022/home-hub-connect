@@ -4,24 +4,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { canEditExpediente } from "@/lib/permissions";
 import {
-  generalSqlApi, expedienteOverlayApi, getFileUrl,
+  generalSqlApi, expedienteOverlayApi, getFileUrl, employeesApi,
   type GeneralExpediente, type GeneralExpedienteCliente, type GeneralExpedientePuesto,
   type ExpedienteOverlayMap, type ExpedienteOverlayEntry, type ExpedienteMovement,
-  type GeneralWeapon,
+  type GeneralWeapon, type Employee,
 } from "@/lib/api";
+import type { ArmedPersonnel } from "@/lib/types";
 import { exportToPDF, exportToExcel } from "@/lib/exportUtils";
 import { useArmedPersonnel } from "@/hooks/useApiHooks";
 import { loadPosts } from "@/lib/postsData";
 import { mergeOperacionesIntoExpediente } from "@/lib/opsExpedienteMerge";
+import { displayCaliber, lineHideKey, applyWeaponOverride } from "@/lib/expedienteHelpers";
 import {
   Building2, MapPin, Crosshair, Users, ChevronDown, ChevronRight, RefreshCw,
   AlertTriangle, FileText, Phone, Mail, ExternalLink, ShieldCheck, ShieldOff, ListChecks,
-  Download, Pencil, ArrowRightLeft, Upload, Trash2, IdCard, User, X,
+  Download, Pencil, ArrowRightLeft, Upload, Trash2, IdCard, User, X, Shield,
 } from "lucide-react";
 
 type FilterKey = "todos" | "armas" | "sinArma" | "novedad";
