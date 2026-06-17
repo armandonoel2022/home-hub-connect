@@ -38,6 +38,8 @@ import Wiki from "./pages/Wiki";
 import TaskInbox from "./pages/TaskInbox";
 import MonitoringCenter from "./pages/MonitoringCenter";
 import OperationsCenter from "./pages/OperationsCenter";
+import ClientExpediente from "./pages/ClientExpediente";
+import WeaponVault from "./pages/WeaponVault";
 import LoginPage from "./pages/Login";
 import RegisterPage from "./pages/Register";
 import MinorPurchases from "./pages/MinorPurchases";
