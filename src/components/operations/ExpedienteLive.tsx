@@ -188,7 +188,7 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
     );
   }
 
-  if (error) {
+  if (error && (!mergedData || mergedData.clientes.length === 0)) {
     return (
       <Card className="p-6 space-y-3">
         <div className="flex items-center gap-2 text-sm font-semibold text-destructive">
