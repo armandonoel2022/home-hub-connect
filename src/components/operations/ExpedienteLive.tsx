@@ -13,7 +13,7 @@ import {
   generalSqlApi, expedienteOverlayApi, getFileUrl, employeesApi,
   type GeneralExpediente, type GeneralExpedienteCliente, type GeneralExpedientePuesto,
   type ExpedienteOverlayMap, type ExpedienteOverlayEntry, type ExpedienteMovement,
-  type GeneralWeapon, type Employee,
+  type GeneralWeapon, type Employee, type GeneralWeaponDetail,
 } from "@/lib/api";
 import type { ArmedPersonnel } from "@/lib/types";
 import { exportToPDF, exportToExcel } from "@/lib/exportUtils";
@@ -25,6 +25,7 @@ import {
   Building2, MapPin, Crosshair, Users, ChevronDown, ChevronRight, RefreshCw,
   AlertTriangle, FileText, Phone, Mail, ExternalLink, ShieldCheck, ShieldOff, ListChecks,
   Download, Pencil, ArrowRightLeft, Upload, Trash2, IdCard, User, X, Shield,
+  Camera, Eye,
 } from "lucide-react";
 
 type FilterKey = "todos" | "armas" | "sinArma" | "novedad";
@@ -562,10 +563,11 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
                                 ctx.hideMany(client, pg.rows);
                               }
                             }}
-                            className="shrink-0 text-muted-foreground hover:text-destructive p-1"
+                            className="shrink-0 inline-flex items-center gap-1 rounded-md border border-destructive/30 px-2 py-1 text-[11px] font-medium text-destructive hover:bg-destructive/10"
                             title="Eliminar puesto completo"
                           >
                             <Trash2 className="h-4 w-4" />
+                            Eliminar puesto
                           </button>
                         )}
                       </div>
@@ -595,9 +597,10 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
                               {p.requiereArma && (
                                 <button
                                   onClick={() => ctx.openWeapon(p, client)}
-                                  className="inline-flex items-center gap-1 shrink-0 max-w-[220px] truncate hover:text-primary"
+                                  className="inline-flex items-center gap-1 shrink-0 max-w-[260px] rounded-md border border-border px-2 py-1 font-medium hover:border-primary hover:text-primary"
                                   title="Ver / editar arma"
                                 >
+                                  {ctx.canEdit ? <Pencil className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                                   <span className="truncate">
                                     {[arma?.tipo || p.armaModelo, p.armaSerial].filter(Boolean).join(" · ") || "Armado"}
                                   </span>
@@ -613,10 +616,11 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
                                       ctx.hideLine(client, p);
                                     }
                                   }}
-                                  className="shrink-0 text-muted-foreground hover:text-destructive"
+                                  className="shrink-0 inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                                   title="Eliminar registro (duplicado/erróneo)"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
+                                  Eliminar
                                 </button>
                               )}
                             </div>
@@ -783,7 +787,7 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
                     onClick={() => setLightbox(getFileUrl(u))}
                   />
                   {ctx.canEdit && (
-                    <button onClick={() => removePhoto(u, "arma")} className="absolute -top-2 -right-2 bg-destructive text-white rounded-full p-0.5">
+                    <button onClick={() => removePhoto(u, "arma")} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5">
                       <X className="h-3 w-3" />
                     </button>
                   )}
@@ -816,7 +820,7 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
                           onClick={() => setLightbox(getFileUrl(url))}
                         />
                         {ctx.canEdit && (
-                          <button onClick={() => removePhoto(url, kind)} className="absolute -top-2 -right-2 bg-destructive text-white rounded-full p-0.5">
+                          <button onClick={() => removePhoto(url, kind)} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5">
                             <X className="h-3 w-3" />
                           </button>
                         )}
@@ -861,11 +865,11 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
       </DialogContent>
       {lightbox && (
         <div
-          className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-6 cursor-zoom-out"
+          className="fixed inset-0 z-[100] bg-foreground/80 flex items-center justify-center p-6 cursor-zoom-out"
           onClick={() => setLightbox(null)}
         >
           <img src={lightbox} alt="Vista ampliada" className="max-h-[90vh] max-w-[90vw] object-contain rounded shadow-2xl" />
-          <button className="absolute top-4 right-4 text-white" onClick={() => setLightbox(null)}><X className="h-6 w-6" /></button>
+          <button className="absolute top-4 right-4 text-background" onClick={() => setLightbox(null)}><X className="h-6 w-6" /></button>
         </div>
       )}
     </Dialog>
@@ -877,6 +881,7 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
 }) {
   const [movs, setMovs] = useState<ExpedienteMovement[]>([]);
   const [showTransfer, setShowTransfer] = useState(false);
+  const [lightbox, setLightbox] = useState<string | null>(null);
   const empId = puesto.vigilanteCodigo ?? puesto.vigilanteOID ?? "";
 
   useEffect(() => {
@@ -887,27 +892,58 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
   const match = ctx.matchEmployee(puesto);
   const emp = match.emp;
   const armed = match.armed;
-  const printFicha = () => printAgentFicha(puesto, cliente, { emp, armed, photo: match.photo, movs });
   const initials = (puesto.vigilante || "?").split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("");
+  const weaponKey = puesto.armaSerial || armed?.weaponSerial || "";
+  const ov = weaponKey ? ctx.overlay[weaponKey] : undefined;
+  const arma = applyWeaponOverride(puesto.arma, ov);
+  const fotosArma = ov?.fotosArma || [];
+  const fotoLicenciaFrente = ov?.fotoLicenciaFrente || null;
+  const fotoLicenciaDorso = ov?.fotoLicenciaDorso || null;
+  const tipoArma = arma?.tipo || armed?.weaponType || puesto.armaModelo;
+  const serialArma = arma?.serie || puesto.armaSerial || armed?.weaponSerial;
+  const calibreArma = displayCaliber(arma?.calibre || armed?.weaponCaliber);
+  const estadoArma = arma?.estatus || armed?.weaponCondition;
+  const hasWeaponData = puesto.requiereArma || !!serialArma || !!tipoArma || !!arma || !!armed;
+  const printFicha = () => printAgentFicha(puesto, cliente, { emp, armed, photo: match.photo, movs, arma, fotosArma });
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><User className="h-5 w-5 text-primary" /> Perfil 360° del Vigilante</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3 text-sm">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-16 w-16">
+        <div className="space-y-4 text-sm">
+          <div className="rounded-lg border border-border bg-muted/25 p-4 flex items-center gap-4">
+            <Avatar className="h-20 w-20 border-2 border-gold/30">
               {match.photo && <AvatarImage src={match.photo} alt={puesto.vigilante} />}
-              <AvatarFallback className="bg-muted">{initials}</AvatarFallback>
+              <AvatarFallback className="bg-secondary text-secondary-foreground text-lg font-bold">{initials}</AvatarFallback>
             </Avatar>
-            <div className="min-w-0">
-              <h2 className="font-heading text-lg font-bold leading-tight truncate">{puesto.vigilante || "Sin asignar"}</h2>
+            <div className="min-w-0 flex-1">
+              <h2 className="font-heading text-xl font-bold leading-tight truncate">{puesto.vigilante || "Sin asignar"}</h2>
               <p className="text-xs text-muted-foreground truncate">{emp?.position || "Oficial de Seguridad"} · {emp?.department || "Safeone"}</p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {puesto.requiereArma && <Badge className="gap-1 text-[10px]"><Crosshair className="h-3 w-3" /> Requiere arma</Badge>}
+                {serialArma && <Badge variant="outline" className="gap-1 text-[10px]"><Shield className="h-3 w-3" /> {serialArma}</Badge>}
+                {puesto.novedad && <Badge variant="destructive" className="text-[10px]">Novedad</Badge>}
+              </div>
             </div>
+            {ctx.canEdit && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="shrink-0 border-destructive/30 text-destructive hover:bg-destructive/10"
+                onClick={() => {
+                  if (confirm(`¿Eliminar este registro del expediente?\n\n${puesto.vigilante || "Sin asignar"} · ${puesto.puesto}\n\nSe ocultará para todos los usuarios.`)) {
+                    ctx.hideLine(cliente, puesto);
+                    onClose();
+                  }
+                }}
+              >
+                <Trash2 className="h-4 w-4 mr-1" /> Eliminar registro
+              </Button>
+            )}
           </div>
-          <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs rounded-lg border border-border p-3">
             <Field label="Código" value={puesto.vigilanteCodigo ?? emp?.employeeCode} />
             <Field label="Cédula" value={puesto.vigilanteCedula ?? (emp as any)?.cedula} />
             {emp?.status && <Field label="Estatus" value={emp.status} />}
@@ -924,48 +960,56 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
             {puesto.comentario && <Field label="Comentario" value={puesto.comentario} />}
           </div>
 
-          {puesto.requiereArma && (() => {
-            const ov = puesto.armaSerial ? ctx.overlay[puesto.armaSerial] : undefined;
-            const arma = applyWeaponOverride(puesto.arma, ov);
-            const fotos = ov?.fotosArma || [];
-            const tipo = arma?.tipo || armed?.weaponType || puesto.armaModelo;
-            const serial = arma?.serie || puesto.armaSerial || armed?.weaponSerial;
-            const calibre = displayCaliber(arma?.calibre || armed?.weaponCaliber);
-            const estado = arma?.estatus || armed?.weaponCondition;
-            return (
-              <div className="rounded-lg border border-gold/40 bg-gold/5 p-3 space-y-2">
-                <div className="flex items-center justify-between">
+          {hasWeaponData && (
+            <div className="rounded-lg border border-gold/40 bg-gold/5 p-4 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
                   <p className="text-xs font-semibold inline-flex items-center gap-1 text-gold-foreground"><Shield className="h-3.5 w-3.5" /> Arma asignada · Auditoría</p>
-                  <button
-                    onClick={() => { onClose(); ctx.openWeapon(puesto, cliente); }}
-                    className="text-[11px] inline-flex items-center gap-1 text-primary hover:underline"
-                    title="Ver / editar arma"
-                  >
-                    <Pencil className="h-3 w-3" /> Ver / editar
-                  </button>
+                  <p className="text-[11px] text-muted-foreground">Datos cruzados desde GENERAL, Personal Armado y la capa editable de la intranet.</p>
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <Field label="Tipo de Arma" value={tipo} />
-                  <Field label="Serial" value={serial} />
-                  <Field label="Marca" value={arma?.marca} />
-                  <Field label="Calibre" value={calibre} />
-                  <Field label="Categoría" value={arma?.categoria} />
-                  <Field label="No. Licencia" value={arma?.noLicencia} />
-                  <Field label="Estado Arma" value={estado} />
-                  <Field label="Propietario" value={arma?.propietario} />
-                  {armed?.ammunitionCount != null && <Field label="Munición" value={`${armed.ammunitionCount} cápsulas`} />}
-                  {armed?.province && <Field label="Provincia" value={armed.province} />}
-                </div>
-                {fotos.length > 0 && (
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    {fotos.map((u) => (
-                      <img key={u} src={getFileUrl(u)} alt="Arma" className="h-16 w-16 object-cover rounded border" />
-                    ))}
-                  </div>
-                )}
+                <Button size="sm" variant="outline" className="h-8 shrink-0" onClick={() => { onClose(); ctx.openWeapon(puesto, cliente); }}>
+                  <Pencil className="h-3.5 w-3.5 mr-1" /> {ctx.canEdit ? "Editar arma" : "Ver arma"}
+                </Button>
               </div>
-            );
-          })()}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                <Field label="Tipo de Arma" value={tipoArma} />
+                <Field label="Serial" value={serialArma} />
+                <Field label="Marca" value={arma?.marca} />
+                <Field label="Calibre" value={calibreArma} />
+                <Field label="Categoría" value={arma?.categoria} />
+                <Field label="No. Licencia" value={arma?.noLicencia} />
+                <Field label="Estado Arma" value={estadoArma} />
+                <Field label="Propietario" value={arma?.propietario} />
+                {armed?.ammunitionCount != null && <Field label="Munición" value={`${armed.ammunitionCount} cápsulas`} />}
+                {armed?.province && <Field label="Provincia" value={armed.province} />}
+              </div>
+              <div className="space-y-2">
+                <p className="text-[11px] font-semibold text-muted-foreground inline-flex items-center gap-1"><Camera className="h-3.5 w-3.5" /> Fotos y licencia</p>
+                <div className="flex flex-wrap gap-2">
+                  {fotosArma.map((u) => (
+                    <button key={u} onClick={() => setLightbox(getFileUrl(u))} className="h-20 w-20 overflow-hidden rounded-md border border-border bg-background hover:border-primary" title="Ver foto del arma">
+                      <img src={getFileUrl(u)} alt="Foto del arma" className="h-full w-full object-cover" />
+                    </button>
+                  ))}
+                  {fotoLicenciaFrente && (
+                    <button onClick={() => setLightbox(getFileUrl(fotoLicenciaFrente))} className="h-20 w-28 overflow-hidden rounded-md border border-border bg-background hover:border-primary" title="Ver licencia frente">
+                      <img src={getFileUrl(fotoLicenciaFrente)} alt="Licencia frente" className="h-full w-full object-cover" />
+                    </button>
+                  )}
+                  {fotoLicenciaDorso && (
+                    <button onClick={() => setLightbox(getFileUrl(fotoLicenciaDorso))} className="h-20 w-28 overflow-hidden rounded-md border border-border bg-background hover:border-primary" title="Ver licencia dorso">
+                      <img src={getFileUrl(fotoLicenciaDorso)} alt="Licencia dorso" className="h-full w-full object-cover" />
+                    </button>
+                  )}
+                  {!fotosArma.length && !fotoLicenciaFrente && !fotoLicenciaDorso && (
+                    <button onClick={() => { onClose(); ctx.openWeapon(puesto, cliente); }} className="h-20 min-w-[160px] rounded-md border border-dashed border-border px-3 text-[11px] text-muted-foreground hover:border-primary hover:text-primary">
+                      <Upload className="h-4 w-4 mx-auto mb-1" /> Agregar fotos del arma
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -989,6 +1033,12 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
           <Button variant="outline" onClick={onClose}>Cerrar</Button>
         </DialogFooter>
       </DialogContent>
+      {lightbox && (
+        <div className="fixed inset-0 z-[100] bg-foreground/80 flex items-center justify-center p-6 cursor-zoom-out" onClick={() => setLightbox(null)}>
+          <img src={lightbox} alt="Vista ampliada del arma" className="max-h-[90vh] max-w-[90vw] object-contain rounded shadow-2xl" />
+          <button className="absolute top-4 right-4 text-background" onClick={() => setLightbox(null)}><X className="h-6 w-6" /></button>
+        </div>
+      )}
     </Dialog>
   );
 }
@@ -1097,19 +1147,26 @@ function openPrint(html: string) {
   setTimeout(() => w.print(), 400);
 }
 const escHtml = (v: unknown) => String(v ?? "—").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
-const fichaStyles = `body{font-family:'Segoe UI',Arial,sans-serif;color:#1f2937;padding:32px;max-width:760px;margin:0 auto}h1{font-size:20px;border-bottom:3px solid #b8860b;padding-bottom:8px;margin-bottom:16px}.row{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid #eee}.lbl{width:160px;color:#6b7280;font-size:12px;text-transform:uppercase}.val{font-weight:600}
-.header{display:flex;align-items:center;gap:16px;margin-bottom:18px}.avatar-img,.avatar-fb{width:64px;height:64px;border-radius:50%;object-fit:cover}.avatar-fb{background:#e5e7eb;color:#374151;font-weight:700;font-size:22px;display:flex;align-items:center;justify-content:center}.name{font-size:18px;font-weight:700;line-height:1.2}.sub{font-size:12px;color:#6b7280}
+const fichaStyles = `body{font-family:'Segoe UI',Arial,sans-serif;color:#1f2937;padding:28px;max-width:820px;margin:0 auto;background:#fff}h1{font-size:20px;border-bottom:3px solid #b8860b;padding-bottom:8px;margin-bottom:16px}.row{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid #eee}.lbl{width:160px;color:#6b7280;font-size:12px;text-transform:uppercase}.val{font-weight:600}
+.header{display:flex;align-items:center;gap:16px;margin-bottom:18px;padding:14px;border:1px solid #e5e7eb;border-radius:10px;background:#f9fafb}.avatar-img,.avatar-fb{width:72px;height:72px;border-radius:50%;object-fit:cover}.avatar-fb{background:#111827;color:#fbbf24;font-weight:700;font-size:22px;display:flex;align-items:center;justify-content:center}.name{font-size:20px;font-weight:800;line-height:1.2}.sub{font-size:12px;color:#6b7280;margin-top:3px}.chips{margin-top:8px}.chip{display:inline-block;border:1px solid #d1d5db;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:700;margin-right:5px}.chip.gold{background:#fbbf24;border-color:#f59e0b;color:#111827}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;margin-bottom:8px}.cell{display:flex;flex-direction:column;border-bottom:1px solid #f0f0f0;padding-bottom:4px}.cl{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#9ca3af}.cv{font-weight:600;font-size:13px}
-.section{margin-top:18px;padding:12px 14px;border:1px solid #e5e7eb;border-radius:8px}.section.gold{border-color:#e2c275;background:#fdf8ec}.sec-title{font-size:12px;font-weight:700;text-transform:uppercase;color:#92400e;margin:0 0 10px}.mov{font-size:12px;padding:4px 0;border-bottom:1px solid #f0f0f0}.mov-d{color:#9ca3af;margin-right:8px}.mov-m{color:#6b7280}.empty{font-size:12px;color:#9ca3af;font-style:italic;margin:0}`;
+.section{margin-top:18px;padding:12px 14px;border:1px solid #e5e7eb;border-radius:8px}.section.gold{border-color:#e2c275;background:#fdf8ec}.sec-title{font-size:12px;font-weight:800;text-transform:uppercase;color:#92400e;margin:0 0 10px}.photos{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.photos img{width:92px;height:72px;object-fit:cover;border:1px solid #e5e7eb;border-radius:6px}.mov{font-size:12px;padding:4px 0;border-bottom:1px solid #f0f0f0}.mov-d{color:#9ca3af;margin-right:8px}.mov-m{color:#6b7280}.empty{font-size:12px;color:#9ca3af;font-style:italic;margin:0}`;
 function rowHtml(l: string, v: unknown) { return `<div class="row"><span class="lbl">${escHtml(l)}</span><span class="val">${escHtml(v)}</span></div>`; }
 
 function printAgentFicha(
   p: GeneralExpedientePuesto,
   c: GeneralExpedienteCliente,
-  extra?: { emp?: any; armed?: any; photo?: string; movs?: ExpedienteMovement[] },
+  extra?: { emp?: any; armed?: any; photo?: string; movs?: ExpedienteMovement[]; arma?: GeneralWeaponDetail | null; fotosArma?: string[] },
 ) {
   const emp = extra?.emp;
   const armed = extra?.armed;
+  const arma = extra?.arma || p.arma;
+  const weaponType = arma?.tipo || armed?.weaponType || p.armaModelo;
+  const weaponSerial = arma?.serie || p.armaSerial || armed?.weaponSerial;
+  const weaponCaliber = displayCaliber(arma?.calibre || armed?.weaponCaliber);
+  const weaponStatus = arma?.estatus || armed?.weaponCondition;
+  const weaponPhotos = (extra?.fotosArma || []).map((u) => getFileUrl(u));
+  const hasWeaponData = p.requiereArma || !!weaponSerial || !!weaponType || !!arma || !!armed;
   const movs = extra?.movs || [];
   const initials = (p.vigilante || "?").split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("");
   const photoHtml = extra?.photo
@@ -1130,21 +1187,27 @@ function printAgentFicha(
     cell("Puesto", p.puesto),
     cell("Horas", p.horas + "h"),
     cell("Incentivo", p.incentivo ? "RD$ " + p.incentivo : "—"),
-    p.requiereArma ? cell("Arma asignada", [p.arma?.tipo, p.armaSerial].filter(Boolean).join(" · ")) : "",
+    hasWeaponData ? cell("Arma asignada", [weaponType, weaponSerial].filter(Boolean).join(" · ")) : "",
     p.comentario ? cell("Comentario", p.comentario) : "",
   ].join("");
 
-  const armedHtml = armed
+  const weaponHtml = hasWeaponData
     ? `<div class="section gold">
         <p class="sec-title">Personal Armado · Auditoría</p>
         <div class="grid">
-          ${cell("Tipo de Arma", armed.weaponType)}
-          ${cell("Serial", armed.weaponSerial)}
-          ${cell("Munición", displayCaliber(armed.weaponCaliber) + (armed.ammunitionCount != null ? ` (${armed.ammunitionCount} cápsulas)` : ""))}
-          ${cell("Estado Arma", armed.weaponCondition)}
-          ${cell("Cliente / Puesto", [armed.client, armed.location].filter(Boolean).join(" · "))}
-          ${cell("Provincia", armed.province)}
+          ${cell("Tipo de Arma", weaponType)}
+          ${cell("Serial", weaponSerial)}
+          ${cell("Marca", arma?.marca || armed?.weaponBrand)}
+          ${cell("Calibre", weaponCaliber)}
+          ${cell("Categoría", arma?.categoria)}
+          ${cell("No. Licencia", arma?.noLicencia || armed?.licenseNumber)}
+          ${cell("Estado Arma", weaponStatus)}
+          ${cell("Propietario", arma?.propietario)}
+          ${armed?.ammunitionCount != null ? cell("Munición", `${armed.ammunitionCount} cápsulas`) : ""}
+          ${cell("Cliente / Puesto", [c.nombre, p.puesto].filter(Boolean).join(" · "))}
+          ${armed?.province ? cell("Provincia", armed.province) : ""}
         </div>
+        ${weaponPhotos.length ? `<div class="photos">${weaponPhotos.map((u) => `<img src="${escHtml(u)}" alt="Foto del arma" />`).join("")}</div>` : ""}
       </div>`
     : "";
 
@@ -1162,10 +1225,11 @@ function printAgentFicha(
       <div>
         <div class="name">${escHtml(p.vigilante || "Sin asignar")}</div>
         <div class="sub">${escHtml((emp?.position || "Oficial de Seguridad") + " · " + (emp?.department || "Safeone"))}</div>
+        <div class="chips">${hasWeaponData ? `<span class="chip gold">Arma: ${escHtml([weaponType, weaponSerial].filter(Boolean).join(" · ") || "Asignada")}</span>` : ""}${p.novedad ? `<span class="chip">Novedad</span>` : ""}</div>
       </div>
     </div>
     <div class="grid">${datosGrid}</div>
-    ${armedHtml}
+    ${weaponHtml}
     ${movsHtml}
   </body></html>`);
 }
