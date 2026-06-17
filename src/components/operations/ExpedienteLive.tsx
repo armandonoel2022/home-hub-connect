@@ -747,7 +747,12 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
             <div className="flex flex-wrap gap-2">
               {fotos.map((u) => (
                 <div key={u} className="relative">
-                  <img src={getFileUrl(u)} alt="Arma" className="h-20 w-20 object-cover rounded border" />
+                  <img
+                    src={getFileUrl(u)}
+                    alt="Arma"
+                    className="h-20 w-20 object-cover rounded border cursor-zoom-in hover:opacity-90"
+                    onClick={() => setLightbox(getFileUrl(u))}
+                  />
                   {ctx.canEdit && (
                     <button onClick={() => removePhoto(u, "arma")} className="absolute -top-2 -right-2 bg-destructive text-white rounded-full p-0.5">
                       <X className="h-3 w-3" />
