@@ -123,8 +123,23 @@ export async function generateExpedientePDF(client: OpsClient, opts?: { open?: b
   });
 
   const fileName = `Expediente-${client.nombre.replace(/[^a-z0-9]+/gi, "_")}.pdf`;
+
   if (opts?.open) {
-    pdf.output("dataurlnewwindow");
+    // Abrir en pestaña nueva con blob URL (más fiable que dataurlnewwindow,
+    // que suele ser bloqueado por el navegador dentro de iframes/preview).
+    try {
+      const blob = pdf.output("blob");
+      const url = URL.createObjectURL(blob);
+      const win = window.open(url, "_blank");
+      if (!win) {
+        // Popup bloqueado: descargar como fallback.
+        pdf.save(fileName);
+      }
+      // Liberar el object URL después de un tiempo prudente.
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      pdf.save(fileName);
+    }
   } else {
     pdf.save(fileName);
   }
