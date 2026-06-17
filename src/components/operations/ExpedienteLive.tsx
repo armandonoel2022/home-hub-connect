@@ -787,7 +787,7 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
                     onClick={() => setLightbox(getFileUrl(u))}
                   />
                   {ctx.canEdit && (
-                    <button onClick={() => removePhoto(u, "arma")} className="absolute -top-2 -right-2 bg-destructive text-white rounded-full p-0.5">
+                    <button onClick={() => removePhoto(u, "arma")} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5">
                       <X className="h-3 w-3" />
                     </button>
                   )}
@@ -820,7 +820,7 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
                           onClick={() => setLightbox(getFileUrl(url))}
                         />
                         {ctx.canEdit && (
-                          <button onClick={() => removePhoto(url, kind)} className="absolute -top-2 -right-2 bg-destructive text-white rounded-full p-0.5">
+                          <button onClick={() => removePhoto(url, kind)} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5">
                             <X className="h-3 w-3" />
                           </button>
                         )}
@@ -865,7 +865,7 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
       </DialogContent>
       {lightbox && (
         <div
-          className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-6 cursor-zoom-out"
+          className="fixed inset-0 z-[100] bg-foreground/80 flex items-center justify-center p-6 cursor-zoom-out"
           onClick={() => setLightbox(null)}
         >
           <img src={lightbox} alt="Vista ampliada" className="max-h-[90vh] max-w-[90vw] object-contain rounded shadow-2xl" />
@@ -1034,7 +1034,7 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
         </DialogFooter>
       </DialogContent>
       {lightbox && (
-        <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-6 cursor-zoom-out" onClick={() => setLightbox(null)}>
+        <div className="fixed inset-0 z-[100] bg-foreground/80 flex items-center justify-center p-6 cursor-zoom-out" onClick={() => setLightbox(null)}>
           <img src={lightbox} alt="Vista ampliada del arma" className="max-h-[90vh] max-w-[90vw] object-contain rounded shadow-2xl" />
           <button className="absolute top-4 right-4 text-background" onClick={() => setLightbox(null)}><X className="h-6 w-6" /></button>
         </div>
