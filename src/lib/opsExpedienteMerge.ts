@@ -122,6 +122,7 @@ export function mergeOperacionesIntoExpediente(
       const info = opsIdx.get(k);
       if (!info) return;
       usedOps.add(k);
+      if (!p.localidad && info.localidad) p.localidad = info.localidad;
       if (!p.armaSerial && info.weapons.length > 0) {
         const w = info.weapons.find((x) => nkey(x.vigilante) === nkey(p.vigilante)) || info.weapons[0];
         p.requiereArma = true;
