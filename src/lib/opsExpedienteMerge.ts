@@ -5,12 +5,51 @@
 
 import type {
   GeneralExpediente, GeneralExpedienteCliente, GeneralExpedientePuesto,
+  GeneralWeaponDetail, GeneralWeapon,
 } from "@/lib/api";
 import type { ArmedPersonnel } from "@/lib/types";
 import type { WorkPost } from "@/lib/postsData";
 
 function nkey(s: string | null | undefined): string {
   return (s || "").trim().toLowerCase();
+}
+
+// Normaliza un serial para comparar (sin espacios, mayúsculas, sin ceros guía).
+function serialKey(s: string | null | undefined): string {
+  const t = (s || "").trim().toUpperCase().replace(/\s+/g, "");
+  return t.replace(/^0+/, "") || t;
+}
+
+// Construye un mapa serial→arma desde el catálogo Armamento de GENERAL (SQL).
+function buildWeaponSerialMap(weapons: GeneralWeapon[]): Map<string, GeneralWeapon> {
+  const m = new Map<string, GeneralWeapon>();
+  (weapons || []).forEach((w) => {
+    const k = serialKey(w.serie);
+    if (k && !m.has(k)) m.set(k, w);
+  });
+  return m;
+}
+
+// Enriquece un objeto arma con los datos de SQL (marca, categoría, calibre,
+// tipo, licencia, estatus, propietario) cuando falten, emparejando por serial.
+function enrichArmaFromSql(
+  arma: GeneralWeaponDetail | null,
+  sqlMap: Map<string, GeneralWeapon>,
+): GeneralWeaponDetail | null {
+  if (!arma || !arma.serie) return arma;
+  const w = sqlMap.get(serialKey(arma.serie));
+  if (!w) return arma;
+  return {
+    ...arma,
+    oid: arma.oid ?? (w.oid != null ? Number(w.oid) : null),
+    marca: arma.marca || w.marca || null,
+    tipo: arma.tipo || w.tipo || null,
+    calibre: arma.calibre || w.calibre || null,
+    categoria: arma.categoria || w.categoria || null,
+    noLicencia: arma.noLicencia || w.noLicencia || w.registro || null,
+    estatus: arma.estatus || w.estatus || null,
+    propietario: arma.propietario || w.propietario || null,
+  };
 }
 
 interface OpsWeapon { serial: string; tipo: string; modelo: string; vigilante: string; }
