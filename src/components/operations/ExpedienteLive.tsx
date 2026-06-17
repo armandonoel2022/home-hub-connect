@@ -25,6 +25,7 @@ import {
   Building2, MapPin, Crosshair, Users, ChevronDown, ChevronRight, RefreshCw,
   AlertTriangle, FileText, Phone, Mail, ExternalLink, ShieldCheck, ShieldOff, ListChecks,
   Download, Pencil, ArrowRightLeft, Upload, Trash2, IdCard, User, X, Shield,
+  Camera, Eye,
 } from "lucide-react";
 
 type FilterKey = "todos" | "armas" | "sinArma" | "novedad";
@@ -562,10 +563,11 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
                                 ctx.hideMany(client, pg.rows);
                               }
                             }}
-                            className="shrink-0 text-muted-foreground hover:text-destructive p-1"
+                            className="shrink-0 inline-flex items-center gap-1 rounded-md border border-destructive/30 px-2 py-1 text-[11px] font-medium text-destructive hover:bg-destructive/10"
                             title="Eliminar puesto completo"
                           >
                             <Trash2 className="h-4 w-4" />
+                            Eliminar puesto
                           </button>
                         )}
                       </div>
@@ -595,9 +597,10 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
                               {p.requiereArma && (
                                 <button
                                   onClick={() => ctx.openWeapon(p, client)}
-                                  className="inline-flex items-center gap-1 shrink-0 max-w-[220px] truncate hover:text-primary"
+                                  className="inline-flex items-center gap-1 shrink-0 max-w-[260px] rounded-md border border-border px-2 py-1 font-medium hover:border-primary hover:text-primary"
                                   title="Ver / editar arma"
                                 >
+                                  {ctx.canEdit ? <Pencil className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                                   <span className="truncate">
                                     {[arma?.tipo || p.armaModelo, p.armaSerial].filter(Boolean).join(" · ") || "Armado"}
                                   </span>
@@ -613,10 +616,11 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
                                       ctx.hideLine(client, p);
                                     }
                                   }}
-                                  className="shrink-0 text-muted-foreground hover:text-destructive"
+                                  className="shrink-0 inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                                   title="Eliminar registro (duplicado/erróneo)"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
+                                  Eliminar
                                 </button>
                               )}
                             </div>
