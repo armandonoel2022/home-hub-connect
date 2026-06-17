@@ -64,6 +64,28 @@ const LoanControl = () => {
 
   const loans = useMemo(() => getApprovedLoans(), [tick]);
 
+  const allLoanRequests = useMemo(() => getAllLoanRequests(), [tick]);
+  const tracked = useMemo(() => {
+    return allLoanRequests.filter((r) => {
+      if (trackFilter === "all") return true;
+      if (trackFilter === "Aprobada") return r.status === "Aprobada";
+      if (trackFilter === "Rechazada") return r.status === "Rechazada";
+      return r.status !== "Aprobada" && r.status !== "Rechazada"; // en proceso
+    });
+  }, [allLoanRequests, trackFilter]);
+  const trackCounts = useMemo(() => ({
+    all: allLoanRequests.length,
+    proceso: allLoanRequests.filter((r) => r.status !== "Aprobada" && r.status !== "Rechazada").length,
+    Aprobada: allLoanRequests.filter((r) => r.status === "Aprobada").length,
+    Rechazada: allLoanRequests.filter((r) => r.status === "Rechazada").length,
+  }), [allLoanRequests]);
+
+  const downloadAmortization = (r: HRRequest) => {
+    generateAmortizationPDF(amortizationInputFromRequest(r)).catch(() => {
+      toast({ title: "No se pudo generar la amortización", variant: "destructive" });
+    });
+  };
+
   const filtered = useMemo(() => {
     const q = filter.toLowerCase();
     return loans.filter((l) =>
