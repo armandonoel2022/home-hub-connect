@@ -24,6 +24,7 @@ import type { ArmedPersonnel, UniformAssignment, FlashlightItem } from "@/lib/ty
 import { uniformAssignmentsApi, flashlightsApi } from "@/lib/api";
 import { equipmentStatusColors, phoneStatusColors, EQUIPMENT_STATUSES, PHONE_STATUSES } from "@/lib/deviceAssignment";
 import { HardDrive, Smartphone, Shirt, Flashlight } from "lucide-react";
+import { displayCaliber } from "@/lib/expedienteHelpers";
 
 function resolvePhoto(url?: string | null): string | undefined {
   if (!url) return undefined;
