@@ -555,6 +555,19 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
                             {opsOrigin && <Badge variant="secondary" className="text-[10px]">Operaciones</Badge>}
                           </div>
                         </button>
+                        {ctx.canEdit && (
+                          <button
+                            onClick={() => {
+                              if (confirm(`¿Eliminar el puesto completo "${pg.nombre}" de ${loc.nombre}?\n\nSe ocultarán sus ${pg.rows.length} registro(s) para todos los usuarios (se puede restaurar desde el archivo de auditoría).`)) {
+                                ctx.hideMany(client, pg.rows);
+                              }
+                            }}
+                            className="shrink-0 text-muted-foreground hover:text-destructive p-1"
+                            title="Eliminar puesto completo"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
 
                       <div className="text-[11px] text-muted-foreground flex items-center gap-1">
