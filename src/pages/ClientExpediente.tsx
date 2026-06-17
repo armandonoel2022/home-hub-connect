@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import ExpedienteLive from "@/components/operations/ExpedienteLive";
+import VaultView from "@/components/operations/VaultView";
 
 function mapsHref(coord: string): string | null {
   if (!coord) return null;
