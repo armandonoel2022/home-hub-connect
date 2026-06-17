@@ -26,6 +26,7 @@ import {
   Crosshair, Users, Pencil, ClipboardList, ExternalLink, RefreshCw, FolderTree,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import ExpedienteLive from "@/components/operations/ExpedienteLive";
 
 function mapsHref(coord: string): string | null {
   if (!coord) return null;
