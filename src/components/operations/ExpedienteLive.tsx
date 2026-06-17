@@ -780,7 +780,12 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
                     <p className="text-[10px] uppercase text-muted-foreground">{kind === "licenciaFrente" ? "Frente" : "Dorso"}</p>
                     {url ? (
                       <div className="relative">
-                        <img src={getFileUrl(url)} alt="Licencia" className="h-24 w-36 object-cover rounded border" />
+                        <img
+                          src={getFileUrl(url)}
+                          alt="Licencia"
+                          className="h-24 w-36 object-cover rounded border cursor-zoom-in hover:opacity-90"
+                          onClick={() => setLightbox(getFileUrl(url))}
+                        />
                         {ctx.canEdit && (
                           <button onClick={() => removePhoto(url, kind)} className="absolute -top-2 -right-2 bg-destructive text-white rounded-full p-0.5">
                             <X className="h-3 w-3" />
