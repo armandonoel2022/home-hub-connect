@@ -881,6 +881,7 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
 }) {
   const [movs, setMovs] = useState<ExpedienteMovement[]>([]);
   const [showTransfer, setShowTransfer] = useState(false);
+  const [lightbox, setLightbox] = useState<string | null>(null);
   const empId = puesto.vigilanteCodigo ?? puesto.vigilanteOID ?? "";
 
   useEffect(() => {
@@ -891,25 +892,53 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
   const match = ctx.matchEmployee(puesto);
   const emp = match.emp;
   const armed = match.armed;
-  const printFicha = () => printAgentFicha(puesto, cliente, { emp, armed, photo: match.photo, movs });
   const initials = (puesto.vigilante || "?").split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("");
+  const weaponKey = puesto.armaSerial || armed?.weaponSerial || "";
+  const ov = weaponKey ? ctx.overlay[weaponKey] : undefined;
+  const arma = applyWeaponOverride(puesto.arma, ov);
+  const fotosArma = ov?.fotosArma || [];
+  const fotoLicenciaFrente = ov?.fotoLicenciaFrente || null;
+  const fotoLicenciaDorso = ov?.fotoLicenciaDorso || null;
+  const tipoArma = arma?.tipo || armed?.weaponType || puesto.armaModelo;
+  const serialArma = arma?.serie || puesto.armaSerial || armed?.weaponSerial;
+  const calibreArma = displayCaliber(arma?.calibre || armed?.weaponCaliber);
+  const estadoArma = arma?.estatus || armed?.weaponCondition;
+  const hasWeaponData = puesto.requiereArma || !!serialArma || !!tipoArma || !!arma || !!armed;
+  const printFicha = () => printAgentFicha(puesto, cliente, { emp, armed, photo: match.photo, movs, arma, fotosArma });
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><User className="h-5 w-5 text-primary" /> Perfil 360° del Vigilante</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3 text-sm">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-16 w-16">
+        <div className="space-y-4 text-sm">
+          <div className="rounded-lg border border-border bg-muted/25 p-4 flex items-center gap-4">
+            <Avatar className="h-20 w-20 border-2 border-gold/30">
               {match.photo && <AvatarImage src={match.photo} alt={puesto.vigilante} />}
-              <AvatarFallback className="bg-muted">{initials}</AvatarFallback>
+              <AvatarFallback className="bg-secondary text-secondary-foreground text-lg font-bold">{initials}</AvatarFallback>
             </Avatar>
-            <div className="min-w-0">
-              <h2 className="font-heading text-lg font-bold leading-tight truncate">{puesto.vigilante || "Sin asignar"}</h2>
+            <div className="min-w-0 flex-1">
+              <h2 className="font-heading text-xl font-bold leading-tight truncate">{puesto.vigilante || "Sin asignar"}</h2>
               <p className="text-xs text-muted-foreground truncate">{emp?.position || "Oficial de Seguridad"} · {emp?.department || "Safeone"}</p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {puesto.requiereArma && <Badge className="gap-1 text-[10px]"><Crosshair className="h-3 w-3" /> Requiere arma</Badge>}
+                {serialArma && <Badge variant="outline" className="gap-1 text-[10px]"><Shield className="h-3 w-3" /> {serialArma}</Badge>}
+                {puesto.novedad && <Badge variant="destructive" className="text-[10px]">Novedad</Badge>}
+              </div>
             </div>
+            {ctx.canEdit && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="shrink-0 border-destructive/30 text-destructive hover:bg-destructive/10"
+                onClick={() => {
+                  if (confirm(`¿Eliminar este registro del expediente?\n\n${puesto.vigilante || "Sin asignar"} · ${puesto.puesto}\n\nSe ocultará para todos los usuarios.`)) ctx.hideLine(cliente, puesto);
+                }}
+              >
+                <Trash2 className="h-4 w-4 mr-1" /> Eliminar registro
+              </Button>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs">
             <Field label="Código" value={puesto.vigilanteCodigo ?? emp?.employeeCode} />
