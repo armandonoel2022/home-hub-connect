@@ -11,19 +11,31 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
 import {
-  getApprovedLoans, loanPrincipal, loanTotalToPay, loanPaid, loanBalance,
+  getApprovedLoans, getAllLoanRequests, loanPrincipal, loanTotalToPay, loanPaid, loanBalance,
   registerLoanPayment,
 } from "@/lib/hrRequestService";
+import { generateAmortizationPDF, amortizationInputFromRequest } from "@/lib/loanAmortizationPdf";
 import { generalSqlApi, type GeneralLoan } from "@/lib/api";
-import type { HRRequest } from "@/lib/hrRequestTypes";
-import { Banknote, Wallet, TrendingDown, HandCoins, Plus, Database } from "lucide-react";
+import type { HRRequest, HRRequestStatus } from "@/lib/hrRequestTypes";
+import { Banknote, Wallet, TrendingDown, HandCoins, Plus, Database, FileText, ListChecks } from "lucide-react";
 
 const rd = (n: number) => `RD$${(Math.round(n) || 0).toLocaleString()}`;
+
+const STATUS_BADGE: Record<HRRequestStatus, string> = {
+  "Pendiente Supervisor": "bg-slate-100 text-slate-700 border-slate-200",
+  "Aprobada Supervisor": "bg-blue-100 text-blue-700 border-blue-200",
+  "Pendiente RRHH": "bg-amber-100 text-amber-700 border-amber-200",
+  "Pendiente Gerencia General": "bg-purple-100 text-purple-700 border-purple-200",
+  "Pendiente Aplicación RRHH": "bg-cyan-100 text-cyan-700 border-cyan-200",
+  "Aprobada": "bg-emerald-100 text-emerald-700 border-emerald-200",
+  "Rechazada": "bg-red-100 text-red-700 border-red-200",
+};
 
 const LoanControl = () => {
   const { user } = useAuth();
   const [tick, setTick] = useState(0);
   const [filter, setFilter] = useState("");
+  const [trackFilter, setTrackFilter] = useState<"all" | "proceso" | "Aprobada" | "Rechazada">("all");
   const [payTarget, setPayTarget] = useState<HRRequest | null>(null);
   const [payAmount, setPayAmount] = useState("");
   const [payDate, setPayDate] = useState(new Date().toISOString().slice(0, 10));
@@ -51,6 +63,28 @@ const LoanControl = () => {
   }, []);
 
   const loans = useMemo(() => getApprovedLoans(), [tick]);
+
+  const allLoanRequests = useMemo(() => getAllLoanRequests(), [tick]);
+  const tracked = useMemo(() => {
+    return allLoanRequests.filter((r) => {
+      if (trackFilter === "all") return true;
+      if (trackFilter === "Aprobada") return r.status === "Aprobada";
+      if (trackFilter === "Rechazada") return r.status === "Rechazada";
+      return r.status !== "Aprobada" && r.status !== "Rechazada"; // en proceso
+    });
+  }, [allLoanRequests, trackFilter]);
+  const trackCounts = useMemo(() => ({
+    all: allLoanRequests.length,
+    proceso: allLoanRequests.filter((r) => r.status !== "Aprobada" && r.status !== "Rechazada").length,
+    Aprobada: allLoanRequests.filter((r) => r.status === "Aprobada").length,
+    Rechazada: allLoanRequests.filter((r) => r.status === "Rechazada").length,
+  }), [allLoanRequests]);
+
+  const downloadAmortization = (r: HRRequest) => {
+    generateAmortizationPDF(amortizationInputFromRequest(r)).catch(() => {
+      toast({ title: "No se pudo generar la amortización", variant: "destructive" });
+    });
+  };
 
   const filtered = useMemo(() => {
     const q = filter.toLowerCase();
@@ -106,6 +140,78 @@ const LoanControl = () => {
           <Card className="p-4"><div className="text-xs text-muted-foreground flex items-center gap-1"><TrendingDown className="h-3.5 w-3.5" /> Cobrado</div><div className="text-xl font-bold text-emerald-600">{rd(totals.paid)}</div></Card>
           <Card className="p-4"><div className="text-xs text-muted-foreground">Por cobrar</div><div className="text-xl font-bold text-amber-600">{rd(totals.balance)}</div></Card>
         </div>
+
+        {/* Seguimiento de solicitudes (en proceso, aprobadas y rechazadas) */}
+        <Card className="p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <ListChecks className="h-5 w-5 text-primary" />
+            <div>
+              <h2 className="font-semibold">Seguimiento de solicitudes de préstamo</h2>
+              <p className="text-xs text-muted-foreground">Todas las solicitudes con su estado actual: en proceso, aprobadas y rechazadas.</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {([
+              ["all", `Todas (${trackCounts.all})`],
+              ["proceso", `En proceso (${trackCounts.proceso})`],
+              ["Aprobada", `Aprobadas (${trackCounts.Aprobada})`],
+              ["Rechazada", `Rechazadas (${trackCounts.Rechazada})`],
+            ] as const).map(([key, label]) => (
+              <Button key={key} size="sm" variant={trackFilter === key ? "default" : "outline"} onClick={() => setTrackFilter(key as any)}>
+                {label}
+              </Button>
+            ))}
+          </div>
+          {tracked.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No hay solicitudes para este filtro.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-left text-muted-foreground border-b">
+                    <th className="py-2 pr-2">ID</th>
+                    <th className="py-2 px-2">Empleado</th>
+                    <th className="py-2 px-2">Departamento</th>
+                    <th className="py-2 px-2 text-right">Monto</th>
+                    <th className="py-2 px-2 text-right">Cuota</th>
+                    <th className="py-2 px-2">Estado</th>
+                    <th className="py-2 pl-2 text-right">Amortización</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {tracked.map((r) => {
+                    const d = r.loanDetails;
+                    const amount = d?.approvedAmount ?? d?.amountRequested ?? 0;
+                    const inst = d?.approvedInstallment ?? d?.monthlyInstallment ?? 0;
+                    return (
+                      <tr key={r.id}>
+                        <td className="py-1.5 pr-2 font-mono">{r.id}</td>
+                        <td className="py-1.5 px-2">{r.beneficiaryName || r.requestedByName}</td>
+                        <td className="py-1.5 px-2 text-muted-foreground">{r.department}</td>
+                        <td className="py-1.5 px-2 text-right">{rd(amount)}</td>
+                        <td className="py-1.5 px-2 text-right">{rd(inst)}</td>
+                        <td className="py-1.5 px-2">
+                          <Badge variant="outline" className={`text-[10px] ${STATUS_BADGE[r.status]}`}>{r.status}</Badge>
+                          {r.status === "Rechazada" && r.rejectionReason && (
+                            <div className="text-[10px] text-red-600 mt-0.5 max-w-[200px]">{r.rejectionReason}</div>
+                          )}
+                        </td>
+                        <td className="py-1.5 pl-2 text-right">
+                          {d ? (
+                            <Button size="sm" variant="ghost" className="h-7 gap-1" onClick={() => downloadAmortization(r)}>
+                              <FileText className="h-3.5 w-3.5" /> PDF
+                            </Button>
+                          ) : <span className="text-muted-foreground">—</span>}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+
 
         <Input placeholder="Buscar por empleado, departamento o ID…" value={filter} onChange={(e) => setFilter(e.target.value)} className="max-w-sm" />
 
