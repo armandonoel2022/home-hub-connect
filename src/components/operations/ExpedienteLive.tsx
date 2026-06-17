@@ -856,10 +856,10 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
   }, [empId]);
   const refreshMovs = () => empId && expedienteOverlayApi.movements({ empleado: empId }).then(setMovs).catch(() => {});
 
-  const printFicha = () => printAgentFicha(puesto, cliente);
   const match = ctx.matchEmployee(puesto);
   const emp = match.emp;
   const armed = match.armed;
+  const printFicha = () => printAgentFicha(puesto, cliente, { emp, armed, photo: match.photo, movs });
   const initials = (puesto.vigilante || "?").split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("");
 
   return (
