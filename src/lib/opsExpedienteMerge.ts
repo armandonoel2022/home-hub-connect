@@ -148,6 +148,19 @@ export function mergeOperacionesIntoExpediente(
   const sqlMap = buildWeaponSerialMap(sqlWeapons);
   if (opsIdx.size === 0 && sqlMap.size === 0) return base;
 
+  // Índice de respaldo por vigilante: permite enriquecer un puesto de GENERAL
+  // con el arma que Operaciones tiene para ese mismo vigilante, aunque el
+  // nombre del cliente o del puesto no coincida exactamente entre las fuentes.
+  const opsByVigilante = new Map<string, { weapon: OpsWeapon; key: string }>();
+  opsIdx.forEach((info, key) => {
+    info.weapons.forEach((w) => {
+      const vk = nkey(w.vigilante);
+      if (vk && (w.serial || w.tipo) && !opsByVigilante.has(vk)) {
+        opsByVigilante.set(vk, { weapon: w, key });
+      }
+    });
+  });
+
   // Marca registros de GENERAL.
   base.clientes.forEach((c) => { c.origen = c.origen || "general"; c.puestos.forEach((p) => { p.origen = p.origen || "general"; }); });
 
@@ -173,6 +186,20 @@ export function mergeOperacionesIntoExpediente(
           if (!p.arma && (w.serial || w.tipo)) {
             p.arma = { oid: null, serie: w.serial || null, marca: null, tipo: w.tipo || null, calibre: null, categoria: null, noLicencia: null, estatus: null, propietario: null };
           }
+        }
+      }
+      // Respaldo por vigilante: si GENERAL no trae arma pero Operaciones tiene
+      // un arma para este mismo vigilante, se enriquece igual (cliente/puesto
+      // pueden no coincidir exactamente entre fuentes).
+      if (!p.armaSerial && p.vigilante) {
+        const hit = opsByVigilante.get(nkey(p.vigilante));
+        if (hit && (hit.weapon.serial || hit.weapon.tipo)) {
+          usedOps.add(hit.key);
+          p.requiereArma = true;
+          p.armaSerial = hit.weapon.serial || null;
+          p.armaModelo = hit.weapon.modelo || hit.weapon.tipo || null;
+          p.armaOrigen = "operaciones";
+          p.arma = { oid: null, serie: hit.weapon.serial || null, marca: null, tipo: hit.weapon.tipo || null, calibre: null, categoria: null, noLicencia: null, estatus: null, propietario: null };
         }
       }
       // Completa marca/categoría/calibre/licencia desde el catálogo SQL por serial.
