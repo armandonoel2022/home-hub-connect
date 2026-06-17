@@ -495,7 +495,7 @@ router.get('/expediente', auth, guard, async (req, res) => {
               c.Codigo AS ClienteCodigo, c.Nombre AS ClienteNombre, c.Direccion,
               c.Telefono, c.Email, c.RNC, c.Cedula, c.Contacto, c.Inactivo,
               pu.Codigo AS PuestoCodigo, pu.Descripcion AS PuestoDesc,
-              e.Codigo AS VigilanteCodigo, e.Nombre1, e.Apellido1
+              e.OID AS VigilanteOID, e.Codigo AS VigilanteCodigo, e.Nombre1, e.Apellido1, e.Cedula AS VigilanteCedula
        FROM ReporteDiario rd
        JOIN ReporteDiarioD rdd ON rdd.ReporteDiario = rd.OID
        JOIN ReportePuesto rp ON rp.ReporteDiarioD = rdd.OID AND rp.GCRecord IS NULL
