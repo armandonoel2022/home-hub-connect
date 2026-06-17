@@ -856,10 +856,10 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
   }, [empId]);
   const refreshMovs = () => empId && expedienteOverlayApi.movements({ empleado: empId }).then(setMovs).catch(() => {});
 
-  const printFicha = () => printAgentFicha(puesto, cliente);
   const match = ctx.matchEmployee(puesto);
   const emp = match.emp;
   const armed = match.armed;
+  const printFicha = () => printAgentFicha(puesto, cliente, { emp, armed, photo: match.photo, movs });
   const initials = (puesto.vigilante || "?").split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("");
 
   return (
@@ -1041,17 +1041,76 @@ function openPrint(html: string) {
   setTimeout(() => w.print(), 400);
 }
 const escHtml = (v: unknown) => String(v ?? "—").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
-const fichaStyles = `body{font-family:'Segoe UI',Arial,sans-serif;color:#1f2937;padding:32px}h1{font-size:20px;border-bottom:3px solid #b8860b;padding-bottom:8px}.row{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid #eee}.lbl{width:160px;color:#6b7280;font-size:12px;text-transform:uppercase}.val{font-weight:600}`;
+const fichaStyles = `body{font-family:'Segoe UI',Arial,sans-serif;color:#1f2937;padding:32px;max-width:760px;margin:0 auto}h1{font-size:20px;border-bottom:3px solid #b8860b;padding-bottom:8px;margin-bottom:16px}.row{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid #eee}.lbl{width:160px;color:#6b7280;font-size:12px;text-transform:uppercase}.val{font-weight:600}
+.header{display:flex;align-items:center;gap:16px;margin-bottom:18px}.avatar-img,.avatar-fb{width:64px;height:64px;border-radius:50%;object-fit:cover}.avatar-fb{background:#e5e7eb;color:#374151;font-weight:700;font-size:22px;display:flex;align-items:center;justify-content:center}.name{font-size:18px;font-weight:700;line-height:1.2}.sub{font-size:12px;color:#6b7280}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;margin-bottom:8px}.cell{display:flex;flex-direction:column;border-bottom:1px solid #f0f0f0;padding-bottom:4px}.cl{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#9ca3af}.cv{font-weight:600;font-size:13px}
+.section{margin-top:18px;padding:12px 14px;border:1px solid #e5e7eb;border-radius:8px}.section.gold{border-color:#e2c275;background:#fdf8ec}.sec-title{font-size:12px;font-weight:700;text-transform:uppercase;color:#92400e;margin:0 0 10px}.mov{font-size:12px;padding:4px 0;border-bottom:1px solid #f0f0f0}.mov-d{color:#9ca3af;margin-right:8px}.mov-m{color:#6b7280}.empty{font-size:12px;color:#9ca3af;font-style:italic;margin:0}`;
 function rowHtml(l: string, v: unknown) { return `<div class="row"><span class="lbl">${escHtml(l)}</span><span class="val">${escHtml(v)}</span></div>`; }
 
-function printAgentFicha(p: GeneralExpedientePuesto, c: GeneralExpedienteCliente) {
+function printAgentFicha(
+  p: GeneralExpedientePuesto,
+  c: GeneralExpedienteCliente,
+  extra?: { emp?: any; armed?: any; photo?: string; movs?: ExpedienteMovement[] },
+) {
+  const emp = extra?.emp;
+  const armed = extra?.armed;
+  const movs = extra?.movs || [];
+  const initials = (p.vigilante || "?").split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("");
+  const photoHtml = extra?.photo
+    ? `<img src="${escHtml(extra.photo)}" alt="" class="avatar-img" />`
+    : `<div class="avatar-fb">${escHtml(initials)}</div>`;
+
+  const cell = (l: string, v: unknown) => `<div class="cell"><span class="cl">${escHtml(l)}</span><span class="cv">${escHtml(v)}</span></div>`;
+
+  const datosGrid = [
+    cell("Código", p.vigilanteCodigo ?? emp?.employeeCode),
+    cell("Cédula", p.vigilanteCedula ?? emp?.cedula),
+    emp?.status ? cell("Estatus", emp.status) : "",
+    emp?.category ? cell("Categoría", emp.category) : "",
+    emp?.payrollType ? cell("Nómina", emp.payrollType) : "",
+    p.vigilanteFechaNacimiento ? cell("Nacimiento", new Date(p.vigilanteFechaNacimiento).toLocaleDateString("es-DO")) : "",
+    p.vigilanteEdad != null ? cell("Edad", p.vigilanteEdad + " años") : "",
+    cell("Cliente", c.nombre),
+    cell("Puesto", p.puesto),
+    cell("Horas", p.horas + "h"),
+    cell("Incentivo", p.incentivo ? "RD$ " + p.incentivo : "—"),
+    p.requiereArma ? cell("Arma asignada", [p.arma?.tipo, p.armaSerial].filter(Boolean).join(" · ")) : "",
+    p.comentario ? cell("Comentario", p.comentario) : "",
+  ].join("");
+
+  const armedHtml = armed
+    ? `<div class="section gold">
+        <p class="sec-title">Personal Armado · Auditoría</p>
+        <div class="grid">
+          ${cell("Tipo de Arma", armed.weaponType)}
+          ${cell("Serial", armed.weaponSerial)}
+          ${cell("Munición", displayCaliber(armed.weaponCaliber) + (armed.ammunitionCount != null ? ` (${armed.ammunitionCount} cápsulas)` : ""))}
+          ${cell("Estado Arma", armed.weaponCondition)}
+          ${cell("Cliente / Puesto", [armed.client, armed.location].filter(Boolean).join(" · "))}
+          ${cell("Provincia", armed.province)}
+        </div>
+      </div>`
+    : "";
+
+  const movsHtml = `<div class="section">
+      <p class="sec-title">Traslados del personal</p>
+      ${movs.length
+        ? movs.map((m) => `<div class="mov"><span class="mov-d">${escHtml(m.fecha ? new Date(m.fecha).toLocaleDateString("es-DO") : "")}</span><span>${escHtml(m.desde || "—")}</span> &rarr; <span>${escHtml(m.hacia || "—")}</span>${m.motivo ? ` <span class="mov-m">· ${escHtml(m.motivo)}</span>` : ""}</div>`).join("")
+        : `<p class="empty">Sin movimientos registrados.</p>`}
+    </div>`;
+
   openPrint(`<html><head><title>Ficha del Vigilante</title><style>${fichaStyles}</style></head><body>
-    <h1>Ficha del Vigilante</h1>
-    ${rowHtml("Nombre", p.vigilante)}${rowHtml("Código", p.vigilanteCodigo)}${rowHtml("Cédula", p.vigilanteCedula)}
-    ${p.vigilanteFechaNacimiento ? rowHtml("Nacimiento", new Date(p.vigilanteFechaNacimiento).toLocaleDateString("es-DO")) : ""}${p.vigilanteEdad != null ? rowHtml("Edad", p.vigilanteEdad + " años") : ""}
-    ${rowHtml("Cliente", c.nombre)}${rowHtml("Puesto", p.puesto)}${rowHtml("Horas", p.horas + "h")}
-    ${p.requiereArma ? rowHtml("Arma asignada", [p.arma?.tipo, p.armaSerial].filter(Boolean).join(" · ")) : ""}
-    ${p.comentario ? rowHtml("Comentario", p.comentario) : ""}
+    <h1>Perfil 360° del Vigilante</h1>
+    <div class="header">
+      ${photoHtml}
+      <div>
+        <div class="name">${escHtml(p.vigilante || "Sin asignar")}</div>
+        <div class="sub">${escHtml((emp?.position || "Oficial de Seguridad") + " · " + (emp?.department || "Safeone"))}</div>
+      </div>
+    </div>
+    <div class="grid">${datosGrid}</div>
+    ${armedHtml}
+    ${movsHtml}
   </body></html>`);
 }
 function printPostFichaLive(p: GeneralExpedientePuesto, c: GeneralExpedienteCliente, fecha: string) {
