@@ -268,6 +268,7 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
     reloadOverlay: loadOverlay,
     hiddenKeys,
     hideLine,
+    hideMany,
     matchEmployee,
     openWeapon: (p, c) => setWeaponDlg({ p, c }),
     openAgent: (p, c) => setAgentDlg({ p, c }),
