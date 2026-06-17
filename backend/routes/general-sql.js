@@ -529,7 +529,8 @@ router.get('/expediente', auth, guard, async (req, res) => {
               h.OID AS PuestoOID, h.Codigo AS PuestoCodigo, h.Descripcion AS PuestoDesc,
               z.Descripcion AS Zona, t.Descripcion AS Tanda,
               e.OID AS VigilanteOID, e.Codigo AS VigilanteCodigo,
-              e.Nombre1, e.Apellido1, e.Cedula AS VigilanteCedula
+              e.Nombre1, e.Apellido1, e.Cedula AS VigilanteCedula,
+              e.FechaNacimiento AS VigilanteNacimiento
        FROM ReportePuesto rp
        JOIN ReporteDiarioD rd ON rp.ReporteDiarioD = rd.OID
        JOIN ReporteDiario r ON rd.ReporteDiario = r.OID
