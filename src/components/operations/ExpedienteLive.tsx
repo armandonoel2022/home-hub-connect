@@ -1030,6 +1030,12 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
           <Button variant="outline" onClick={onClose}>Cerrar</Button>
         </DialogFooter>
       </DialogContent>
+      {lightbox && (
+        <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-6 cursor-zoom-out" onClick={() => setLightbox(null)}>
+          <img src={lightbox} alt="Vista ampliada del arma" className="max-h-[90vh] max-w-[90vw] object-contain rounded shadow-2xl" />
+          <button className="absolute top-4 right-4 text-white" onClick={() => setLightbox(null)}><X className="h-6 w-6" /></button>
+        </div>
+      )}
     </Dialog>
   );
 }
@@ -1147,7 +1153,7 @@ function rowHtml(l: string, v: unknown) { return `<div class="row"><span class="
 function printAgentFicha(
   p: GeneralExpedientePuesto,
   c: GeneralExpedienteCliente,
-  extra?: { emp?: any; armed?: any; photo?: string; movs?: ExpedienteMovement[] },
+  extra?: { emp?: any; armed?: any; photo?: string; movs?: ExpedienteMovement[]; arma?: GeneralWeaponDetail | null; fotosArma?: string[] },
 ) {
   const emp = extra?.emp;
   const armed = extra?.armed;
