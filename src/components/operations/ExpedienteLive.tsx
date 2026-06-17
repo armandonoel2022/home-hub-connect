@@ -229,7 +229,7 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
     const q = search.toLowerCase().trim();
     return mergedData.clientes
       .map((c) => {
-        let puestos = c.puestos;
+        let puestos = c.puestos.filter((p) => !hiddenKeys.has(lineHideKey(c, p)));
         if (filter === "armas") puestos = puestos.filter((p) => p.requiereArma);
         else if (filter === "sinArma") puestos = puestos.filter((p) => !p.requiereArma);
         else if (filter === "novedad") puestos = puestos.filter((p) => p.novedad);
@@ -242,7 +242,7 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
         String(c.codigo ?? "").includes(q) ||
         c.puestos.some((p) => `${p.vigilante} ${p.armaSerial ?? ""}`.toLowerCase().includes(q)),
       );
-  }, [mergedData, search, filter]);
+  }, [mergedData, search, filter, hiddenKeys]);
 
   const t = mergedData?.totals || {};
 
@@ -251,6 +251,9 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
     canEdit,
     reportDate: data?.fecha || "",
     reloadOverlay: loadOverlay,
+    hiddenKeys,
+    hideLine,
+    matchEmployee,
     openWeapon: (p, c) => setWeaponDlg({ p, c }),
     openAgent: (p, c) => setAgentDlg({ p, c }),
     openPost: (p, c) => setPostDlg({ p, c }),
