@@ -737,7 +737,6 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
           <DialogTitle className="flex items-center gap-2"><User className="h-5 w-5 text-primary" /> {puesto.vigilante}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3 text-sm">
-          <div class="hidden" />
           <div className="grid grid-cols-2 gap-2 text-xs">
             <Field label="Código" value={puesto.vigilanteCodigo} />
             <Field label="Cédula" value={puesto.vigilanteCedula} />
