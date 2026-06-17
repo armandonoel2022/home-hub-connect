@@ -146,11 +146,19 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
 
   const { data: personnel } = useArmedPersonnel();
 
-  // Fusiona GENERAL con Operaciones (Personal Armado + Puestos) y enriquece
-  // las armas con el catálogo Armamento de SQL (marca, categoría, calibre, licencia).
+  // Fuente de verdad: gSafeOne (GENERAL). Si GENERAL responde con datos, se
+  // usa EXCLUSIVAMENTE esa fuente (solo se enriquecen las armas con el catálogo
+  // Armamento de SQL por serial). Operaciones (Personal Armado + Puestos) se usa
+  // únicamente como respaldo cuando GENERAL no está disponible.
   const mergedData = useMemo<GeneralExpediente | null>(() => {
-    if (!data && (!personnel || personnel.length === 0)) return data;
-    return mergeOperacionesIntoExpediente(data, personnel || [], loadPosts(), sqlWeapons);
+    const generalHasData = !!(data && data.clientes && data.clientes.length > 0);
+    if (!generalHasData && (!personnel || personnel.length === 0)) return data;
+    return mergeOperacionesIntoExpediente(
+      data,
+      generalHasData ? [] : (personnel || []),
+      generalHasData ? [] : loadPosts(),
+      sqlWeapons,
+    );
   }, [data, personnel, sqlWeapons]);
 
   const filtered = useMemo<GeneralExpedienteCliente[]>(() => {
