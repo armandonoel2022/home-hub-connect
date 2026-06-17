@@ -35,6 +35,7 @@ const LoanControl = () => {
   const { user } = useAuth();
   const [tick, setTick] = useState(0);
   const [filter, setFilter] = useState("");
+  const [trackFilter, setTrackFilter] = useState<"all" | "proceso" | "Aprobada" | "Rechazada">("all");
   const [payTarget, setPayTarget] = useState<HRRequest | null>(null);
   const [payAmount, setPayAmount] = useState("");
   const [payDate, setPayDate] = useState(new Date().toISOString().slice(0, 10));
