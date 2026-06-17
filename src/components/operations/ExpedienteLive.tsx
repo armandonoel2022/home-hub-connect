@@ -85,6 +85,7 @@ interface LiveCtx {
   reloadOverlay: () => void;
   hiddenKeys: Set<string>;
   hideLine: (cliente: GeneralExpedienteCliente, p: GeneralExpedientePuesto) => void;
+  hideMany: (cliente: GeneralExpedienteCliente, ps: GeneralExpedientePuesto[]) => void;
   matchEmployee: (p: GeneralExpedientePuesto) => EmployeeMatch;
   openWeapon: (p: GeneralExpedientePuesto, cliente: GeneralExpedienteCliente) => void;
   openAgent: (p: GeneralExpedientePuesto, cliente: GeneralExpedienteCliente) => void;
