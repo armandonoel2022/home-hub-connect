@@ -85,6 +85,7 @@ interface LiveCtx {
   reloadOverlay: () => void;
   hiddenKeys: Set<string>;
   hideLine: (cliente: GeneralExpedienteCliente, p: GeneralExpedientePuesto) => void;
+  hideMany: (cliente: GeneralExpedienteCliente, ps: GeneralExpedientePuesto[]) => void;
   matchEmployee: (p: GeneralExpedientePuesto) => EmployeeMatch;
   openWeapon: (p: GeneralExpedientePuesto, cliente: GeneralExpedienteCliente) => void;
   openAgent: (p: GeneralExpedientePuesto, cliente: GeneralExpedienteCliente) => void;
@@ -210,6 +211,19 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
     }
   };
 
+  const hideMany = async (cliente: GeneralExpedienteCliente, ps: GeneralExpedientePuesto[]) => {
+    try {
+      let next: string[] = [];
+      for (const p of ps) {
+        next = await expedienteOverlayApi.hide(lineHideKey(cliente, p));
+      }
+      setHiddenKeys(new Set(next || []));
+      toast({ title: "Puesto eliminado del expediente" });
+    } catch (e) {
+      toast({ title: "No se pudo eliminar", description: String((e as Error)?.message || e), variant: "destructive" });
+    }
+  };
+
   // Fuente de verdad: gSafeOne (GENERAL). Si GENERAL responde con datos, se
   // usa EXCLUSIVAMENTE esa fuente (solo se enriquecen las armas con el catálogo
   // Armamento de SQL por serial). Operaciones (Personal Armado + Puestos) se usa
@@ -254,6 +268,7 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
     reloadOverlay: loadOverlay,
     hiddenKeys,
     hideLine,
+    hideMany,
     matchEmployee,
     openWeapon: (p, c) => setWeaponDlg({ p, c }),
     openAgent: (p, c) => setAgentDlg({ p, c }),
@@ -540,6 +555,19 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
                             {opsOrigin && <Badge variant="secondary" className="text-[10px]">Operaciones</Badge>}
                           </div>
                         </button>
+                        {ctx.canEdit && (
+                          <button
+                            onClick={() => {
+                              if (confirm(`¿Eliminar el puesto completo "${pg.nombre}" de ${loc.nombre}?\n\nSe ocultarán sus ${pg.rows.length} registro(s) para todos los usuarios (se puede restaurar desde el archivo de auditoría).`)) {
+                                ctx.hideMany(client, pg.rows);
+                              }
+                            }}
+                            className="shrink-0 text-muted-foreground hover:text-destructive p-1"
+                            title="Eliminar puesto completo"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
 
                       <div className="text-[11px] text-muted-foreground flex items-center gap-1">
@@ -893,23 +921,51 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
             <Field label="Puesto" value={puesto.puesto} />
             <Field label="Horas" value={`${puesto.horas}h`} />
             <Field label="Incentivo" value={puesto.incentivo ? `RD$ ${puesto.incentivo}` : "—"} />
-            {puesto.requiereArma && <Field label="Arma asignada" value={[puesto.arma?.tipo, puesto.armaSerial].filter(Boolean).join(" · ")} />}
             {puesto.comentario && <Field label="Comentario" value={puesto.comentario} />}
           </div>
 
-          {armed && (
-            <div className="rounded-lg border border-gold/40 bg-gold/5 p-3 space-y-2">
-              <p className="text-xs font-semibold inline-flex items-center gap-1 text-gold-foreground"><Shield className="h-3.5 w-3.5" /> Personal Armado · Auditoría</p>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <Field label="Tipo de Arma" value={armed.weaponType} />
-                <Field label="Serial" value={armed.weaponSerial} />
-                <Field label="Munición" value={`${displayCaliber(armed.weaponCaliber)}${armed.ammunitionCount != null ? ` (${armed.ammunitionCount} cápsulas)` : ""}`} />
-                <Field label="Estado Arma" value={armed.weaponCondition} />
-                <Field label="Cliente / Puesto" value={[armed.client, armed.location].filter(Boolean).join(" · ")} />
-                <Field label="Provincia" value={armed.province} />
+          {puesto.requiereArma && (() => {
+            const ov = puesto.armaSerial ? ctx.overlay[puesto.armaSerial] : undefined;
+            const arma = applyWeaponOverride(puesto.arma, ov);
+            const fotos = ov?.fotosArma || [];
+            const tipo = arma?.tipo || armed?.weaponType || puesto.armaModelo;
+            const serial = arma?.serie || puesto.armaSerial || armed?.weaponSerial;
+            const calibre = displayCaliber(arma?.calibre || armed?.weaponCaliber);
+            const estado = arma?.estatus || armed?.weaponCondition;
+            return (
+              <div className="rounded-lg border border-gold/40 bg-gold/5 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold inline-flex items-center gap-1 text-gold-foreground"><Shield className="h-3.5 w-3.5" /> Arma asignada · Auditoría</p>
+                  <button
+                    onClick={() => { onClose(); ctx.openWeapon(puesto, cliente); }}
+                    className="text-[11px] inline-flex items-center gap-1 text-primary hover:underline"
+                    title="Ver / editar arma"
+                  >
+                    <Pencil className="h-3 w-3" /> Ver / editar
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <Field label="Tipo de Arma" value={tipo} />
+                  <Field label="Serial" value={serial} />
+                  <Field label="Marca" value={arma?.marca} />
+                  <Field label="Calibre" value={calibre} />
+                  <Field label="Categoría" value={arma?.categoria} />
+                  <Field label="No. Licencia" value={arma?.noLicencia} />
+                  <Field label="Estado Arma" value={estado} />
+                  <Field label="Propietario" value={arma?.propietario} />
+                  {armed?.ammunitionCount != null && <Field label="Munición" value={`${armed.ammunitionCount} cápsulas`} />}
+                  {armed?.province && <Field label="Provincia" value={armed.province} />}
+                </div>
+                {fotos.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {fotos.map((u) => (
+                      <img key={u} src={getFileUrl(u)} alt="Arma" className="h-16 w-16 object-cover rounded border" />
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
