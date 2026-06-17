@@ -5,12 +5,51 @@
 
 import type {
   GeneralExpediente, GeneralExpedienteCliente, GeneralExpedientePuesto,
+  GeneralWeaponDetail, GeneralWeapon,
 } from "@/lib/api";
 import type { ArmedPersonnel } from "@/lib/types";
 import type { WorkPost } from "@/lib/postsData";
 
 function nkey(s: string | null | undefined): string {
   return (s || "").trim().toLowerCase();
+}
+
+// Normaliza un serial para comparar (sin espacios, mayúsculas, sin ceros guía).
+function serialKey(s: string | null | undefined): string {
+  const t = (s || "").trim().toUpperCase().replace(/\s+/g, "");
+  return t.replace(/^0+/, "") || t;
+}
+
+// Construye un mapa serial→arma desde el catálogo Armamento de GENERAL (SQL).
+function buildWeaponSerialMap(weapons: GeneralWeapon[]): Map<string, GeneralWeapon> {
+  const m = new Map<string, GeneralWeapon>();
+  (weapons || []).forEach((w) => {
+    const k = serialKey(w.serie);
+    if (k && !m.has(k)) m.set(k, w);
+  });
+  return m;
+}
+
+// Enriquece un objeto arma con los datos de SQL (marca, categoría, calibre,
+// tipo, licencia, estatus, propietario) cuando falten, emparejando por serial.
+function enrichArmaFromSql(
+  arma: GeneralWeaponDetail | null,
+  sqlMap: Map<string, GeneralWeapon>,
+): GeneralWeaponDetail | null {
+  if (!arma || !arma.serie) return arma;
+  const w = sqlMap.get(serialKey(arma.serie));
+  if (!w) return arma;
+  return {
+    ...arma,
+    oid: arma.oid ?? (w.oid != null ? Number(w.oid) : null),
+    marca: arma.marca || w.marca || null,
+    tipo: arma.tipo || w.tipo || null,
+    calibre: arma.calibre || w.calibre || null,
+    categoria: arma.categoria || w.categoria || null,
+    noLicencia: arma.noLicencia || w.noLicencia || w.registro || null,
+    estatus: arma.estatus || w.estatus || null,
+    propietario: arma.propietario || w.propietario || null,
+  };
 }
 
 interface OpsWeapon { serial: string; tipo: string; modelo: string; vigilante: string; }
@@ -99,13 +138,15 @@ export function mergeOperacionesIntoExpediente(
   data: GeneralExpediente | null,
   personnel: ArmedPersonnel[],
   workPosts: WorkPost[],
+  sqlWeapons: GeneralWeapon[] = [],
 ): GeneralExpediente {
   const base: GeneralExpediente = data
     ? { ...data, clientes: data.clientes.map((c) => ({ ...c, puestos: c.puestos.map((p) => ({ ...p })) })) }
     : { fecha: null, clientes: [], totals: {} };
 
   const opsIdx = buildOpsIndex(personnel || [], workPosts || []);
-  if (opsIdx.size === 0) return base;
+  const sqlMap = buildWeaponSerialMap(sqlWeapons);
+  if (opsIdx.size === 0 && sqlMap.size === 0) return base;
 
   // Marca registros de GENERAL.
   base.clientes.forEach((c) => { c.origen = c.origen || "general"; c.puestos.forEach((p) => { p.origen = p.origen || "general"; }); });
@@ -120,18 +161,24 @@ export function mergeOperacionesIntoExpediente(
     c.puestos.forEach((p) => {
       const k = `${nkey(c.nombre)}|${nkey(p.puesto)}`;
       const info = opsIdx.get(k);
-      if (!info) return;
-      usedOps.add(k);
-      if (!p.localidad && info.localidad) p.localidad = info.localidad;
-      if (!p.armaSerial && info.weapons.length > 0) {
-        const w = info.weapons.find((x) => nkey(x.vigilante) === nkey(p.vigilante)) || info.weapons[0];
-        p.requiereArma = true;
-        p.armaSerial = w.serial || null;
-        p.armaModelo = w.modelo || w.tipo || null;
-        p.armaOrigen = "operaciones";
-        if (!p.arma && (w.serial || w.tipo)) {
-          p.arma = { oid: null, serie: w.serial || null, marca: null, tipo: w.tipo || null, calibre: null, categoria: null, noLicencia: null, estatus: null, propietario: null };
+      if (info) {
+        usedOps.add(k);
+        if (!p.localidad && info.localidad) p.localidad = info.localidad;
+        if (!p.armaSerial && info.weapons.length > 0) {
+          const w = info.weapons.find((x) => nkey(x.vigilante) === nkey(p.vigilante)) || info.weapons[0];
+          p.requiereArma = true;
+          p.armaSerial = w.serial || null;
+          p.armaModelo = w.modelo || w.tipo || null;
+          p.armaOrigen = "operaciones";
+          if (!p.arma && (w.serial || w.tipo)) {
+            p.arma = { oid: null, serie: w.serial || null, marca: null, tipo: w.tipo || null, calibre: null, categoria: null, noLicencia: null, estatus: null, propietario: null };
+          }
         }
+      }
+      // Completa marca/categoría/calibre/licencia desde el catálogo SQL por serial.
+      p.arma = enrichArmaFromSql(p.arma, sqlMap);
+      if (p.arma) {
+        p.armaModelo = p.armaModelo || p.arma.marca || p.arma.tipo || null;
       }
     });
   });
@@ -148,10 +195,16 @@ export function mergeOperacionesIntoExpediente(
       clienteByKey.set(nkey(info.cliente), cliente);
       base.clientes.push(cliente);
     }
+    const pushPuesto = (w?: OpsWeapon) => {
+      const puesto = makeOpsPuesto(info, w);
+      puesto.arma = enrichArmaFromSql(puesto.arma, sqlMap);
+      if (puesto.arma) puesto.armaModelo = puesto.armaModelo || puesto.arma.marca || puesto.arma.tipo || null;
+      cliente!.puestos.push(puesto);
+    };
     if (info.weapons.length > 0) {
-      info.weapons.forEach((w) => cliente!.puestos.push(makeOpsPuesto(info, w)));
+      info.weapons.forEach((w) => pushPuesto(w));
     } else {
-      cliente.puestos.push(makeOpsPuesto(info));
+      pushPuesto();
     }
   });
 

@@ -12,6 +12,7 @@ import {
   generalSqlApi, expedienteOverlayApi, getFileUrl,
   type GeneralExpediente, type GeneralExpedienteCliente, type GeneralExpedientePuesto,
   type ExpedienteOverlayMap, type ExpedienteOverlayEntry, type ExpedienteMovement,
+  type GeneralWeapon,
 } from "@/lib/api";
 import { exportToPDF, exportToExcel } from "@/lib/exportUtils";
 import { useArmedPersonnel } from "@/hooks/useApiHooks";
@@ -87,6 +88,7 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [data, setData] = useState<GeneralExpediente | null>(null);
+  const [sqlWeapons, setSqlWeapons] = useState<GeneralWeapon[]>([]);
   const [overlay, setOverlay] = useState<ExpedienteOverlayMap>({});
   const [serverCanEdit, setServerCanEdit] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -136,16 +138,20 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
     generalSqlApi.expedienteDates()
       .then((d) => setAvailableDates((d || []).map(toInputDate)))
       .catch(() => { /* selector opcional */ });
+    generalSqlApi.weapons()
+      .then((w) => setSqlWeapons(w || []))
+      .catch(() => { /* catálogo opcional */ });
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, []);
 
   const { data: personnel } = useArmedPersonnel();
 
-  // Fusiona GENERAL con Operaciones (Personal Armado + Puestos).
+  // Fusiona GENERAL con Operaciones (Personal Armado + Puestos) y enriquece
+  // las armas con el catálogo Armamento de SQL (marca, categoría, calibre, licencia).
   const mergedData = useMemo<GeneralExpediente | null>(() => {
     if (!data && (!personnel || personnel.length === 0)) return data;
-    return mergeOperacionesIntoExpediente(data, personnel || [], loadPosts());
-  }, [data, personnel]);
+    return mergeOperacionesIntoExpediente(data, personnel || [], loadPosts(), sqlWeapons);
+  }, [data, personnel, sqlWeapons]);
 
   const filtered = useMemo<GeneralExpedienteCliente[]>(() => {
     if (!mergedData) return [];

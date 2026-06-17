@@ -1255,9 +1255,10 @@ export interface GeneralLoan {
   meses: number; interes: number; tasaInteres: number;
 }
 export interface GeneralWeapon {
-  oid: number | string; serie?: string | null; modelo?: string | null;
+  oid: number | string; codigo?: string | null; serie?: string | null; modelo?: string | null;
   registro?: string | null; marca?: string | null; calibre?: string | null;
-  tipo?: string | null; estatus?: string | null;
+  tipo?: string | null; categoria?: string | null; noLicencia?: string | null;
+  estatus?: string | null; propietario?: string | null;
 }
 
 // ─── Operaciones: Expediente Digital (clientes, localidades, puestos, reporte diario, bóveda) ───
