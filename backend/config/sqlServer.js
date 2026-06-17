@@ -31,9 +31,10 @@ function isConfigured() {
   return !!(process.env.GENERAL_SQL_HOST && process.env.GENERAL_SQL_DB);
 }
 
-// Solo lectura por ahora. La escritura llegará con tablas staging separadas.
+// Escritura DESHABILITADA por defecto. Para habilitarla se requiere, de forma
+// explícita, la variable de entorno GENERAL_SQL_WRITE=true.
 function writeEnabled() {
-  return false;
+  return String(process.env.GENERAL_SQL_WRITE || 'false').toLowerCase() === 'true';
 }
 
 function loadDriver() {
