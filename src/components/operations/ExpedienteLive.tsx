@@ -601,10 +601,12 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
 
         <div className="space-y-4 text-sm">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+            <Field label="Serie" value={serie} />
             <Field label="Marca" value={puesto.arma?.marca} />
             <Field label="Tipo" value={puesto.arma?.tipo} />
             <Field label="Calibre" value={puesto.arma?.calibre} />
             <Field label="Categoría" value={puesto.arma?.categoria} />
+            <Field label="No. Licencia" value={noLicencia || puesto.arma?.noLicencia} />
             <Field label="Propietario" value={puesto.arma?.propietario} />
             <Field label="Ubicación" value={`${cliente.nombre} · ${puesto.puesto}`} />
             <Field label="Custodio" value={puesto.vigilante} />
