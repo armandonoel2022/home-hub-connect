@@ -12,6 +12,7 @@ import {
   generalSqlApi, expedienteOverlayApi, getFileUrl,
   type GeneralExpediente, type GeneralExpedienteCliente, type GeneralExpedientePuesto,
   type ExpedienteOverlayMap, type ExpedienteOverlayEntry, type ExpedienteMovement,
+  type GeneralWeapon,
 } from "@/lib/api";
 import { exportToPDF, exportToExcel } from "@/lib/exportUtils";
 import { useArmedPersonnel } from "@/hooks/useApiHooks";
