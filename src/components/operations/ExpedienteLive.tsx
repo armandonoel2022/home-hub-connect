@@ -14,6 +14,9 @@ import {
   type ExpedienteOverlayMap, type ExpedienteOverlayEntry, type ExpedienteMovement,
 } from "@/lib/api";
 import { exportToPDF, exportToExcel } from "@/lib/exportUtils";
+import { useArmedPersonnel } from "@/hooks/useApiHooks";
+import { loadPosts } from "@/lib/postsData";
+import { mergeOperacionesIntoExpediente } from "@/lib/opsExpedienteMerge";
 import {
   Building2, MapPin, Crosshair, Users, ChevronDown, ChevronRight, RefreshCw,
   AlertTriangle, FileText, Phone, Mail, ExternalLink, ShieldCheck, ShieldOff, ListChecks,
