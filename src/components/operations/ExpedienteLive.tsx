@@ -396,52 +396,79 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
             {client.contacto && <span className="text-muted-foreground">Contacto: {client.contacto}</span>}
           </div>
 
-          {groups.map((g) => (
-            <div key={g.nombre} className="space-y-1.5">
-              {g.puestos.map((p) => {
-                const ov = p.armaSerial ? ctx.overlay[p.armaSerial] : undefined;
-                const estatus = ov?.estatus ?? p.arma?.estatus ?? null;
-                const fotos = ov?.fotosArma?.length || 0;
-                return (
-                  <div key={p.lineaOID} className="flex flex-wrap items-center gap-2 text-xs border border-border rounded-md px-2.5 py-2">
-                    <button
-                      onClick={() => ctx.openPost(p, client)}
-                      className="inline-flex items-center gap-1 font-medium w-44 truncate shrink-0 hover:text-primary text-left"
-                      title="Ver ficha del puesto"
-                    >
-                      {p.requiereArma
-                        ? <Crosshair className="h-3.5 w-3.5 text-gold shrink-0" />
-                        : <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
-                      <span className="truncate">{p.puesto}</span>
-                    </button>
-                    <button
-                      onClick={() => ctx.openAgent(p, client)}
-                      className="flex-1 min-w-[120px] truncate text-left hover:text-primary inline-flex items-center gap-1"
-                      title="Ver ficha del vigilante"
-                    >
-                      <User className="h-3.5 w-3.5 shrink-0 text-muted-foreground" /> {p.vigilante}
-                    </button>
-                    <span className="text-muted-foreground shrink-0">{p.horas}h</span>
-                    {p.requiereArma && (
-                      <button
-                        onClick={() => ctx.openWeapon(p, client)}
-                        className="inline-flex items-center gap-1 shrink-0 max-w-[220px] truncate hover:text-primary"
-                        title="Ver / editar arma"
-                      >
-                        <span className="truncate">
-                          {[p.arma?.tipo || p.armaModelo, p.armaSerial].filter(Boolean).join(" · ") || "Armado"}
-                        </span>
-                        {estatus && <span className={`px-1.5 py-0.5 rounded ${statusColor(estatus)}`}>{estatus}</span>}
-                        {fotos > 0 && <Badge variant="outline" className="text-[9px]">{fotos}📷</Badge>}
-                      </button>
-                    )}
-                    {p.novedad && <Badge variant="destructive" className="text-[10px] shrink-0">Novedad</Badge>}
-                    {(p.origen === "operaciones" || p.armaOrigen === "operaciones") && (
-                      <Badge variant="secondary" className="text-[10px] shrink-0">Operaciones</Badge>
-                    )}
-                  </div>
-                );
-              })}
+          {localidades.map((loc) => (
+            <div key={loc.nombre} className="border-l-2 border-gold/40 pl-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-gold shrink-0" />
+                <p className="text-sm font-semibold">{loc.nombre}</p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                {loc.puestos.map((pg) => {
+                  const head = pg.rows[0];
+                  const opsOrigin = pg.rows.some((r) => r.origen === "operaciones" || r.armaOrigen === "operaciones");
+                  return (
+                    <div key={pg.nombre} className="bg-card border border-border rounded-lg p-3 space-y-2">
+                      <div className="flex items-start gap-2">
+                        <button
+                          onClick={() => ctx.openPost(head, client)}
+                          className="min-w-0 flex-1 text-left hover:text-primary"
+                          title="Ver ficha del puesto"
+                        >
+                          <p className="text-sm font-semibold truncate">{pg.nombre}</p>
+                          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                            {pg.requiereArma ? (
+                              <Badge className="text-[10px] gap-1"><Crosshair className="h-3 w-3" /> Requiere arma</Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-[10px]">Sin arma</Badge>
+                            )}
+                            {opsOrigin && <Badge variant="secondary" className="text-[10px]">Operaciones</Badge>}
+                          </div>
+                        </button>
+                      </div>
+
+                      <div className="text-[11px] text-muted-foreground flex items-center gap-1">
+                        <Users className="h-3 w-3" /> Reporte: {reporteLabel}
+                      </div>
+
+                      <div className="space-y-1">
+                        {pg.rows.map((p) => {
+                          const ov = p.armaSerial ? ctx.overlay[p.armaSerial] : undefined;
+                          const estatus = ov?.estatus ?? p.arma?.estatus ?? null;
+                          const fotos = ov?.fotosArma?.length || 0;
+                          return (
+                            <div key={p.lineaOID} className="flex flex-wrap items-center gap-2 text-xs border-b border-border/50 pb-1 last:border-0 last:pb-0">
+                              <button
+                                onClick={() => ctx.openAgent(p, client)}
+                                className="flex-1 min-w-[120px] truncate text-left hover:text-primary inline-flex items-center gap-1"
+                                title="Ver ficha del vigilante"
+                              >
+                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${p.vigilante ? "bg-emerald-500" : "bg-muted-foreground"}`} />
+                                <span className="truncate">{p.vigilante || "Sin asignar"}</span>
+                              </button>
+                              {p.horas > 0 && <span className="text-muted-foreground shrink-0">{p.horas}h</span>}
+                              {p.requiereArma && (
+                                <button
+                                  onClick={() => ctx.openWeapon(p, client)}
+                                  className="inline-flex items-center gap-1 shrink-0 max-w-[220px] truncate hover:text-primary"
+                                  title="Ver / editar arma"
+                                >
+                                  <span className="truncate">
+                                    {[p.arma?.tipo || p.armaModelo, p.armaSerial].filter(Boolean).join(" · ") || "Armado"}
+                                  </span>
+                                  {estatus && <span className={`px-1.5 py-0.5 rounded ${statusColor(estatus)}`}>{estatus}</span>}
+                                  {fotos > 0 && <Badge variant="outline" className="text-[9px]">{fotos}📷</Badge>}
+                                </button>
+                              )}
+                              {p.novedad && <Badge variant="destructive" className="text-[10px] shrink-0">Novedad</Badge>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           ))}
         </div>
