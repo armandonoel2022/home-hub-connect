@@ -1117,6 +1117,68 @@ export const generalSqlApi = {
   schemaKeys: () => apiFetch<Array<{ tabla: string; tipo: string; columna: string; restriccion: string }>>("/general-sql/schema-keys"),
 };
 
+// ─── Expediente Overlay (capa editable local sobre GENERAL) ───
+export interface ExpedienteOverlayEntry {
+  estatus?: string | null;
+  nota?: string | null;
+  noLicencia?: string | null;
+  custodioOverride?: string | null;
+  fotosArma?: string[];
+  fotoLicenciaFrente?: string | null;
+  fotoLicenciaDorso?: string | null;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+export type ExpedienteOverlayMap = Record<string, ExpedienteOverlayEntry>;
+
+export interface ExpedienteMovement {
+  id: string;
+  tipo: "arma" | "personal";
+  serie?: string | null;
+  armaModelo?: string | null;
+  empleado?: string | number | null;
+  empleadoNombre?: string | null;
+  desde?: string | null;
+  hacia?: string | null;
+  motivo?: string;
+  fecha?: string;
+  registradoPor?: string;
+}
+
+export const expedienteOverlayApi = {
+  canEdit: () => apiFetch<{ canEdit: boolean }>("/expediente-overlay/can-edit"),
+  list: () => apiFetch<ExpedienteOverlayMap>("/expediente-overlay"),
+  get: (serie: string) => apiFetch<ExpedienteOverlayEntry>(`/expediente-overlay/${encodeURIComponent(serie)}`),
+  save: (serie: string, data: Partial<ExpedienteOverlayEntry>) =>
+    apiFetch<ExpedienteOverlayEntry>(`/expediente-overlay/${encodeURIComponent(serie)}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+  uploadPhoto: (serie: string, dataUrl: string, fileName: string, kind: "arma" | "licenciaFrente" | "licenciaDorso") =>
+    apiFetch<{ url: string; overlay: ExpedienteOverlayEntry }>(`/expediente-overlay/${encodeURIComponent(serie)}/photo`, {
+      method: "POST",
+      body: JSON.stringify({ dataUrl, fileName, kind }),
+    }),
+  deletePhoto: (serie: string, url: string, kind: "arma" | "licenciaFrente" | "licenciaDorso") =>
+    apiFetch<ExpedienteOverlayEntry>(`/expediente-overlay/${encodeURIComponent(serie)}/photo`, {
+      method: "DELETE",
+      body: JSON.stringify({ url, kind }),
+    }),
+  movements: (params?: { serie?: string; empleado?: string | number; tipo?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.serie) q.set("serie", params.serie);
+    if (params?.empleado != null) q.set("empleado", String(params.empleado));
+    if (params?.tipo) q.set("tipo", params.tipo);
+    const qs = q.toString();
+    return apiFetch<ExpedienteMovement[]>(`/expediente-overlay/movements/all${qs ? `?${qs}` : ""}`);
+  },
+  addMovement: (data: Partial<ExpedienteMovement>) =>
+    apiFetch<ExpedienteMovement>("/expediente-overlay/movements", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+};
+
 export interface GeneralWeaponDetail {
   oid: number | null;
   serie: string | null;
