@@ -1034,6 +1034,9 @@ export default function Payroll() {
                           {liveCalc.lateDeduction > 0 && (
                             <Row label={`Descuento horas tardías (${liveCalc.lateHours}h)`} value={`- ${fmtRD(liveCalc.lateDeduction)}`} muted />
                           )}
+                          {liveCalc.loanDeduction > 0 && (
+                            <Row label={`Cuota de préstamo${liveCalc.loanCount > 1 ? `s (${liveCalc.loanCount})` : ""}`} value={`- ${fmtRD(liveCalc.loanDeduction)}`} muted />
+                          )}
                           <Row label="Total deducciones" value={`- ${fmtRD(liveCalc.total)}`} />
                           <Row label="Neto a recibir" value={fmtRD(liveCalc.net)} bold />
                         </TableBody>
