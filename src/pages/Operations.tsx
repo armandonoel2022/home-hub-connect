@@ -110,12 +110,12 @@ function PersonnelDashboard({ personnel, onFilter, onAssign }: { personnel: Arme
     let letal = 0, noLetal = 0, sinArma = 0;
     personnel.forEach(p => {
       if (p.weaponCaliber === "Letal") letal++;
-      else if (p.weaponCaliber === "No letal") noLetal++;
+      else if (p.weaponCaliber === "No letal" || p.weaponCaliber === "Menos que letal") noLetal++;
       else sinArma++;
     });
     return [
       { name: "Letal", value: letal },
-      { name: "No letal", value: noLetal },
+      { name: "Menos que letal", value: noLetal },
       ...(sinArma > 0 ? [{ name: "Sin arma", value: sinArma }] : []),
     ];
   }, [personnel]);
