@@ -16,10 +16,11 @@ import { useArmedPersonnel } from "@/hooks/useApiHooks";
 import {
   getClients, getLocationsByClient, getPostsByLocation, getLiveSnapshot, getLatestReportDate,
   saveClient, deleteClient, saveLocation, deleteLocation, savePost, deletePost,
-  replaceDailyReport, seedFromPersonnel, yesterdayISO,
+  replaceDailyReport, syncFromOperaciones, yesterdayISO,
   type OpsClient, type OpsLocation, type OpsPost, type OpsTurno, type DailyReport,
   OPS_EVENT,
 } from "@/lib/opsExpediente";
+import { loadPosts } from "@/lib/postsData";
 import { generateExpedientePDF } from "@/lib/expedientePdf";
 import {
   Building2, MapPin, Plus, Trash2, ArrowLeft, ChevronDown, ChevronRight, FileText,
@@ -50,12 +51,22 @@ const ClientExpediente = () => {
   const [postDialog, setPostDialog] = useState<{ locationId: string; data: Partial<OpsPost> } | null>(null);
   const [reportDialog, setReportDialog] = useState<OpsPost | null>(null);
 
-  // Seed inicial desde Personal Armado
+  // Espejo vivo: sincroniza el Expediente Manual con Operaciones (Personal + Puestos).
   useEffect(() => {
     if (personnel && personnel.length > 0) {
-      const seeded = seedFromPersonnel(personnel);
-      if (seeded) refresh();
+      const synced = syncFromOperaciones(personnel, loadPosts());
+      if (synced) refresh();
     }
+  }, [personnel]);
+
+  // Re-sincroniza cuando cambian los Puestos de Operaciones.
+  useEffect(() => {
+    const onPosts = () => {
+      const synced = syncFromOperaciones(personnel || [], loadPosts());
+      if (synced) refresh();
+    };
+    window.addEventListener("safeone:posts-updated", onPosts);
+    return () => window.removeEventListener("safeone:posts-updated", onPosts);
   }, [personnel]);
 
   useEffect(() => {
@@ -378,6 +389,9 @@ function PostBlock({ post, onEdit, onDelete, onReport, tick }: {
               <Badge variant="outline" className="text-[10px]">Sin arma</Badge>
             )}
             <Badge variant="outline" className="text-[10px]">{post.turnos.length} turno(s)</Badge>
+            {post.origin === "manual" && (
+              <Badge variant="secondary" className="text-[10px]">Manual</Badge>
+            )}
           </div>
         </div>
         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onReport} title="Reporte diario"><ClipboardList className="h-3.5 w-3.5 text-primary" /></Button>

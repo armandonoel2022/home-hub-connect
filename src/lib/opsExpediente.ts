@@ -7,6 +7,7 @@
 // best-effort con el backend local (JSON) cuando la API está configurada.
 
 import type { ArmedPersonnel } from "@/lib/types";
+import { loadPosts, type WorkPost } from "@/lib/postsData";
 import {
   isApiConfigured,
   opsClientsApi, opsLocationsApi, opsPostsApi, opsDailyReportsApi, vaultMovementsApi,
@@ -25,6 +26,8 @@ export interface OpsClient {
   contrato: OpsContrato;
   coordinates: string;   // "lat,lng" o URL de Google Maps
   notas: string;
+  origin?: "ops" | "manual";
+  sourceKey?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -37,6 +40,8 @@ export interface OpsLocation {
   coordinates: string;
   mapsUrl: string;
   notas: string;
+  origin?: "ops" | "manual";
+  sourceKey?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -55,6 +60,8 @@ export interface OpsPost {
   turnos: OpsTurno[];
   coordinates: string;
   notas: string;
+  origin?: "ops" | "manual";
+  sourceKey?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -98,6 +105,7 @@ const K_POSTS = "safeone_ops_posts_v1";
 const K_REPORTS = "safeone_ops_daily_reports_v1";
 const K_VAULT = "safeone_vault_movements_v1";
 const K_SEED = "safeone_ops_expediente_seed_v1";
+const K_SYNC_HASH = "safeone_ops_expediente_sync_hash_v1";
 
 export const VAULT_LABEL = "Bóveda / Almacén";
 export const OPS_EVENT = "safeone:ops-expediente-updated";
@@ -160,6 +168,8 @@ export function saveClient(input: Partial<OpsClient>): OpsClient {
     contrato: input.contrato || { numero: "", inicio: "", fin: "" },
     coordinates: input.coordinates || "",
     notas: input.notas || "",
+    origin: input.origin ?? "manual",
+    sourceKey: input.sourceKey,
     createdAt: now,
     updatedAt: now,
   };
@@ -197,6 +207,8 @@ export function saveLocation(input: Partial<OpsLocation>): OpsLocation {
     coordinates: input.coordinates || "",
     mapsUrl: input.mapsUrl || "",
     notas: input.notas || "",
+    origin: input.origin ?? "manual",
+    sourceKey: input.sourceKey,
     createdAt: now,
     updatedAt: now,
   };
@@ -234,6 +246,8 @@ export function savePost(input: Partial<OpsPost>): OpsPost {
     turnos: input.turnos || [],
     coordinates: input.coordinates || "",
     notas: input.notas || "",
+    origin: input.origin ?? "manual",
+    sourceKey: input.sourceKey,
     createdAt: now,
     updatedAt: now,
   };
@@ -374,100 +388,237 @@ export function getWeaponHistory(armaSerial: string): VaultMovement[] {
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 }
 
-// ─── Seed desde Personal Armado ───
+// ─── Sincronización con Operaciones (Personal Armado + Puestos) ───
+// El Expediente "Manual" es un ESPEJO VIVO de Operaciones: se re-deriva la
+// estructura y se MEZCLA con lo existente, conservando ediciones manuales.
 function norm(s: string): string {
   return (s || "").trim();
 }
+function nkey(s: string): string {
+  return norm(s).toLowerCase();
+}
 
-export function seedFromPersonnel(personnel: ArmedPersonnel[], force = false): boolean {
-  if (!force && (localStorage.getItem(K_SEED) || getClients().length > 0)) return false;
-  if (!personnel || personnel.length === 0) return false;
+const AUTO_CREATED_BY = "Semilla automática";
+const OPS_CREATED_BY = "Operaciones";
 
-  const now = new Date().toISOString();
-  const clients: OpsClient[] = [];
-  const locations: OpsLocation[] = [];
-  const posts: OpsPost[] = [];
-  const reports: DailyReport[] = [];
-  const yest = yesterdayISO();
+interface DerivedClient { sourceKey: string; nombre: string; coordinates: string; }
+interface DerivedLoc { sourceKey: string; clientSK: string; nombre: string; coordinates: string; }
+interface DerivedPost { sourceKey: string; locSK: string; nombre: string; requiereArma: boolean; turnos: Set<string>; coordinates: string; }
+interface DerivedRow { turnoNombre: string; personnelId: string; personnelName: string; presente: boolean; armaSerial: string; armaTipo: string; }
 
-  const clientByName = new Map<string, OpsClient>();
-  const locByKey = new Map<string, OpsLocation>();
-  const postByKey = new Map<string, OpsPost>();
+function buildDerived(personnel: ArmedPersonnel[], workPosts: WorkPost[]) {
+  const clients = new Map<string, DerivedClient>();
+  const locs = new Map<string, DerivedLoc>();
+  const posts = new Map<string, DerivedPost>();
+  const reports = new Map<string, DerivedRow[]>();
 
-  const shiftName = (p: ArmedPersonnel): string => p.shiftType || "Diurno";
+  const ensureChain = (clienteNom: string, localidadNom: string, puestoNom: string, coord: string): string => {
+    const cNom = norm(clienteNom) || "Cliente sin nombre";
+    const lNom = norm(localidadNom) || "Sede Principal";
+    const pNom = norm(puestoNom) || "Puesto General";
+    const cSK = `c:${cNom.toLowerCase()}`;
+    const lSK = `${cSK}|l:${lNom.toLowerCase()}`;
+    const pSK = `${lSK}|p:${pNom.toLowerCase()}`;
+    if (!clients.has(cSK)) clients.set(cSK, { sourceKey: cSK, nombre: cNom, coordinates: "" });
+    if (!locs.has(lSK)) locs.set(lSK, { sourceKey: lSK, clientSK: cSK, nombre: lNom, coordinates: coord || "" });
+    else if (coord && !locs.get(lSK)!.coordinates) locs.get(lSK)!.coordinates = coord;
+    if (!posts.has(pSK)) posts.set(pSK, { sourceKey: pSK, locSK: lSK, nombre: pNom, requiereArma: false, turnos: new Set(), coordinates: coord || "" });
+    else if (coord && !posts.get(pSK)!.coordinates) posts.get(pSK)!.coordinates = coord;
+    if (!reports.has(pSK)) reports.set(pSK, []);
+    return pSK;
+  };
 
-  personnel.forEach((p) => {
+  (personnel || []).forEach((p) => {
     if (p.status === "Inactivo") return;
-    const clienteNom = norm(p.client) || "Cliente sin nombre";
-    const localidadNom = norm(p.province) || "Sede Principal";
-    const puestoNom = norm(p.location) || "Puesto General";
-
-    // Cliente
-    let client = clientByName.get(clienteNom.toLowerCase());
-    if (!client) {
-      client = {
-        id: uid("OCL"), nombre: clienteNom,
-        contrato: { numero: "", inicio: "", fin: "" },
-        coordinates: "", notas: "", createdAt: now, updatedAt: now,
-      };
-      clientByName.set(clienteNom.toLowerCase(), client);
-      clients.push(client);
-    }
-
-    // Localidad (por provincia dentro del cliente)
-    const locKey = `${client.id}::${localidadNom.toLowerCase()}`;
-    let loc = locByKey.get(locKey);
-    if (!loc) {
-      loc = {
-        id: uid("OLO"), clientId: client.id, nombre: localidadNom,
-        direccion: "", coordinates: p.coordinates || "", mapsUrl: "", notas: "",
-        createdAt: now, updatedAt: now,
-      };
-      locByKey.set(locKey, loc);
-      locations.push(loc);
-    }
-
-    // Puesto
-    const postKey = `${loc.id}::${puestoNom.toLowerCase()}`;
-    let post = postByKey.get(postKey);
-    if (!post) {
-      post = {
-        id: uid("OPS"), locationId: loc.id, nombre: puestoNom,
-        requiereArma: false, turnos: [], coordinates: p.coordinates || "",
-        notas: "", createdAt: now, updatedAt: now,
-      };
-      postByKey.set(postKey, post);
-      posts.push(post);
-    }
-    const hasWeapon = !!(p.weaponSerial || p.weaponType);
-    if (hasWeapon) post.requiereArma = true;
-
-    // Turno
-    const tName = shiftName(p);
-    let turno = post.turnos.find((t) => t.nombre.toLowerCase() === tName.toLowerCase());
-    if (!turno) {
-      turno = { id: uid("TRN"), nombre: tName, horario: p.shiftHours ? `${p.shiftHours}h` : "" };
-      post.turnos.push(turno);
-    }
-
-    // Reporte diario semilla (de ayer) = foto viva del puesto
-    reports.push({
-      id: uid("ODR"), fecha: yest, postId: post.id, turnoId: turno.id,
-      personnelId: p.id, personnelName: p.name || p.employeeCode,
+    const pSK = ensureChain(p.client, p.province, p.location, p.coordinates || "");
+    const post = posts.get(pSK)!;
+    if (p.weaponSerial || p.weaponType) post.requiereArma = true;
+    const tName = p.shiftType || "Diurno";
+    post.turnos.add(tName);
+    reports.get(pSK)!.push({
+      turnoNombre: tName,
+      personnelId: p.id,
+      personnelName: p.name || p.employeeCode,
       presente: p.status === "Activo",
-      armaSerial: p.weaponSerial || "", armaTipo: p.weaponType || "",
-      novedades: "", createdBy: "Semilla automática", createdAt: now,
+      armaSerial: p.weaponSerial || "",
+      armaTipo: p.weaponType || "",
     });
   });
 
-  writeLS(K_CLIENTS, clients);
-  writeLS(K_LOCATIONS, locations);
-  writeLS(K_POSTS, posts);
-  writeLS(K_REPORTS, reports);
+  (workPosts || []).forEach((wp) => {
+    const pSK = ensureChain(wp.cliente, wp.provincia, wp.nombre, wp.coordenada || "");
+    const post = posts.get(pSK)!;
+    if (wp.weapons && wp.weapons.length) post.requiereArma = true;
+    const rows = reports.get(pSK)!;
+    const existingNames = new Set(rows.map((r) => r.personnelName.toLowerCase()));
+    const weapons = (wp.weapons || []).slice();
+
+    (wp.guards || []).forEach((g, idx) => {
+      const tName = g.shift || "Diurno";
+      post.turnos.add(tName);
+      if (existingNames.has(g.guardName.toLowerCase())) return;
+      let w = weapons.find((x) => (x.assignedGuardIds || []).includes(g.id));
+      if (!w) w = weapons[idx];
+      rows.push({
+        turnoNombre: tName,
+        personnelId: g.id,
+        personnelName: g.guardName,
+        presente: true,
+        armaSerial: w?.serial || "",
+        armaTipo: w?.arma || "",
+      });
+      if (w) { const i = weapons.indexOf(w); if (i >= 0) weapons.splice(i, 1); }
+    });
+
+    // Armas sin agente asignado: se muestran igual para que se vean en el puesto.
+    weapons.forEach((w) => {
+      rows.push({
+        turnoNombre: "Diurno",
+        personnelId: w.id,
+        personnelName: "(Arma sin asignar)",
+        presente: true,
+        armaSerial: w.serial || "",
+        armaTipo: w.arma || "",
+      });
+    });
+  });
+
+  posts.forEach((p) => { if (p.turnos.size === 0) p.turnos.add("Diurno"); });
+  return { clients, locs, posts, reports };
+}
+
+/**
+ * Espejo vivo del Expediente Manual a partir de Operaciones.
+ * Conserva y mezcla: re-deriva lo de Operaciones (origin "ops") y preserva
+ * lo creado/editado manualmente dentro del Expediente (origin "manual").
+ */
+export function syncFromOperaciones(personnel: ArmedPersonnel[], workPosts: WorkPost[], force = false): boolean {
+  const ppl = personnel || [];
+  const wps = workPosts || [];
+  if (ppl.length === 0 && wps.length === 0) return false;
+
+  const derived = buildDerived(ppl, wps);
+
+  const hash = JSON.stringify({
+    c: Array.from(derived.clients.values()),
+    l: Array.from(derived.locs.values()),
+    p: Array.from(derived.posts.values()).map((x) => ({ ...x, turnos: Array.from(x.turnos) })),
+    r: Array.from(derived.reports.entries()),
+  });
+  if (!force && localStorage.getItem(K_SYNC_HASH) === hash && getClients().length > 0) return false;
+
+  const now = new Date().toISOString();
+  const yest = yesterdayISO();
+  const isManual = (o: { origin?: string }) => o.origin === "manual";
+
+  const exClients = getClients();
+  const exLocs = getLocations();
+  const exPosts = getPosts();
+  const exReports = getDailyReports();
+
+  // ── Clientes ──
+  const exClientBySK = new Map<string, OpsClient>();
+  exClients.forEach((c) => { if (!isManual(c)) exClientBySK.set(c.sourceKey || `c:${nkey(c.nombre)}`, c); });
+  const finalClients: OpsClient[] = exClients.filter(isManual);
+  const clientIdBySK = new Map<string, string>();
+  derived.clients.forEach((d, sk) => {
+    const ex = exClientBySK.get(sk);
+    if (ex) {
+      const merged: OpsClient = { ...ex, nombre: d.nombre, origin: "ops", sourceKey: sk, coordinates: ex.coordinates || d.coordinates || "", updatedAt: now };
+      finalClients.push(merged);
+      clientIdBySK.set(sk, merged.id);
+    } else {
+      const id = uid("OCL");
+      finalClients.push({ id, nombre: d.nombre, contrato: { numero: "", inicio: "", fin: "" }, coordinates: d.coordinates || "", notas: "", origin: "ops", sourceKey: sk, createdAt: now, updatedAt: now });
+      clientIdBySK.set(sk, id);
+    }
+  });
+
+  // ── Localidades ──
+  const exClientNameById = new Map(exClients.map((c) => [c.id, c.nombre]));
+  const locSK = (l: OpsLocation) => l.sourceKey || `c:${nkey(exClientNameById.get(l.clientId) || "")}|l:${nkey(l.nombre)}`;
+  const exLocBySK = new Map<string, OpsLocation>();
+  exLocs.forEach((l) => { if (!isManual(l)) exLocBySK.set(locSK(l), l); });
+  const finalLocs: OpsLocation[] = exLocs.filter(isManual);
+  const locIdBySK = new Map<string, string>();
+  derived.locs.forEach((d, sk) => {
+    const clientId = clientIdBySK.get(d.clientSK);
+    if (!clientId) return;
+    const ex = exLocBySK.get(sk);
+    if (ex) {
+      const merged: OpsLocation = { ...ex, clientId, nombre: d.nombre, origin: "ops", sourceKey: sk, coordinates: ex.coordinates || d.coordinates || "", updatedAt: now };
+      finalLocs.push(merged);
+      locIdBySK.set(sk, merged.id);
+    } else {
+      const id = uid("OLO");
+      finalLocs.push({ id, clientId, nombre: d.nombre, direccion: "", coordinates: d.coordinates || "", mapsUrl: "", notas: "", origin: "ops", sourceKey: sk, createdAt: now, updatedAt: now });
+      locIdBySK.set(sk, id);
+    }
+  });
+
+  // ── Puestos ──
+  const exLocSkById = new Map<string, string>();
+  exLocs.forEach((l) => exLocSkById.set(l.id, locSK(l)));
+  const exPostBySK = new Map<string, OpsPost>();
+  exPosts.forEach((p) => { if (!isManual(p)) exPostBySK.set(p.sourceKey || `${exLocSkById.get(p.locationId) || ""}|p:${nkey(p.nombre)}`, p); });
+  const finalPosts: OpsPost[] = exPosts.filter(isManual);
+  const postIdBySK = new Map<string, string>();
+  const postById = new Map<string, OpsPost>();
+  derived.posts.forEach((d, sk) => {
+    const locationId = locIdBySK.get(d.locSK);
+    if (!locationId) return;
+    const turnosArr = Array.from(d.turnos);
+    const ex = exPostBySK.get(sk);
+    let fp: OpsPost;
+    if (ex) {
+      const turnos = ex.turnos.slice();
+      turnosArr.forEach((tn) => { if (!turnos.some((t) => nkey(t.nombre) === nkey(tn))) turnos.push({ id: uid("TRN"), nombre: tn, horario: "" }); });
+      fp = { ...ex, locationId, nombre: d.nombre, requiereArma: ex.requiereArma || d.requiereArma, origin: "ops", sourceKey: sk, coordinates: ex.coordinates || d.coordinates || "", turnos, updatedAt: now };
+    } else {
+      fp = { id: uid("OPS"), locationId, nombre: d.nombre, requiereArma: d.requiereArma, turnos: turnosArr.map((tn) => ({ id: uid("TRN"), nombre: tn, horario: "" })), coordinates: d.coordinates || "", notas: "", origin: "ops", sourceKey: sk, createdAt: now, updatedAt: now };
+    }
+    finalPosts.push(fp);
+    postIdBySK.set(sk, fp.id);
+    postById.set(fp.id, fp);
+  });
+
+  // ── Reportes (foto viva) ──
+  const autoCreators = new Set([AUTO_CREATED_BY, OPS_CREATED_BY]);
+  const manualPostIds = new Set(finalPosts.filter(isManual).map((p) => p.id));
+  const allPostIds = new Set(finalPosts.map((p) => p.id));
+  const preserved = exReports.filter((r) => (!autoCreators.has(r.createdBy) || manualPostIds.has(r.postId)) && allPostIds.has(r.postId));
+  const newReports: DailyReport[] = [];
+  derived.reports.forEach((rows, pSK) => {
+    const postId = postIdBySK.get(pSK);
+    if (!postId) return;
+    const post = postById.get(postId)!;
+    rows.forEach((row) => {
+      const turno = post.turnos.find((t) => nkey(t.nombre) === nkey(row.turnoNombre)) || post.turnos[0];
+      newReports.push({
+        id: uid("ODR"), fecha: yest, postId, turnoId: turno?.id || "",
+        personnelId: row.personnelId, personnelName: row.personnelName,
+        presente: row.presente, armaSerial: row.armaSerial, armaTipo: row.armaTipo,
+        novedades: "", createdBy: OPS_CREATED_BY, createdAt: now,
+      });
+    });
+  });
+
+  writeLS(K_CLIENTS, finalClients);
+  writeLS(K_LOCATIONS, finalLocs);
+  writeLS(K_POSTS, finalPosts);
+  writeLS(K_REPORTS, [...newReports, ...preserved]);
+  localStorage.setItem(K_SYNC_HASH, hash);
   localStorage.setItem(K_SEED, "1");
   return true;
 }
 
+// Compatibilidad: sembrar/sincronizar desde Personal Armado (+ Puestos guardados).
+export function seedFromPersonnel(personnel: ArmedPersonnel[], force = false): boolean {
+  let workPosts: WorkPost[] = [];
+  try { workPosts = loadPosts(); } catch { /* noop */ }
+  return syncFromOperaciones(personnel, workPosts, force);
+}
+
 export function resetExpedienteSeed() {
-  [K_CLIENTS, K_LOCATIONS, K_POSTS, K_REPORTS, K_SEED].forEach((k) => localStorage.removeItem(k));
+  [K_CLIENTS, K_LOCATIONS, K_POSTS, K_REPORTS, K_SEED, K_SYNC_HASH].forEach((k) => localStorage.removeItem(k));
 }

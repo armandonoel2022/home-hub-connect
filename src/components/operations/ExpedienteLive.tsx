@@ -14,6 +14,9 @@ import {
   type ExpedienteOverlayMap, type ExpedienteOverlayEntry, type ExpedienteMovement,
 } from "@/lib/api";
 import { exportToPDF, exportToExcel } from "@/lib/exportUtils";
+import { useArmedPersonnel } from "@/hooks/useApiHooks";
+import { loadPosts } from "@/lib/postsData";
+import { mergeOperacionesIntoExpediente } from "@/lib/opsExpedienteMerge";
 import {
   Building2, MapPin, Crosshair, Users, ChevronDown, ChevronRight, RefreshCw,
   AlertTriangle, FileText, Phone, Mail, ExternalLink, ShieldCheck, ShieldOff, ListChecks,
@@ -116,10 +119,18 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
 
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
+  const { data: personnel } = useArmedPersonnel();
+
+  // Fusiona GENERAL con Operaciones (Personal Armado + Puestos).
+  const mergedData = useMemo<GeneralExpediente | null>(() => {
+    if (!data && (!personnel || personnel.length === 0)) return data;
+    return mergeOperacionesIntoExpediente(data, personnel || [], loadPosts());
+  }, [data, personnel]);
+
   const filtered = useMemo<GeneralExpedienteCliente[]>(() => {
-    if (!data) return [];
+    if (!mergedData) return [];
     const q = search.toLowerCase().trim();
-    return data.clientes
+    return mergedData.clientes
       .map((c) => {
         let puestos = c.puestos;
         if (filter === "armas") puestos = puestos.filter((p) => p.requiereArma);
@@ -134,9 +145,9 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
         String(c.codigo ?? "").includes(q) ||
         c.puestos.some((p) => `${p.vigilante} ${p.armaSerial ?? ""}`.toLowerCase().includes(q)),
       );
-  }, [data, search, filter]);
+  }, [mergedData, search, filter]);
 
-  const t = data?.totals || {};
+  const t = mergedData?.totals || {};
 
   const ctx: LiveCtx = {
     overlay,
@@ -177,7 +188,7 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
     );
   }
 
-  if (error) {
+  if (error && (!mergedData || mergedData.clientes.length === 0)) {
     return (
       <Card className="p-6 space-y-3">
         <div className="flex items-center gap-2 text-sm font-semibold text-destructive">
@@ -194,6 +205,12 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
 
   return (
     <div className="space-y-4">
+      {error && (
+        <Card className="p-3 flex items-start gap-2 border-amber-300 bg-amber-50 text-amber-800 text-xs">
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+          <span>GENERAL no está disponible; mostrando datos de Operaciones (Personal Armado y Puestos). <button onClick={load} className="underline font-medium">Reintentar</button></span>
+        </Card>
+      )}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
         <KpiCard icon={<Building2 className="h-4 w-4" />} label="Clientes con cobertura" value={t.clientes ?? 0} />
         <KpiCard icon={<ListChecks className="h-4 w-4" />} label="Puestos cubiertos" value={t.puestosCubiertos ?? 0} />
@@ -395,6 +412,9 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
                       </button>
                     )}
                     {p.novedad && <Badge variant="destructive" className="text-[10px] shrink-0">Novedad</Badge>}
+                    {(p.origen === "operaciones" || p.armaOrigen === "operaciones") && (
+                      <Badge variant="secondary" className="text-[10px] shrink-0">Operaciones</Badge>
+                    )}
                   </div>
                 );
               })}
