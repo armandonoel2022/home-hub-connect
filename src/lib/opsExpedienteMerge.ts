@@ -188,6 +188,20 @@ export function mergeOperacionesIntoExpediente(
           }
         }
       }
+      // Respaldo por vigilante: si GENERAL no trae arma pero Operaciones tiene
+      // un arma para este mismo vigilante, se enriquece igual (cliente/puesto
+      // pueden no coincidir exactamente entre fuentes).
+      if (!p.armaSerial && p.vigilante) {
+        const hit = opsByVigilante.get(nkey(p.vigilante));
+        if (hit && (hit.weapon.serial || hit.weapon.tipo)) {
+          usedOps.add(hit.key);
+          p.requiereArma = true;
+          p.armaSerial = hit.weapon.serial || null;
+          p.armaModelo = hit.weapon.modelo || hit.weapon.tipo || null;
+          p.armaOrigen = "operaciones";
+          p.arma = { oid: null, serie: hit.weapon.serial || null, marca: null, tipo: hit.weapon.tipo || null, calibre: null, categoria: null, noLicencia: null, estatus: null, propietario: null };
+        }
+      }
       // Completa marca/categoría/calibre/licencia desde el catálogo SQL por serial.
       p.arma = enrichArmaFromSql(p.arma, sqlMap);
       if (p.arma) {
