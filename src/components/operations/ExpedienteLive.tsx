@@ -688,12 +688,12 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
         <div className="space-y-4 text-sm">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
             <Field label="Serie" value={serie} />
-            <Field label="Marca" value={puesto.arma?.marca} />
-            <Field label="Tipo" value={puesto.arma?.tipo} />
-            <Field label="Calibre" value={puesto.arma?.calibre} />
-            <Field label="Categoría" value={puesto.arma?.categoria} />
-            <Field label="No. Licencia" value={noLicencia || puesto.arma?.noLicencia} />
-            <Field label="Propietario" value={puesto.arma?.propietario} />
+            <Field label="Marca" value={marca} />
+            <Field label="Tipo" value={tipo} />
+            <Field label="Calibre" value={displayCaliber(calibre)} />
+            <Field label="Categoría" value={categoria} />
+            <Field label="No. Licencia" value={noLicencia} />
+            <Field label="Propietario" value={propietario} />
             <Field label="Ubicación" value={`${cliente.nombre} · ${puesto.puesto}`} />
             <Field label="Custodio" value={puesto.vigilante} />
           </div>
@@ -701,12 +701,32 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
           {ctx.canEdit ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label className="text-xs space-y-1">
-                <span className="font-medium">Estatus</span>
-                <Input value={estatus} onChange={(e) => setEstatus(e.target.value)} placeholder="En condiciones / Falta de mantenimiento…" />
+                <span className="font-medium">Marca</span>
+                <Input value={marca} onChange={(e) => setMarca(e.target.value)} placeholder="Marca del arma" />
+              </label>
+              <label className="text-xs space-y-1">
+                <span className="font-medium">Tipo</span>
+                <Input value={tipo} onChange={(e) => setTipo(e.target.value)} placeholder="Pistola / Escopeta / Revólver…" />
+              </label>
+              <label className="text-xs space-y-1">
+                <span className="font-medium">Calibre</span>
+                <Input value={calibre} onChange={(e) => setCalibre(e.target.value)} placeholder="Calibre / Menos que letal" />
+              </label>
+              <label className="text-xs space-y-1">
+                <span className="font-medium">Categoría</span>
+                <Input value={categoria} onChange={(e) => setCategoria(e.target.value)} placeholder="Categoría" />
+              </label>
+              <label className="text-xs space-y-1">
+                <span className="font-medium">Propietario</span>
+                <Input value={propietario} onChange={(e) => setPropietario(e.target.value)} placeholder="Propietario del arma" />
               </label>
               <label className="text-xs space-y-1">
                 <span className="font-medium">No. Licencia</span>
                 <Input value={noLicencia} onChange={(e) => setNoLicencia(e.target.value)} placeholder="Número de licencia" />
+              </label>
+              <label className="text-xs space-y-1">
+                <span className="font-medium">Estatus</span>
+                <Input value={estatus} onChange={(e) => setEstatus(e.target.value)} placeholder="En condiciones / Falta de mantenimiento…" />
               </label>
               <label className="text-xs space-y-1 sm:col-span-2">
                 <span className="font-medium">Nota</span>
