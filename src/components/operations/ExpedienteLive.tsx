@@ -856,17 +856,34 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
   const refreshMovs = () => empId && expedienteOverlayApi.movements({ empleado: empId }).then(setMovs).catch(() => {});
 
   const printFicha = () => printAgentFicha(puesto, cliente);
+  const match = ctx.matchEmployee(puesto);
+  const emp = match.emp;
+  const armed = match.armed;
+  const initials = (puesto.vigilante || "?").split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("");
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><User className="h-5 w-5 text-primary" /> {puesto.vigilante}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><User className="h-5 w-5 text-primary" /> Perfil 360° del Vigilante</DialogTitle>
         </DialogHeader>
         <div className="space-y-3 text-sm">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-16 w-16">
+              {match.photo && <AvatarImage src={match.photo} alt={puesto.vigilante} />}
+              <AvatarFallback className="bg-muted">{initials}</AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <h2 className="font-heading text-lg font-bold leading-tight truncate">{puesto.vigilante || "Sin asignar"}</h2>
+              <p className="text-xs text-muted-foreground truncate">{emp?.position || "Oficial de Seguridad"} · {emp?.department || "Safeone"}</p>
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-2 text-xs">
-            <Field label="Código" value={puesto.vigilanteCodigo} />
-            <Field label="Cédula" value={puesto.vigilanteCedula} />
+            <Field label="Código" value={puesto.vigilanteCodigo ?? emp?.employeeCode} />
+            <Field label="Cédula" value={puesto.vigilanteCedula ?? (emp as any)?.cedula} />
+            {emp?.status && <Field label="Estatus" value={emp.status} />}
+            {emp?.category && <Field label="Categoría" value={emp.category} />}
+            {emp?.payrollType && <Field label="Nómina" value={emp.payrollType} />}
             {puesto.vigilanteFechaNacimiento && (
               <Field label="Nacimiento" value={new Date(puesto.vigilanteFechaNacimiento).toLocaleDateString("es-DO")} />
             )}
@@ -878,6 +895,20 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
             {puesto.requiereArma && <Field label="Arma asignada" value={[puesto.arma?.tipo, puesto.armaSerial].filter(Boolean).join(" · ")} />}
             {puesto.comentario && <Field label="Comentario" value={puesto.comentario} />}
           </div>
+
+          {armed && (
+            <div className="rounded-lg border border-gold/40 bg-gold/5 p-3 space-y-2">
+              <p className="text-xs font-semibold inline-flex items-center gap-1 text-gold-foreground"><Shield className="h-3.5 w-3.5" /> Personal Armado · Auditoría</p>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <Field label="Tipo de Arma" value={armed.weaponType} />
+                <Field label="Serial" value={armed.weaponSerial} />
+                <Field label="Munición" value={`${displayCaliber(armed.weaponCaliber)}${armed.ammunitionCount != null ? ` (${armed.ammunitionCount} cápsulas)` : ""}`} />
+                <Field label="Estado Arma" value={armed.weaponCondition} />
+                <Field label="Cliente / Puesto" value={[armed.client, armed.location].filter(Boolean).join(" · ")} />
+                <Field label="Provincia" value={armed.province} />
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
