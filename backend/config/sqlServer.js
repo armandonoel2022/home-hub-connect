@@ -256,6 +256,7 @@ module.exports = {
   authMode,
   getPool,
   query,
+  execWrite,
   status,
   listTables,
   listColumns,
