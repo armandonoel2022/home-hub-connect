@@ -1144,10 +1144,10 @@ function openPrint(html: string) {
   setTimeout(() => w.print(), 400);
 }
 const escHtml = (v: unknown) => String(v ?? "—").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
-const fichaStyles = `body{font-family:'Segoe UI',Arial,sans-serif;color:#1f2937;padding:32px;max-width:760px;margin:0 auto}h1{font-size:20px;border-bottom:3px solid #b8860b;padding-bottom:8px;margin-bottom:16px}.row{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid #eee}.lbl{width:160px;color:#6b7280;font-size:12px;text-transform:uppercase}.val{font-weight:600}
-.header{display:flex;align-items:center;gap:16px;margin-bottom:18px}.avatar-img,.avatar-fb{width:64px;height:64px;border-radius:50%;object-fit:cover}.avatar-fb{background:#e5e7eb;color:#374151;font-weight:700;font-size:22px;display:flex;align-items:center;justify-content:center}.name{font-size:18px;font-weight:700;line-height:1.2}.sub{font-size:12px;color:#6b7280}
+const fichaStyles = `body{font-family:'Segoe UI',Arial,sans-serif;color:#1f2937;padding:28px;max-width:820px;margin:0 auto;background:#fff}h1{font-size:20px;border-bottom:3px solid #b8860b;padding-bottom:8px;margin-bottom:16px}.row{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid #eee}.lbl{width:160px;color:#6b7280;font-size:12px;text-transform:uppercase}.val{font-weight:600}
+.header{display:flex;align-items:center;gap:16px;margin-bottom:18px;padding:14px;border:1px solid #e5e7eb;border-radius:10px;background:#f9fafb}.avatar-img,.avatar-fb{width:72px;height:72px;border-radius:50%;object-fit:cover}.avatar-fb{background:#111827;color:#fbbf24;font-weight:700;font-size:22px;display:flex;align-items:center;justify-content:center}.name{font-size:20px;font-weight:800;line-height:1.2}.sub{font-size:12px;color:#6b7280;margin-top:3px}.chips{margin-top:8px}.chip{display:inline-block;border:1px solid #d1d5db;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:700;margin-right:5px}.chip.gold{background:#fbbf24;border-color:#f59e0b;color:#111827}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;margin-bottom:8px}.cell{display:flex;flex-direction:column;border-bottom:1px solid #f0f0f0;padding-bottom:4px}.cl{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#9ca3af}.cv{font-weight:600;font-size:13px}
-.section{margin-top:18px;padding:12px 14px;border:1px solid #e5e7eb;border-radius:8px}.section.gold{border-color:#e2c275;background:#fdf8ec}.sec-title{font-size:12px;font-weight:700;text-transform:uppercase;color:#92400e;margin:0 0 10px}.mov{font-size:12px;padding:4px 0;border-bottom:1px solid #f0f0f0}.mov-d{color:#9ca3af;margin-right:8px}.mov-m{color:#6b7280}.empty{font-size:12px;color:#9ca3af;font-style:italic;margin:0}`;
+.section{margin-top:18px;padding:12px 14px;border:1px solid #e5e7eb;border-radius:8px}.section.gold{border-color:#e2c275;background:#fdf8ec}.sec-title{font-size:12px;font-weight:800;text-transform:uppercase;color:#92400e;margin:0 0 10px}.photos{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.photos img{width:92px;height:72px;object-fit:cover;border:1px solid #e5e7eb;border-radius:6px}.mov{font-size:12px;padding:4px 0;border-bottom:1px solid #f0f0f0}.mov-d{color:#9ca3af;margin-right:8px}.mov-m{color:#6b7280}.empty{font-size:12px;color:#9ca3af;font-style:italic;margin:0}`;
 function rowHtml(l: string, v: unknown) { return `<div class="row"><span class="lbl">${escHtml(l)}</span><span class="val">${escHtml(v)}</span></div>`; }
 
 function printAgentFicha(
@@ -1157,6 +1157,13 @@ function printAgentFicha(
 ) {
   const emp = extra?.emp;
   const armed = extra?.armed;
+  const arma = extra?.arma || p.arma;
+  const weaponType = arma?.tipo || armed?.weaponType || p.armaModelo;
+  const weaponSerial = arma?.serie || p.armaSerial || armed?.weaponSerial;
+  const weaponCaliber = displayCaliber(arma?.calibre || armed?.weaponCaliber);
+  const weaponStatus = arma?.estatus || armed?.weaponCondition;
+  const weaponPhotos = (extra?.fotosArma || []).map((u) => getFileUrl(u));
+  const hasWeaponData = p.requiereArma || !!weaponSerial || !!weaponType || !!arma || !!armed;
   const movs = extra?.movs || [];
   const initials = (p.vigilante || "?").split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("");
   const photoHtml = extra?.photo
@@ -1177,21 +1184,27 @@ function printAgentFicha(
     cell("Puesto", p.puesto),
     cell("Horas", p.horas + "h"),
     cell("Incentivo", p.incentivo ? "RD$ " + p.incentivo : "—"),
-    p.requiereArma ? cell("Arma asignada", [p.arma?.tipo, p.armaSerial].filter(Boolean).join(" · ")) : "",
+    hasWeaponData ? cell("Arma asignada", [weaponType, weaponSerial].filter(Boolean).join(" · ")) : "",
     p.comentario ? cell("Comentario", p.comentario) : "",
   ].join("");
 
-  const armedHtml = armed
+  const weaponHtml = hasWeaponData
     ? `<div class="section gold">
         <p class="sec-title">Personal Armado · Auditoría</p>
         <div class="grid">
-          ${cell("Tipo de Arma", armed.weaponType)}
-          ${cell("Serial", armed.weaponSerial)}
-          ${cell("Munición", displayCaliber(armed.weaponCaliber) + (armed.ammunitionCount != null ? ` (${armed.ammunitionCount} cápsulas)` : ""))}
-          ${cell("Estado Arma", armed.weaponCondition)}
-          ${cell("Cliente / Puesto", [armed.client, armed.location].filter(Boolean).join(" · "))}
-          ${cell("Provincia", armed.province)}
+          ${cell("Tipo de Arma", weaponType)}
+          ${cell("Serial", weaponSerial)}
+          ${cell("Marca", arma?.marca || armed?.weaponBrand)}
+          ${cell("Calibre", weaponCaliber)}
+          ${cell("Categoría", arma?.categoria)}
+          ${cell("No. Licencia", arma?.noLicencia || armed?.licenseNumber)}
+          ${cell("Estado Arma", weaponStatus)}
+          ${cell("Propietario", arma?.propietario)}
+          ${armed?.ammunitionCount != null ? cell("Munición", `${armed.ammunitionCount} cápsulas`) : ""}
+          ${cell("Cliente / Puesto", [c.nombre, p.puesto].filter(Boolean).join(" · "))}
+          ${armed?.province ? cell("Provincia", armed.province) : ""}
         </div>
+        ${weaponPhotos.length ? `<div class="photos">${weaponPhotos.map((u) => `<img src="${escHtml(u)}" alt="Foto del arma" />`).join("")}</div>` : ""}
       </div>`
     : "";
 
@@ -1209,10 +1222,11 @@ function printAgentFicha(
       <div>
         <div class="name">${escHtml(p.vigilante || "Sin asignar")}</div>
         <div class="sub">${escHtml((emp?.position || "Oficial de Seguridad") + " · " + (emp?.department || "Safeone"))}</div>
+        <div class="chips">${hasWeaponData ? `<span class="chip gold">Arma: ${escHtml([weaponType, weaponSerial].filter(Boolean).join(" · ") || "Asignada")}</span>` : ""}${p.novedad ? `<span class="chip">Novedad</span>` : ""}</div>
       </div>
     </div>
     <div class="grid">${datosGrid}</div>
-    ${armedHtml}
+    ${weaponHtml}
     ${movsHtml}
   </body></html>`);
 }
