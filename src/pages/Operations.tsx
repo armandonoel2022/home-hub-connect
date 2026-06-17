@@ -1510,7 +1510,7 @@ const OperationsPage = () => {
 
                 <div>
                   <label className="text-sm font-medium text-card-foreground block mb-1.5">Tipo de Munición</label>
-                  <select value={form.weaponCaliber || ""} onChange={e => setForm({ ...form, weaponCaliber: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none">
+                  <select value={form.weaponCaliber === "No letal" ? "Menos que letal" : (form.weaponCaliber || "")} onChange={e => setForm({ ...form, weaponCaliber: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none">
                     <option value="">Seleccionar...</option>
                     <option value="Letal">Letal</option>
                     <option value="Menos que letal">Menos que letal</option>
