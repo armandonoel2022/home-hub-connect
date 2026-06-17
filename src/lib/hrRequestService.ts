@@ -388,6 +388,11 @@ export function getApprovedLoans(): HRRequest[] {
   return getAll().filter((r) => r.formType === "prestamos" && r.status === "Aprobada");
 }
 
+/** Todas las solicitudes de préstamo (cualquier estado: en proceso, aprobadas, rechazadas). */
+export function getAllLoanRequests(): HRRequest[] {
+  return getAll().filter((r) => r.formType === "prestamos");
+}
+
 /** Monto efectivo del préstamo (aprobado por Gerencia o el solicitado). */
 export function loanPrincipal(req: HRRequest): number {
   const d = req.loanDetails;
