@@ -1,71 +1,55 @@
-# Operaciones — Expediente Digital del Cliente
+## Objetivo
 
-Reestructuración de "Personal y Puestos" para modelar el expediente completo de cada cliente: localidades, puestos, turnos, armas, personal (alimentado por el reporte diario de ayer), bóveda de armas y ficha imprimible.
+Hacer el **Expediente de Clientes** más profesional/estético (vista 360° con filtros por botones en lugar de todo desplegado) y alimentarlo con **datos reales** de la base de datos gSafeOne, leyendo del **último Reporte Diario digitado (el de ayer)**.
 
-## Modelo de datos (nuevo)
+## Hallazgo clave sobre el modelo de datos (del extracto)
 
-Hoy un "puesto" es solo el texto `location` en cada registro de Personal Armado. Se introduce una jerarquía persistida en backend (archivos JSON locales, patrón `createCrudRoutes`, con respaldo en `localStorage`):
+- **Cliente**: `OID, Codigo, Nombre, Direccion, Telefono, Email, RNC, Cedula, Contacto, Inactivo`.
+- **Puesto**: `OID, Codigo, Descripcion` → en gSafeOne es el **rol/ocupación** (Vigilante, Supervisor…), NO una localidad física.
+- **ReporteDiario** (cabecera) → **ReporteDiarioD** (intermedia) → **ReportePuesto** (detalle: `Cliente, Puesto, Vigilante, Horas, Incentivo, Arma, Novedad, Comentario`).
+- **Empleado** = vigilante asignado. **Armamento** = serial/arma (ya existe `/weapons`).
+- **No existe tabla Localidad.** El "360°" por cliente se arma agrupando las líneas de `ReportePuesto` del último reporte por Cliente → Puesto(rol) → Vigilante/Arma.
 
-```text
-Cliente (OpsClient)
-  └─ Localidad (OpsLocation)        [geolocalización propia + dirección + contrato]
-       └─ Puesto (OpsPost)          [requiereArma sí/no, geolocalización, turnos]
-            └─ Turno (embebido)     [nombre + horario]
-                 └─ Personal + Arma → viene del REPORTE DIARIO (el de ayer)
-```
+Por eso la jerarquía visual será: **Cliente → Puestos cubiertos (del reporte de ayer) → Vigilante + Arma + Horas**, con la dirección del cliente como su localización. La capa manual "Localidad" se mantiene solo en el modo manual (localStorage) ya existente.
 
-Entidades:
-- **OpsClient**: `{ id, nombre, contrato: { numero, inicio, fin }, coordinates, notas }`
-- **OpsLocation**: `{ id, clientId, nombre, direccion, coordinates, mapsUrl, notas }`
-- **OpsPost**: `{ id, locationId, nombre, requiereArma: boolean, turnos: [{ id, nombre, horario }], coordinates, notas }`
-- **DailyReport (reporte diario)**: `{ id, fecha (YYYY-MM-DD), postId, turnoId, personnelId, personnelName, presente, armaSerial, armaTipo, novedades, createdBy, createdAt }` — una fila por puesto/turno/agente. El expediente lee **el reporte de ayer** (fecha = ayer, o el último digitado por puesto).
-- **VaultMovement (bóveda)**: `{ id, fecha, armaSerial, armaTipo, tipo: "salida"|"entrada", from, to, personnel (quién recibe/entrega), authorizedBy (quién autoriza), notas, createdBy, createdAt }` — registro FROM→TO de cada arma.
+## Backend (`backend/routes/general-sql.js`)
 
-## Backend
+Nuevos endpoints solo-lectura (mismo guard que GENERAL):
 
-Nuevas rutas JSON locales (igual patrón que `armed-personnel.js`):
-- `backend/routes/ops-clients.js` → `ops_clients.json`
-- `backend/routes/ops-locations.js` → `ops_locations.json`
-- `backend/routes/ops-posts.js` → `ops_posts.json`
-- `backend/routes/ops-daily-reports.js` → `ops_daily_reports.json` (filtro por `?fecha=` y `?postId=`)
-- `backend/routes/vault-movements.js` → `vault_movements.json` (filtro por `?armaSerial=`)
-- Registrar todas en `backend/server.js`.
+1. `GET /general-sql/expediente/status` → fecha y OID del último `ReporteDiario` (ayer/último cerrado).
+2. `GET /general-sql/expediente` → 360° del último reporte:
+   - Join `ReporteDiario → ReporteDiarioD → ReportePuesto → Cliente → Puesto → Empleado` y `Armamento` (por `Arma`).
+   - Devuelve por cliente: datos del cliente (nombre, dirección, tel, email, RNC/Cédula, contacto) + lista de puestos cubiertos con `{ puesto, vigilante, horas, armaSerial/modelo, novedad, comentario }`.
+   - Totales globales: clientes con cobertura, puestos cubiertos, vigilantes, armas en uso, puestos armados vs sin arma.
 
-## Frontend
+Se mapeará con `SELECT *` flexible donde los nombres puedan variar (como ya se hace con `Armamento`).
 
-### Capa de datos
-- `src/lib/opsExpediente.ts`: tipos + CRUD (clientes, localidades, puestos, reportes, bóveda) con sync al backend y respaldo `localStorage`. Helper `getYesterdayReport(postId)` que resuelve el último reporte digitado (preferentemente el de ayer) y arma la "foto viva" de personal + arma por puesto/turno.
-- Seed inicial: derivar clientes/localidades/puestos desde `ArmedPersonnel` (agrupando `client` → `location`) para no empezar vacío.
+## Cliente API (`src/lib/api.ts`)
 
-### Pantallas
-1. **Expediente del Cliente** (`src/pages/ClientExpediente.tsx`, ruta `/operaciones/expediente`):
-   - Árbol Cliente → Localidad → Puesto → Turno.
-   - Cada puesto muestra: badge "requiere arma", personal y arma del **reporte de ayer** (en tiempo real), licencia/serial, y enlaces de geolocalización (cliente y puesto).
-   - Botón **Imprimir expediente** (PDF tipo ficha con membrete SafeOne) por cliente.
-   - Editores para crear/editar localidades, puestos y turnos.
-2. **Reporte Diario** (`src/components/operations/DailyReportForm.tsx`, integrado en el expediente o `/operaciones/reporte-diario`):
-   - Selección de fecha + localidad/puesto/turno; por cada puesto se digita personal presente, arma usada (serial) y novedades. Es la fuente que alimenta el expediente.
-3. **Bóveda de Armas** (`src/pages/WeaponVault.tsx`, ruta `/operaciones/boveda`):
-   - Registro de salida/entrada con FROM→TO, quién, cuándo, cuál (serial), autorizado por.
-   - Estado actual de cada arma (en bóveda vs. en puesto X) e historial por arma.
+Agregar a `generalSqlApi`:
+- `expedienteStatus()` y `expediente()` con sus tipos (`GeneralExpediente`, `GeneralExpedienteCliente`, `GeneralExpedientePuesto`).
 
-### Navegación / accesos
-- Agregar entradas en `src/components/AppSidebar.tsx` (Operaciones) y rutas en `src/App.tsx`.
-- Permisos vía `src/lib/permissions.ts` (Operaciones / Admin / Gerencia).
+## Frontend (`src/pages/ClientExpediente.tsx`)
 
-## Impresión
-- `src/lib/expedientePdf.ts`: genera el expediente del cliente con `jspdf`/`jspdf-autotable` y membrete `safeone-letterhead.png` (A4), incluyendo localidades, puestos, turnos, armas, personal y coordenadas.
+Rediseño manteniendo la idea original:
+- **Selector de fuente**: "Vivo (GENERAL)" (BD) vs "Manual" (localStorage actual, como respaldo/edición).
+- **Barra 360° de KPIs** arriba (tarjetas): Clientes con cobertura, Puestos cubiertos, Vigilantes en servicio, Armas en uso, Puestos sin arma. Muestra la fecha del reporte (ayer).
+- **Filtros por botones** (chips): `Todos` · `Con armas` · `Sin armas` · `Con novedad` + buscador por cliente.
+- **Tarjetas colapsadas por defecto** (no todo desplegado): cada cliente muestra resumen (puestos, vigilantes, armas) y al expandir revela el detalle de puestos/vigilantes/armas del reporte de ayer, geolocalización y botón de imprimir expediente.
+- Estados de carga/empty/erro y botón Recargar. Si GENERAL no está conectado, cae al modo Manual con aviso.
+- Estética alineada al sistema (paleta oro/charcoal, encabezados, badges), sin colores hardcodeados.
 
-## Notas
-- Reutiliza `geoResolver.ts` para coordenadas/Google Maps y `weaponAssetLinking.ts` para validar seriales contra activos fijos (tipo ARM).
-- No todos los puestos requieren arma (`requiereArma`); la UI oculta secciones de arma cuando es `false`.
-- Se conserva el módulo actual de Puestos; el expediente es la nueva vista jerárquica que lo amplía.
+## Respuesta a "¿cómo exporto un reporte con los keys de cada tabla?"
+
+Incluiré un pequeño botón **"Exportar esquema"** (o lo entrego como nota): consulta `INFORMATION_SCHEMA.KEY_COLUMN_USAGE` + `TABLE_CONSTRAINTS` para listar PKs/FKs por tabla y se exporta a Excel con `exportUtils`. (Confirmar si lo quieres dentro de la app o solo el query.)
 
 ## Orden de implementación
-1. Backend (5 rutas + registro en server.js).
-2. `opsExpediente.ts` + seed desde Personal Armado.
-3. Pantalla Expediente + editores de localidad/puesto/turno.
-4. Formulario de Reporte Diario.
-5. Bóveda de Armas (FROM→TO + historial).
-6. PDF del expediente.
-7. Sidebar, rutas y permisos.
+
+1. Endpoints backend `expediente` + registro.
+2. `generalSqlApi.expediente*` + tipos en `api.ts`.
+3. Rediseño de `ClientExpediente.tsx` (KPIs + filtros + colapso + modo Vivo/Manual).
+4. Verificación de build y, si GENERAL responde, prueba en preview.
+
+## Decisión que necesito confirmar
+
+¿La capa **"Localidad"** la dejamos solo en el modo Manual (la BD no la tiene) y en el modo Vivo agrupamos directamente **Cliente → Puestos del reporte de ayer**? Es lo que propongo.
