@@ -601,10 +601,12 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
 
         <div className="space-y-4 text-sm">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+            <Field label="Serie" value={serie} />
             <Field label="Marca" value={puesto.arma?.marca} />
             <Field label="Tipo" value={puesto.arma?.tipo} />
             <Field label="Calibre" value={puesto.arma?.calibre} />
             <Field label="Categoría" value={puesto.arma?.categoria} />
+            <Field label="No. Licencia" value={noLicencia || puesto.arma?.noLicencia} />
             <Field label="Propietario" value={puesto.arma?.propietario} />
             <Field label="Ubicación" value={`${cliente.nombre} · ${puesto.puesto}`} />
             <Field label="Custodio" value={puesto.vigilante} />
@@ -740,6 +742,10 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
           <div className="grid grid-cols-2 gap-2 text-xs">
             <Field label="Código" value={puesto.vigilanteCodigo} />
             <Field label="Cédula" value={puesto.vigilanteCedula} />
+            {puesto.vigilanteFechaNacimiento && (
+              <Field label="Nacimiento" value={new Date(puesto.vigilanteFechaNacimiento).toLocaleDateString("es-DO")} />
+            )}
+            {puesto.vigilanteEdad != null && <Field label="Edad" value={`${puesto.vigilanteEdad} años`} />}
             <Field label="Cliente" value={cliente.nombre} />
             <Field label="Puesto" value={puesto.puesto} />
             <Field label="Horas" value={`${puesto.horas}h`} />
@@ -885,6 +891,7 @@ function printAgentFicha(p: GeneralExpedientePuesto, c: GeneralExpedienteCliente
   openPrint(`<html><head><title>Ficha del Vigilante</title><style>${fichaStyles}</style></head><body>
     <h1>Ficha del Vigilante</h1>
     ${rowHtml("Nombre", p.vigilante)}${rowHtml("Código", p.vigilanteCodigo)}${rowHtml("Cédula", p.vigilanteCedula)}
+    ${p.vigilanteFechaNacimiento ? rowHtml("Nacimiento", new Date(p.vigilanteFechaNacimiento).toLocaleDateString("es-DO")) : ""}${p.vigilanteEdad != null ? rowHtml("Edad", p.vigilanteEdad + " años") : ""}
     ${rowHtml("Cliente", c.nombre)}${rowHtml("Puesto", p.puesto)}${rowHtml("Horas", p.horas + "h")}
     ${p.requiereArma ? rowHtml("Arma asignada", [p.arma?.tipo, p.armaSerial].filter(Boolean).join(" · ")) : ""}
     ${p.comentario ? rowHtml("Comentario", p.comentario) : ""}

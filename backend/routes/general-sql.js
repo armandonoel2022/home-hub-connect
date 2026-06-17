@@ -391,14 +391,26 @@ async function catalogMap(candidates) {
 
 const cleanStr = (v) => (v == null || v === 'NULL' || v === '' ? null : v);
 
+// Calcula la edad en años a partir de una fecha de nacimiento (Date/ISO).
+function computeAge(v) {
+  if (v == null || v === 'NULL' || v === '') return null;
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
+  return age >= 0 && age < 120 ? age : null;
+}
+
 // Lee todas las armas de Armamento con sus catálogos resueltos.
 async function readWeapons() {
   const rows = await sql.query(`SELECT * FROM Armamento WHERE GCRecord IS NULL`);
   const [marcaCat, tipoCat, calCat, catCat] = await Promise.all([
-    catalogMap(['Marca', 'MarcaArma', 'Marcas']),
-    catalogMap(['TipoArma', 'Tipo', 'TipoArmamento']),
-    catalogMap(['Calibre', 'Calibres']),
-    catalogMap(['Categoria', 'CategoriaArma', 'Categorias']),
+    catalogMap(['MarcaArma', 'Marca', 'Marcas']),
+    catalogMap(['TipoArma', 'TipoArmamento', 'Tipo']),
+    catalogMap(['Calibre', 'CalibreArma', 'Calibres']),
+    catalogMap(['CategoriaArma', 'Categoria', 'Categorias']),
   ]);
   const pick = (r, ...names) => {
     for (const n of names) {
@@ -529,7 +541,8 @@ router.get('/expediente', auth, guard, async (req, res) => {
               h.OID AS PuestoOID, h.Codigo AS PuestoCodigo, h.Descripcion AS PuestoDesc,
               z.Descripcion AS Zona, t.Descripcion AS Tanda,
               e.OID AS VigilanteOID, e.Codigo AS VigilanteCodigo,
-              e.Nombre1, e.Apellido1, e.Cedula AS VigilanteCedula
+              e.Nombre1, e.Apellido1, e.Cedula AS VigilanteCedula,
+              e.FechaNacimiento AS VigilanteNacimiento
        FROM ReportePuesto rp
        JOIN ReporteDiarioD rd ON rp.ReporteDiarioD = rd.OID
        JOIN ReporteDiario r ON rd.ReporteDiario = r.OID
@@ -577,6 +590,8 @@ router.get('/expediente', auth, guard, async (req, res) => {
         vigilanteOID: r.VigilanteOID ?? null,
         vigilanteCodigo: r.VigilanteCodigo ?? null,
         vigilanteCedula: r.VigilanteCedula && r.VigilanteCedula !== 'NULL' ? r.VigilanteCedula : null,
+        vigilanteFechaNacimiento: cleanStr(r.VigilanteNacimiento),
+        vigilanteEdad: computeAge(r.VigilanteNacimiento),
         horas: Number(r.Horas) || 0,
         incentivo: Number(r.Incentivo) || 0,
         requiereArma: r.ArmaOID != null,
