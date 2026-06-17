@@ -138,6 +138,9 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
     generalSqlApi.expedienteDates()
       .then((d) => setAvailableDates((d || []).map(toInputDate)))
       .catch(() => { /* selector opcional */ });
+    generalSqlApi.weapons()
+      .then((w) => setSqlWeapons(w || []))
+      .catch(() => { /* catálogo opcional */ });
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, []);
 
