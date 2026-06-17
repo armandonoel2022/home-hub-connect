@@ -534,12 +534,28 @@ router.get('/expediente', auth, guard, async (req, res) => {
         puesto: r.PuestoDesc || `Puesto ${r.PuestoCodigo ?? ''}`.trim(),
         puestoCodigo: r.PuestoCodigo,
         vigilante: vigilante || '—',
+        vigilanteOID: r.VigilanteOID ?? null,
         vigilanteCodigo: r.VigilanteCodigo ?? null,
+        vigilanteCedula: r.VigilanteCedula && r.VigilanteCedula !== 'NULL' ? r.VigilanteCedula : null,
         horas: Number(r.Horas) || 0,
         incentivo: Number(r.Incentivo) || 0,
         requiereArma: r.ArmaOID != null,
+        armaOID: r.ArmaOID != null ? Number(r.ArmaOID) : null,
         armaSerial: arma?.serie || null,
         armaModelo: arma?.modelo || arma?.marca || null,
+        arma: arma
+          ? {
+              oid: r.ArmaOID != null ? Number(r.ArmaOID) : null,
+              serie: arma.serie,
+              marca: arma.marca,
+              tipo: arma.tipo,
+              calibre: arma.calibre,
+              categoria: arma.categoria,
+              noLicencia: arma.noLicencia,
+              estatus: arma.estatus,
+              propietario: arma.propietario,
+            }
+          : null,
         novedad: r.NovedadOID != null,
         comentario: r.Comentario && r.Comentario !== 'NULL' ? r.Comentario : '',
       });
