@@ -539,9 +539,18 @@ export default function Payroll() {
     const factor = payFrequency === "quincenal" ? 0.5 : 1;
     const d = calcDeductions(gross);
     const x = computeExtras(detail, detailExtras, gross);
+    // Cuotas de préstamos aprobados del empleado (coincidencia por nombre y frecuencia)
+    const nameKey = (detail.fullName || "").trim().toLowerCase();
+    const loans = getApprovedLoans().filter(l =>
+      (l.requestedByName || "").trim().toLowerCase() === nameKey
+      && loanBalance(l) > 0
+      && (l.loanDetails?.frequency || "mensual") === payFrequency
+    );
+    const loanDeduction = loans.reduce((s, l) =>
+      s + (l.loanDetails?.approvedInstallment ?? l.loanDetails?.monthlyInstallment ?? 0), 0);
     const grossBase = gross * factor;
     const grossPeriod = grossBase + x.extraEarnings;
-    const total = d.totalDeductions * factor + x.extraDeductions;
+    const total = d.totalDeductions * factor + x.extraDeductions + loanDeduction;
     return {
       gross,
       grossBase,
@@ -554,6 +563,8 @@ export default function Payroll() {
       holidayDays: x.holidayDays, holidayAmount: x.holidayAmount,
       lateHours: x.lateHours, lateDeduction: x.lateDeduction,
       mealDeduction: x.mealDeduction,
+      loanDeduction,
+      loanCount: loans.length,
       total,
       net: grossPeriod - total,
     };
