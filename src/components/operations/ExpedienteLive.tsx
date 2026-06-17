@@ -29,6 +29,17 @@ function mapsHref(addr: string): string {
   return `https://www.google.com/maps?q=${encodeURIComponent(addr)}`;
 }
 
+// Normaliza una fecha de GENERAL (ISO o Date) a 'YYYY-MM-DD' para <input type=date>.
+function toInputDate(v: string | null | undefined): string {
+  if (!v) return "";
+  const s = String(v);
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toISOString().slice(0, 10);
+}
+
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const r = new FileReader();
