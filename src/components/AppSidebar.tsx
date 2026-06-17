@@ -33,6 +33,8 @@ import {
   Banknote,
   ImagePlus,
   BrainCircuit,
+  FolderTree,
+  Lock,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
