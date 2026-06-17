@@ -138,13 +138,15 @@ export function mergeOperacionesIntoExpediente(
   data: GeneralExpediente | null,
   personnel: ArmedPersonnel[],
   workPosts: WorkPost[],
+  sqlWeapons: GeneralWeapon[] = [],
 ): GeneralExpediente {
   const base: GeneralExpediente = data
     ? { ...data, clientes: data.clientes.map((c) => ({ ...c, puestos: c.puestos.map((p) => ({ ...p })) })) }
     : { fecha: null, clientes: [], totals: {} };
 
   const opsIdx = buildOpsIndex(personnel || [], workPosts || []);
-  if (opsIdx.size === 0) return base;
+  const sqlMap = buildWeaponSerialMap(sqlWeapons);
+  if (opsIdx.size === 0 && sqlMap.size === 0) return base;
 
   // Marca registros de GENERAL.
   base.clientes.forEach((c) => { c.origen = c.origen || "general"; c.puestos.forEach((p) => { p.origen = p.origen || "general"; }); });
