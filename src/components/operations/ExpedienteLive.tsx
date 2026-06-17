@@ -282,18 +282,41 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
   );
 };
 
-// ─── Agrupación por localidad (dirección) ───
-function groupByLocation(puestos: GeneralExpedientePuesto[]) {
-  // GENERAL no tiene Localidad; agrupamos por descripción de puesto base si aplica.
-  // Por ahora una sola "localidad" implícita; se conserva orden del reporte.
-  return [{ nombre: "Puestos cubiertos", puestos }];
+// ─── Agrupación por Localidad → Puesto (estilo Manual) ───
+interface PuestoGroup {
+  nombre: string;
+  requiereArma: boolean;
+  rows: GeneralExpedientePuesto[];
+}
+interface LocalidadGroup {
+  nombre: string;
+  puestos: PuestoGroup[];
+}
+
+function groupByLocalidad(puestos: GeneralExpedientePuesto[]): LocalidadGroup[] {
+  const locs = new Map<string, LocalidadGroup>();
+  for (const p of puestos) {
+    const locName = (p.localidad || "Sede Principal").trim() || "Sede Principal";
+    let loc = locs.get(locName.toLowerCase());
+    if (!loc) { loc = { nombre: locName, puestos: [] }; locs.set(locName.toLowerCase(), loc); }
+    const puestoName = (p.puesto || "Puesto General").trim() || "Puesto General";
+    let pg = loc.puestos.find((x) => x.nombre.toLowerCase() === puestoName.toLowerCase());
+    if (!pg) { pg = { nombre: puestoName, requiereArma: false, rows: [] }; loc.puestos.push(pg); }
+    pg.rows.push(p);
+    if (p.requiereArma) pg.requiereArma = true;
+  }
+  return [...locs.values()];
 }
 
 function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx: LiveCtx }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const armas = client.puestos.filter((p) => p.requiereArma).length;
-  const vigilantes = new Set(client.puestos.map((p) => p.vigilanteCodigo).filter((x) => x != null)).size;
+  const vigilantes = new Set(
+    client.puestos
+      .map((p) => (p.vigilanteCodigo != null ? `c:${p.vigilanteCodigo}` : (p.vigilante || "").trim().toLowerCase()))
+      .filter((x) => x && x !== "c:"),
+  ).size;
 
   const printExpediente = () => {
     try {
