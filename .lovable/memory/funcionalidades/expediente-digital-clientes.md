@@ -25,6 +25,11 @@ El personal y el arma de cada puesto vienen del **reporte diario** (`DailyReport
 Rutas JSON: `ops-clients`, `ops-locations`, `ops-posts`, `ops-daily-reports`, `vault-movements` (patrón createCrudRoutes; daily-reports y vault tienen `/q/filter`).
 
 ## UI / rutas / permisos
-- `/operaciones/expediente` (`ClientExpediente.tsx`) — árbol + editores + reporte diario + PDF (`expedientePdf.ts`, membrete A4).
+- `/operaciones/expediente` (`ClientExpediente.tsx`) — selector de fuente **Vivo (GENERAL)** vs **Manual**.
+- Modo **Vivo** (`src/components/operations/ExpedienteLive.tsx`): lee el último Reporte Diario de gSafeOne vía `generalSqlApi.expediente()`. Vista 360° con KPIs (clientes, puestos cubiertos, vigilantes, armas, sin arma, con novedad), filtros por botones (Todos/Con armas/Sin arma/Con novedad) + buscador, tarjetas colapsadas por defecto, datos del cliente (dirección/tel/email/RNC/cédula/contacto) y puestos del reporte con vigilante+arma+horas+novedad. PDF por cliente con `exportToPDF`. Botón "Exportar esquema" (PK/FK) vía `generalSqlApi.schemaKeys()`.
+- Modo **Manual** (legado): árbol Cliente→Localidad→Puesto→Turno + editores + reporte diario + PDF (`expedientePdf.ts`, membrete A4).
 - `/operaciones/boveda` (`WeaponVault.tsx`) — movimientos, estado actual e historial por arma.
 - Permisos: módulos `clientExpediente` y `weaponVault` (mismo grupo que Operaciones: Operaciones/Admin/Gerencia/Comercial).
+
+## Backend GENERAL (gSafeOne) para Expediente Vivo
+`backend/routes/general-sql.js`: `GET /expediente` arma el 360° del último `ReporteDiario` (ReporteDiario→ReporteDiarioD→ReportePuesto→Cliente/Puesto/Empleado + Armamento por OID). En gSafeOne **Puesto = rol/ocupación** (no localidad); no existe tabla Localidad. `GET /expediente/status` (fecha último reporte) y `GET /schema-keys` (PK/FK desde INFORMATION_SCHEMA).

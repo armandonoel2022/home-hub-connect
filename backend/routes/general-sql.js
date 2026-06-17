@@ -372,4 +372,160 @@ router.get('/weapons', auth, guard, async (req, res) => {
   } catch (e) { res.status(502).json({ message: e.message }); }
 });
 
+// ─── Expediente de Clientes (vivo desde GENERAL) ───
+// Lee el ÚLTIMO Reporte Diario digitado (típicamente el de ayer) y arma el
+// 360° por cliente: Cliente → Puestos cubiertos → Vigilante + Arma + Horas.
+// No existe tabla Localidad en gSafeOne; se agrupa Cliente → Puesto(rol).
+
+async function latestReportDate() {
+  const rows = await sql.query(
+    `SELECT TOP 1 Fecha FROM ReporteDiario WHERE GCRecord IS NULL ORDER BY Fecha DESC`
+  );
+  return rows[0]?.Fecha || null;
+}
+
+// Mapa OID→arma usando SELECT * flexible (los nombres de Armamento varían).
+async function weaponsMap() {
+  const map = new Map();
+  try {
+    const rows = await sql.query(`SELECT * FROM Armamento WHERE GCRecord IS NULL`);
+    const pick = (r, ...names) => {
+      for (const n of names) {
+        const key = Object.keys(r).find((k) => k.toLowerCase() === n.toLowerCase());
+        if (key && r[key] != null && r[key] !== '') return r[key];
+      }
+      return null;
+    };
+    for (const r of rows) {
+      const oid = pick(r, 'OID');
+      if (oid == null) continue;
+      map.set(Number(oid), {
+        serie: pick(r, 'Serie', 'NumeroSerie', 'NoSerie', 'Serial'),
+        modelo: pick(r, 'Modelo', 'Descripcion'),
+        marca: pick(r, 'Marca'),
+        registro: pick(r, 'Registro', 'NoRegistro'),
+        calibre: pick(r, 'Calibre'),
+      });
+    }
+  } catch (_) { /* Armamento puede no existir; se ignora */ }
+  return map;
+}
+
+router.get('/expediente/status', auth, guard, async (req, res) => {
+  try {
+    const fecha = await latestReportDate();
+    res.json({ fecha });
+  } catch (e) { res.status(502).json({ message: e.message }); }
+});
+
+router.get('/expediente', auth, guard, async (req, res) => {
+  try {
+    const fecha = await latestReportDate();
+    if (!fecha) return res.json({ fecha: null, clientes: [], totals: {} });
+
+    const rows = await sql.query(
+      `SELECT rp.OID AS LineaOID, rp.Cliente AS ClienteOID, rp.Puesto AS PuestoOID,
+              rp.Vigilante AS VigilanteOID, rp.Horas, rp.Incentivo, rp.Arma AS ArmaOID,
+              rp.Novedad AS NovedadOID, rp.Comentario,
+              c.Codigo AS ClienteCodigo, c.Nombre AS ClienteNombre, c.Direccion,
+              c.Telefono, c.Email, c.RNC, c.Cedula, c.Contacto, c.Inactivo,
+              pu.Codigo AS PuestoCodigo, pu.Descripcion AS PuestoDesc,
+              e.Codigo AS VigilanteCodigo, e.Nombre1, e.Apellido1
+       FROM ReporteDiario rd
+       JOIN ReporteDiarioD rdd ON rdd.ReporteDiario = rd.OID
+       JOIN ReportePuesto rp ON rp.ReporteDiarioD = rdd.OID AND rp.GCRecord IS NULL
+       LEFT JOIN Cliente c ON c.OID = rp.Cliente
+       LEFT JOIN Puesto pu ON pu.OID = rp.Puesto
+       LEFT JOIN Empleado e ON e.OID = rp.Vigilante
+       WHERE rd.GCRecord IS NULL AND rd.Fecha = @fecha`,
+      { fecha }
+    );
+
+    const weapons = await weaponsMap();
+    const byClient = new Map();
+
+    for (const r of rows) {
+      const cid = r.ClienteOID;
+      if (cid == null) continue;
+      if (!byClient.has(cid)) {
+        byClient.set(cid, {
+          oid: cid,
+          codigo: r.ClienteCodigo,
+          nombre: r.ClienteNombre || `Cliente ${r.ClienteCodigo ?? cid}`,
+          direccion: r.Direccion || '',
+          telefono: r.Telefono || '',
+          email: r.Email || '',
+          rnc: r.RNC && r.RNC !== 'NULL' ? r.RNC : '',
+          cedula: r.Cedula && r.Cedula !== 'NULL' ? r.Cedula : '',
+          contacto: r.Contacto || '',
+          inactivo: !!r.Inactivo,
+          puestos: [],
+        });
+      }
+      const arma = r.ArmaOID != null ? weapons.get(Number(r.ArmaOID)) : null;
+      const vigilante = [r.Nombre1, r.Apellido1].filter(Boolean).join(' ').trim();
+      byClient.get(cid).puestos.push({
+        lineaOID: r.LineaOID,
+        puesto: r.PuestoDesc || `Puesto ${r.PuestoCodigo ?? ''}`.trim(),
+        puestoCodigo: r.PuestoCodigo,
+        vigilante: vigilante || '—',
+        vigilanteCodigo: r.VigilanteCodigo ?? null,
+        horas: Number(r.Horas) || 0,
+        incentivo: Number(r.Incentivo) || 0,
+        requiereArma: r.ArmaOID != null,
+        armaSerial: arma?.serie || null,
+        armaModelo: arma?.modelo || arma?.marca || null,
+        novedad: r.NovedadOID != null,
+        comentario: r.Comentario && r.Comentario !== 'NULL' ? r.Comentario : '',
+      });
+    }
+
+    const clientes = Array.from(byClient.values()).sort((a, b) =>
+      a.nombre.localeCompare(b.nombre)
+    );
+
+    let puestosCubiertos = 0, armas = 0, sinArma = 0, conNovedad = 0;
+    const vigilantes = new Set();
+    for (const c of clientes) {
+      for (const p of c.puestos) {
+        puestosCubiertos++;
+        if (p.requiereArma) armas++; else sinArma++;
+        if (p.novedad) conNovedad++;
+        if (p.vigilanteCodigo != null) vigilantes.add(p.vigilanteCodigo);
+      }
+    }
+
+    res.json({
+      fecha,
+      clientes,
+      totals: {
+        clientes: clientes.length,
+        puestosCubiertos,
+        vigilantes: vigilantes.size,
+        armas,
+        sinArma,
+        conNovedad,
+      },
+    });
+  } catch (e) { res.status(502).json({ message: e.message }); }
+});
+
+// ─── Exportación de esquema: PKs/FKs por tabla ───
+router.get('/schema-keys', auth, guard, async (req, res) => {
+  try {
+    const rows = await sql.query(
+      `SELECT tc.TABLE_NAME AS tabla, tc.CONSTRAINT_TYPE AS tipo,
+              kcu.COLUMN_NAME AS columna, tc.CONSTRAINT_NAME AS restriccion
+       FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
+       JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE kcu
+         ON kcu.CONSTRAINT_NAME = tc.CONSTRAINT_NAME
+       WHERE tc.CONSTRAINT_TYPE IN ('PRIMARY KEY','FOREIGN KEY')
+       ORDER BY tc.TABLE_NAME, tc.CONSTRAINT_TYPE`
+    );
+    res.json(rows.map((r) => ({
+      tabla: r.tabla, tipo: r.tipo, columna: r.columna, restriccion: r.restriccion,
+    })));
+  } catch (e) { res.status(502).json({ message: e.message }); }
+});
+
 module.exports = router;
