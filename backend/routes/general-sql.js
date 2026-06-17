@@ -391,6 +391,18 @@ async function catalogMap(candidates) {
 
 const cleanStr = (v) => (v == null || v === 'NULL' || v === '' ? null : v);
 
+// Calcula la edad en años a partir de una fecha de nacimiento (Date/ISO).
+function computeAge(v) {
+  if (v == null || v === 'NULL' || v === '') return null;
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
+  return age >= 0 && age < 120 ? age : null;
+}
+
 // Lee todas las armas de Armamento con sus catálogos resueltos.
 async function readWeapons() {
   const rows = await sql.query(`SELECT * FROM Armamento WHERE GCRecord IS NULL`);
