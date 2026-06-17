@@ -1041,7 +1041,10 @@ function openPrint(html: string) {
   setTimeout(() => w.print(), 400);
 }
 const escHtml = (v: unknown) => String(v ?? "—").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
-const fichaStyles = `body{font-family:'Segoe UI',Arial,sans-serif;color:#1f2937;padding:32px}h1{font-size:20px;border-bottom:3px solid #b8860b;padding-bottom:8px}.row{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid #eee}.lbl{width:160px;color:#6b7280;font-size:12px;text-transform:uppercase}.val{font-weight:600}`;
+const fichaStyles = `body{font-family:'Segoe UI',Arial,sans-serif;color:#1f2937;padding:32px;max-width:760px;margin:0 auto}h1{font-size:20px;border-bottom:3px solid #b8860b;padding-bottom:8px;margin-bottom:16px}.row{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid #eee}.lbl{width:160px;color:#6b7280;font-size:12px;text-transform:uppercase}.val{font-weight:600}
+.header{display:flex;align-items:center;gap:16px;margin-bottom:18px}.avatar-img,.avatar-fb{width:64px;height:64px;border-radius:50%;object-fit:cover}.avatar-fb{background:#e5e7eb;color:#374151;font-weight:700;font-size:22px;display:flex;align-items:center;justify-content:center}.name{font-size:18px;font-weight:700;line-height:1.2}.sub{font-size:12px;color:#6b7280}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;margin-bottom:8px}.cell{display:flex;flex-direction:column;border-bottom:1px solid #f0f0f0;padding-bottom:4px}.cl{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#9ca3af}.cv{font-weight:600;font-size:13px}
+.section{margin-top:18px;padding:12px 14px;border:1px solid #e5e7eb;border-radius:8px}.section.gold{border-color:#e2c275;background:#fdf8ec}.sec-title{font-size:12px;font-weight:700;text-transform:uppercase;color:#92400e;margin:0 0 10px}.mov{font-size:12px;padding:4px 0;border-bottom:1px solid #f0f0f0}.mov-d{color:#9ca3af;margin-right:8px}.mov-m{color:#6b7280}.empty{font-size:12px;color:#9ca3af;font-style:italic;margin:0}`;
 function rowHtml(l: string, v: unknown) { return `<div class="row"><span class="lbl">${escHtml(l)}</span><span class="val">${escHtml(v)}</span></div>`; }
 
 function printAgentFicha(
