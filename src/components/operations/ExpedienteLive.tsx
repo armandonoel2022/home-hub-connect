@@ -119,10 +119,18 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
 
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
+  const { data: personnel } = useArmedPersonnel();
+
+  // Fusiona GENERAL con Operaciones (Personal Armado + Puestos).
+  const mergedData = useMemo<GeneralExpediente | null>(() => {
+    if (!data && (!personnel || personnel.length === 0)) return data;
+    return mergeOperacionesIntoExpediente(data, personnel || [], loadPosts());
+  }, [data, personnel]);
+
   const filtered = useMemo<GeneralExpedienteCliente[]>(() => {
-    if (!data) return [];
+    if (!mergedData) return [];
     const q = search.toLowerCase().trim();
-    return data.clientes
+    return mergedData.clientes
       .map((c) => {
         let puestos = c.puestos;
         if (filter === "armas") puestos = puestos.filter((p) => p.requiereArma);
@@ -137,9 +145,9 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
         String(c.codigo ?? "").includes(q) ||
         c.puestos.some((p) => `${p.vigilante} ${p.armaSerial ?? ""}`.toLowerCase().includes(q)),
       );
-  }, [data, search, filter]);
+  }, [mergedData, search, filter]);
 
-  const t = data?.totals || {};
+  const t = mergedData?.totals || {};
 
   const ctx: LiveCtx = {
     overlay,
