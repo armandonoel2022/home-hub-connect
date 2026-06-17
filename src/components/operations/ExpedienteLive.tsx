@@ -869,7 +869,7 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
           onClick={() => setLightbox(null)}
         >
           <img src={lightbox} alt="Vista ampliada" className="max-h-[90vh] max-w-[90vw] object-contain rounded shadow-2xl" />
-          <button className="absolute top-4 right-4 text-white" onClick={() => setLightbox(null)}><X className="h-6 w-6" /></button>
+          <button className="absolute top-4 right-4 text-background" onClick={() => setLightbox(null)}><X className="h-6 w-6" /></button>
         </div>
       )}
     </Dialog>
@@ -933,7 +933,10 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
                 variant="outline"
                 className="shrink-0 border-destructive/30 text-destructive hover:bg-destructive/10"
                 onClick={() => {
-                  if (confirm(`¿Eliminar este registro del expediente?\n\n${puesto.vigilante || "Sin asignar"} · ${puesto.puesto}\n\nSe ocultará para todos los usuarios.`)) ctx.hideLine(cliente, puesto);
+                  if (confirm(`¿Eliminar este registro del expediente?\n\n${puesto.vigilante || "Sin asignar"} · ${puesto.puesto}\n\nSe ocultará para todos los usuarios.`)) {
+                    ctx.hideLine(cliente, puesto);
+                    onClose();
+                  }
                 }}
               >
                 <Trash2 className="h-4 w-4 mr-1" /> Eliminar registro
@@ -1033,7 +1036,7 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
       {lightbox && (
         <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-6 cursor-zoom-out" onClick={() => setLightbox(null)}>
           <img src={lightbox} alt="Vista ampliada del arma" className="max-h-[90vh] max-w-[90vw] object-contain rounded shadow-2xl" />
-          <button className="absolute top-4 right-4 text-white" onClick={() => setLightbox(null)}><X className="h-6 w-6" /></button>
+          <button className="absolute top-4 right-4 text-background" onClick={() => setLightbox(null)}><X className="h-6 w-6" /></button>
         </div>
       )}
     </Dialog>
