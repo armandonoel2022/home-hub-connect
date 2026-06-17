@@ -1,55 +1,61 @@
-## Objetivo
+# Expediente 360° Vivo — datos detallados, CRUD y bóveda unificada
 
-Hacer el **Expediente de Clientes** más profesional/estético (vista 360° con filtros por botones en lugar de todo desplegado) y alimentarlo con **datos reales** de la base de datos gSafeOne, leyendo del **último Reporte Diario digitado (el de ayer)**.
+## Problema
+El modo **Vivo (GENERAL)** de *Expediente de Clientes* lee el último reporte diario, pero:
+- Los puestos y vigilantes **no son clicables** (no abren ficha).
+- No muestra el detalle de arma (serial, marca, calibre, licencia, estado, fotos) que sí tiene *Personal Armado y Puestos*.
+- No hay forma de **editar** ni de subir **licencia/fotos** de cada arma.
+- La **bóveda** está en otra pantalla separada.
 
-## Hallazgo clave sobre el modelo de datos (del extracto)
+## Restricción técnica clave
+La conexión a GENERAL (gSafeOne / SQL Server) es **solo lectura** (`writeEnabled()=false`). Por eso:
+- Los datos base (cliente, puesto, vigilante, arma asignada del reporte) se **leen** de GENERAL.
+- Toda edición/CRUD y las **fotos/licencias** se guardan en un **overlay local JSON** (mismo motor de archivos en C: que el resto de la intranet), enlazado por **Serie del arma** (estable) y por OID de línea.
 
-- **Cliente**: `OID, Codigo, Nombre, Direccion, Telefono, Email, RNC, Cedula, Contacto, Inactivo`.
-- **Puesto**: `OID, Codigo, Descripcion` → en gSafeOne es el **rol/ocupación** (Vigilante, Supervisor…), NO una localidad física.
-- **ReporteDiario** (cabecera) → **ReporteDiarioD** (intermedia) → **ReportePuesto** (detalle: `Cliente, Puesto, Vigilante, Horas, Incentivo, Arma, Novedad, Comentario`).
-- **Empleado** = vigilante asignado. **Armamento** = serial/arma (ya existe `/weapons`).
-- **No existe tabla Localidad.** El "360°" por cliente se arma agrupando las líneas de `ReportePuesto` del último reporte por Cliente → Puesto(rol) → Vigilante/Arma.
+## Tabla Armamento (confirmado del Excel)
+`OID, Codigo, Marca(FK#), Serie, Categoria, Estatus, Tipo(FK#), Calibre(FK#), NoLicencia, FotoLicenciaFrente/Dorso, FotoArma1..4, Permanente, Vence, Nota, Propietario`
+→ Marca/Tipo/Calibre son códigos numéricos; se resolverán contra sus tablas de catálogo en GENERAL (con respaldo al número si no hay catálogo). Las columnas de foto vienen vacías en la BD, por eso las fotos van al overlay local.
 
-Por eso la jerarquía visual será: **Cliente → Puestos cubiertos (del reporte de ayer) → Vigilante + Arma + Horas**, con la dirección del cliente como su localización. La capa manual "Localidad" se mantiene solo en el modo manual (localStorage) ya existente.
+## Alcance
 
-## Backend (`backend/routes/general-sql.js`)
+### 1. Backend — enriquecer lectura de armas (`backend/routes/general-sql.js`)
+- Ampliar `weaponsMap()` para incluir `noLicencia, calibre, marca, tipo, estatus, permanente, vence, propietario`, resolviendo Marca/Tipo/Calibre contra catálogos (descubrimiento dinámico, con caché y respaldo al valor crudo).
+- En `/expediente`, cada puesto devolverá el objeto `arma` completo (oid, serie, marca, modelo, calibre, tipo, noLicencia, estatus) y datos del vigilante (código, nombre, OID) para poder abrir fichas.
 
-Nuevos endpoints solo-lectura (mismo guard que GENERAL):
+### 2. Backend — overlay editable + bóveda (`backend/routes/expediente-overlay.js`, nuevo)
+- `GET /expediente-overlay` → devuelve overlays por serie: `{ estatus, nota, fotosArma[], fotoLicenciaFrente, fotoLicenciaDorso, noLicencia, custodioOverride, ... }`.
+- `PUT /expediente-overlay/:serie` → guarda/edita campos del arma (persistente en JSON local). **Gateado** a editores autorizados.
+- `POST /expediente-overlay/:serie/photo` (multipart) → sube foto de arma o de licencia al storage local (uploads/operaciones/armas/…), devuelve URL.
+- Movimientos FROM→TO de armas y traslados de personal: reutilizar/extender `vault-movements.js` y registrar `{ arma/serie, desde, hacia, quién, cuándo, motivo }`; endpoint de historial por serie.
+- Guard de escritura: lista de correos autorizados (Samuel, Aurelio Pérez, Armando Noel) + super admin.
 
-1. `GET /general-sql/expediente/status` → fecha y OID del último `ReporteDiario` (ayer/último cerrado).
-2. `GET /general-sql/expediente` → 360° del último reporte:
-   - Join `ReporteDiario → ReporteDiarioD → ReportePuesto → Cliente → Puesto → Empleado` y `Armamento` (por `Arma`).
-   - Devuelve por cliente: datos del cliente (nombre, dirección, tel, email, RNC/Cédula, contacto) + lista de puestos cubiertos con `{ puesto, vigilante, horas, armaSerial/modelo, novedad, comentario }`.
-   - Totales globales: clientes con cobertura, puestos cubiertos, vigilantes, armas en uso, puestos armados vs sin arma.
+### 3. Permisos (`src/lib/permissions.ts`)
+- Añadir `OPS_EXPEDIENTE_EDITORS` (correos de Samuel, Aurelio Pérez, `anoel`, super) y helper `canEditExpediente(user)`. El backend valida lo mismo del lado servidor.
 
-Se mapeará con `SELECT *` flexible donde los nombres puedan variar (como ya se hace con `Armamento`).
+### 4. API cliente (`src/lib/api.ts`)
+- Tipos ampliados `GeneralExpedientePuesto.arma` (serie, marca, modelo, calibre, tipo, noLicencia, estatus) y `vigilanteOID`.
+- `expedienteOverlayApi`: `list()`, `save(serie, data)`, `uploadPhoto(serie, file, kind)`, `movements(serie)`, `addMovement(...)`.
 
-## Cliente API (`src/lib/api.ts`)
+### 5. Frontend — Expediente Vivo unificado (`src/components/operations/ExpedienteLive.tsx`)
+- **Cliente → (agrupación por dirección/localidad) → Puesto → Vigilante/Arma**, tarjetas colapsables como hoy pero con detalle enriquecido.
+- **Puesto clicable** → abre *Ficha del Puesto* (reusar estilo de `lib/ficha.ts`).
+- **Vigilante clicable** → abre ficha del agente (nombre, código, puesto, turno; cruza con Personal Armado si existe).
+- **Arma**: muestra `Tipo · Marca · Serial · Calibre · No. Licencia · Estatus` con color de estado (igual que `PostsView`), miniaturas de fotos y de licencia.
+- **Panel/Dialog de arma** (solo editores): editar estatus/nota/No. licencia, subir múltiples fotos del arma y foto de licencia (frente/dorso), ver historial de movimientos FROM→TO, registrar traslado de arma y de personal.
+- Mezcla overlay local sobre los datos de GENERAL (las ediciones prevalecen visualmente).
+- Mantener KPIs, filtros, búsqueda, export PDF/Excel y “Exportar esquema”.
 
-Agregar a `generalSqlApi`:
-- `expedienteStatus()` y `expediente()` con sus tipos (`GeneralExpediente`, `GeneralExpedienteCliente`, `GeneralExpedientePuesto`).
+### 6. Unificar Bóveda + Clientes (`src/pages/ClientExpediente.tsx`)
+- Añadir un tercer sub-modo/sección **Bóveda** dentro de la misma pantalla (tabs: *Vivo*, *Bóveda*, *Manual*), o integrar la bóveda como panel lateral del modo Vivo. La bóveda lista armas (de Armamento) con su ubicación actual (puesto/custodio del último reporte) y su registro de entradas/salidas FROM→TO.
+- Mantener el modo Manual existente como respaldo.
 
-## Frontend (`src/pages/ClientExpediente.tsx`)
+## Detalles técnicos
+- Storage de fotos: `uploads/operaciones/armas/<serie>/...` vía `fileStorage`/multer (mismo patrón que otros adjuntos).
+- Overlay keyed por **Serie** (estable entre reportes) con índice secundario por OID.
+- Resolución de catálogos Marca/Tipo/Calibre: intentar tablas tipo `Marca`, `TipoArma`, `Calibre` (o equivalentes) por descubrimiento; si no existen, mostrar el código. 
+- Todo el guardado server-side revalida el correo del usuario autenticado (no confiar solo en el front).
+- Auditoría: cada edición/movimiento se registra en el audit log (acción crítica) según memoria del proyecto.
 
-Rediseño manteniendo la idea original:
-- **Selector de fuente**: "Vivo (GENERAL)" (BD) vs "Manual" (localStorage actual, como respaldo/edición).
-- **Barra 360° de KPIs** arriba (tarjetas): Clientes con cobertura, Puestos cubiertos, Vigilantes en servicio, Armas en uso, Puestos sin arma. Muestra la fecha del reporte (ayer).
-- **Filtros por botones** (chips): `Todos` · `Con armas` · `Sin armas` · `Con novedad` + buscador por cliente.
-- **Tarjetas colapsadas por defecto** (no todo desplegado): cada cliente muestra resumen (puestos, vigilantes, armas) y al expandir revela el detalle de puestos/vigilantes/armas del reporte de ayer, geolocalización y botón de imprimir expediente.
-- Estados de carga/empty/erro y botón Recargar. Si GENERAL no está conectado, cae al modo Manual con aviso.
-- Estética alineada al sistema (paleta oro/charcoal, encabezados, badges), sin colores hardcodeados.
-
-## Respuesta a "¿cómo exporto un reporte con los keys de cada tabla?"
-
-Incluiré un pequeño botón **"Exportar esquema"** (o lo entrego como nota): consulta `INFORMATION_SCHEMA.KEY_COLUMN_USAGE` + `TABLE_CONSTRAINTS` para listar PKs/FKs por tabla y se exporta a Excel con `exportUtils`. (Confirmar si lo quieres dentro de la app o solo el query.)
-
-## Orden de implementación
-
-1. Endpoints backend `expediente` + registro.
-2. `generalSqlApi.expediente*` + tipos en `api.ts`.
-3. Rediseño de `ClientExpediente.tsx` (KPIs + filtros + colapso + modo Vivo/Manual).
-4. Verificación de build y, si GENERAL responde, prueba en preview.
-
-## Decisión que necesito confirmar
-
-¿La capa **"Localidad"** la dejamos solo en el modo Manual (la BD no la tiene) y en el modo Vivo agrupamos directamente **Cliente → Puestos del reporte de ayer**? Es lo que propongo.
+## Fuera de alcance
+- Escritura directa a SQL Server (permanece de solo lectura).
+- Cambios en el módulo *Personal Armado y Puestos* (se reutiliza como referencia/seed).
