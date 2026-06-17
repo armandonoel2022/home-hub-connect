@@ -3,6 +3,7 @@
 // Las fotos se resuelven contra el servidor local cuando son rutas /photos.
 
 import type { ArmedPersonnel } from "@/lib/types";
+import { displayCaliber } from "@/lib/expedienteHelpers";
 import type { DerivedPost } from "@/lib/derivedPosts";
 import { getFileUrl } from "@/lib/api";
 
@@ -113,7 +114,7 @@ export function printAgentFicha(p: ArmedPersonnel) {
       ${row("Tipo de Arma", p.weaponType)}
       ${row("Marca", p.weaponBrand)}
       ${row("Serial", p.weaponSerial)}
-      ${row("Tipo Munición", p.weaponCaliber)}
+      ${row("Tipo Munición", displayCaliber(p.weaponCaliber))}
       ${row("Cápsulas", p.ammunitionCount)}
       ${row("Estado del Arma", p.weaponCondition)}
       ${row("Nro. Licencia", p.licenseNumber)}

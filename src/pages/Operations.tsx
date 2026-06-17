@@ -47,6 +47,7 @@ const WEAPON_CONDITIONS = [
 ];
 
 import { parseAnyCoords, isMapsUrl } from "@/lib/geoResolver";
+import { displayCaliber } from "@/lib/expedienteHelpers";
 
 function parseCoords(coords: string): [number, number] | null {
   return parseAnyCoords(coords);
@@ -110,12 +111,12 @@ function PersonnelDashboard({ personnel, onFilter, onAssign }: { personnel: Arme
     let letal = 0, noLetal = 0, sinArma = 0;
     personnel.forEach(p => {
       if (p.weaponCaliber === "Letal") letal++;
-      else if (p.weaponCaliber === "No letal") noLetal++;
+      else if (p.weaponCaliber === "No letal" || p.weaponCaliber === "Menos que letal") noLetal++;
       else sinArma++;
     });
     return [
       { name: "Letal", value: letal },
-      { name: "No letal", value: noLetal },
+      { name: "Menos que letal", value: noLetal },
       ...(sinArma > 0 ? [{ name: "Sin arma", value: sinArma }] : []),
     ];
   }, [personnel]);
@@ -1119,7 +1120,7 @@ const OperationsPage = () => {
                         <td className="px-3 py-2">
                           {p.weaponCaliber && (
                             <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${p.weaponCaliber === "Letal" ? "bg-red-50 text-red-700" : "bg-blue-50 text-blue-700"}`}>
-                              {p.weaponCaliber}
+                              {displayCaliber(p.weaponCaliber)}
                             </span>
                           )}
                         </td>
@@ -1266,7 +1267,7 @@ const OperationsPage = () => {
                     ["Cel. Personal", selected.personalPhone || "—"],
                     ["Tipo de Arma", selected.weaponType || "—"],
                     ["Marca", selected.weaponBrand || "—"],
-                    ["Tipo Munición", selected.weaponCaliber || "—"],
+                    ["Tipo Munición", displayCaliber(selected.weaponCaliber)],
                     ["Cápsulas", String(selected.ammunitionCount)],
                     ["Serial Arma", selected.weaponSerial || "—"],
                     ["Estado del Arma", selected.weaponCondition || "—"],
@@ -1509,10 +1510,10 @@ const OperationsPage = () => {
 
                 <div>
                   <label className="text-sm font-medium text-card-foreground block mb-1.5">Tipo de Munición</label>
-                  <select value={form.weaponCaliber || ""} onChange={e => setForm({ ...form, weaponCaliber: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none">
+                  <select value={form.weaponCaliber === "No letal" ? "Menos que letal" : (form.weaponCaliber || "")} onChange={e => setForm({ ...form, weaponCaliber: e.target.value })} className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-gold outline-none">
                     <option value="">Seleccionar...</option>
                     <option value="Letal">Letal</option>
-                    <option value="No letal">No letal</option>
+                    <option value="Menos que letal">Menos que letal</option>
                   </select>
                 </div>
 

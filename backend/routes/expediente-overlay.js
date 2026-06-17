@@ -18,6 +18,7 @@ const router = express.Router();
 
 const OVERLAY_FILE = 'expediente-overlay.json';   // { [serie]: {...campos} }
 const MOVES_FILE = 'expediente-movements.json';   // [ {id, tipo, serie/empleado, desde, hacia, ...} ]
+const HIDDEN_FILE = 'expediente-hidden.json';     // { keys: [ "claveLinea", ... ] }
 
 // Correos con permiso de edición (alineado con src/lib/permissions.ts).
 const EDITOR_EMAILS = [
@@ -85,7 +86,8 @@ router.put('/:serie', auth, editGuard, jsonLarge, (req, res) => {
   if (!serie) return res.status(400).json({ message: 'serie requerida' });
   const overlay = readOverlay();
   const prev = overlay[serie] || {};
-  const allowed = ['estatus', 'nota', 'noLicencia', 'custodioOverride', 'puestoOverride', 'clienteOverride'];
+  const allowed = ['estatus', 'nota', 'noLicencia', 'custodioOverride', 'puestoOverride', 'clienteOverride',
+    'marca', 'propietario', 'calibre', 'categoria', 'tipo'];
   const patch = {};
   for (const k of allowed) {
     if (k in (req.body || {})) patch[k] = req.body[k];
@@ -184,6 +186,36 @@ router.post('/movements', auth, editGuard, jsonLarge, (req, res) => {
   items.push(mov);
   writeData(MOVES_FILE, items);
   res.status(201).json(mov);
+});
+
+// ─── Líneas ocultas del expediente (eliminar registros duplicados/erróneos) ───
+// Se ocultan por una clave estable (cliente|puesto|vigilante) para que el
+// ocultamiento persista aunque el OID del reporte diario cambie cada día.
+function readHidden() {
+  const data = readData(HIDDEN_FILE);
+  if (Array.isArray(data)) return { keys: data };
+  return data && Array.isArray(data.keys) ? data : { keys: [] };
+}
+
+router.get('/hidden/all', auth, readGuard, (req, res) => {
+  res.json(readHidden().keys);
+});
+
+router.post('/hidden', auth, editGuard, jsonLarge, (req, res) => {
+  const key = String((req.body || {}).key || '').trim();
+  if (!key) return res.status(400).json({ message: 'key requerida' });
+  const hidden = readHidden();
+  if (!hidden.keys.includes(key)) hidden.keys.push(key);
+  writeData(HIDDEN_FILE, hidden);
+  res.json(hidden.keys);
+});
+
+router.delete('/hidden', auth, editGuard, jsonLarge, (req, res) => {
+  const key = String((req.body || {}).key || '').trim();
+  const hidden = readHidden();
+  hidden.keys = hidden.keys.filter((k) => k !== key);
+  writeData(HIDDEN_FILE, hidden);
+  res.json(hidden.keys);
 });
 
 module.exports = router;

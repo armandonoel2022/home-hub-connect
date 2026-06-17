@@ -1125,6 +1125,12 @@ export interface ExpedienteOverlayEntry {
   nota?: string | null;
   noLicencia?: string | null;
   custodioOverride?: string | null;
+  // Sobrescrituras del catálogo de armas (auditoría: alinear lo mostrado).
+  marca?: string | null;
+  propietario?: string | null;
+  calibre?: string | null;
+  categoria?: string | null;
+  tipo?: string | null;
   fotosArma?: string[];
   fotoLicenciaFrente?: string | null;
   fotoLicenciaDorso?: string | null;
@@ -1179,6 +1185,12 @@ export const expedienteOverlayApi = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+  // Líneas ocultas (eliminar registros duplicados/erróneos del expediente).
+  hidden: () => apiFetch<string[]>("/expediente-overlay/hidden/all"),
+  hide: (key: string) =>
+    apiFetch<string[]>("/expediente-overlay/hidden", { method: "POST", body: JSON.stringify({ key }) }),
+  unhide: (key: string) =>
+    apiFetch<string[]>("/expediente-overlay/hidden", { method: "DELETE", body: JSON.stringify({ key }) }),
 };
 
 export interface GeneralWeaponDetail {

@@ -4,24 +4,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { canEditExpediente } from "@/lib/permissions";
 import {
-  generalSqlApi, expedienteOverlayApi, getFileUrl,
+  generalSqlApi, expedienteOverlayApi, getFileUrl, employeesApi,
   type GeneralExpediente, type GeneralExpedienteCliente, type GeneralExpedientePuesto,
   type ExpedienteOverlayMap, type ExpedienteOverlayEntry, type ExpedienteMovement,
-  type GeneralWeapon,
+  type GeneralWeapon, type Employee,
 } from "@/lib/api";
+import type { ArmedPersonnel } from "@/lib/types";
 import { exportToPDF, exportToExcel } from "@/lib/exportUtils";
 import { useArmedPersonnel } from "@/hooks/useApiHooks";
 import { loadPosts } from "@/lib/postsData";
 import { mergeOperacionesIntoExpediente } from "@/lib/opsExpedienteMerge";
+import { displayCaliber, lineHideKey, applyWeaponOverride } from "@/lib/expedienteHelpers";
 import {
   Building2, MapPin, Crosshair, Users, ChevronDown, ChevronRight, RefreshCw,
   AlertTriangle, FileText, Phone, Mail, ExternalLink, ShieldCheck, ShieldOff, ListChecks,
-  Download, Pencil, ArrowRightLeft, Upload, Trash2, IdCard, User, X,
+  Download, Pencil, ArrowRightLeft, Upload, Trash2, IdCard, User, X, Shield,
 } from "lucide-react";
 
 type FilterKey = "todos" | "armas" | "sinArma" | "novedad";
@@ -74,11 +77,15 @@ function KpiCard({ icon, label, value, accent }: { icon: ReactNode; label: strin
 }
 
 // ─── Contexto compartido vía props sencillas ───
+interface EmployeeMatch { photo?: string; emp?: Employee; armed?: ArmedPersonnel; }
 interface LiveCtx {
   overlay: ExpedienteOverlayMap;
   canEdit: boolean;
   reportDate: string;
   reloadOverlay: () => void;
+  hiddenKeys: Set<string>;
+  hideLine: (cliente: GeneralExpedienteCliente, p: GeneralExpedientePuesto) => void;
+  matchEmployee: (p: GeneralExpedientePuesto) => EmployeeMatch;
   openWeapon: (p: GeneralExpedientePuesto, cliente: GeneralExpedienteCliente) => void;
   openAgent: (p: GeneralExpedientePuesto, cliente: GeneralExpedienteCliente) => void;
   openPost: (p: GeneralExpedientePuesto, cliente: GeneralExpedienteCliente) => void;
@@ -90,6 +97,8 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
   const [data, setData] = useState<GeneralExpediente | null>(null);
   const [sqlWeapons, setSqlWeapons] = useState<GeneralWeapon[]>([]);
   const [overlay, setOverlay] = useState<ExpedienteOverlayMap>({});
+  const [hiddenKeys, setHiddenKeys] = useState<Set<string>>(new Set());
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [serverCanEdit, setServerCanEdit] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -107,12 +116,14 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
 
   const loadOverlay = async () => {
     try {
-      const [ov, ce] = await Promise.all([
+      const [ov, ce, hid] = await Promise.all([
         expedienteOverlayApi.list().catch(() => ({} as ExpedienteOverlayMap)),
         expedienteOverlayApi.canEdit().catch(() => ({ canEdit: false })),
+        expedienteOverlayApi.hidden().catch(() => [] as string[]),
       ]);
       setOverlay(ov || {});
       setServerCanEdit(!!ce.canEdit);
+      setHiddenKeys(new Set(hid || []));
     } catch { /* overlay opcional */ }
   };
 
@@ -141,10 +152,63 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
     generalSqlApi.weapons()
       .then((w) => setSqlWeapons(w || []))
       .catch(() => { /* catálogo opcional */ });
+    employeesApi.getAll()
+      .then((e) => setEmployees(e || []))
+      .catch(() => { /* fotos opcionales */ });
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, []);
 
   const { data: personnel } = useArmedPersonnel();
+
+  // Índice de empleados (RRHH) por código / cédula / nombre para resolver la
+  // foto y los datos en la ficha 360° del vigilante.
+  const employeeIndex = useMemo(() => {
+    const byCode = new Map<string, Employee>();
+    const byCedula = new Map<string, Employee>();
+    const byName = new Map<string, Employee>();
+    (employees || []).forEach((e) => {
+      if (e.employeeCode) byCode.set(String(e.employeeCode).trim().toLowerCase(), e);
+      if (e.cedula) byCedula.set(String(e.cedula).replace(/\D/g, ""), e);
+      if (e.tss) byCedula.set(String(e.tss).replace(/\D/g, ""), e);
+      if (e.fullName) byName.set(e.fullName.trim().toLowerCase(), e);
+    });
+    return { byCode, byCedula, byName };
+  }, [employees]);
+
+  const armedIndex = useMemo(() => {
+    const byName = new Map<string, ArmedPersonnel>();
+    const byCode = new Map<string, ArmedPersonnel>();
+    (personnel || []).forEach((a) => {
+      if (a.name) byName.set(a.name.trim().toLowerCase(), a);
+      if (a.employeeCode) byCode.set(String(a.employeeCode).trim().toLowerCase(), a);
+    });
+    return { byName, byCode };
+  }, [personnel]);
+
+  const matchEmployee = (p: GeneralExpedientePuesto): EmployeeMatch => {
+    const code = p.vigilanteCodigo != null ? String(p.vigilanteCodigo).trim().toLowerCase() : "";
+    const ced = p.vigilanteCedula ? String(p.vigilanteCedula).replace(/\D/g, "") : "";
+    const name = (p.vigilante || "").trim().toLowerCase();
+    const emp = (code && employeeIndex.byCode.get(code))
+      || (ced && employeeIndex.byCedula.get(ced))
+      || (name && employeeIndex.byName.get(name)) || undefined;
+    const armed = (name && armedIndex.byName.get(name))
+      || (code && armedIndex.byCode.get(code)) || undefined;
+    const raw = emp?.photoUrl || (emp as any)?.photo || "";
+    const photo = raw ? (raw.startsWith("/photos") || raw.startsWith("/uploads") ? getFileUrl(raw) : raw) : undefined;
+    return { photo, emp, armed };
+  };
+
+  const hideLine = async (cliente: GeneralExpedienteCliente, p: GeneralExpedientePuesto) => {
+    const key = lineHideKey(cliente, p);
+    try {
+      const next = await expedienteOverlayApi.hide(key);
+      setHiddenKeys(new Set(next || []));
+      toast({ title: "Registro eliminado del expediente" });
+    } catch (e) {
+      toast({ title: "No se pudo eliminar", description: String((e as Error)?.message || e), variant: "destructive" });
+    }
+  };
 
   // Fuente de verdad: gSafeOne (GENERAL). Si GENERAL responde con datos, se
   // usa EXCLUSIVAMENTE esa fuente (solo se enriquecen las armas con el catálogo
@@ -166,7 +230,7 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
     const q = search.toLowerCase().trim();
     return mergedData.clientes
       .map((c) => {
-        let puestos = c.puestos;
+        let puestos = c.puestos.filter((p) => !hiddenKeys.has(lineHideKey(c, p)));
         if (filter === "armas") puestos = puestos.filter((p) => p.requiereArma);
         else if (filter === "sinArma") puestos = puestos.filter((p) => !p.requiereArma);
         else if (filter === "novedad") puestos = puestos.filter((p) => p.novedad);
@@ -179,7 +243,7 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
         String(c.codigo ?? "").includes(q) ||
         c.puestos.some((p) => `${p.vigilante} ${p.armaSerial ?? ""}`.toLowerCase().includes(q)),
       );
-  }, [mergedData, search, filter]);
+  }, [mergedData, search, filter, hiddenKeys]);
 
   const t = mergedData?.totals || {};
 
@@ -188,6 +252,9 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
     canEdit,
     reportDate: data?.fecha || "",
     reloadOverlay: loadOverlay,
+    hiddenKeys,
+    hideLine,
+    matchEmployee,
     openWeapon: (p, c) => setWeaponDlg({ p, c }),
     openAgent: (p, c) => setAgentDlg({ p, c }),
     openPost: (p, c) => setPostDlg({ p, c }),
@@ -482,7 +549,8 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
                       <div className="space-y-1">
                         {pg.rows.map((p) => {
                           const ov = p.armaSerial ? ctx.overlay[p.armaSerial] : undefined;
-                          const estatus = ov?.estatus ?? p.arma?.estatus ?? null;
+                          const arma = applyWeaponOverride(p.arma, ov);
+                          const estatus = arma?.estatus ?? null;
                           const fotos = ov?.fotosArma?.length || 0;
                           return (
                             <div key={p.lineaOID} className="flex flex-wrap items-center gap-2 text-xs border-b border-border/50 pb-1 last:border-0 last:pb-0">
@@ -503,13 +571,26 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
                                   title="Ver / editar arma"
                                 >
                                   <span className="truncate">
-                                    {[p.arma?.tipo || p.armaModelo, p.armaSerial].filter(Boolean).join(" · ") || "Armado"}
+                                    {[arma?.tipo || p.armaModelo, p.armaSerial].filter(Boolean).join(" · ") || "Armado"}
                                   </span>
                                   {estatus && <span className={`px-1.5 py-0.5 rounded ${statusColor(estatus)}`}>{estatus}</span>}
                                   {fotos > 0 && <Badge variant="outline" className="text-[9px]">{fotos}📷</Badge>}
                                 </button>
                               )}
                               {p.novedad && <Badge variant="destructive" className="text-[10px] shrink-0">Novedad</Badge>}
+                              {ctx.canEdit && (
+                                <button
+                                  onClick={() => {
+                                    if (confirm(`¿Eliminar este registro del expediente?\n\n${p.vigilante || "Sin asignar"} · ${pg.nombre}\n\nSe ocultará para todos los usuarios (se puede restaurar desde el archivo de auditoría).`)) {
+                                      ctx.hideLine(client, p);
+                                    }
+                                  }}
+                                  className="shrink-0 text-muted-foreground hover:text-destructive"
+                                  title="Eliminar registro (duplicado/erróneo)"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              )}
                             </div>
                           );
                         })}
@@ -535,10 +616,16 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
   const ov: ExpedienteOverlayEntry = (serie && ctx.overlay[serie]) || {};
   const [estatus, setEstatus] = useState(ov.estatus ?? puesto.arma?.estatus ?? "");
   const [noLicencia, setNoLicencia] = useState(ov.noLicencia ?? puesto.arma?.noLicencia ?? "");
+  const [marca, setMarca] = useState(ov.marca ?? puesto.arma?.marca ?? "");
+  const [tipo, setTipo] = useState(ov.tipo ?? puesto.arma?.tipo ?? "");
+  const [calibre, setCalibre] = useState(ov.calibre ?? puesto.arma?.calibre ?? "");
+  const [categoria, setCategoria] = useState(ov.categoria ?? puesto.arma?.categoria ?? "");
+  const [propietario, setPropietario] = useState(ov.propietario ?? puesto.arma?.propietario ?? "");
   const [nota, setNota] = useState(ov.nota ?? "");
   const [saving, setSaving] = useState(false);
   const [movs, setMovs] = useState<ExpedienteMovement[]>([]);
   const [showTransfer, setShowTransfer] = useState(false);
+  const [lightbox, setLightbox] = useState<string | null>(null);
 
   useEffect(() => {
     if (serie) expedienteOverlayApi.movements({ serie }).then(setMovs).catch(() => setMovs([]));
@@ -560,7 +647,7 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
   const save = async () => {
     setSaving(true);
     try {
-      await expedienteOverlayApi.save(serie, { estatus, noLicencia, nota });
+      await expedienteOverlayApi.save(serie, { estatus, noLicencia, nota, marca, tipo, calibre, categoria, propietario });
       ctx.reloadOverlay();
       toast({ title: "Arma actualizada" });
     } catch (e) {
@@ -602,12 +689,12 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
         <div className="space-y-4 text-sm">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
             <Field label="Serie" value={serie} />
-            <Field label="Marca" value={puesto.arma?.marca} />
-            <Field label="Tipo" value={puesto.arma?.tipo} />
-            <Field label="Calibre" value={puesto.arma?.calibre} />
-            <Field label="Categoría" value={puesto.arma?.categoria} />
-            <Field label="No. Licencia" value={noLicencia || puesto.arma?.noLicencia} />
-            <Field label="Propietario" value={puesto.arma?.propietario} />
+            <Field label="Marca" value={marca} />
+            <Field label="Tipo" value={tipo} />
+            <Field label="Calibre" value={displayCaliber(calibre)} />
+            <Field label="Categoría" value={categoria} />
+            <Field label="No. Licencia" value={noLicencia} />
+            <Field label="Propietario" value={propietario} />
             <Field label="Ubicación" value={`${cliente.nombre} · ${puesto.puesto}`} />
             <Field label="Custodio" value={puesto.vigilante} />
           </div>
@@ -615,12 +702,32 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
           {ctx.canEdit ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label className="text-xs space-y-1">
-                <span className="font-medium">Estatus</span>
-                <Input value={estatus} onChange={(e) => setEstatus(e.target.value)} placeholder="En condiciones / Falta de mantenimiento…" />
+                <span className="font-medium">Marca</span>
+                <Input value={marca} onChange={(e) => setMarca(e.target.value)} placeholder="Marca del arma" />
+              </label>
+              <label className="text-xs space-y-1">
+                <span className="font-medium">Tipo</span>
+                <Input value={tipo} onChange={(e) => setTipo(e.target.value)} placeholder="Pistola / Escopeta / Revólver…" />
+              </label>
+              <label className="text-xs space-y-1">
+                <span className="font-medium">Calibre</span>
+                <Input value={calibre} onChange={(e) => setCalibre(e.target.value)} placeholder="Calibre / Menos que letal" />
+              </label>
+              <label className="text-xs space-y-1">
+                <span className="font-medium">Categoría</span>
+                <Input value={categoria} onChange={(e) => setCategoria(e.target.value)} placeholder="Categoría" />
+              </label>
+              <label className="text-xs space-y-1">
+                <span className="font-medium">Propietario</span>
+                <Input value={propietario} onChange={(e) => setPropietario(e.target.value)} placeholder="Propietario del arma" />
               </label>
               <label className="text-xs space-y-1">
                 <span className="font-medium">No. Licencia</span>
                 <Input value={noLicencia} onChange={(e) => setNoLicencia(e.target.value)} placeholder="Número de licencia" />
+              </label>
+              <label className="text-xs space-y-1">
+                <span className="font-medium">Estatus</span>
+                <Input value={estatus} onChange={(e) => setEstatus(e.target.value)} placeholder="En condiciones / Falta de mantenimiento…" />
               </label>
               <label className="text-xs space-y-1 sm:col-span-2">
                 <span className="font-medium">Nota</span>
@@ -641,7 +748,12 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
             <div className="flex flex-wrap gap-2">
               {fotos.map((u) => (
                 <div key={u} className="relative">
-                  <img src={getFileUrl(u)} alt="Arma" className="h-20 w-20 object-cover rounded border" />
+                  <img
+                    src={getFileUrl(u)}
+                    alt="Arma"
+                    className="h-20 w-20 object-cover rounded border cursor-zoom-in hover:opacity-90"
+                    onClick={() => setLightbox(getFileUrl(u))}
+                  />
                   {ctx.canEdit && (
                     <button onClick={() => removePhoto(u, "arma")} className="absolute -top-2 -right-2 bg-destructive text-white rounded-full p-0.5">
                       <X className="h-3 w-3" />
@@ -669,7 +781,12 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
                     <p className="text-[10px] uppercase text-muted-foreground">{kind === "licenciaFrente" ? "Frente" : "Dorso"}</p>
                     {url ? (
                       <div className="relative">
-                        <img src={getFileUrl(url)} alt="Licencia" className="h-24 w-36 object-cover rounded border" />
+                        <img
+                          src={getFileUrl(url)}
+                          alt="Licencia"
+                          className="h-24 w-36 object-cover rounded border cursor-zoom-in hover:opacity-90"
+                          onClick={() => setLightbox(getFileUrl(url))}
+                        />
                         {ctx.canEdit && (
                           <button onClick={() => removePhoto(url, kind)} className="absolute -top-2 -right-2 bg-destructive text-white rounded-full p-0.5">
                             <X className="h-3 w-3" />
@@ -714,6 +831,15 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
           <Button variant="outline" onClick={onClose}>Cerrar</Button>
         </DialogFooter>
       </DialogContent>
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-6 cursor-zoom-out"
+          onClick={() => setLightbox(null)}
+        >
+          <img src={lightbox} alt="Vista ampliada" className="max-h-[90vh] max-w-[90vw] object-contain rounded shadow-2xl" />
+          <button className="absolute top-4 right-4 text-white" onClick={() => setLightbox(null)}><X className="h-6 w-6" /></button>
+        </div>
+      )}
     </Dialog>
   );
 }
@@ -731,17 +857,34 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
   const refreshMovs = () => empId && expedienteOverlayApi.movements({ empleado: empId }).then(setMovs).catch(() => {});
 
   const printFicha = () => printAgentFicha(puesto, cliente);
+  const match = ctx.matchEmployee(puesto);
+  const emp = match.emp;
+  const armed = match.armed;
+  const initials = (puesto.vigilante || "?").split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("");
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><User className="h-5 w-5 text-primary" /> {puesto.vigilante}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><User className="h-5 w-5 text-primary" /> Perfil 360° del Vigilante</DialogTitle>
         </DialogHeader>
         <div className="space-y-3 text-sm">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-16 w-16">
+              {match.photo && <AvatarImage src={match.photo} alt={puesto.vigilante} />}
+              <AvatarFallback className="bg-muted">{initials}</AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <h2 className="font-heading text-lg font-bold leading-tight truncate">{puesto.vigilante || "Sin asignar"}</h2>
+              <p className="text-xs text-muted-foreground truncate">{emp?.position || "Oficial de Seguridad"} · {emp?.department || "Safeone"}</p>
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-2 text-xs">
-            <Field label="Código" value={puesto.vigilanteCodigo} />
-            <Field label="Cédula" value={puesto.vigilanteCedula} />
+            <Field label="Código" value={puesto.vigilanteCodigo ?? emp?.employeeCode} />
+            <Field label="Cédula" value={puesto.vigilanteCedula ?? (emp as any)?.cedula} />
+            {emp?.status && <Field label="Estatus" value={emp.status} />}
+            {emp?.category && <Field label="Categoría" value={emp.category} />}
+            {emp?.payrollType && <Field label="Nómina" value={emp.payrollType} />}
             {puesto.vigilanteFechaNacimiento && (
               <Field label="Nacimiento" value={new Date(puesto.vigilanteFechaNacimiento).toLocaleDateString("es-DO")} />
             )}
@@ -753,6 +896,20 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
             {puesto.requiereArma && <Field label="Arma asignada" value={[puesto.arma?.tipo, puesto.armaSerial].filter(Boolean).join(" · ")} />}
             {puesto.comentario && <Field label="Comentario" value={puesto.comentario} />}
           </div>
+
+          {armed && (
+            <div className="rounded-lg border border-gold/40 bg-gold/5 p-3 space-y-2">
+              <p className="text-xs font-semibold inline-flex items-center gap-1 text-gold-foreground"><Shield className="h-3.5 w-3.5" /> Personal Armado · Auditoría</p>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <Field label="Tipo de Arma" value={armed.weaponType} />
+                <Field label="Serial" value={armed.weaponSerial} />
+                <Field label="Munición" value={`${displayCaliber(armed.weaponCaliber)}${armed.ammunitionCount != null ? ` (${armed.ammunitionCount} cápsulas)` : ""}`} />
+                <Field label="Estado Arma" value={armed.weaponCondition} />
+                <Field label="Cliente / Puesto" value={[armed.client, armed.location].filter(Boolean).join(" · ")} />
+                <Field label="Provincia" value={armed.province} />
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
