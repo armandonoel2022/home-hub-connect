@@ -578,6 +578,8 @@ router.get('/expediente', auth, guard, async (req, res) => {
         vigilanteOID: r.VigilanteOID ?? null,
         vigilanteCodigo: r.VigilanteCodigo ?? null,
         vigilanteCedula: r.VigilanteCedula && r.VigilanteCedula !== 'NULL' ? r.VigilanteCedula : null,
+        vigilanteFechaNacimiento: cleanStr(r.VigilanteNacimiento),
+        vigilanteEdad: computeAge(r.VigilanteNacimiento),
         horas: Number(r.Horas) || 0,
         incentivo: Number(r.Incentivo) || 0,
         requiereArma: r.ArmaOID != null,
