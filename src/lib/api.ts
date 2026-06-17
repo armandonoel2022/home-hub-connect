@@ -1208,6 +1208,8 @@ export interface GeneralExpedientePuesto {
   arma: GeneralWeaponDetail | null;
   novedad: boolean;
   comentario: string;
+  origen?: "general" | "operaciones";
+  armaOrigen?: "general" | "operaciones";
 }
 
 export interface GeneralExpedienteCliente {
@@ -1222,6 +1224,7 @@ export interface GeneralExpedienteCliente {
   contacto: string;
   inactivo: boolean;
   puestos: GeneralExpedientePuesto[];
+  origen?: "general" | "operaciones";
 }
 
 export interface GeneralExpediente {
