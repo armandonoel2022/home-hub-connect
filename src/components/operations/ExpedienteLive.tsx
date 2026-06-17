@@ -2,19 +2,46 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { generalSqlApi, type GeneralExpediente, type GeneralExpedienteCliente } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { canEditExpediente } from "@/lib/permissions";
+import {
+  generalSqlApi, expedienteOverlayApi, getFileUrl,
+  type GeneralExpediente, type GeneralExpedienteCliente, type GeneralExpedientePuesto,
+  type ExpedienteOverlayMap, type ExpedienteOverlayEntry, type ExpedienteMovement,
+} from "@/lib/api";
 import { exportToPDF, exportToExcel } from "@/lib/exportUtils";
 import {
   Building2, MapPin, Crosshair, Users, ChevronDown, ChevronRight, RefreshCw,
-  AlertTriangle, FileText, Phone, Mail, ExternalLink, ShieldCheck, ShieldOff, ListChecks, Download,
+  AlertTriangle, FileText, Phone, Mail, ExternalLink, ShieldCheck, ShieldOff, ListChecks,
+  Download, Pencil, ArrowRightLeft, Upload, Trash2, IdCard, User, X,
 } from "lucide-react";
 
 type FilterKey = "todos" | "armas" | "sinArma" | "novedad";
 
 function mapsHref(addr: string): string {
   return `https://www.google.com/maps?q=${encodeURIComponent(addr)}`;
+}
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result));
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+function statusColor(c?: string | null): string {
+  const s = (c || "").toLowerCase();
+  if (!s) return "bg-muted text-muted-foreground";
+  if (s.includes("buena") || s.includes("condicion") || s.includes("operativ")) return "bg-emerald-50 text-emerald-700";
+  if (s.includes("mantenim")) return "bg-amber-50 text-amber-700";
+  if (s.includes("fiscal")) return "bg-purple-50 text-purple-700";
+  return "bg-red-50 text-red-700";
 }
 
 function KpiCard({ icon, label, value, accent }: { icon: ReactNode; label: string; value: number | string; accent?: string }) {
@@ -31,13 +58,45 @@ function KpiCard({ icon, label, value, accent }: { icon: ReactNode; label: strin
   );
 }
 
+// ─── Contexto compartido vía props sencillas ───
+interface LiveCtx {
+  overlay: ExpedienteOverlayMap;
+  canEdit: boolean;
+  reportDate: string;
+  reloadOverlay: () => void;
+  openWeapon: (p: GeneralExpedientePuesto, cliente: GeneralExpedienteCliente) => void;
+  openAgent: (p: GeneralExpedientePuesto, cliente: GeneralExpedienteCliente) => void;
+  openPost: (p: GeneralExpedientePuesto, cliente: GeneralExpedienteCliente) => void;
+}
+
 const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [data, setData] = useState<GeneralExpediente | null>(null);
+  const [overlay, setOverlay] = useState<ExpedienteOverlayMap>({});
+  const [serverCanEdit, setServerCanEdit] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterKey>("todos");
+
+  // dialogs
+  const [weaponDlg, setWeaponDlg] = useState<{ p: GeneralExpedientePuesto; c: GeneralExpedienteCliente } | null>(null);
+  const [agentDlg, setAgentDlg] = useState<{ p: GeneralExpedientePuesto; c: GeneralExpedienteCliente } | null>(null);
+  const [postDlg, setPostDlg] = useState<{ p: GeneralExpedientePuesto; c: GeneralExpedienteCliente } | null>(null);
+
+  const canEdit = serverCanEdit && canEditExpediente(user);
+
+  const loadOverlay = async () => {
+    try {
+      const [ov, ce] = await Promise.all([
+        expedienteOverlayApi.list().catch(() => ({} as ExpedienteOverlayMap)),
+        expedienteOverlayApi.canEdit().catch(() => ({ canEdit: false })),
+      ]);
+      setOverlay(ov || {});
+      setServerCanEdit(!!ce.canEdit);
+    } catch { /* overlay opcional */ }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -45,6 +104,7 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
     try {
       const res = await generalSqlApi.expediente();
       setData(res);
+      await loadOverlay();
     } catch (e) {
       const msg = (e as Error)?.message || "No se pudo conectar con GENERAL";
       setError(msg);
@@ -68,10 +128,25 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
         return { ...c, puestos };
       })
       .filter((c) => c.puestos.length > 0)
-      .filter((c) => !q || c.nombre.toLowerCase().includes(q) || String(c.codigo ?? "").includes(q));
+      .filter((c) =>
+        !q ||
+        c.nombre.toLowerCase().includes(q) ||
+        String(c.codigo ?? "").includes(q) ||
+        c.puestos.some((p) => `${p.vigilante} ${p.armaSerial ?? ""}`.toLowerCase().includes(q)),
+      );
   }, [data, search, filter]);
 
   const t = data?.totals || {};
+
+  const ctx: LiveCtx = {
+    overlay,
+    canEdit,
+    reportDate: data?.fecha || "",
+    reloadOverlay: loadOverlay,
+    openWeapon: (p, c) => setWeaponDlg({ p, c }),
+    openAgent: (p, c) => setAgentDlg({ p, c }),
+    openPost: (p, c) => setPostDlg({ p, c }),
+  };
 
   const exportSchema = async () => {
     try {
@@ -119,7 +194,6 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
 
   return (
     <div className="space-y-4">
-      {/* KPI 360° */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
         <KpiCard icon={<Building2 className="h-4 w-4" />} label="Clientes con cobertura" value={t.clientes ?? 0} />
         <KpiCard icon={<ListChecks className="h-4 w-4" />} label="Puestos cubiertos" value={t.puestosCubiertos ?? 0} />
@@ -129,11 +203,11 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
         <KpiCard icon={<AlertTriangle className="h-4 w-4" />} label="Con novedad" value={t.conNovedad ?? 0} accent="bg-destructive/10 text-destructive" />
       </div>
 
-      {/* Controles */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="text-xs text-muted-foreground inline-flex items-center gap-1 mr-2">
           <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
           Reporte: <span className="font-medium">{data?.fecha ? new Date(data.fecha).toLocaleDateString("es-DO") : "—"}</span>
+          {canEdit && <Badge variant="secondary" className="ml-2 text-[10px]">Edición habilitada</Badge>}
         </div>
         <div className="flex gap-1 flex-wrap">
           {([
@@ -147,27 +221,58 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
             </Button>
           ))}
         </div>
-        <Input placeholder="Buscar cliente o código…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs h-9" />
+        <Input placeholder="Buscar cliente, vigilante o serial…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs h-9" />
         <div className="ml-auto flex gap-2">
           <Button size="sm" variant="outline" onClick={exportSchema}><Download className="h-4 w-4 mr-1" /> Exportar esquema</Button>
           <Button size="sm" variant="outline" onClick={load}><RefreshCw className="h-4 w-4 mr-1" /> Recargar</Button>
         </div>
       </div>
 
-      {/* Lista de clientes (colapsados) */}
       <div className="space-y-2">
         {filtered.length === 0 && (
           <Card className="p-10 text-center text-sm text-muted-foreground">
             No hay clientes que coincidan con el filtro seleccionado.
           </Card>
         )}
-        {filtered.map((c) => <LiveClientCard key={c.oid} client={c} reportDate={data?.fecha || ""} />)}
+        {filtered.map((c) => <LiveClientCard key={c.oid} client={c} ctx={ctx} />)}
       </div>
+
+      {weaponDlg && (
+        <WeaponDialog
+          puesto={weaponDlg.p}
+          cliente={weaponDlg.c}
+          ctx={ctx}
+          onClose={() => setWeaponDlg(null)}
+        />
+      )}
+      {agentDlg && (
+        <AgentDialog
+          puesto={agentDlg.p}
+          cliente={agentDlg.c}
+          ctx={ctx}
+          onClose={() => setAgentDlg(null)}
+        />
+      )}
+      {postDlg && (
+        <PostDialog
+          puesto={postDlg.p}
+          cliente={postDlg.c}
+          ctx={ctx}
+          onClose={() => setPostDlg(null)}
+        />
+      )}
     </div>
   );
 };
 
-function LiveClientCard({ client, reportDate }: { client: GeneralExpedienteCliente; reportDate: string }) {
+// ─── Agrupación por localidad (dirección) ───
+function groupByLocation(puestos: GeneralExpedientePuesto[]) {
+  // GENERAL no tiene Localidad; agrupamos por descripción de puesto base si aplica.
+  // Por ahora una sola "localidad" implícita; se conserva orden del reporte.
+  return [{ nombre: "Puestos cubiertos", puestos }];
+}
+
+function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx: LiveCtx }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const armas = client.puestos.filter((p) => p.requiereArma).length;
@@ -177,27 +282,38 @@ function LiveClientCard({ client, reportDate }: { client: GeneralExpedienteClien
     try {
       exportToPDF({
         title: `Expediente — ${client.nombre}`,
-        subtitle: `${client.direccion || "Sin dirección"}  ·  Reporte: ${reportDate ? new Date(reportDate).toLocaleDateString("es-DO") : "—"}  ·  ${client.rnc ? `RNC ${client.rnc}` : client.cedula ? `Céd. ${client.cedula}` : ""}`,
+        subtitle: `${client.direccion || "Sin dirección"}  ·  Reporte: ${ctx.reportDate ? new Date(ctx.reportDate).toLocaleDateString("es-DO") : "—"}  ·  ${client.rnc ? `RNC ${client.rnc}` : client.cedula ? `Céd. ${client.cedula}` : ""}`,
         columns: [
-          { header: "Puesto", key: "puesto", width: 50 },
-          { header: "Vigilante", key: "vigilante", width: 55 },
-          { header: "Horas", key: "horas", width: 18 },
-          { header: "Arma", key: "arma", width: 45 },
-          { header: "Novedad / Comentario", key: "comentario", width: 60 },
+          { header: "Puesto", key: "puesto", width: 45 },
+          { header: "Vigilante", key: "vigilante", width: 50 },
+          { header: "Horas", key: "horas", width: 16 },
+          { header: "Arma (Serial · Licencia)", key: "arma", width: 55 },
+          { header: "Estado", key: "estado", width: 30 },
+          { header: "Novedad", key: "comentario", width: 45 },
         ],
-        data: client.puestos.map((p) => ({
-          puesto: p.puesto,
-          vigilante: p.vigilante,
-          horas: p.horas,
-          arma: p.requiereArma ? [p.armaModelo, p.armaSerial].filter(Boolean).join(" · ") || "Armado" : "—",
-          comentario: p.comentario || (p.novedad ? "Con novedad" : ""),
-        })),
+        data: client.puestos.map((p) => {
+          const ov = p.armaSerial ? ctx.overlay[p.armaSerial] : undefined;
+          const estatus = ov?.estatus ?? p.arma?.estatus ?? "";
+          const lic = ov?.noLicencia ?? p.arma?.noLicencia ?? "";
+          return {
+            puesto: p.puesto,
+            vigilante: p.vigilante,
+            horas: p.horas,
+            arma: p.requiereArma
+              ? [p.arma?.tipo || p.armaModelo, p.armaSerial, lic ? `Lic. ${lic}` : ""].filter(Boolean).join(" · ") || "Armado"
+              : "—",
+            estado: p.requiereArma ? (estatus || "—") : "—",
+            comentario: p.comentario || (p.novedad ? "Con novedad" : ""),
+          };
+        }),
         filename: `expediente_${(client.codigo ?? client.nombre).toString().replace(/\W+/g, "_")}`,
       });
     } catch (e) {
       toast({ title: "No se pudo generar el expediente", description: String((e as Error)?.message || e), variant: "destructive" });
     }
   };
+
+  const groups = groupByLocation(client.puestos);
 
   return (
     <Card className="overflow-hidden">
@@ -226,8 +342,7 @@ function LiveClientCard({ client, reportDate }: { client: GeneralExpedienteClien
       </button>
 
       {open && (
-        <div className="p-4 space-y-3">
-          {/* Datos del cliente */}
+        <div className="p-4 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
             {client.direccion && (
               <a href={mapsHref(client.direccion)} target="_blank" rel="noopener noreferrer" className="inline-flex items-start gap-1 text-primary hover:underline">
@@ -240,29 +355,430 @@ function LiveClientCard({ client, reportDate }: { client: GeneralExpedienteClien
             {client.contacto && <span className="text-muted-foreground">Contacto: {client.contacto}</span>}
           </div>
 
-          {/* Puestos del último reporte */}
-          <div className="space-y-1.5">
-            {client.puestos.map((p) => (
-              <div key={p.lineaOID} className="flex items-center gap-2 text-xs border border-border rounded-md px-2.5 py-1.5">
-                {p.requiereArma
-                  ? <Crosshair className="h-3.5 w-3.5 text-gold shrink-0" />
-                  : <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
-                <span className="font-medium w-40 truncate shrink-0">{p.puesto}</span>
-                <span className="flex-1 truncate">{p.vigilante}</span>
-                <span className="text-muted-foreground shrink-0">{p.horas}h</span>
-                {p.requiereArma && (
-                  <span className="text-muted-foreground shrink-0 max-w-[150px] truncate">
-                    {[p.armaModelo, p.armaSerial].filter(Boolean).join(" · ") || "Armado"}
-                  </span>
-                )}
-                {p.novedad && <Badge variant="destructive" className="text-[10px] shrink-0">Novedad</Badge>}
-              </div>
-            ))}
-          </div>
+          {groups.map((g) => (
+            <div key={g.nombre} className="space-y-1.5">
+              {g.puestos.map((p) => {
+                const ov = p.armaSerial ? ctx.overlay[p.armaSerial] : undefined;
+                const estatus = ov?.estatus ?? p.arma?.estatus ?? null;
+                const fotos = ov?.fotosArma?.length || 0;
+                return (
+                  <div key={p.lineaOID} className="flex flex-wrap items-center gap-2 text-xs border border-border rounded-md px-2.5 py-2">
+                    <button
+                      onClick={() => ctx.openPost(p, client)}
+                      className="inline-flex items-center gap-1 font-medium w-44 truncate shrink-0 hover:text-primary text-left"
+                      title="Ver ficha del puesto"
+                    >
+                      {p.requiereArma
+                        ? <Crosshair className="h-3.5 w-3.5 text-gold shrink-0" />
+                        : <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+                      <span className="truncate">{p.puesto}</span>
+                    </button>
+                    <button
+                      onClick={() => ctx.openAgent(p, client)}
+                      className="flex-1 min-w-[120px] truncate text-left hover:text-primary inline-flex items-center gap-1"
+                      title="Ver ficha del vigilante"
+                    >
+                      <User className="h-3.5 w-3.5 shrink-0 text-muted-foreground" /> {p.vigilante}
+                    </button>
+                    <span className="text-muted-foreground shrink-0">{p.horas}h</span>
+                    {p.requiereArma && (
+                      <button
+                        onClick={() => ctx.openWeapon(p, client)}
+                        className="inline-flex items-center gap-1 shrink-0 max-w-[220px] truncate hover:text-primary"
+                        title="Ver / editar arma"
+                      >
+                        <span className="truncate">
+                          {[p.arma?.tipo || p.armaModelo, p.armaSerial].filter(Boolean).join(" · ") || "Armado"}
+                        </span>
+                        {estatus && <span className={`px-1.5 py-0.5 rounded ${statusColor(estatus)}`}>{estatus}</span>}
+                        {fotos > 0 && <Badge variant="outline" className="text-[9px]">{fotos}📷</Badge>}
+                      </button>
+                    )}
+                    {p.novedad && <Badge variant="destructive" className="text-[10px] shrink-0">Novedad</Badge>}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
         </div>
       )}
     </Card>
   );
+}
+
+// ─── Dialog de Arma (detalle + edición + fotos + movimientos) ───
+function WeaponDialog({ puesto, cliente, ctx, onClose }: {
+  puesto: GeneralExpedientePuesto; cliente: GeneralExpedienteCliente; ctx: LiveCtx; onClose: () => void;
+}) {
+  const { toast } = useToast();
+  const serie = puesto.armaSerial || "";
+  const ov: ExpedienteOverlayEntry = (serie && ctx.overlay[serie]) || {};
+  const [estatus, setEstatus] = useState(ov.estatus ?? puesto.arma?.estatus ?? "");
+  const [noLicencia, setNoLicencia] = useState(ov.noLicencia ?? puesto.arma?.noLicencia ?? "");
+  const [nota, setNota] = useState(ov.nota ?? "");
+  const [saving, setSaving] = useState(false);
+  const [movs, setMovs] = useState<ExpedienteMovement[]>([]);
+  const [showTransfer, setShowTransfer] = useState(false);
+
+  useEffect(() => {
+    if (serie) expedienteOverlayApi.movements({ serie }).then(setMovs).catch(() => setMovs([]));
+  }, [serie]);
+
+  const refreshMovs = () => serie && expedienteOverlayApi.movements({ serie }).then(setMovs).catch(() => {});
+
+  if (!serie) {
+    return (
+      <Dialog open onOpenChange={onClose}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Arma sin serial</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">Este puesto está armado pero el arma no tiene serial en GENERAL, por lo que no se puede editar el expediente.</p>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await expedienteOverlayApi.save(serie, { estatus, noLicencia, nota });
+      ctx.reloadOverlay();
+      toast({ title: "Arma actualizada" });
+    } catch (e) {
+      toast({ title: "No se pudo guardar", description: String((e as Error)?.message || e), variant: "destructive" });
+    } finally { setSaving(false); }
+  };
+
+  const upload = async (file: File, kind: "arma" | "licenciaFrente" | "licenciaDorso") => {
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      await expedienteOverlayApi.uploadPhoto(serie, dataUrl, file.name, kind);
+      ctx.reloadOverlay();
+      toast({ title: "Imagen subida" });
+    } catch (e) {
+      toast({ title: "No se pudo subir la imagen", description: String((e as Error)?.message || e), variant: "destructive" });
+    }
+  };
+
+  const removePhoto = async (url: string, kind: "arma" | "licenciaFrente" | "licenciaDorso") => {
+    try {
+      await expedienteOverlayApi.deletePhoto(serie, url, kind);
+      ctx.reloadOverlay();
+    } catch (e) {
+      toast({ title: "No se pudo eliminar", variant: "destructive" });
+    }
+  };
+
+  const fotos = ov.fotosArma || [];
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Crosshair className="h-5 w-5 text-gold" /> {puesto.arma?.tipo || "Arma"} · Serial {serie}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 text-sm">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+            <Field label="Marca" value={puesto.arma?.marca} />
+            <Field label="Tipo" value={puesto.arma?.tipo} />
+            <Field label="Calibre" value={puesto.arma?.calibre} />
+            <Field label="Categoría" value={puesto.arma?.categoria} />
+            <Field label="Propietario" value={puesto.arma?.propietario} />
+            <Field label="Ubicación" value={`${cliente.nombre} · ${puesto.puesto}`} />
+            <Field label="Custodio" value={puesto.vigilante} />
+          </div>
+
+          {ctx.canEdit ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label className="text-xs space-y-1">
+                <span className="font-medium">Estatus</span>
+                <Input value={estatus} onChange={(e) => setEstatus(e.target.value)} placeholder="En condiciones / Falta de mantenimiento…" />
+              </label>
+              <label className="text-xs space-y-1">
+                <span className="font-medium">No. Licencia</span>
+                <Input value={noLicencia} onChange={(e) => setNoLicencia(e.target.value)} placeholder="Número de licencia" />
+              </label>
+              <label className="text-xs space-y-1 sm:col-span-2">
+                <span className="font-medium">Nota</span>
+                <Textarea value={nota} onChange={(e) => setNota(e.target.value)} rows={2} />
+              </label>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <Field label="Estatus" value={estatus} />
+              <Field label="No. Licencia" value={noLicencia} />
+              {nota && <Field label="Nota" value={nota} />}
+            </div>
+          )}
+
+          {/* Fotos del arma */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground">Fotos del arma ({fotos.length})</p>
+            <div className="flex flex-wrap gap-2">
+              {fotos.map((u) => (
+                <div key={u} className="relative">
+                  <img src={getFileUrl(u)} alt="Arma" className="h-20 w-20 object-cover rounded border" />
+                  {ctx.canEdit && (
+                    <button onClick={() => removePhoto(u, "arma")} className="absolute -top-2 -right-2 bg-destructive text-white rounded-full p-0.5">
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              {ctx.canEdit && (
+                <label className="h-20 w-20 border-2 border-dashed rounded flex items-center justify-center cursor-pointer hover:bg-muted/50">
+                  <Upload className="h-5 w-5 text-muted-foreground" />
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f, "arma"); e.currentTarget.value = ""; }} />
+                </label>
+              )}
+            </div>
+          </div>
+
+          {/* Licencia */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground">Licencia (frente / dorso)</p>
+            <div className="flex flex-wrap gap-3">
+              {(["licenciaFrente", "licenciaDorso"] as const).map((kind) => {
+                const url = kind === "licenciaFrente" ? ov.fotoLicenciaFrente : ov.fotoLicenciaDorso;
+                return (
+                  <div key={kind} className="space-y-1">
+                    <p className="text-[10px] uppercase text-muted-foreground">{kind === "licenciaFrente" ? "Frente" : "Dorso"}</p>
+                    {url ? (
+                      <div className="relative">
+                        <img src={getFileUrl(url)} alt="Licencia" className="h-24 w-36 object-cover rounded border" />
+                        {ctx.canEdit && (
+                          <button onClick={() => removePhoto(url, kind)} className="absolute -top-2 -right-2 bg-destructive text-white rounded-full p-0.5">
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
+                    ) : ctx.canEdit ? (
+                      <label className="h-24 w-36 border-2 border-dashed rounded flex items-center justify-center cursor-pointer hover:bg-muted/50">
+                        <IdCard className="h-5 w-5 text-muted-foreground" />
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f, kind); e.currentTarget.value = ""; }} />
+                      </label>
+                    ) : (
+                      <div className="h-24 w-36 border rounded flex items-center justify-center text-[10px] text-muted-foreground">Sin imagen</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Movimientos FROM→TO */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-muted-foreground inline-flex items-center gap-1"><ArrowRightLeft className="h-3.5 w-3.5" /> Movimientos del arma</p>
+              {ctx.canEdit && <Button size="sm" variant="outline" className="h-7" onClick={() => setShowTransfer((v) => !v)}>Registrar traslado</Button>}
+            </div>
+            {showTransfer && (
+              <TransferForm
+                tipo="arma"
+                serie={serie}
+                armaModelo={puesto.arma?.tipo || puesto.armaModelo || ""}
+                defaultFrom={`${cliente.nombre} · ${puesto.puesto}`}
+                onDone={() => { setShowTransfer(false); refreshMovs(); }}
+              />
+            )}
+            <MovementsList movs={movs} />
+          </div>
+        </div>
+
+        <DialogFooter>
+          {ctx.canEdit && <Button onClick={save} disabled={saving}>{saving ? "Guardando…" : "Guardar cambios"}</Button>}
+          <Button variant="outline" onClick={onClose}>Cerrar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AgentDialog({ puesto, cliente, ctx, onClose }: {
+  puesto: GeneralExpedientePuesto; cliente: GeneralExpedienteCliente; ctx: LiveCtx; onClose: () => void;
+}) {
+  const [movs, setMovs] = useState<ExpedienteMovement[]>([]);
+  const [showTransfer, setShowTransfer] = useState(false);
+  const empId = puesto.vigilanteCodigo ?? puesto.vigilanteOID ?? "";
+
+  useEffect(() => {
+    if (empId) expedienteOverlayApi.movements({ empleado: empId }).then(setMovs).catch(() => {});
+  }, [empId]);
+  const refreshMovs = () => empId && expedienteOverlayApi.movements({ empleado: empId }).then(setMovs).catch(() => {});
+
+  const printFicha = () => printAgentFicha(puesto, cliente);
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><User className="h-5 w-5 text-primary" /> {puesto.vigilante}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 text-sm">
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <Field label="Código" value={puesto.vigilanteCodigo} />
+            <Field label="Cédula" value={puesto.vigilanteCedula} />
+            <Field label="Cliente" value={cliente.nombre} />
+            <Field label="Puesto" value={puesto.puesto} />
+            <Field label="Horas" value={`${puesto.horas}h`} />
+            <Field label="Incentivo" value={puesto.incentivo ? `RD$ ${puesto.incentivo}` : "—"} />
+            {puesto.requiereArma && <Field label="Arma asignada" value={[puesto.arma?.tipo, puesto.armaSerial].filter(Boolean).join(" · ")} />}
+            {puesto.comentario && <Field label="Comentario" value={puesto.comentario} />}
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-muted-foreground inline-flex items-center gap-1"><ArrowRightLeft className="h-3.5 w-3.5" /> Traslados del personal</p>
+              {ctx.canEdit && <Button size="sm" variant="outline" className="h-7" onClick={() => setShowTransfer((v) => !v)}>Registrar traslado</Button>}
+            </div>
+            {showTransfer && (
+              <TransferForm
+                tipo="personal"
+                empleado={String(empId)}
+                empleadoNombre={puesto.vigilante}
+                defaultFrom={`${cliente.nombre} · ${puesto.puesto}`}
+                onDone={() => { setShowTransfer(false); refreshMovs(); }}
+              />
+            )}
+            <MovementsList movs={movs} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={printFicha}><FileText className="h-4 w-4 mr-1" /> Imprimir ficha</Button>
+          <Button variant="outline" onClick={onClose}>Cerrar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PostDialog({ puesto, cliente, ctx, onClose }: {
+  puesto: GeneralExpedientePuesto; cliente: GeneralExpedienteCliente; ctx: LiveCtx; onClose: () => void;
+}) {
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><MapPin className="h-5 w-5 text-gold" /> {puesto.puesto}</DialogTitle>
+        </DialogHeader>
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <Field label="Cliente" value={cliente.nombre} />
+          <Field label="Código cliente" value={cliente.codigo} />
+          <Field label="Dirección" value={cliente.direccion} />
+          <Field label="Requiere arma" value={puesto.requiereArma ? "Sí" : "No"} />
+          <Field label="Vigilante" value={puesto.vigilante} />
+          <Field label="Horas" value={`${puesto.horas}h`} />
+          {puesto.requiereArma && <Field label="Arma" value={[puesto.arma?.tipo, puesto.armaSerial].filter(Boolean).join(" · ")} />}
+          {puesto.novedad && <Field label="Novedad" value={puesto.comentario || "Sí"} />}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => printPostFichaLive(puesto, cliente, ctx.reportDate)}><FileText className="h-4 w-4 mr-1" /> Imprimir ficha</Button>
+          <Button variant="outline" onClick={onClose}>Cerrar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function TransferForm({ tipo, serie, armaModelo, empleado, empleadoNombre, defaultFrom, onDone }: {
+  tipo: "arma" | "personal";
+  serie?: string;
+  armaModelo?: string;
+  empleado?: string;
+  empleadoNombre?: string;
+  defaultFrom: string;
+  onDone: () => void;
+}) {
+  const { toast } = useToast();
+  const [desde, setDesde] = useState(defaultFrom);
+  const [hacia, setHacia] = useState("");
+  const [motivo, setMotivo] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (!hacia.trim()) { toast({ title: "Indica el destino (TO)", variant: "destructive" }); return; }
+    setSaving(true);
+    try {
+      await expedienteOverlayApi.addMovement({ tipo, serie, armaModelo, empleado, empleadoNombre, desde, hacia, motivo });
+      toast({ title: "Traslado registrado" });
+      onDone();
+    } catch (e) {
+      toast({ title: "No se pudo registrar", description: String((e as Error)?.message || e), variant: "destructive" });
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="border border-border rounded-md p-2.5 space-y-2 bg-muted/30">
+      <div className="grid grid-cols-2 gap-2">
+        <label className="text-[11px] space-y-1"><span className="font-medium">Desde (FROM)</span><Input className="h-8" value={desde} onChange={(e) => setDesde(e.target.value)} /></label>
+        <label className="text-[11px] space-y-1"><span className="font-medium">Hacia (TO)</span><Input className="h-8" value={hacia} onChange={(e) => setHacia(e.target.value)} placeholder="Almacén / Puesto / Custodio" /></label>
+      </div>
+      <Input className="h-8 text-xs" value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Motivo del traslado" />
+      <div className="flex justify-end">
+        <Button size="sm" className="h-7" onClick={save} disabled={saving}>{saving ? "Guardando…" : "Guardar traslado"}</Button>
+      </div>
+    </div>
+  );
+}
+
+function MovementsList({ movs }: { movs: ExpedienteMovement[] }) {
+  if (!movs.length) return <p className="text-[11px] text-muted-foreground italic">Sin movimientos registrados.</p>;
+  return (
+    <div className="space-y-1">
+      {movs.map((m) => (
+        <div key={m.id} className="text-[11px] border border-border rounded px-2 py-1 flex items-center gap-2">
+          <span className="text-muted-foreground shrink-0">{m.fecha ? new Date(m.fecha).toLocaleDateString("es-DO") : ""}</span>
+          <span className="font-medium truncate">{m.desde || "—"}</span>
+          <ArrowRightLeft className="h-3 w-3 shrink-0 text-gold" />
+          <span className="font-medium truncate">{m.hacia || "—"}</span>
+          {m.motivo && <span className="text-muted-foreground truncate">· {m.motivo}</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Field({ label, value }: { label: string; value?: ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="truncate font-medium">{value ?? "—"}</p>
+    </div>
+  );
+}
+
+// ─── Impresión de fichas (ventana nueva) ───
+function openPrint(html: string) {
+  const w = window.open("", "_blank", "width=900,height=700");
+  if (!w) return;
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => w.print(), 400);
+}
+const escHtml = (v: unknown) => String(v ?? "—").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
+const fichaStyles = `body{font-family:'Segoe UI',Arial,sans-serif;color:#1f2937;padding:32px}h1{font-size:20px;border-bottom:3px solid #b8860b;padding-bottom:8px}.row{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid #eee}.lbl{width:160px;color:#6b7280;font-size:12px;text-transform:uppercase}.val{font-weight:600}`;
+function rowHtml(l: string, v: unknown) { return `<div class="row"><span class="lbl">${escHtml(l)}</span><span class="val">${escHtml(v)}</span></div>`; }
+
+function printAgentFicha(p: GeneralExpedientePuesto, c: GeneralExpedienteCliente) {
+  openPrint(`<html><head><title>Ficha del Vigilante</title><style>${fichaStyles}</style></head><body>
+    <h1>Ficha del Vigilante</h1>
+    ${rowHtml("Nombre", p.vigilante)}${rowHtml("Código", p.vigilanteCodigo)}${rowHtml("Cédula", p.vigilanteCedula)}
+    ${rowHtml("Cliente", c.nombre)}${rowHtml("Puesto", p.puesto)}${rowHtml("Horas", p.horas + "h")}
+    ${p.requiereArma ? rowHtml("Arma asignada", [p.arma?.tipo, p.armaSerial].filter(Boolean).join(" · ")) : ""}
+    ${p.comentario ? rowHtml("Comentario", p.comentario) : ""}
+  </body></html>`);
+}
+function printPostFichaLive(p: GeneralExpedientePuesto, c: GeneralExpedienteCliente, fecha: string) {
+  openPrint(`<html><head><title>Ficha del Puesto</title><style>${fichaStyles}</style></head><body>
+    <h1>Ficha del Puesto</h1>
+    ${rowHtml("Puesto", p.puesto)}${rowHtml("Cliente", c.nombre)}${rowHtml("Dirección", c.direccion)}
+    ${rowHtml("Requiere arma", p.requiereArma ? "Sí" : "No")}${rowHtml("Vigilante", p.vigilante)}
+    ${p.requiereArma ? rowHtml("Arma", [p.arma?.tipo, p.armaSerial].filter(Boolean).join(" · ")) : ""}
+    ${rowHtml("Reporte", fecha ? new Date(fecha).toLocaleDateString("es-DO") : "—")}
+    ${p.novedad ? rowHtml("Novedad", p.comentario || "Sí") : ""}
+  </body></html>`);
 }
 
 export default ExpedienteLive;
