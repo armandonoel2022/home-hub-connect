@@ -714,7 +714,7 @@ const EmployeeDirectory = () => {
                       <div className="bg-white/70 rounded p-2"><span className="text-amber-700 block">Provincia</span>{armed.province || "—"}</div>
                       <div className="bg-white/70 rounded p-2"><span className="text-amber-700 block">Tipo de Arma</span>{armed.weaponType || "—"} {armed.weaponBrand || ""}</div>
                       <div className="bg-white/70 rounded p-2"><span className="text-amber-700 block">Serial</span><span className="font-mono">{armed.weaponSerial || "—"}</span></div>
-                      <div className="bg-white/70 rounded p-2"><span className="text-amber-700 block">Munición</span>{armed.weaponCaliber || "—"} ({armed.ammunitionCount} cápsulas)</div>
+                      <div className="bg-white/70 rounded p-2"><span className="text-amber-700 block">Munición</span>{displayCaliber(armed.weaponCaliber)} ({armed.ammunitionCount} cápsulas)</div>
                       <div className="bg-white/70 rounded p-2"><span className="text-amber-700 block">Estado Arma</span>{armed.weaponCondition || "—"}</div>
                       <div className="bg-white/70 rounded p-2"><span className="text-amber-700 block">Supervisor</span>{armed.supervisor || "—"}</div>
                       <div className="bg-white/70 rounded p-2"><span className="text-amber-700 block">Licencia</span>{armed.licenseNumber || "—"} {armed.licenseExpiry ? `(vence ${armed.licenseExpiry})` : ""}</div>
