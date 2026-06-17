@@ -1125,6 +1125,12 @@ export interface ExpedienteOverlayEntry {
   nota?: string | null;
   noLicencia?: string | null;
   custodioOverride?: string | null;
+  // Sobrescrituras del catálogo de armas (auditoría: alinear lo mostrado).
+  marca?: string | null;
+  propietario?: string | null;
+  calibre?: string | null;
+  categoria?: string | null;
+  tipo?: string | null;
   fotosArma?: string[];
   fotoLicenciaFrente?: string | null;
   fotoLicenciaDorso?: string | null;
