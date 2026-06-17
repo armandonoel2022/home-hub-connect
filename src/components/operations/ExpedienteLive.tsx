@@ -88,6 +88,7 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [data, setData] = useState<GeneralExpediente | null>(null);
+  const [sqlWeapons, setSqlWeapons] = useState<GeneralWeapon[]>([]);
   const [overlay, setOverlay] = useState<ExpedienteOverlayMap>({});
   const [serverCanEdit, setServerCanEdit] = useState(false);
   const [loading, setLoading] = useState(true);
