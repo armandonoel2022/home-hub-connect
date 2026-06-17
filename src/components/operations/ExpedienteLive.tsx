@@ -116,12 +116,14 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
 
   const loadOverlay = async () => {
     try {
-      const [ov, ce] = await Promise.all([
+      const [ov, ce, hid] = await Promise.all([
         expedienteOverlayApi.list().catch(() => ({} as ExpedienteOverlayMap)),
         expedienteOverlayApi.canEdit().catch(() => ({ canEdit: false })),
+        expedienteOverlayApi.hidden().catch(() => [] as string[]),
       ]);
       setOverlay(ov || {});
       setServerCanEdit(!!ce.canEdit);
+      setHiddenKeys(new Set(hid || []));
     } catch { /* overlay opcional */ }
   };
 
