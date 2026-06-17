@@ -89,64 +89,94 @@ const ClientExpediente = () => {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={refresh}>
-              <RefreshCw className="h-4 w-4 mr-1" /> Recargar
-            </Button>
-            <Button size="sm" onClick={() => setClientDialog({})}>
-              <Plus className="h-4 w-4 mr-1" /> Nuevo cliente
-            </Button>
+            {mode === "manual" && (
+              <>
+                <Button variant="outline" size="sm" onClick={refresh}>
+                  <RefreshCw className="h-4 w-4 mr-1" /> Recargar
+                </Button>
+                <Button size="sm" onClick={() => setClientDialog({})}>
+                  <Plus className="h-4 w-4 mr-1" /> Nuevo cliente
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
-        <Input
-          placeholder="Buscar cliente…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-md"
-        />
-
-        <div className="space-y-4">
-          {clients.length === 0 && (
-            <Card className="p-10 text-center text-sm text-muted-foreground">
-              No hay clientes. Crea uno o recarga; se siembran automáticamente desde Personal Armado.
-            </Card>
-          )}
-          {clients.map((client) => (
-            <ClientBlock
-              key={client.id}
-              client={client}
-              onEditClient={() => setClientDialog(client)}
-              onDeleteClient={() => {
-                if (confirm(`¿Eliminar el cliente "${client.nombre}" y todas sus localidades/puestos?`)) {
-                  deleteClient(client.id);
-                  toast({ title: "Cliente eliminado" });
-                  refresh();
-                }
-              }}
-              onAddLocation={() => setLocationDialog({ clientId: client.id, data: {} })}
-              onEditLocation={(l) => setLocationDialog({ clientId: client.id, data: l })}
-              onDeleteLocation={(l) => {
-                if (confirm(`¿Eliminar la localidad "${l.nombre}"?`)) { deleteLocation(l.id); refresh(); }
-              }}
-              onAddPost={(locId) => setPostDialog({ locationId: locId, data: {} })}
-              onEditPost={(p) => setPostDialog({ locationId: p.locationId, data: p })}
-              onDeletePost={(p) => {
-                if (confirm(`¿Eliminar el puesto "${p.nombre}"?`)) { deletePost(p.id); refresh(); }
-              }}
-              onReport={(p) => setReportDialog(p)}
-              onPrint={async () => {
-                try {
-                  toast({ title: "Generando expediente…" });
-                  await generateExpedientePDF(client, { open: true });
-                } catch (e) {
-                  console.error("Error generando expediente PDF", e);
-                  toast({ title: "No se pudo generar el expediente", description: String((e as Error)?.message || e), variant: "destructive" });
-                }
-              }}
-              tick={tick}
-            />
-          ))}
+        {/* Selector de fuente de datos */}
+        <div className="inline-flex rounded-lg border border-border bg-muted/40 p-1">
+          <Button
+            size="sm"
+            variant={mode === "vivo" ? "default" : "ghost"}
+            className="h-8"
+            onClick={() => setMode("vivo")}
+          >
+            Vivo (GENERAL)
+          </Button>
+          <Button
+            size="sm"
+            variant={mode === "manual" ? "default" : "ghost"}
+            className="h-8"
+            onClick={() => setMode("manual")}
+          >
+            Manual
+          </Button>
         </div>
+
+        {mode === "vivo" ? (
+          <ExpedienteLive onUnavailable={() => { /* el usuario puede cambiar a Manual */ }} />
+        ) : (
+          <>
+            <Input
+              placeholder="Buscar cliente…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="max-w-md"
+            />
+
+            <div className="space-y-4">
+              {clients.length === 0 && (
+                <Card className="p-10 text-center text-sm text-muted-foreground">
+                  No hay clientes. Crea uno o recarga; se siembran automáticamente desde Personal Armado.
+                </Card>
+              )}
+              {clients.map((client) => (
+                <ClientBlock
+                  key={client.id}
+                  client={client}
+                  onEditClient={() => setClientDialog(client)}
+                  onDeleteClient={() => {
+                    if (confirm(`¿Eliminar el cliente "${client.nombre}" y todas sus localidades/puestos?`)) {
+                      deleteClient(client.id);
+                      toast({ title: "Cliente eliminado" });
+                      refresh();
+                    }
+                  }}
+                  onAddLocation={() => setLocationDialog({ clientId: client.id, data: {} })}
+                  onEditLocation={(l) => setLocationDialog({ clientId: client.id, data: l })}
+                  onDeleteLocation={(l) => {
+                    if (confirm(`¿Eliminar la localidad "${l.nombre}"?`)) { deleteLocation(l.id); refresh(); }
+                  }}
+                  onAddPost={(locId) => setPostDialog({ locationId: locId, data: {} })}
+                  onEditPost={(p) => setPostDialog({ locationId: p.locationId, data: p })}
+                  onDeletePost={(p) => {
+                    if (confirm(`¿Eliminar el puesto "${p.nombre}"?`)) { deletePost(p.id); refresh(); }
+                  }}
+                  onReport={(p) => setReportDialog(p)}
+                  onPrint={async () => {
+                    try {
+                      toast({ title: "Generando expediente…" });
+                      await generateExpedientePDF(client, { open: true });
+                    } catch (e) {
+                      console.error("Error generando expediente PDF", e);
+                      toast({ title: "No se pudo generar el expediente", description: String((e as Error)?.message || e), variant: "destructive" });
+                    }
+                  }}
+                  tick={tick}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {clientDialog && (
