@@ -891,6 +891,7 @@ function printAgentFicha(p: GeneralExpedientePuesto, c: GeneralExpedienteCliente
   openPrint(`<html><head><title>Ficha del Vigilante</title><style>${fichaStyles}</style></head><body>
     <h1>Ficha del Vigilante</h1>
     ${rowHtml("Nombre", p.vigilante)}${rowHtml("Código", p.vigilanteCodigo)}${rowHtml("Cédula", p.vigilanteCedula)}
+    ${p.vigilanteFechaNacimiento ? rowHtml("Nacimiento", new Date(p.vigilanteFechaNacimiento).toLocaleDateString("es-DO")) : ""}${p.vigilanteEdad != null ? rowHtml("Edad", p.vigilanteEdad + " años") : ""}
     ${rowHtml("Cliente", c.nombre)}${rowHtml("Puesto", p.puesto)}${rowHtml("Horas", p.horas + "h")}
     ${p.requiereArma ? rowHtml("Arma asignada", [p.arma?.tipo, p.armaSerial].filter(Boolean).join(" · ")) : ""}
     ${p.comentario ? rowHtml("Comentario", p.comentario) : ""}
