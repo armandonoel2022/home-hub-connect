@@ -168,7 +168,8 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
     const byName = new Map<string, Employee>();
     (employees || []).forEach((e) => {
       if (e.employeeCode) byCode.set(String(e.employeeCode).trim().toLowerCase(), e);
-      if ((e as any).cedula) byCedula.set(String((e as any).cedula).replace(/\D/g, ""), e);
+      if (e.cedula) byCedula.set(String(e.cedula).replace(/\D/g, ""), e);
+      if (e.tss) byCedula.set(String(e.tss).replace(/\D/g, ""), e);
       if (e.fullName) byName.set(e.fullName.trim().toLowerCase(), e);
     });
     return { byCode, byCedula, byName };
