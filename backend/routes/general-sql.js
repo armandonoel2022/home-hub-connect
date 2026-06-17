@@ -442,9 +442,25 @@ router.get('/weapons', auth, guard, async (req, res) => {
 });
 
 // ─── Expediente de Clientes (vivo desde GENERAL) ───
-// Lee el ÚLTIMO Reporte Diario digitado (típicamente el de ayer) y arma el
-// 360° por cliente: Cliente → Puestos cubiertos → Vigilante + Arma + Horas.
-// No existe tabla Localidad en gSafeOne; se agrupa Cliente → Puesto(rol).
+// Arma el 360° por cliente a partir del Reporte Diario, replicando la
+// estructura oficial del query de Operaciones:
+//   ReportePuesto → ReporteDiarioD → ReporteDiario (Zona/Tanda/Fecha)
+//   ReportePuesto → HoraContratada (Puesto) → Cliente
+//   ReportePuesto → Empleado (Vigilante) · Armamento (Arma)
+// Jerarquía resultante:  Cliente → Zona(Localidad) → Puesto → Tanda(Turno).
+//
+// Por defecto muestra el ÚLTIMO reporte digitado (típicamente el de ayer);
+// admite ?fecha=YYYY-MM-DD para navegar hacia atrás hasta el día de hoy.
+
+function normalizeDateParam(v) {
+  if (!v) return null;
+  const s = String(v).trim();
+  let m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = /^(\d{4})(\d{2})(\d{2})$/.exec(s);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  return null;
+}
 
 async function latestReportDate() {
   const rows = await sql.query(
