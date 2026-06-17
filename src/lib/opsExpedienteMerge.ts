@@ -161,18 +161,24 @@ export function mergeOperacionesIntoExpediente(
     c.puestos.forEach((p) => {
       const k = `${nkey(c.nombre)}|${nkey(p.puesto)}`;
       const info = opsIdx.get(k);
-      if (!info) return;
-      usedOps.add(k);
-      if (!p.localidad && info.localidad) p.localidad = info.localidad;
-      if (!p.armaSerial && info.weapons.length > 0) {
-        const w = info.weapons.find((x) => nkey(x.vigilante) === nkey(p.vigilante)) || info.weapons[0];
-        p.requiereArma = true;
-        p.armaSerial = w.serial || null;
-        p.armaModelo = w.modelo || w.tipo || null;
-        p.armaOrigen = "operaciones";
-        if (!p.arma && (w.serial || w.tipo)) {
-          p.arma = { oid: null, serie: w.serial || null, marca: null, tipo: w.tipo || null, calibre: null, categoria: null, noLicencia: null, estatus: null, propietario: null };
+      if (info) {
+        usedOps.add(k);
+        if (!p.localidad && info.localidad) p.localidad = info.localidad;
+        if (!p.armaSerial && info.weapons.length > 0) {
+          const w = info.weapons.find((x) => nkey(x.vigilante) === nkey(p.vigilante)) || info.weapons[0];
+          p.requiereArma = true;
+          p.armaSerial = w.serial || null;
+          p.armaModelo = w.modelo || w.tipo || null;
+          p.armaOrigen = "operaciones";
+          if (!p.arma && (w.serial || w.tipo)) {
+            p.arma = { oid: null, serie: w.serial || null, marca: null, tipo: w.tipo || null, calibre: null, categoria: null, noLicencia: null, estatus: null, propietario: null };
+          }
         }
+      }
+      // Completa marca/categoría/calibre/licencia desde el catálogo SQL por serial.
+      p.arma = enrichArmaFromSql(p.arma, sqlMap);
+      if (p.arma) {
+        p.armaModelo = p.armaModelo || p.arma.marca || p.arma.tipo || null;
       }
     });
   });
@@ -189,10 +195,16 @@ export function mergeOperacionesIntoExpediente(
       clienteByKey.set(nkey(info.cliente), cliente);
       base.clientes.push(cliente);
     }
+    const pushPuesto = (w?: OpsWeapon) => {
+      const puesto = makeOpsPuesto(info, w);
+      puesto.arma = enrichArmaFromSql(puesto.arma, sqlMap);
+      if (puesto.arma) puesto.armaModelo = puesto.armaModelo || puesto.arma.marca || puesto.arma.tipo || null;
+      cliente!.puestos.push(puesto);
+    };
     if (info.weapons.length > 0) {
-      info.weapons.forEach((w) => cliente!.puestos.push(makeOpsPuesto(info, w)));
+      info.weapons.forEach((w) => pushPuesto(w));
     } else {
-      cliente.puestos.push(makeOpsPuesto(info));
+      pushPuesto();
     }
   });
 
