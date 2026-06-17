@@ -148,6 +148,19 @@ export function mergeOperacionesIntoExpediente(
   const sqlMap = buildWeaponSerialMap(sqlWeapons);
   if (opsIdx.size === 0 && sqlMap.size === 0) return base;
 
+  // Índice de respaldo por vigilante: permite enriquecer un puesto de GENERAL
+  // con el arma que Operaciones tiene para ese mismo vigilante, aunque el
+  // nombre del cliente o del puesto no coincida exactamente entre las fuentes.
+  const opsByVigilante = new Map<string, { weapon: OpsWeapon; key: string }>();
+  opsIdx.forEach((info, key) => {
+    info.weapons.forEach((w) => {
+      const vk = nkey(w.vigilante);
+      if (vk && (w.serial || w.tipo) && !opsByVigilante.has(vk)) {
+        opsByVigilante.set(vk, { weapon: w, key });
+      }
+    });
+  });
+
   // Marca registros de GENERAL.
   base.clientes.forEach((c) => { c.origen = c.origen || "general"; c.puestos.forEach((p) => { p.origen = p.origen || "general"; }); });
 
