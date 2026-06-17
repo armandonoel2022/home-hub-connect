@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import ExpedienteLive from "@/components/operations/ExpedienteLive";
+import VaultView from "@/components/operations/VaultView";
 
 function mapsHref(coord: string): string | null {
   if (!coord) return null;
@@ -41,7 +42,7 @@ const ClientExpediente = () => {
   const [tick, setTick] = useState(0);
   const refresh = () => setTick((t) => t + 1);
   const [search, setSearch] = useState("");
-  const [mode, setMode] = useState<"vivo" | "manual">("vivo");
+  const [mode, setMode] = useState<"vivo" | "boveda" | "manual">("vivo");
 
   // dialogs
   const [clientDialog, setClientDialog] = useState<Partial<OpsClient> | null>(null);
@@ -114,6 +115,14 @@ const ClientExpediente = () => {
           </Button>
           <Button
             size="sm"
+            variant={mode === "boveda" ? "default" : "ghost"}
+            className="h-8"
+            onClick={() => setMode("boveda")}
+          >
+            Bóveda
+          </Button>
+          <Button
+            size="sm"
             variant={mode === "manual" ? "default" : "ghost"}
             className="h-8"
             onClick={() => setMode("manual")}
@@ -124,6 +133,8 @@ const ClientExpediente = () => {
 
         {mode === "vivo" ? (
           <ExpedienteLive onUnavailable={() => { /* el usuario puede cambiar a Manual */ }} />
+        ) : mode === "boveda" ? (
+          <VaultView />
         ) : (
           <>
             <Input

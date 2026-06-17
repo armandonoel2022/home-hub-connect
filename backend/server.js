@@ -93,6 +93,7 @@ app.use('/api/ops-locations', require('./routes/ops-locations'));
 app.use('/api/ops-posts', require('./routes/ops-posts'));
 app.use('/api/ops-daily-reports', require('./routes/ops-daily-reports'));
 app.use('/api/vault-movements', require('./routes/vault-movements'));
+app.use('/api/expediente-overlay', require('./routes/expediente-overlay'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({

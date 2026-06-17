@@ -64,6 +64,26 @@ export function isITSuper(user: IntranetUser | null | undefined): boolean {
   return isSuperUser(user) || isCoAdminIT(user);
 }
 
+/**
+ * Editores autorizados del Expediente 360° (armas, licencias, fotos, traslados).
+ * Debe mantenerse alineado con EDITOR_EMAILS en backend/routes/expediente-overlay.js.
+ * El backend revalida el correo del usuario; esto solo controla la UI.
+ */
+export const OPS_EXPEDIENTE_EDITORS = [
+  "tecnologia@safeone.com.do",
+  "anoel@safeone.com.do",
+  "aperez@safeone.com.do",
+  "sperez@safeone.com.do",
+  "samuel@safeone.com.do",
+  "aurelio@safeone.com.do",
+];
+
+export function canEditExpediente(user: IntranetUser | null | undefined): boolean {
+  if (!user) return false;
+  if (isSuperUser(user) || !!user.isAdmin) return true;
+  return OPS_EXPEDIENTE_EDITORS.includes(norm(user.email));
+}
+
 export function isAdmin(user: IntranetUser | null | undefined): boolean {
   return !!user?.isAdmin || isSuperUser(user);
 }
