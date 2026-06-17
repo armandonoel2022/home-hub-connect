@@ -1194,6 +1194,7 @@ export interface GeneralWeaponDetail {
 export interface GeneralExpedientePuesto {
   lineaOID: number;
   puesto: string;
+  localidad?: string;
   puestoCodigo: number | null;
   vigilante: string;
   vigilanteOID: number | null;
