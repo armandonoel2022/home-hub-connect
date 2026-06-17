@@ -353,7 +353,8 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
     }
   };
 
-  const groups = groupByLocation(client.puestos);
+  const localidades = groupByLocalidad(client.puestos);
+  const reporteLabel = ctx.reportDate ? new Date(ctx.reportDate).toLocaleDateString("es-DO") : "—";
 
   return (
     <Card className="overflow-hidden">
