@@ -16,6 +16,7 @@ function nkey(s: string | null | undefined): string {
 interface OpsWeapon { serial: string; tipo: string; modelo: string; vigilante: string; }
 interface OpsPostInfo {
   cliente: string;
+  localidad: string;
   puesto: string;
   weapons: OpsWeapon[];
   vigilantes: string[];
@@ -26,19 +27,21 @@ function buildOpsIndex(personnel: ArmedPersonnel[], workPosts: WorkPost[]): Map<
   const idx = new Map<string, OpsPostInfo>();
   const keyOf = (cliente: string, puesto: string) => `${nkey(cliente)}|${nkey(puesto)}`;
 
-  const ensure = (cliente: string, puesto: string): OpsPostInfo => {
+  const ensure = (cliente: string, puesto: string, localidad: string): OpsPostInfo => {
     const k = keyOf(cliente, puesto);
     let e = idx.get(k);
     if (!e) {
-      e = { cliente: (cliente || "").trim() || "Cliente sin nombre", puesto: (puesto || "").trim() || "Puesto General", weapons: [], vigilantes: [] };
+      e = { cliente: (cliente || "").trim() || "Cliente sin nombre", localidad: (localidad || "").trim() || "Sede Principal", puesto: (puesto || "").trim() || "Puesto General", weapons: [], vigilantes: [] };
       idx.set(k, e);
+    } else if (!e.localidad || e.localidad === "Sede Principal") {
+      if ((localidad || "").trim()) e.localidad = localidad.trim();
     }
     return e;
   };
 
   (personnel || []).forEach((p) => {
     if (p.status === "Inactivo") return;
-    const e = ensure(p.client || "", p.location || "");
+    const e = ensure(p.client || "", p.location || "", p.province || "");
     const name = p.name || p.employeeCode;
     if (name && !e.vigilantes.includes(name)) e.vigilantes.push(name);
     if (p.weaponSerial || p.weaponType) {
@@ -47,7 +50,7 @@ function buildOpsIndex(personnel: ArmedPersonnel[], workPosts: WorkPost[]): Map<
   });
 
   (workPosts || []).forEach((wp) => {
-    const e = ensure(wp.cliente || "", wp.nombre || "");
+    const e = ensure(wp.cliente || "", wp.nombre || "", wp.provincia || "");
     (wp.guards || []).forEach((g) => { if (g.guardName && !e.vigilantes.includes(g.guardName)) e.vigilantes.push(g.guardName); });
     (wp.weapons || []).forEach((w) => {
       const serial = w.serial || "";
@@ -67,6 +70,7 @@ function makeOpsPuesto(info: OpsPostInfo, w?: OpsWeapon): GeneralExpedientePuest
   return {
     lineaOID: nextOid(),
     puesto: info.puesto,
+    localidad: info.localidad,
     puestoCodigo: null,
     vigilante: w?.vigilante || info.vigilantes[0] || "",
     vigilanteOID: null,
@@ -118,6 +122,7 @@ export function mergeOperacionesIntoExpediente(
       const info = opsIdx.get(k);
       if (!info) return;
       usedOps.add(k);
+      if (!p.localidad && info.localidad) p.localidad = info.localidad;
       if (!p.armaSerial && info.weapons.length > 0) {
         const w = info.weapons.find((x) => nkey(x.vigilante) === nkey(p.vigilante)) || info.weapons[0];
         p.requiereArma = true;
