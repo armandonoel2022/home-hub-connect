@@ -47,6 +47,7 @@ const WEAPON_CONDITIONS = [
 ];
 
 import { parseAnyCoords, isMapsUrl } from "@/lib/geoResolver";
+import { displayCaliber } from "@/lib/expedienteHelpers";
 
 function parseCoords(coords: string): [number, number] | null {
   return parseAnyCoords(coords);
