@@ -1112,7 +1112,52 @@ export const generalSqlApi = {
   employeeHistory: (empleadoOID: string | number) =>
     apiFetch<PayrollHistoryEntry[]>(`/general-sql/employee-history/${encodeURIComponent(String(empleadoOID))}`),
   peek: (table: string) => apiFetch<any[]>(`/general-sql/peek/${encodeURIComponent(table)}`),
+  expedienteStatus: () => apiFetch<{ fecha: string | null }>("/general-sql/expediente/status"),
+  expediente: () => apiFetch<GeneralExpediente>("/general-sql/expediente"),
+  schemaKeys: () => apiFetch<Array<{ tabla: string; tipo: string; columna: string; restriccion: string }>>("/general-sql/schema-keys"),
 };
+
+export interface GeneralExpedientePuesto {
+  lineaOID: number;
+  puesto: string;
+  puestoCodigo: number | null;
+  vigilante: string;
+  vigilanteCodigo: number | null;
+  horas: number;
+  incentivo: number;
+  requiereArma: boolean;
+  armaSerial: string | null;
+  armaModelo: string | null;
+  novedad: boolean;
+  comentario: string;
+}
+
+export interface GeneralExpedienteCliente {
+  oid: number;
+  codigo: number | null;
+  nombre: string;
+  direccion: string;
+  telefono: string;
+  email: string;
+  rnc: string;
+  cedula: string;
+  contacto: string;
+  inactivo: boolean;
+  puestos: GeneralExpedientePuesto[];
+}
+
+export interface GeneralExpediente {
+  fecha: string | null;
+  clientes: GeneralExpedienteCliente[];
+  totals: {
+    clientes?: number;
+    puestosCubiertos?: number;
+    vigilantes?: number;
+    armas?: number;
+    sinArma?: number;
+    conNovedad?: number;
+  };
+}
 
 export interface GeneralEmployee {
   oid: number | string; codigo?: string; nombre: string; cedula?: string;
