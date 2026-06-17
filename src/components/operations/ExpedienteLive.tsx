@@ -246,6 +246,20 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
           Reporte: <span className="font-medium">{data?.fecha ? new Date(data.fecha).toLocaleDateString("es-DO") : "—"}</span>
           {canEdit && <Badge variant="secondary" className="ml-2 text-[10px]">Edición habilitada</Badge>}
         </div>
+        <div className="inline-flex items-center gap-1">
+          <Input
+            type="date"
+            value={selectedDate}
+            max={new Date().toISOString().slice(0, 10)}
+            onChange={(e) => { setSelectedDate(e.target.value); load(e.target.value || undefined); }}
+            list="expediente-dates"
+            className="h-9 w-[150px]"
+            title="Fecha del reporte (por defecto ayer; puedes ir hacia atrás hasta hoy)"
+          />
+          <datalist id="expediente-dates">
+            {availableDates.map((d) => <option key={d} value={d} />)}
+          </datalist>
+        </div>
         <div className="flex gap-1 flex-wrap">
           {([
             ["todos", "Todos"],
