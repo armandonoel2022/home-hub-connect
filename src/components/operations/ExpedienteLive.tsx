@@ -646,7 +646,7 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
   const save = async () => {
     setSaving(true);
     try {
-      await expedienteOverlayApi.save(serie, { estatus, noLicencia, nota });
+      await expedienteOverlayApi.save(serie, { estatus, noLicencia, nota, marca, tipo, calibre, categoria, propietario });
       ctx.reloadOverlay();
       toast({ title: "Arma actualizada" });
     } catch (e) {
