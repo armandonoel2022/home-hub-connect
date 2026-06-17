@@ -211,6 +211,19 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
     }
   };
 
+  const hideMany = async (cliente: GeneralExpedienteCliente, ps: GeneralExpedientePuesto[]) => {
+    try {
+      let next: string[] = [];
+      for (const p of ps) {
+        next = await expedienteOverlayApi.hide(lineHideKey(cliente, p));
+      }
+      setHiddenKeys(new Set(next || []));
+      toast({ title: "Puesto eliminado del expediente" });
+    } catch (e) {
+      toast({ title: "No se pudo eliminar", description: String((e as Error)?.message || e), variant: "destructive" });
+    }
+  };
+
   // Fuente de verdad: gSafeOne (GENERAL). Si GENERAL responde con datos, se
   // usa EXCLUSIVAMENTE esa fuente (solo se enriquecen las armas con el catálogo
   // Armamento de SQL por serial). Operaciones (Personal Armado + Puestos) se usa
