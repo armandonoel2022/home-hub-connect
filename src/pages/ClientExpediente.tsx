@@ -115,6 +115,14 @@ const ClientExpediente = () => {
           </Button>
           <Button
             size="sm"
+            variant={mode === "boveda" ? "default" : "ghost"}
+            className="h-8"
+            onClick={() => setMode("boveda")}
+          >
+            Bóveda
+          </Button>
+          <Button
+            size="sm"
             variant={mode === "manual" ? "default" : "ghost"}
             className="h-8"
             onClick={() => setMode("manual")}
@@ -125,6 +133,8 @@ const ClientExpediente = () => {
 
         {mode === "vivo" ? (
           <ExpedienteLive onUnavailable={() => { /* el usuario puede cambiar a Manual */ }} />
+        ) : mode === "boveda" ? (
+          <VaultView />
         ) : (
           <>
             <Input
