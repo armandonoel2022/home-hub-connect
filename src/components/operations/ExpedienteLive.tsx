@@ -81,6 +81,8 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [filter, setFilter] = useState<FilterKey>("todos");
 
   // dialogs
