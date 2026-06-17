@@ -165,36 +165,42 @@ export function generateAmortizationSchedule(
   const installment = round2(cuota);
   const dates = installmentDates(startDate, n, frequency);
 
+  // Primera pasada: calcular pagos de cada cuota (la última cierra el saldo).
+  const pays: number[] = [];
+  let bal = P;
+  for (let k = 0; k < n; k++) {
+    const interest = round2(bal * i);
+    let capital = round2(installment - interest);
+    let pay = installment;
+    if (k === n - 1) { capital = round2(bal); pay = round2(capital + interest); }
+    bal = round2(bal - capital);
+    pays.push(pay);
+  }
+
   const rows: AmortizationRow[] = [];
   let balance = P;
   let totalInterest = 0;
   for (let k = 0; k < n; k++) {
     const interest = round2(balance * i);
     let capital = round2(installment - interest);
-    let pay = installment;
-    if (k === n - 1) { capital = round2(balance); pay = round2(capital + interest); }
+    if (k === n - 1) { capital = round2(balance); }
     balance = round2(balance - capital);
     totalInterest = round2(totalInterest + interest);
-    const remaining = n - 1 - k;
+    // Saldo total tras este pago = suma de las cuotas que aún faltan.
+    const balanceTotal = round2(pays.slice(k + 1).reduce((s, p) => s + p, 0));
     rows.push({
       n: k + 1,
       date: dates[k],
       interest,
       capital,
       balanceCapital: Math.max(0, balance),
-      balanceTotal: round2(Math.max(0, balance) + interestRemaining(balance, i, remaining, installment)),
-      installment: pay,
+      balanceTotal,
+      installment: pays[k],
     });
   }
   return { rows, installment, totalInterest, totalToPay: round2(P + totalInterest) };
 }
 
-/** Saldo total restante = suma de las cuotas pendientes (aprox. cuota × restantes). */
-function interestRemaining(_balance: number, _i: number, remaining: number, installment: number): number {
-  // El saldo total tras un pago = cuotas que faltan × cuota − saldo de capital ya contado.
-  // Aproximación coherente con GENERAL: cuotas restantes × cuota.
-  return remaining * installment;
-}
 
 /**
  * Calcula cuota mensual (amortización francesa, tasa mensual).
