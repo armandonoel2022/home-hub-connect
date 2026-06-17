@@ -77,11 +77,15 @@ function KpiCard({ icon, label, value, accent }: { icon: ReactNode; label: strin
 }
 
 // ─── Contexto compartido vía props sencillas ───
+interface EmployeeMatch { photo?: string; emp?: Employee; armed?: ArmedPersonnel; }
 interface LiveCtx {
   overlay: ExpedienteOverlayMap;
   canEdit: boolean;
   reportDate: string;
   reloadOverlay: () => void;
+  hiddenKeys: Set<string>;
+  hideLine: (cliente: GeneralExpedienteCliente, p: GeneralExpedientePuesto) => void;
+  matchEmployee: (p: GeneralExpedientePuesto) => EmployeeMatch;
   openWeapon: (p: GeneralExpedientePuesto, cliente: GeneralExpedienteCliente) => void;
   openAgent: (p: GeneralExpedientePuesto, cliente: GeneralExpedienteCliente) => void;
   openPost: (p: GeneralExpedientePuesto, cliente: GeneralExpedienteCliente) => void;
