@@ -205,6 +205,12 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
 
   return (
     <div className="space-y-4">
+      {error && (
+        <Card className="p-3 flex items-start gap-2 border-amber-300 bg-amber-50 text-amber-800 text-xs">
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+          <span>GENERAL no está disponible; mostrando datos de Operaciones (Personal Armado y Puestos). <button onClick={load} className="underline font-medium">Reintentar</button></span>
+        </Card>
+      )}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
         <KpiCard icon={<Building2 className="h-4 w-4" />} label="Clientes con cobertura" value={t.clientes ?? 0} />
         <KpiCard icon={<ListChecks className="h-4 w-4" />} label="Puestos cubiertos" value={t.puestosCubiertos ?? 0} />
