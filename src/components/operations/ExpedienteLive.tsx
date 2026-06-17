@@ -17,7 +17,7 @@ function mapsHref(addr: string): string {
   return `https://www.google.com/maps?q=${encodeURIComponent(addr)}`;
 }
 
-function KpiCard({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: number | string; accent?: string }) {
+function KpiCard({ icon, label, value, accent }: { icon: ReactNode; label: string; value: number | string; accent?: string }) {
   return (
     <Card className="p-3 flex items-center gap-3">
       <div className={`h-9 w-9 rounded-md flex items-center justify-center shrink-0 ${accent || "bg-primary/10 text-primary"}`}>
