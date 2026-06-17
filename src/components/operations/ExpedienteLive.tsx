@@ -152,10 +152,62 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
     generalSqlApi.weapons()
       .then((w) => setSqlWeapons(w || []))
       .catch(() => { /* catálogo opcional */ });
+    employeesApi.getAll()
+      .then((e) => setEmployees(e || []))
+      .catch(() => { /* fotos opcionales */ });
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, []);
 
   const { data: personnel } = useArmedPersonnel();
+
+  // Índice de empleados (RRHH) por código / cédula / nombre para resolver la
+  // foto y los datos en la ficha 360° del vigilante.
+  const employeeIndex = useMemo(() => {
+    const byCode = new Map<string, Employee>();
+    const byCedula = new Map<string, Employee>();
+    const byName = new Map<string, Employee>();
+    (employees || []).forEach((e) => {
+      if (e.employeeCode) byCode.set(String(e.employeeCode).trim().toLowerCase(), e);
+      if ((e as any).cedula) byCedula.set(String((e as any).cedula).replace(/\D/g, ""), e);
+      if (e.fullName) byName.set(e.fullName.trim().toLowerCase(), e);
+    });
+    return { byCode, byCedula, byName };
+  }, [employees]);
+
+  const armedIndex = useMemo(() => {
+    const byName = new Map<string, ArmedPersonnel>();
+    const byCode = new Map<string, ArmedPersonnel>();
+    (personnel || []).forEach((a) => {
+      if (a.name) byName.set(a.name.trim().toLowerCase(), a);
+      if (a.employeeCode) byCode.set(String(a.employeeCode).trim().toLowerCase(), a);
+    });
+    return { byName, byCode };
+  }, [personnel]);
+
+  const matchEmployee = (p: GeneralExpedientePuesto): EmployeeMatch => {
+    const code = p.vigilanteCodigo != null ? String(p.vigilanteCodigo).trim().toLowerCase() : "";
+    const ced = p.vigilanteCedula ? String(p.vigilanteCedula).replace(/\D/g, "") : "";
+    const name = (p.vigilante || "").trim().toLowerCase();
+    const emp = (code && employeeIndex.byCode.get(code))
+      || (ced && employeeIndex.byCedula.get(ced))
+      || (name && employeeIndex.byName.get(name)) || undefined;
+    const armed = (name && armedIndex.byName.get(name))
+      || (code && armedIndex.byCode.get(code)) || undefined;
+    const raw = emp?.photoUrl || (emp as any)?.photo || "";
+    const photo = raw ? (raw.startsWith("/photos") || raw.startsWith("/uploads") ? getFileUrl(raw) : raw) : undefined;
+    return { photo, emp, armed };
+  };
+
+  const hideLine = async (cliente: GeneralExpedienteCliente, p: GeneralExpedientePuesto) => {
+    const key = lineHideKey(cliente, p);
+    try {
+      const next = await expedienteOverlayApi.hide(key);
+      setHiddenKeys(new Set(next || []));
+      toast({ title: "Registro eliminado del expediente" });
+    } catch (e) {
+      toast({ title: "No se pudo eliminar", description: String((e as Error)?.message || e), variant: "destructive" });
+    }
+  };
 
   // Fuente de verdad: gSafeOne (GENERAL). Si GENERAL responde con datos, se
   // usa EXCLUSIVAMENTE esa fuente (solo se enriquecen las armas con el catálogo
