@@ -556,6 +556,7 @@ router.get('/expediente', auth, guard, async (req, res) => {
 
     // Estructura oficial: ReportePuesto → HoraContratada (Puesto) → Cliente,
     // con Zona (localidad) y Tanda (turno) del ReporteDiario.
+    // Algunas instalaciones de gSafeOne no tienen ciertas columnas (p.ej. Codigo
     // en Cliente/HoraContratada). Detectamos las columnas reales para evitar
     // "Invalid column name 'Codigo'".
     const [cCols, hCols] = await Promise.all([
