@@ -682,3 +682,34 @@ export function seedFromPersonnel(personnel: ArmedPersonnel[], force = false): b
 export function resetExpedienteSeed() {
   [K_CLIENTS, K_LOCATIONS, K_POSTS, K_REPORTS, K_SEED, K_SYNC_HASH].forEach((k) => localStorage.removeItem(k));
 }
+
+// Limpieza única de la data descargada previamente desde Operaciones, para que
+// el Expediente Manual se reconstruya EXCLUSIVAMENTE desde la conexión al
+// servidor (GENERAL). Se ejecuta una sola vez por versión.
+const K_CLEAN_VERSION = "safeone_ops_expediente_clean_v1";
+export function cleanupLegacyExpediente(): boolean {
+  try {
+    if (localStorage.getItem(K_CLEAN_VERSION) === "1") return false;
+    // Elimina SOLO lo derivado automáticamente (origin "ops" / semillas).
+    // Conserva lo creado o editado manualmente por el usuario (origin "manual").
+    const isManual = (o: { origin?: string }) => o.origin === "manual";
+    const manualClients = getClients().filter(isManual);
+    const manualLocs = getLocations().filter(isManual);
+    const manualPosts = getPosts().filter(isManual);
+    const manualPostIds = new Set(manualPosts.map((p) => p.id));
+    const autoCreators = new Set([AUTO_CREATED_BY, OPS_CREATED_BY]);
+    const manualReports = getDailyReports().filter(
+      (r) => !autoCreators.has(r.createdBy) || manualPostIds.has(r.postId),
+    );
+    writeLS(K_CLIENTS, manualClients);
+    writeLS(K_LOCATIONS, manualLocs);
+    writeLS(K_POSTS, manualPosts);
+    writeLS(K_REPORTS, manualReports);
+    localStorage.removeItem(K_SYNC_HASH);
+    localStorage.removeItem(K_SEED);
+    localStorage.setItem(K_CLEAN_VERSION, "1");
+    return true;
+  } catch {
+    return false;
+  }
+}
