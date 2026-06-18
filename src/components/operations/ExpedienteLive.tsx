@@ -18,7 +18,7 @@ import {
 import type { ArmedPersonnel } from "@/lib/types";
 import { exportToPDF, exportToExcel } from "@/lib/exportUtils";
 import { useArmedPersonnel } from "@/hooks/useApiHooks";
-import { loadPosts } from "@/lib/postsData";
+
 import { mergeOperacionesIntoExpediente } from "@/lib/opsExpedienteMerge";
 import { displayCaliber, lineHideKey, applyWeaponOverride } from "@/lib/expedienteHelpers";
 import {
