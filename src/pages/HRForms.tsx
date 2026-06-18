@@ -372,6 +372,12 @@ const HRForms = () => {
     setLoanApplyDate("");
   };
 
+  const previewAmortization = (req: HRRequest) => {
+    generateAmortizationPDF(amortizationInputFromRequest(req), { open: true }).catch(() => {
+      toast({ title: "No se pudo generar la amortización", variant: "destructive" });
+    });
+  };
+
   const handleApprove = (req: HRRequest) => {
     if (!user) return;
     // For vacaciones, require cover person when supervisor approves
