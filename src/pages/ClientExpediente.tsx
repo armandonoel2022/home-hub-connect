@@ -16,11 +16,11 @@ import { useArmedPersonnel } from "@/hooks/useApiHooks";
 import {
   getClients, getLocationsByClient, getPostsByLocation, getLiveSnapshot, getLatestReportDate,
   saveClient, deleteClient, saveLocation, deleteLocation, savePost, deletePost,
-  replaceDailyReport, syncFromOperaciones, yesterdayISO,
+  replaceDailyReport, syncFromGeneral, cleanupLegacyExpediente, yesterdayISO,
   type OpsClient, type OpsLocation, type OpsPost, type OpsTurno, type DailyReport,
   OPS_EVENT,
 } from "@/lib/opsExpediente";
-import { loadPosts } from "@/lib/postsData";
+import { generalSqlApi } from "@/lib/api";
 import { generateExpedientePDF } from "@/lib/expedientePdf";
 import {
   Building2, MapPin, Plus, Trash2, ArrowLeft, ChevronDown, ChevronRight, FileText,
