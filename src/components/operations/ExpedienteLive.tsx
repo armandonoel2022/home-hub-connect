@@ -18,7 +18,7 @@ import {
 import type { ArmedPersonnel } from "@/lib/types";
 import { exportToPDF, exportToExcel } from "@/lib/exportUtils";
 import { useArmedPersonnel } from "@/hooks/useApiHooks";
-import { loadPosts } from "@/lib/postsData";
+
 import { mergeOperacionesIntoExpediente } from "@/lib/opsExpedienteMerge";
 import { displayCaliber, lineHideKey, applyWeaponOverride } from "@/lib/expedienteHelpers";
 import {
@@ -225,20 +225,13 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
     }
   };
 
-  // Fuente de verdad: gSafeOne (GENERAL). Si GENERAL responde con datos, se
-  // usa EXCLUSIVAMENTE esa fuente (solo se enriquecen las armas con el catálogo
-  // Armamento de SQL por serial). Operaciones (Personal Armado + Puestos) se usa
-  // únicamente como respaldo cuando GENERAL no está disponible.
+  // Fuente de verdad ÚNICA: gSafeOne (GENERAL/SQL). Se IGNORA Operaciones
+  // (Personal Armado + Puestos). Solo se enriquecen las armas con el catálogo
+  // Armamento de SQL por serial (marca, calibre, categoría, licencia, etc.).
   const mergedData = useMemo<GeneralExpediente | null>(() => {
-    const generalHasData = !!(data && data.clientes && data.clientes.length > 0);
-    if (!generalHasData && (!personnel || personnel.length === 0)) return data;
-    return mergeOperacionesIntoExpediente(
-      data,
-      generalHasData ? [] : (personnel || []),
-      generalHasData ? [] : loadPosts(),
-      sqlWeapons,
-    );
-  }, [data, personnel, sqlWeapons]);
+    if (!data) return data;
+    return mergeOperacionesIntoExpediente(data, [], [], sqlWeapons);
+  }, [data, sqlWeapons]);
 
   const filtered = useMemo<GeneralExpedienteCliente[]>(() => {
     if (!mergedData) return [];
