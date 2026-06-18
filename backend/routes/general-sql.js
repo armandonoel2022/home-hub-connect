@@ -554,50 +554,24 @@ router.get('/expediente', auth, guard, async (req, res) => {
     const fecha = pedida || (await latestReportDate());
     if (!fecha) return res.json({ fecha: null, clientes: [], totals: {} });
 
-    // Estructura oficial: ReportePuesto → HoraContratada (Puesto) → Cliente,
-    // con Zona (localidad) y Tanda (turno) del ReporteDiario.
-    // Algunas instalaciones de gSafeOne no tienen ciertas columnas (p.ej. Codigo
-    // en Cliente/HoraContratada). Detectamos las columnas reales para evitar
-    // "Invalid column name 'Codigo'".
-    const [cCols, hCols, eCols, rpCols] = await Promise.all([
-      tableColumns('Cliente'),
-      tableColumns('HoraContratada'),
-      tableColumns('Empleado'),
-      tableColumns('ReportePuesto'),
-    ]);
-
-    // Nombre del empleado: usa NombreCompleto si existe (query oficial),
-    // si no, concatena Nombre1/Apellido1 como respaldo.
-    const empNombre = eCols.has('nombrecompleto')
-      ? 'e.NombreCompleto AS EmpleadoNombre'
-      : `${selCol(eCols, 'e', 'Nombre1', 'Nombre1')}, ${selCol(eCols, 'e', 'Apellido1', 'Apellido1')}, NULL AS EmpleadoNombre`;
-
-    const rpGcFilter = rpCols.has('gcrecord') ? 'rp.GCRecord IS NULL AND ' : '';
+    // Estructura oficial probada por Operaciones. Importante: Cliente y
+    // HoraContratada NO usan Codigo en esta instalación; sus identificadores
+    // salen de OID y sus nombres de Nombre/Descripcion.
 
     const rows = await sql.query(
-      `SELECT rp.OID AS LineaOID, rp.Horas, rp.Arma AS ArmaOID,
-              ${selCol(rpCols, 'rp', 'Incentivo', 'Incentivo')},
-              ${selCol(rpCols, 'rp', 'Novedad', 'NovedadOID')},
-              ${selCol(rpCols, 'rp', 'Comentario', 'Comentario')},
+      `SELECT rp.OID AS LineaOID,
               c.OID AS ClienteOID,
-              ${selCol(cCols, 'c', 'Codigo', 'ClienteCodigo')},
-              ${selCol(cCols, 'c', 'Nombre', 'ClienteNombre')},
-              ${selCol(cCols, 'c', 'Direccion', 'Direccion')},
-              ${selCol(cCols, 'c', 'Telefono', 'Telefono')},
-              ${selCol(cCols, 'c', 'Email', 'Email')},
-              ${selCol(cCols, 'c', 'RNC', 'RNC')},
-              ${selCol(cCols, 'c', 'Cedula', 'Cedula')},
-              ${selCol(cCols, 'c', 'Contacto', 'Contacto')},
-              ${selCol(cCols, 'c', 'Inactivo', 'Inactivo')},
+              c.Nombre AS ClienteNombre,
+              z.Descripcion AS Zona,
+              t.Descripcion AS Tanda,
               h.OID AS PuestoOID,
-              ${selCol(hCols, 'h', 'Codigo', 'PuestoCodigo')},
-              ${selCol(hCols, 'h', 'Descripcion', 'PuestoDesc')},
-              z.Descripcion AS Zona, t.Descripcion AS Tanda,
+              h.Descripcion AS PuestoDesc,
+              rp.Horas,
               e.OID AS VigilanteOID,
-              ${selCol(eCols, 'e', 'Codigo', 'VigilanteCodigo')},
-              ${empNombre},
-              ${selCol(eCols, 'e', 'Cedula', 'VigilanteCedula')},
-              ${selCol(eCols, 'e', 'FechaNacimiento', 'VigilanteNacimiento')}
+              e.Codigo AS VigilanteCodigo,
+              e.NombreCompleto AS EmpleadoNombre,
+              a.OID AS ArmaOID,
+              a.Serie AS ArmaSerie
        FROM ReportePuesto rp
        JOIN ReporteDiarioD rd ON rp.ReporteDiarioD = rd.OID
        JOIN ReporteDiario r ON rd.ReporteDiario = r.OID
@@ -607,8 +581,7 @@ router.get('/expediente', auth, guard, async (req, res) => {
        JOIN Zona z ON rd.Zona = z.OID
        JOIN Tanda t ON rd.Tanda = t.OID
        LEFT JOIN Armamento a ON rp.Arma = a.OID
-       WHERE ${rpGcFilter}r.GCRecord IS NULL
-         AND CAST(r.Fecha AS DATE) = CAST(@fecha AS DATE)`,
+       WHERE CAST(r.Fecha AS DATE) = CAST(@fecha AS DATE)`,
       { fecha }
     );
 
@@ -621,37 +594,37 @@ router.get('/expediente', auth, guard, async (req, res) => {
       if (!byClient.has(cid)) {
         byClient.set(cid, {
           oid: cid,
-          codigo: r.ClienteCodigo,
-          nombre: r.ClienteNombre || `Cliente ${r.ClienteCodigo ?? cid}`,
-          direccion: r.Direccion || '',
-          telefono: r.Telefono || '',
-          email: r.Email || '',
-          rnc: r.RNC && r.RNC !== 'NULL' ? r.RNC : '',
-          cedula: r.Cedula && r.Cedula !== 'NULL' ? r.Cedula : '',
-          contacto: r.Contacto || '',
-          inactivo: !!r.Inactivo,
+          codigo: cid,
+          nombre: r.ClienteNombre || `Cliente ${cid}`,
+          direccion: '',
+          telefono: '',
+          email: '',
+          rnc: '',
+          cedula: '',
+          contacto: '',
+          inactivo: false,
           puestos: [],
         });
       }
-      const arma = r.ArmaOID != null ? weapons.get(Number(r.ArmaOID)) : null;
-      const vigilante = (cleanStr(r.EmpleadoNombre) ||
-        [r.Nombre1, r.Apellido1].filter(Boolean).join(' ')).trim();
+      const arma = (r.ArmaOID != null ? weapons.get(Number(r.ArmaOID)) : null) ||
+        (cleanStr(r.ArmaSerie) ? { serie: cleanStr(r.ArmaSerie), modelo: null, marca: null, tipo: null, calibre: null, categoria: null, noLicencia: null, estatus: null, propietario: null } : null);
+      const vigilante = (cleanStr(r.EmpleadoNombre) || '').trim();
       const tanda = r.Tanda && r.Tanda !== 'NULL' ? String(r.Tanda).trim() : '';
       byClient.get(cid).puestos.push({
         lineaOID: r.LineaOID,
-        puesto: r.PuestoDesc || `Puesto ${r.PuestoCodigo ?? ''}`.trim(),
-        puestoCodigo: r.PuestoCodigo,
+        puesto: r.PuestoDesc || `Puesto ${r.PuestoOID ?? ''}`.trim(),
+        puestoCodigo: r.PuestoOID,
         localidad: r.Zona && r.Zona !== 'NULL' ? String(r.Zona).trim() : 'Sede Principal',
         tanda,
         vigilante: vigilante || '—',
         vigilanteOID: r.VigilanteOID ?? null,
         vigilanteCodigo: r.VigilanteCodigo ?? null,
-        vigilanteCedula: r.VigilanteCedula && r.VigilanteCedula !== 'NULL' ? r.VigilanteCedula : null,
-        vigilanteFechaNacimiento: cleanStr(r.VigilanteNacimiento),
-        vigilanteEdad: computeAge(r.VigilanteNacimiento),
+        vigilanteCedula: null,
+        vigilanteFechaNacimiento: null,
+        vigilanteEdad: null,
         horas: Number(r.Horas) || 0,
-        incentivo: Number(r.Incentivo) || 0,
-        requiereArma: r.ArmaOID != null,
+        incentivo: 0,
+        requiereArma: r.ArmaOID != null || !!cleanStr(r.ArmaSerie),
         armaOID: r.ArmaOID != null ? Number(r.ArmaOID) : null,
         armaSerial: arma?.serie || null,
         armaModelo: arma?.modelo || arma?.marca || null,
@@ -668,8 +641,8 @@ router.get('/expediente', auth, guard, async (req, res) => {
               propietario: arma.propietario,
             }
           : null,
-        novedad: r.NovedadOID != null,
-        comentario: r.Comentario && r.Comentario !== 'NULL' ? r.Comentario : '',
+        novedad: false,
+        comentario: '',
       });
     }
 
