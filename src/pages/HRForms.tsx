@@ -31,6 +31,7 @@ import {
   escalateLoanToGerencia, approveLoanByGerencia, applyLoan,
 } from "@/lib/hrRequestService";
 import { getLoanSettings, saveLoanSettings, calcLoanCapacity, calcMonthlyInstallment, calcLoanPlan, maxInstallmentByFrequency, type LoanFrequency } from "@/lib/loanSettings";
+import { generateAmortizationPDF, amortizationInputFromRequest } from "@/lib/loanAmortizationPdf";
 
 type FormType = "vacaciones" | "dias-libres" | "comida" | "ausencias" | "feriados" | "permisos" | "prestamos";
 type FormMode = "print" | "virtual";
