@@ -335,16 +335,16 @@ const HRForms = () => {
       rejectedAt: null,
     };
 
-    // Loans go directly to Dilia (RRHH). Notify her specifically + RRHH team for visibility.
+    // Préstamos: llegan a Dilia Aguasvivas Y Alexandra Lira (cualquiera puede aprobar). RRHH ve para visibilidad.
     const notifyIds = isLoan
-      ? [diliaApprover?.id, ...rrhhUserIds].filter(Boolean) as string[]
+      ? [...loanApproverIds, ...rrhhUserIds].filter(Boolean) as string[]
       : [];
     createHRRequest(request, notifyIds);
     setRefreshKey((k) => k + 1);
     toast({
       title: "Solicitud Enviada",
       description: isLoan
-        ? `Solicitud de préstamo enviada a ${diliaApprover?.fullName || "RRHH"} para revisión.`
+        ? `Solicitud de préstamo enviada a ${[diliaApprover?.fullName, alexandraApprover?.fullName].filter(Boolean).join(" y ") || "RRHH"} para revisión (cualquiera puede aprobar).`
         : `Tu solicitud de ${formConfig.find(f => f.key === activeForm)?.label} fue enviada a ${request.supervisorName} para aprobación.`,
     });
     setBeneficiaryId("");
