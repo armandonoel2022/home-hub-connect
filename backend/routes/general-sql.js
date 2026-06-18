@@ -559,14 +559,26 @@ router.get('/expediente', auth, guard, async (req, res) => {
     // Algunas instalaciones de gSafeOne no tienen ciertas columnas (p.ej. Codigo
     // en Cliente/HoraContratada). Detectamos las columnas reales para evitar
     // "Invalid column name 'Codigo'".
-    const [cCols, hCols] = await Promise.all([
+    const [cCols, hCols, eCols, rpCols] = await Promise.all([
       tableColumns('Cliente'),
       tableColumns('HoraContratada'),
+      tableColumns('Empleado'),
+      tableColumns('ReportePuesto'),
     ]);
 
+    // Nombre del empleado: usa NombreCompleto si existe (query oficial),
+    // si no, concatena Nombre1/Apellido1 como respaldo.
+    const empNombre = eCols.has('nombrecompleto')
+      ? 'e.NombreCompleto AS EmpleadoNombre'
+      : `${selCol(eCols, 'e', 'Nombre1', 'Nombre1')}, ${selCol(eCols, 'e', 'Apellido1', 'Apellido1')}, NULL AS EmpleadoNombre`;
+
+    const rpGcFilter = rpCols.has('gcrecord') ? 'rp.GCRecord IS NULL AND ' : '';
+
     const rows = await sql.query(
-      `SELECT rp.OID AS LineaOID, rp.Horas, rp.Incentivo, rp.Arma AS ArmaOID,
-              rp.Novedad AS NovedadOID, rp.Comentario,
+      `SELECT rp.OID AS LineaOID, rp.Horas, rp.Arma AS ArmaOID,
+              ${selCol(rpCols, 'rp', 'Incentivo', 'Incentivo')},
+              ${selCol(rpCols, 'rp', 'Novedad', 'NovedadOID')},
+              ${selCol(rpCols, 'rp', 'Comentario', 'Comentario')},
               c.OID AS ClienteOID,
               ${selCol(cCols, 'c', 'Codigo', 'ClienteCodigo')},
               ${selCol(cCols, 'c', 'Nombre', 'ClienteNombre')},
@@ -581,18 +593,21 @@ router.get('/expediente', auth, guard, async (req, res) => {
               ${selCol(hCols, 'h', 'Codigo', 'PuestoCodigo')},
               ${selCol(hCols, 'h', 'Descripcion', 'PuestoDesc')},
               z.Descripcion AS Zona, t.Descripcion AS Tanda,
-              e.OID AS VigilanteOID, e.Codigo AS VigilanteCodigo,
-              e.Nombre1, e.Apellido1, e.Cedula AS VigilanteCedula,
-              e.FechaNacimiento AS VigilanteNacimiento
+              e.OID AS VigilanteOID,
+              ${selCol(eCols, 'e', 'Codigo', 'VigilanteCodigo')},
+              ${empNombre},
+              ${selCol(eCols, 'e', 'Cedula', 'VigilanteCedula')},
+              ${selCol(eCols, 'e', 'FechaNacimiento', 'VigilanteNacimiento')}
        FROM ReportePuesto rp
        JOIN ReporteDiarioD rd ON rp.ReporteDiarioD = rd.OID
        JOIN ReporteDiario r ON rd.ReporteDiario = r.OID
        JOIN HoraContratada h ON rp.Puesto = h.OID
        JOIN Cliente c ON h.Cliente = c.OID
        LEFT JOIN Empleado e ON rp.Vigilante = e.OID
-       LEFT JOIN Zona z ON rd.Zona = z.OID
-       LEFT JOIN Tanda t ON rd.Tanda = t.OID
-       WHERE rp.GCRecord IS NULL AND r.GCRecord IS NULL
+       JOIN Zona z ON rd.Zona = z.OID
+       JOIN Tanda t ON rd.Tanda = t.OID
+       LEFT JOIN Armamento a ON rp.Arma = a.OID
+       WHERE ${rpGcFilter}r.GCRecord IS NULL
          AND CAST(r.Fecha AS DATE) = CAST(@fecha AS DATE)`,
       { fecha }
     );
