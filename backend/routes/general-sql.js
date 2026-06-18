@@ -576,6 +576,44 @@ router.get('/expediente', auth, guard, async (req, res) => {
        LEFT JOIN Tanda t ON rd.Tanda = t.OID
        WHERE rp.GCRecord IS NULL AND r.GCRecord IS NULL
          AND CAST(r.Fecha AS DATE) = CAST(@fecha AS DATE)`,
+    // Algunas instalaciones de gSafeOne no tienen ciertas columnas (p.ej. Codigo
+    // en Cliente/HoraContratada). Detectamos las columnas reales para evitar
+    // "Invalid column name 'Codigo'".
+    const [cCols, hCols] = await Promise.all([
+      tableColumns('Cliente'),
+      tableColumns('HoraContratada'),
+    ]);
+
+    const rows = await sql.query(
+      `SELECT rp.OID AS LineaOID, rp.Horas, rp.Incentivo, rp.Arma AS ArmaOID,
+              rp.Novedad AS NovedadOID, rp.Comentario,
+              c.OID AS ClienteOID,
+              ${selCol(cCols, 'c', 'Codigo', 'ClienteCodigo')},
+              ${selCol(cCols, 'c', 'Nombre', 'ClienteNombre')},
+              ${selCol(cCols, 'c', 'Direccion', 'Direccion')},
+              ${selCol(cCols, 'c', 'Telefono', 'Telefono')},
+              ${selCol(cCols, 'c', 'Email', 'Email')},
+              ${selCol(cCols, 'c', 'RNC', 'RNC')},
+              ${selCol(cCols, 'c', 'Cedula', 'Cedula')},
+              ${selCol(cCols, 'c', 'Contacto', 'Contacto')},
+              ${selCol(cCols, 'c', 'Inactivo', 'Inactivo')},
+              h.OID AS PuestoOID,
+              ${selCol(hCols, 'h', 'Codigo', 'PuestoCodigo')},
+              ${selCol(hCols, 'h', 'Descripcion', 'PuestoDesc')},
+              z.Descripcion AS Zona, t.Descripcion AS Tanda,
+              e.OID AS VigilanteOID, e.Codigo AS VigilanteCodigo,
+              e.Nombre1, e.Apellido1, e.Cedula AS VigilanteCedula,
+              e.FechaNacimiento AS VigilanteNacimiento
+       FROM ReportePuesto rp
+       JOIN ReporteDiarioD rd ON rp.ReporteDiarioD = rd.OID
+       JOIN ReporteDiario r ON rd.ReporteDiario = r.OID
+       JOIN HoraContratada h ON rp.Puesto = h.OID
+       JOIN Cliente c ON h.Cliente = c.OID
+       LEFT JOIN Empleado e ON rp.Vigilante = e.OID
+       LEFT JOIN Zona z ON rd.Zona = z.OID
+       LEFT JOIN Tanda t ON rd.Tanda = t.OID
+       WHERE rp.GCRecord IS NULL AND r.GCRecord IS NULL
+         AND CAST(r.Fecha AS DATE) = CAST(@fecha AS DATE)`,
       { fecha }
     );
 
