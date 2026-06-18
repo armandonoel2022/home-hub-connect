@@ -504,6 +504,29 @@ async function weaponsMap() {
   return map;
 }
 
+// Devuelve el conjunto de columnas existentes (en minúsculas) de una tabla.
+const _colCache = new Map();
+async function tableColumns(table) {
+  if (_colCache.has(table)) return _colCache.get(table);
+  let set = new Set();
+  try {
+    const rows = await sql.query(
+      `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = @t`,
+      { t: table }
+    );
+    set = new Set(rows.map((r) => String(r.COLUMN_NAME).toLowerCase()));
+  } catch (_) { /* si falla, set vacío → se usan NULLs */ }
+  _colCache.set(table, set);
+  return set;
+}
+
+// Construye "alias.Col AS Alias" si existe, o "NULL AS Alias" si no.
+function selCol(cols, alias, column, asName) {
+  return cols.has(String(column).toLowerCase())
+    ? `${alias}.${column} AS ${asName}`
+    : `NULL AS ${asName}`;
+}
+
 router.get('/expediente/status', auth, guard, async (req, res) => {
   try {
     const fecha = await latestReportDate();
@@ -533,12 +556,30 @@ router.get('/expediente', auth, guard, async (req, res) => {
 
     // Estructura oficial: ReportePuesto → HoraContratada (Puesto) → Cliente,
     // con Zona (localidad) y Tanda (turno) del ReporteDiario.
+    // Algunas instalaciones de gSafeOne no tienen ciertas columnas (p.ej. Codigo
+    // en Cliente/HoraContratada). Detectamos las columnas reales para evitar
+    // "Invalid column name 'Codigo'".
+    const [cCols, hCols] = await Promise.all([
+      tableColumns('Cliente'),
+      tableColumns('HoraContratada'),
+    ]);
+
     const rows = await sql.query(
       `SELECT rp.OID AS LineaOID, rp.Horas, rp.Incentivo, rp.Arma AS ArmaOID,
               rp.Novedad AS NovedadOID, rp.Comentario,
-              c.OID AS ClienteOID, c.Codigo AS ClienteCodigo, c.Nombre AS ClienteNombre,
-              c.Direccion, c.Telefono, c.Email, c.RNC, c.Cedula, c.Contacto, c.Inactivo,
-              h.OID AS PuestoOID, h.Codigo AS PuestoCodigo, h.Descripcion AS PuestoDesc,
+              c.OID AS ClienteOID,
+              ${selCol(cCols, 'c', 'Codigo', 'ClienteCodigo')},
+              ${selCol(cCols, 'c', 'Nombre', 'ClienteNombre')},
+              ${selCol(cCols, 'c', 'Direccion', 'Direccion')},
+              ${selCol(cCols, 'c', 'Telefono', 'Telefono')},
+              ${selCol(cCols, 'c', 'Email', 'Email')},
+              ${selCol(cCols, 'c', 'RNC', 'RNC')},
+              ${selCol(cCols, 'c', 'Cedula', 'Cedula')},
+              ${selCol(cCols, 'c', 'Contacto', 'Contacto')},
+              ${selCol(cCols, 'c', 'Inactivo', 'Inactivo')},
+              h.OID AS PuestoOID,
+              ${selCol(hCols, 'h', 'Codigo', 'PuestoCodigo')},
+              ${selCol(hCols, 'h', 'Descripcion', 'PuestoDesc')},
               z.Descripcion AS Zona, t.Descripcion AS Tanda,
               e.OID AS VigilanteOID, e.Codigo AS VigilanteCodigo,
               e.Nombre1, e.Apellido1, e.Cedula AS VigilanteCedula,
