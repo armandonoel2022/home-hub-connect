@@ -12,6 +12,7 @@ import {
   getRequestsByUser, getNotificationsForUser, markNotificationRead,
 } from "@/lib/hrRequestService";
 import { HR_FORM_LABELS, type HRRequest } from "@/lib/hrRequestTypes";
+import { generateAmortizationPDF, amortizationInputFromRequest } from "@/lib/loanAmortizationPdf";
 import {
   CheckCircle2, Clock, XCircle, FileText, Bell, ArrowRight, Inbox, Printer,
 } from "lucide-react";
