@@ -755,6 +755,9 @@ const HRForms = () => {
                             <CheckCircle2 className="h-3.5 w-3.5" /> Registrar fecha de aplicación
                           </Button>
                         )}
+                        <Button size="sm" variant="outline" className="gap-1" onClick={() => previewAmortization(req)}>
+                          <FileText className="h-3.5 w-3.5" /> Previsualizar amortización
+                        </Button>
                       </div>
                     </div>
 
