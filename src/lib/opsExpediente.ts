@@ -11,6 +11,7 @@ import { loadPosts, type WorkPost } from "@/lib/postsData";
 import {
   isApiConfigured,
   opsClientsApi, opsLocationsApi, opsPostsApi, opsDailyReportsApi, vaultMovementsApi,
+  type GeneralExpediente,
 } from "@/lib/api";
 
 // ─── Tipos ───
