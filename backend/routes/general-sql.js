@@ -556,27 +556,6 @@ router.get('/expediente', auth, guard, async (req, res) => {
 
     // Estructura oficial: ReportePuesto → HoraContratada (Puesto) → Cliente,
     // con Zona (localidad) y Tanda (turno) del ReporteDiario.
-    const rows = await sql.query(
-      `SELECT rp.OID AS LineaOID, rp.Horas, rp.Incentivo, rp.Arma AS ArmaOID,
-              rp.Novedad AS NovedadOID, rp.Comentario,
-              c.OID AS ClienteOID, c.Codigo AS ClienteCodigo, c.Nombre AS ClienteNombre,
-              c.Direccion, c.Telefono, c.Email, c.RNC, c.Cedula, c.Contacto, c.Inactivo,
-              h.OID AS PuestoOID, h.Codigo AS PuestoCodigo, h.Descripcion AS PuestoDesc,
-              z.Descripcion AS Zona, t.Descripcion AS Tanda,
-              e.OID AS VigilanteOID, e.Codigo AS VigilanteCodigo,
-              e.Nombre1, e.Apellido1, e.Cedula AS VigilanteCedula,
-              e.FechaNacimiento AS VigilanteNacimiento
-       FROM ReportePuesto rp
-       JOIN ReporteDiarioD rd ON rp.ReporteDiarioD = rd.OID
-       JOIN ReporteDiario r ON rd.ReporteDiario = r.OID
-       JOIN HoraContratada h ON rp.Puesto = h.OID
-       JOIN Cliente c ON h.Cliente = c.OID
-       LEFT JOIN Empleado e ON rp.Vigilante = e.OID
-       LEFT JOIN Zona z ON rd.Zona = z.OID
-       LEFT JOIN Tanda t ON rd.Tanda = t.OID
-       WHERE rp.GCRecord IS NULL AND r.GCRecord IS NULL
-         AND CAST(r.Fecha AS DATE) = CAST(@fecha AS DATE)`,
-    // Algunas instalaciones de gSafeOne no tienen ciertas columnas (p.ej. Codigo
     // en Cliente/HoraContratada). Detectamos las columnas reales para evitar
     // "Invalid column name 'Codigo'".
     const [cCols, hCols] = await Promise.all([
