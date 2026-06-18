@@ -51,23 +51,21 @@ const ClientExpediente = () => {
   const [postDialog, setPostDialog] = useState<{ locationId: string; data: Partial<OpsPost> } | null>(null);
   const [reportDialog, setReportDialog] = useState<OpsPost | null>(null);
 
-  // Espejo vivo: sincroniza el Expediente Manual con Operaciones (Personal + Puestos).
+  // El Expediente Manual se construye EXCLUSIVAMENTE desde la conexión al
+  // servidor (Expediente GENERAL/SQL). Ignoramos Operaciones (Personal/Puestos).
   useEffect(() => {
-    if (personnel && personnel.length > 0) {
-      const synced = syncFromOperaciones(personnel, loadPosts());
-      if (synced) refresh();
-    }
-  }, [personnel]);
-
-  // Re-sincroniza cuando cambian los Puestos de Operaciones.
-  useEffect(() => {
-    const onPosts = () => {
-      const synced = syncFromOperaciones(personnel || [], loadPosts());
-      if (synced) refresh();
-    };
-    window.addEventListener("safeone:posts-updated", onPosts);
-    return () => window.removeEventListener("safeone:posts-updated", onPosts);
-  }, [personnel]);
+    // Limpieza única de la data basura descargada previamente desde Operaciones.
+    const cleaned = cleanupLegacyExpediente();
+    if (cleaned) refresh();
+    // Reconexión: trae el expediente vivo y reconstruye el Manual persistente.
+    generalSqlApi.expediente()
+      .then((general) => {
+        const synced = syncFromGeneral(general, cleaned);
+        if (synced) refresh();
+      })
+      .catch(() => { /* servidor no disponible: se conserva lo persistido */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const h = () => refresh();
