@@ -504,6 +504,29 @@ async function weaponsMap() {
   return map;
 }
 
+// Devuelve el conjunto de columnas existentes (en minúsculas) de una tabla.
+const _colCache = new Map();
+async function tableColumns(table) {
+  if (_colCache.has(table)) return _colCache.get(table);
+  let set = new Set();
+  try {
+    const rows = await sql.query(
+      `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = @t`,
+      { t: table }
+    );
+    set = new Set(rows.map((r) => String(r.COLUMN_NAME).toLowerCase()));
+  } catch (_) { /* si falla, set vacío → se usan NULLs */ }
+  _colCache.set(table, set);
+  return set;
+}
+
+// Construye "alias.Col AS Alias" si existe, o "NULL AS Alias" si no.
+function selCol(cols, alias, column, asName) {
+  return cols.has(String(column).toLowerCase())
+    ? `${alias}.${column} AS ${asName}`
+    : `NULL AS ${asName}`;
+}
+
 router.get('/expediente/status', auth, guard, async (req, res) => {
   try {
     const fecha = await latestReportDate();
