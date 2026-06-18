@@ -183,6 +183,18 @@ const MyHRRequests = () => {
                     <strong>Motivo de rechazo:</strong> {r.rejectionReason}
                   </div>
                 )}
+                {r.formType === "prestamos" && r.loanDetails && (
+                  <div className="mt-3">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-2"
+                      onClick={() => generateAmortizationPDF(amortizationInputFromRequest(r), { open: true }).catch(() => {})}
+                    >
+                      <FileText className="h-3 w-3" /> Previsualizar tabla de amortización
+                    </Button>
+                  </div>
+                )}
                 {r.status === "Aprobada" && (
                   <div className="mt-3">
                     <Link to={`/rrhh/imprimir/${r.id}`}>
