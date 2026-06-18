@@ -634,7 +634,8 @@ router.get('/expediente', auth, guard, async (req, res) => {
         });
       }
       const arma = r.ArmaOID != null ? weapons.get(Number(r.ArmaOID)) : null;
-      const vigilante = [r.Nombre1, r.Apellido1].filter(Boolean).join(' ').trim();
+      const vigilante = (cleanStr(r.EmpleadoNombre) ||
+        [r.Nombre1, r.Apellido1].filter(Boolean).join(' ')).trim();
       const tanda = r.Tanda && r.Tanda !== 'NULL' ? String(r.Tanda).trim() : '';
       byClient.get(cid).puestos.push({
         lineaOID: r.LineaOID,
