@@ -558,6 +558,17 @@ router.get('/expediente', auth, guard, async (req, res) => {
     // HoraContratada NO usan Codigo en esta instalación; sus identificadores
     // salen de OID y sus nombres de Nombre/Descripcion.
 
+    // El esquema de Empleado varía entre instalaciones de gSafeOne: algunas no
+    // tienen Codigo y/o NombreCompleto. Detectamos dinámicamente para evitar
+    // "Invalid column name".
+    const eCols = await tableColumns('Empleado');
+    const selVigCodigo = selCol(eCols, 'e', 'Codigo', 'VigilanteCodigo');
+    const selVigNombre = eCols.has('nombrecompleto')
+      ? 'e.NombreCompleto AS EmpleadoNombre'
+      : (eCols.has('nombre1') || eCols.has('apellido1')
+          ? "LTRIM(RTRIM(ISNULL(e.Nombre1,'') + ' ' + ISNULL(e.Apellido1,''))) AS EmpleadoNombre"
+          : 'NULL AS EmpleadoNombre');
+
     const rows = await sql.query(
       `SELECT rp.OID AS LineaOID,
               c.OID AS ClienteOID,
@@ -568,8 +579,8 @@ router.get('/expediente', auth, guard, async (req, res) => {
               h.Descripcion AS PuestoDesc,
               rp.Horas,
               e.OID AS VigilanteOID,
-              e.Codigo AS VigilanteCodigo,
-              e.NombreCompleto AS EmpleadoNombre,
+              ${selVigCodigo},
+              ${selVigNombre},
               a.OID AS ArmaOID,
               a.Serie AS ArmaSerie
        FROM ReportePuesto rp
