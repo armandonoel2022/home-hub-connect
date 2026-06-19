@@ -559,10 +559,9 @@ router.get('/expediente', auth, guard, async (req, res) => {
     // salen de OID y sus nombres de Nombre/Descripcion.
 
     // El esquema de Empleado varía entre instalaciones de gSafeOne: algunas no
-    // tienen Codigo y/o NombreCompleto. Detectamos dinámicamente para evitar
-    // "Invalid column name".
+    // tienen NombreCompleto. NO usamos Codigo en absoluto para evitar
+    // "Invalid column name". Detectamos solo el nombre dinámicamente.
     const eCols = await tableColumns('Empleado');
-    const selVigCodigo = selCol(eCols, 'e', 'Codigo', 'VigilanteCodigo');
     const selVigNombre = eCols.has('nombrecompleto')
       ? 'e.NombreCompleto AS EmpleadoNombre'
       : (eCols.has('nombre1') || eCols.has('apellido1')
@@ -579,7 +578,6 @@ router.get('/expediente', auth, guard, async (req, res) => {
               h.Descripcion AS PuestoDesc,
               rp.Horas,
               e.OID AS VigilanteOID,
-              ${selVigCodigo},
               ${selVigNombre},
               a.OID AS ArmaOID,
               a.Serie AS ArmaSerie
@@ -629,7 +627,7 @@ router.get('/expediente', auth, guard, async (req, res) => {
         tanda,
         vigilante: vigilante || '—',
         vigilanteOID: r.VigilanteOID ?? null,
-        vigilanteCodigo: r.VigilanteCodigo ?? null,
+        vigilanteCodigo: null,
         vigilanteCedula: null,
         vigilanteFechaNacimiento: null,
         vigilanteEdad: null,
