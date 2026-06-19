@@ -627,7 +627,7 @@ router.get('/expediente', auth, guard, async (req, res) => {
         tanda,
         vigilante: vigilante || '—',
         vigilanteOID: r.VigilanteOID ?? null,
-        vigilanteCodigo: r.VigilanteCodigo ?? null,
+        vigilanteCodigo: null,
         vigilanteCedula: null,
         vigilanteFechaNacimiento: null,
         vigilanteEdad: null,
