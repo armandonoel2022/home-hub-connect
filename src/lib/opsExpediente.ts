@@ -11,7 +11,6 @@ import { loadPosts, type WorkPost } from "@/lib/postsData";
 import {
   isApiConfigured,
   opsClientsApi, opsLocationsApi, opsPostsApi, opsDailyReportsApi, vaultMovementsApi,
-  type GeneralExpediente,
 } from "@/lib/api";
 
 // ─── Tipos ───
@@ -488,56 +487,18 @@ function buildDerived(personnel: ArmedPersonnel[], workPosts: WorkPost[]) {
   return { clients, locs, posts, reports };
 }
 
-// Estructura derivada común (clientes/localidades/puestos/reportes) lista para
-// volcar al Expediente Manual conservando ediciones manuales.
-type Derived = ReturnType<typeof buildDerived>;
+/**
+ * Espejo vivo del Expediente Manual a partir de Operaciones.
+ * Conserva y mezcla: re-deriva lo de Operaciones (origin "ops") y preserva
+ * lo creado/editado manualmente dentro del Expediente (origin "manual").
+ */
+export function syncFromOperaciones(personnel: ArmedPersonnel[], workPosts: WorkPost[], force = false): boolean {
+  const ppl = personnel || [];
+  const wps = workPosts || [];
+  if (ppl.length === 0 && wps.length === 0) return false;
 
-// Deriva la jerarquía a partir del Expediente "Vivo" (GENERAL/SQL Server).
-function buildDerivedFromGeneral(general: GeneralExpediente): Derived {
-  const clients = new Map<string, DerivedClient>();
-  const locs = new Map<string, DerivedLoc>();
-  const posts = new Map<string, DerivedPost>();
-  const reports = new Map<string, DerivedRow[]>();
+  const derived = buildDerived(ppl, wps);
 
-  const ensureChain = (clienteNom: string, localidadNom: string, puestoNom: string): string => {
-    const cNom = norm(clienteNom) || "Cliente sin nombre";
-    const lNom = norm(localidadNom) || "Sede Principal";
-    const pNom = norm(puestoNom) || "Puesto General";
-    const cSK = `c:${cNom.toLowerCase()}`;
-    const lSK = `${cSK}|l:${lNom.toLowerCase()}`;
-    const pSK = `${lSK}|p:${pNom.toLowerCase()}`;
-    if (!clients.has(cSK)) clients.set(cSK, { sourceKey: cSK, nombre: cNom, coordinates: "" });
-    if (!locs.has(lSK)) locs.set(lSK, { sourceKey: lSK, clientSK: cSK, nombre: lNom, coordinates: "" });
-    if (!posts.has(pSK)) posts.set(pSK, { sourceKey: pSK, locSK: lSK, nombre: pNom, requiereArma: false, turnos: new Set(), coordinates: "" });
-    if (!reports.has(pSK)) reports.set(pSK, []);
-    return pSK;
-  };
-
-  (general?.clientes || []).forEach((c) => {
-    (c.puestos || []).forEach((p) => {
-      const pSK = ensureChain(c.nombre, p.localidad || "", p.puesto || "");
-      const post = posts.get(pSK)!;
-      if (p.armaSerial || p.requiereArma) post.requiereArma = true;
-      const tName = "Diurno";
-      post.turnos.add(tName);
-      reports.get(pSK)!.push({
-        turnoNombre: tName,
-        personnelId: String(p.lineaOID ?? p.vigilanteOID ?? ""),
-        personnelName: p.vigilante || "(Sin asignar)",
-        presente: true,
-        armaSerial: p.armaSerial || "",
-        armaTipo: p.armaModelo || p.arma?.tipo || "",
-      });
-    });
-  });
-
-  posts.forEach((p) => { if (p.turnos.size === 0) p.turnos.add("Diurno"); });
-  return { clients, locs, posts, reports };
-}
-
-// Vuelca la estructura derivada al Expediente Manual conservando ediciones
-// manuales (origin "manual"). Devuelve true si hubo cambios.
-function applyDerived(derived: Derived, force: boolean): boolean {
   const hash = JSON.stringify({
     c: Array.from(derived.clients.values()),
     l: Array.from(derived.locs.values()),
@@ -651,27 +612,6 @@ function applyDerived(derived: Derived, force: boolean): boolean {
   return true;
 }
 
-/**
- * Espejo vivo del Expediente Manual a partir de Operaciones.
- * (Conservado por compatibilidad; el Expediente ahora se alimenta de GENERAL.)
- */
-export function syncFromOperaciones(personnel: ArmedPersonnel[], workPosts: WorkPost[], force = false): boolean {
-  const ppl = personnel || [];
-  const wps = workPosts || [];
-  if (ppl.length === 0 && wps.length === 0) return false;
-  return applyDerived(buildDerived(ppl, wps), force);
-}
-
-/**
- * Espejo vivo del Expediente Manual a partir de la conexión al servidor
- * (Expediente GENERAL/SQL). Esta es ahora la ÚNICA fuente del Manual para
- * evitar data basura proveniente de Operaciones.
- */
-export function syncFromGeneral(general: GeneralExpediente | null, force = false): boolean {
-  if (!general || !general.clientes || general.clientes.length === 0) return false;
-  return applyDerived(buildDerivedFromGeneral(general), force);
-}
-
 // Compatibilidad: sembrar/sincronizar desde Personal Armado (+ Puestos guardados).
 export function seedFromPersonnel(personnel: ArmedPersonnel[], force = false): boolean {
   let workPosts: WorkPost[] = [];
@@ -681,35 +621,4 @@ export function seedFromPersonnel(personnel: ArmedPersonnel[], force = false): b
 
 export function resetExpedienteSeed() {
   [K_CLIENTS, K_LOCATIONS, K_POSTS, K_REPORTS, K_SEED, K_SYNC_HASH].forEach((k) => localStorage.removeItem(k));
-}
-
-// Limpieza única de la data descargada previamente desde Operaciones, para que
-// el Expediente Manual se reconstruya EXCLUSIVAMENTE desde la conexión al
-// servidor (GENERAL). Se ejecuta una sola vez por versión.
-const K_CLEAN_VERSION = "safeone_ops_expediente_clean_v1";
-export function cleanupLegacyExpediente(): boolean {
-  try {
-    if (localStorage.getItem(K_CLEAN_VERSION) === "1") return false;
-    // Elimina SOLO lo derivado automáticamente (origin "ops" / semillas).
-    // Conserva lo creado o editado manualmente por el usuario (origin "manual").
-    const isManual = (o: { origin?: string }) => o.origin === "manual";
-    const manualClients = getClients().filter(isManual);
-    const manualLocs = getLocations().filter(isManual);
-    const manualPosts = getPosts().filter(isManual);
-    const manualPostIds = new Set(manualPosts.map((p) => p.id));
-    const autoCreators = new Set([AUTO_CREATED_BY, OPS_CREATED_BY]);
-    const manualReports = getDailyReports().filter(
-      (r) => !autoCreators.has(r.createdBy) || manualPostIds.has(r.postId),
-    );
-    writeLS(K_CLIENTS, manualClients);
-    writeLS(K_LOCATIONS, manualLocs);
-    writeLS(K_POSTS, manualPosts);
-    writeLS(K_REPORTS, manualReports);
-    localStorage.removeItem(K_SYNC_HASH);
-    localStorage.removeItem(K_SEED);
-    localStorage.setItem(K_CLEAN_VERSION, "1");
-    return true;
-  } catch {
-    return false;
-  }
 }

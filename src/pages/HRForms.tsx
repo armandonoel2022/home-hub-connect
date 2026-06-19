@@ -31,7 +31,6 @@ import {
   escalateLoanToGerencia, approveLoanByGerencia, applyLoan,
 } from "@/lib/hrRequestService";
 import { getLoanSettings, saveLoanSettings, calcLoanCapacity, calcMonthlyInstallment, calcLoanPlan, maxInstallmentByFrequency, type LoanFrequency } from "@/lib/loanSettings";
-import { generateAmortizationPDF, amortizationInputFromRequest } from "@/lib/loanAmortizationPdf";
 
 type FormType = "vacaciones" | "dias-libres" | "comida" | "ausencias" | "feriados" | "permisos" | "prestamos";
 type FormMode = "print" | "virtual";
@@ -137,10 +136,8 @@ const HRForms = () => {
   const supervisor = allUsers.find((u) => u.id === user?.reportsTo);
   const rrhhLeader = allUsers.find((u) => u.department === "Recursos Humanos" && u.isDepartmentLeader);
   const rrhhUserIds = allUsers.filter((u) => u.department === "Recursos Humanos").map((u) => u.id);
-  // Dilia Aguasvivas y Alexandra Lira — destinatarias directas de préstamos (aprobación indistinta)
+  // Dilia Aguasvivas — destinataria directa de préstamos
   const diliaApprover = allUsers.find((u) => u.fullName?.toLowerCase().includes("dilia")) || rrhhLeader;
-  const alexandraApprover = allUsers.find((u) => u.fullName?.toLowerCase().includes("alexandra"));
-  const loanApproverIds = [diliaApprover?.id, alexandraApprover?.id].filter(Boolean) as string[];
   const gerenciaApprover = allUsers.find((u) => (u.fullName || "").toLowerCase().includes("aurelio"));
   const isRRHH = user?.department === "Recursos Humanos";
   const isGerenciaApprover = user?.id === gerenciaApprover?.id;
@@ -335,16 +332,16 @@ const HRForms = () => {
       rejectedAt: null,
     };
 
-    // Préstamos: llegan a Dilia Aguasvivas Y Alexandra Lira (cualquiera puede aprobar). RRHH ve para visibilidad.
+    // Loans go directly to Dilia (RRHH). Notify her specifically + RRHH team for visibility.
     const notifyIds = isLoan
-      ? [...loanApproverIds, ...rrhhUserIds].filter(Boolean) as string[]
+      ? [diliaApprover?.id, ...rrhhUserIds].filter(Boolean) as string[]
       : [];
     createHRRequest(request, notifyIds);
     setRefreshKey((k) => k + 1);
     toast({
       title: "Solicitud Enviada",
       description: isLoan
-        ? `Solicitud de préstamo enviada a ${[diliaApprover?.fullName, alexandraApprover?.fullName].filter(Boolean).join(" y ") || "RRHH"} para revisión (cualquiera puede aprobar).`
+        ? `Solicitud de préstamo enviada a ${diliaApprover?.fullName || "RRHH"} para revisión.`
         : `Tu solicitud de ${formConfig.find(f => f.key === activeForm)?.label} fue enviada a ${request.supervisorName} para aprobación.`,
     });
     setBeneficiaryId("");
@@ -370,12 +367,6 @@ const HRForms = () => {
     setLoanAction(null);
     setLoanComment("");
     setLoanApplyDate("");
-  };
-
-  const previewAmortization = (req: HRRequest) => {
-    generateAmortizationPDF(amortizationInputFromRequest(req), { open: true }).catch(() => {
-      toast({ title: "No se pudo generar la amortización", variant: "destructive" });
-    });
   };
 
   const handleApprove = (req: HRRequest) => {
@@ -761,9 +752,6 @@ const HRForms = () => {
                             <CheckCircle2 className="h-3.5 w-3.5" /> Registrar fecha de aplicación
                           </Button>
                         )}
-                        <Button size="sm" variant="outline" className="gap-1" onClick={() => previewAmortization(req)}>
-                          <FileText className="h-3.5 w-3.5" /> Previsualizar amortización
-                        </Button>
                       </div>
                     </div>
 

@@ -504,29 +504,6 @@ async function weaponsMap() {
   return map;
 }
 
-// Devuelve el conjunto de columnas existentes (en minúsculas) de una tabla.
-const _colCache = new Map();
-async function tableColumns(table) {
-  if (_colCache.has(table)) return _colCache.get(table);
-  let set = new Set();
-  try {
-    const rows = await sql.query(
-      `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = @t`,
-      { t: table }
-    );
-    set = new Set(rows.map((r) => String(r.COLUMN_NAME).toLowerCase()));
-  } catch (_) { /* si falla, set vacío → se usan NULLs */ }
-  _colCache.set(table, set);
-  return set;
-}
-
-// Construye "alias.Col AS Alias" si existe, o "NULL AS Alias" si no.
-function selCol(cols, alias, column, asName) {
-  return cols.has(String(column).toLowerCase())
-    ? `${alias}.${column} AS ${asName}`
-    : `NULL AS ${asName}`;
-}
-
 router.get('/expediente/status', auth, guard, async (req, res) => {
   try {
     const fecha = await latestReportDate();
@@ -554,43 +531,28 @@ router.get('/expediente', auth, guard, async (req, res) => {
     const fecha = pedida || (await latestReportDate());
     if (!fecha) return res.json({ fecha: null, clientes: [], totals: {} });
 
-    // Estructura oficial probada por Operaciones. Importante: Cliente y
-    // HoraContratada NO usan Codigo en esta instalación; sus identificadores
-    // salen de OID y sus nombres de Nombre/Descripcion.
-
-    // El esquema de Empleado varía entre instalaciones de gSafeOne: algunas no
-    // tienen NombreCompleto. NO usamos Codigo en absoluto para evitar
-    // "Invalid column name". Detectamos solo el nombre dinámicamente.
-    const eCols = await tableColumns('Empleado');
-    const selVigNombre = eCols.has('nombrecompleto')
-      ? 'e.NombreCompleto AS EmpleadoNombre'
-      : (eCols.has('nombre1') || eCols.has('apellido1')
-          ? "LTRIM(RTRIM(ISNULL(e.Nombre1,'') + ' ' + ISNULL(e.Apellido1,''))) AS EmpleadoNombre"
-          : 'NULL AS EmpleadoNombre');
-
+    // Estructura oficial: ReportePuesto → HoraContratada (Puesto) → Cliente,
+    // con Zona (localidad) y Tanda (turno) del ReporteDiario.
     const rows = await sql.query(
-      `SELECT rp.OID AS LineaOID,
-              c.OID AS ClienteOID,
-              c.Nombre AS ClienteNombre,
-              z.Descripcion AS Zona,
-              t.Descripcion AS Tanda,
-              h.OID AS PuestoOID,
-              h.Descripcion AS PuestoDesc,
-              rp.Horas,
-              e.OID AS VigilanteOID,
-              ${selVigNombre},
-              a.OID AS ArmaOID,
-              a.Serie AS ArmaSerie
+      `SELECT rp.OID AS LineaOID, rp.Horas, rp.Incentivo, rp.Arma AS ArmaOID,
+              rp.Novedad AS NovedadOID, rp.Comentario,
+              c.OID AS ClienteOID, c.Codigo AS ClienteCodigo, c.Nombre AS ClienteNombre,
+              c.Direccion, c.Telefono, c.Email, c.RNC, c.Cedula, c.Contacto, c.Inactivo,
+              h.OID AS PuestoOID, h.Codigo AS PuestoCodigo, h.Descripcion AS PuestoDesc,
+              z.Descripcion AS Zona, t.Descripcion AS Tanda,
+              e.OID AS VigilanteOID, e.Codigo AS VigilanteCodigo,
+              e.Nombre1, e.Apellido1, e.Cedula AS VigilanteCedula,
+              e.FechaNacimiento AS VigilanteNacimiento
        FROM ReportePuesto rp
        JOIN ReporteDiarioD rd ON rp.ReporteDiarioD = rd.OID
        JOIN ReporteDiario r ON rd.ReporteDiario = r.OID
        JOIN HoraContratada h ON rp.Puesto = h.OID
        JOIN Cliente c ON h.Cliente = c.OID
        LEFT JOIN Empleado e ON rp.Vigilante = e.OID
-       JOIN Zona z ON rd.Zona = z.OID
-       JOIN Tanda t ON rd.Tanda = t.OID
-       LEFT JOIN Armamento a ON rp.Arma = a.OID
-       WHERE CAST(r.Fecha AS DATE) = CAST(@fecha AS DATE)`,
+       LEFT JOIN Zona z ON rd.Zona = z.OID
+       LEFT JOIN Tanda t ON rd.Tanda = t.OID
+       WHERE rp.GCRecord IS NULL AND r.GCRecord IS NULL
+         AND CAST(r.Fecha AS DATE) = CAST(@fecha AS DATE)`,
       { fecha }
     );
 
@@ -603,37 +565,36 @@ router.get('/expediente', auth, guard, async (req, res) => {
       if (!byClient.has(cid)) {
         byClient.set(cid, {
           oid: cid,
-          codigo: cid,
-          nombre: r.ClienteNombre || `Cliente ${cid}`,
-          direccion: '',
-          telefono: '',
-          email: '',
-          rnc: '',
-          cedula: '',
-          contacto: '',
-          inactivo: false,
+          codigo: r.ClienteCodigo,
+          nombre: r.ClienteNombre || `Cliente ${r.ClienteCodigo ?? cid}`,
+          direccion: r.Direccion || '',
+          telefono: r.Telefono || '',
+          email: r.Email || '',
+          rnc: r.RNC && r.RNC !== 'NULL' ? r.RNC : '',
+          cedula: r.Cedula && r.Cedula !== 'NULL' ? r.Cedula : '',
+          contacto: r.Contacto || '',
+          inactivo: !!r.Inactivo,
           puestos: [],
         });
       }
-      const arma = (r.ArmaOID != null ? weapons.get(Number(r.ArmaOID)) : null) ||
-        (cleanStr(r.ArmaSerie) ? { serie: cleanStr(r.ArmaSerie), modelo: null, marca: null, tipo: null, calibre: null, categoria: null, noLicencia: null, estatus: null, propietario: null } : null);
-      const vigilante = (cleanStr(r.EmpleadoNombre) || '').trim();
+      const arma = r.ArmaOID != null ? weapons.get(Number(r.ArmaOID)) : null;
+      const vigilante = [r.Nombre1, r.Apellido1].filter(Boolean).join(' ').trim();
       const tanda = r.Tanda && r.Tanda !== 'NULL' ? String(r.Tanda).trim() : '';
       byClient.get(cid).puestos.push({
         lineaOID: r.LineaOID,
-        puesto: r.PuestoDesc || `Puesto ${r.PuestoOID ?? ''}`.trim(),
-        puestoCodigo: r.PuestoOID,
+        puesto: r.PuestoDesc || `Puesto ${r.PuestoCodigo ?? ''}`.trim(),
+        puestoCodigo: r.PuestoCodigo,
         localidad: r.Zona && r.Zona !== 'NULL' ? String(r.Zona).trim() : 'Sede Principal',
         tanda,
         vigilante: vigilante || '—',
         vigilanteOID: r.VigilanteOID ?? null,
-        vigilanteCodigo: null,
-        vigilanteCedula: null,
-        vigilanteFechaNacimiento: null,
-        vigilanteEdad: null,
+        vigilanteCodigo: r.VigilanteCodigo ?? null,
+        vigilanteCedula: r.VigilanteCedula && r.VigilanteCedula !== 'NULL' ? r.VigilanteCedula : null,
+        vigilanteFechaNacimiento: cleanStr(r.VigilanteNacimiento),
+        vigilanteEdad: computeAge(r.VigilanteNacimiento),
         horas: Number(r.Horas) || 0,
-        incentivo: 0,
-        requiereArma: r.ArmaOID != null || !!cleanStr(r.ArmaSerie),
+        incentivo: Number(r.Incentivo) || 0,
+        requiereArma: r.ArmaOID != null,
         armaOID: r.ArmaOID != null ? Number(r.ArmaOID) : null,
         armaSerial: arma?.serie || null,
         armaModelo: arma?.modelo || arma?.marca || null,
@@ -650,8 +611,8 @@ router.get('/expediente', auth, guard, async (req, res) => {
               propietario: arma.propietario,
             }
           : null,
-        novedad: false,
-        comentario: '',
+        novedad: r.NovedadOID != null,
+        comentario: r.Comentario && r.Comentario !== 'NULL' ? r.Comentario : '',
       });
     }
 
