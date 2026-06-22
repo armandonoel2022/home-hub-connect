@@ -19,6 +19,7 @@ const router = express.Router();
 const OVERLAY_FILE = 'expediente-overlay.json';   // { [serie]: {...campos} }
 const MOVES_FILE = 'expediente-movements.json';   // [ {id, tipo, serie/empleado, desde, hacia, ...} ]
 const HIDDEN_FILE = 'expediente-hidden.json';     // { keys: [ "claveLinea", ... ] }
+const SCHEDULE_FILE = 'expediente-schedules.json'; // { [postKey]: { semana:{lunes:[...],...,feriado:[...]}, requiereArma, updatedAt, updatedBy } }
 
 // Correos con permiso de edición (alineado con src/lib/permissions.ts).
 const EDITOR_EMAILS = [
