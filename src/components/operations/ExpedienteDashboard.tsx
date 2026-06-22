@@ -16,7 +16,7 @@ import { loadHolidays, getHolidayName, dayClassification, DIA_LABELS, DIAS_ORDEN
 import { displayCaliber } from "@/lib/expedienteHelpers";
 import {
   Building2, Users, Crosshair, RefreshCw, Download, CalendarDays, AlertTriangle,
-  ShieldCheck, CalendarClock, Pencil, Plus, Trash2, CircleCheck, CircleX, Sparkles,
+  ShieldCheck, CalendarClock, Pencil, Plus, Trash2, CircleX, Sparkles,
 } from "lucide-react";
 
 // Clave estable del puesto para la plantilla de horario (cliente|puesto).
