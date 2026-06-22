@@ -127,6 +127,14 @@ const ClientExpediente = () => {
           </Button>
           <Button
             size="sm"
+            variant={mode === "dashboard" ? "default" : "ghost"}
+            className="h-8"
+            onClick={() => setMode("dashboard")}
+          >
+            Dashboard
+          </Button>
+          <Button
+            size="sm"
             variant={mode === "boveda" ? "default" : "ghost"}
             className="h-8"
             onClick={() => setMode("boveda")}
