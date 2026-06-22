@@ -44,7 +44,7 @@ const ClientExpediente = () => {
   const [tick, setTick] = useState(0);
   const refresh = () => setTick((t) => t + 1);
   const [search, setSearch] = useState("");
-  const [mode, setMode] = useState<"vivo" | "boveda" | "manual">("vivo");
+  const [mode, setMode] = useState<"vivo" | "dashboard" | "boveda" | "manual">("vivo");
 
   // dialogs
   const [clientDialog, setClientDialog] = useState<Partial<OpsClient> | null>(null);
