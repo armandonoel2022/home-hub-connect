@@ -29,6 +29,7 @@ import {
 import { Link } from "react-router-dom";
 import ExpedienteLive from "@/components/operations/ExpedienteLive";
 import VaultView from "@/components/operations/VaultView";
+import ExpedienteDashboard from "@/components/operations/ExpedienteDashboard";
 
 function mapsHref(coord: string): string | null {
   if (!coord) return null;
