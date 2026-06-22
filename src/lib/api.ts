@@ -1191,6 +1191,55 @@ export const expedienteOverlayApi = {
     apiFetch<string[]>("/expediente-overlay/hidden", { method: "POST", body: JSON.stringify({ key }) }),
   unhide: (key: string) =>
     apiFetch<string[]>("/expediente-overlay/hidden", { method: "DELETE", body: JSON.stringify({ key }) }),
+  // Plantilla de horario semanal por puesto (Lun–Dom + Feriado).
+  schedules: () => apiFetch<Record<string, PostScheduleEntry>>("/expediente-overlay/schedule/all"),
+  getSchedule: (postKey: string) =>
+    apiFetch<PostScheduleEntry | null>(`/expediente-overlay/schedule/${encodeURIComponent(postKey)}`),
+  saveSchedule: (postKey: string, data: Partial<PostScheduleEntry>) =>
+    apiFetch<PostScheduleEntry>(`/expediente-overlay/schedule/${encodeURIComponent(postKey)}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+};
+
+// ─── Plantilla de horario semanal por puesto ───
+export type DiaSemana = "lunes" | "martes" | "miercoles" | "jueves" | "viernes" | "sabado" | "domingo" | "feriado";
+
+export interface PostScheduleSlot {
+  tanda: string;          // turno/tanda esperada
+  vigilante?: string;     // vigilante esperado (opcional)
+  arma?: string;          // serial/arma esperada (opcional)
+}
+
+export interface PostScheduleEntry {
+  cliente?: string | null;
+  puesto?: string | null;
+  requiereArma?: boolean;
+  semana: Record<DiaSemana, PostScheduleSlot[]>;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+// ─── Feriados de República Dominicana ───
+export interface Holiday {
+  date: string;       // YYYY-MM-DD
+  name: string;
+  localName?: string;
+  origen?: "oficial" | "manual";
+}
+export interface HolidaysResponse {
+  year: number;
+  source: "nager" | "cache" | null;
+  items: Holiday[];
+}
+export const holidaysApi = {
+  list: (year: number) => apiFetch<HolidaysResponse>(`/holidays?year=${year}`),
+  refresh: (year: number) =>
+    apiFetch<HolidaysResponse>("/holidays/refresh", { method: "POST", body: JSON.stringify({ year }) }),
+  addManual: (date: string, name: string) =>
+    apiFetch<{ items: Holiday[] }>("/holidays/manual", { method: "POST", body: JSON.stringify({ date, name }) }),
+  remove: (date: string) =>
+    apiFetch<{ items: Holiday[] }>("/holidays/manual", { method: "DELETE", body: JSON.stringify({ date }) }),
 };
 
 export interface GeneralWeaponDetail {
