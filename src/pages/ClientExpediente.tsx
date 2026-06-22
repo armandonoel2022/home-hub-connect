@@ -153,6 +153,8 @@ const ClientExpediente = () => {
 
         {mode === "vivo" ? (
           <ExpedienteLive onUnavailable={() => { /* el usuario puede cambiar a Manual */ }} />
+        ) : mode === "dashboard" ? (
+          <ExpedienteDashboard />
         ) : mode === "boveda" ? (
           <VaultView />
         ) : (
