@@ -150,12 +150,26 @@ const ExpedienteDashboard = () => {
     exportToExcel({
       title: `Expediente Clientes ${fecha}`,
       filename: `expediente-dashboard-${fecha}`,
-      columns: ["Cliente", "Localidad", "Puesto", "Tanda", "Vigilante", "Arma", "Calibre", "Estado vs plantilla"],
-      data: comparisons.map((c) => [
-        c.cliente.nombre, c.puesto.localidad || "", c.puesto.puesto, c.puesto.tanda || "",
-        c.puesto.vigilante || "—", c.puesto.armaSerial || "—",
-        displayCaliber(c.puesto.arma?.calibre), c.detalle || c.estado,
-      ]),
+      columns: [
+        { header: "Cliente", key: "cliente" },
+        { header: "Localidad", key: "localidad" },
+        { header: "Puesto", key: "puesto" },
+        { header: "Tanda", key: "tanda" },
+        { header: "Vigilante", key: "vigilante" },
+        { header: "Arma", key: "arma" },
+        { header: "Calibre", key: "calibre" },
+        { header: "Estado vs plantilla", key: "estado" },
+      ],
+      data: comparisons.map((c) => ({
+        cliente: c.cliente.nombre,
+        localidad: c.puesto.localidad || "",
+        puesto: c.puesto.puesto,
+        tanda: c.puesto.tanda || "",
+        vigilante: c.puesto.vigilante || "—",
+        arma: c.puesto.armaSerial || "—",
+        calibre: displayCaliber(c.puesto.arma?.calibre),
+        estado: c.detalle || c.estado,
+      })),
     });
   };
 
