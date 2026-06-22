@@ -81,7 +81,7 @@ export async function generatePayslipPDF(run: PayrollRun, item: PayrollItem, opt
     body.push([`Horas nocturnas (${item.nightHours || 0}h × tarifa × 1.15)`, fmtRD(item.nightAmount || 0).replace("DOP", "").trim(), ""]);
   }
   if ((item.holidayAmount || 0) > 0) {
-    body.push([`Días feriados trabajados (${item.holidayDays || 0} día(s))`, fmtRD(item.holidayAmount || 0).replace("DOP", "").trim(), ""]);
+    body.push([`Días feriados trabajados (${item.holidayDays || 0} día(s) · sueldo/26 ×2)`, fmtRD(item.holidayAmount || 0).replace("DOP", "").trim(), ""]);
   }
   if ((item.incentiveAmount || 0) > 0) {
     body.push([`Incentivos / bonos (${(item.incentiveDetail || []).length} concepto(s))`, fmtRD(item.incentiveAmount || 0).replace("DOP", "").trim(), ""]);

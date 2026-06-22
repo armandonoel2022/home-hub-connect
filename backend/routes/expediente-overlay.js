@@ -19,6 +19,7 @@ const router = express.Router();
 const OVERLAY_FILE = 'expediente-overlay.json';   // { [serie]: {...campos} }
 const MOVES_FILE = 'expediente-movements.json';   // [ {id, tipo, serie/empleado, desde, hacia, ...} ]
 const HIDDEN_FILE = 'expediente-hidden.json';     // { keys: [ "claveLinea", ... ] }
+const SCHEDULE_FILE = 'expediente-schedules.json'; // { [postKey]: { semana:{lunes:[...],...,feriado:[...]}, requiereArma, updatedAt, updatedBy } }
 
 // Correos con permiso de edición (alineado con src/lib/permissions.ts).
 const EDITOR_EMAILS = [
@@ -216,6 +217,45 @@ router.delete('/hidden', auth, editGuard, jsonLarge, (req, res) => {
   hidden.keys = hidden.keys.filter((k) => k !== key);
   writeData(HIDDEN_FILE, hidden);
   res.json(hidden.keys);
+});
+
+// ─── Plantilla de horario semanal por puesto (Lun–Dom + Feriado) ───
+// La plantilla esperada vive aquí (local); gSafeOne es solo lectura. Se compara
+// luego contra lo realmente reportado por día.
+function readSchedules() {
+  const data = readData(SCHEDULE_FILE);
+  return Array.isArray(data) ? {} : (data || {});
+}
+
+router.get('/schedule/all', auth, readGuard, (req, res) => {
+  res.json(readSchedules());
+});
+
+router.get('/schedule/:postKey', auth, readGuard, (req, res) => {
+  const all = readSchedules();
+  res.json(all[req.params.postKey] || null);
+});
+
+router.put('/schedule/:postKey', auth, editGuard, jsonLarge, (req, res) => {
+  const postKey = req.params.postKey;
+  if (!postKey) return res.status(400).json({ message: 'postKey requerido' });
+  const all = readSchedules();
+  const body = req.body || {};
+  const dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo', 'feriado'];
+  const semana = {};
+  const inSemana = body.semana || {};
+  dias.forEach((d) => { semana[d] = Array.isArray(inSemana[d]) ? inSemana[d] : []; });
+  all[postKey] = {
+    ...(all[postKey] || {}),
+    cliente: body.cliente ?? all[postKey]?.cliente ?? null,
+    puesto: body.puesto ?? all[postKey]?.puesto ?? null,
+    requiereArma: body.requiereArma ?? all[postKey]?.requiereArma ?? false,
+    semana,
+    updatedAt: new Date().toISOString(),
+    updatedBy: req.user?.email || req.user?.fullName || 'desconocido',
+  };
+  writeData(SCHEDULE_FILE, all);
+  res.json(all[postKey]);
 });
 
 module.exports = router;

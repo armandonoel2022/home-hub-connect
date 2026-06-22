@@ -352,8 +352,9 @@ router.post('/runs/generate', auth, (req, res) => {
       } else if (x.type === 'holiday') {
         const d = Number(x.days) || 1;
         holidayDays += d;
-        // Día feriado trabajado: pago del día + 100% adicional (doble pago)
-        holidayAmount += x.amount ? Number(x.amount) : d * factors.normalDailyHours * hourly * 2;
+        // Día feriado trabajado: salario diario = sueldo mensual / 26, pagado al
+        // 200% (día normal + 100% adicional por ser día libre/feriado).
+        holidayAmount += x.amount ? Number(x.amount) : d * (grossMonthly / 26) * 2;
       } else if (x.type === 'incentive') {
         const a = Number(x.amount) || 0;
         incentiveAmount += a;

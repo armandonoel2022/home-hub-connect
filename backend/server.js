@@ -94,6 +94,7 @@ app.use('/api/ops-posts', require('./routes/ops-posts'));
 app.use('/api/ops-daily-reports', require('./routes/ops-daily-reports'));
 app.use('/api/vault-movements', require('./routes/vault-movements'));
 app.use('/api/expediente-overlay', require('./routes/expediente-overlay'));
+app.use('/api/holidays', require('./routes/holidays'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({
