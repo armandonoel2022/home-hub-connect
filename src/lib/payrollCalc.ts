@@ -38,6 +38,22 @@ export function calcDeductions(grossMonthly: number) {
 
 export function round2(n: number) { return Math.round(n * 100) / 100; }
 
+/**
+ * Salario diario para feriados: sueldo mensual / 26 (no 23.83).
+ * Disposición SafeOne para días feriados publicados en R.D.
+ */
+export function dailyHolidayRate(monthlySalary: number): number {
+  return round2((Number(monthlySalary) || 0) / 26);
+}
+
+/**
+ * Pago de un feriado trabajado: salario diario (sueldo/26) al 200%
+ * (día normal + 100% adicional por ser día libre/feriado).
+ */
+export function holidayPay(monthlySalary: number, days = 1): number {
+  return round2(dailyHolidayRate(monthlySalary) * days * 2);
+}
+
 export function fmtRD(n: number) {
   return new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP", minimumFractionDigits: 2 }).format(n || 0);
 }
