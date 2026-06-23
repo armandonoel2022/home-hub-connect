@@ -899,11 +899,12 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
   const fotosArma = ov?.fotosArma || [];
   const fotoLicenciaFrente = ov?.fotoLicenciaFrente || null;
   const fotoLicenciaDorso = ov?.fotoLicenciaDorso || null;
-  const tipoArma = displayWeaponType(arma?.tipo || arma?.categoria || arma?.calibre || armed?.weaponCaliber || armed?.weaponType || puesto.armaModelo);
+  const tipoArmaRaw = arma?.tipo || arma?.categoria || arma?.calibre || armed?.weaponCaliber || armed?.weaponType || puesto.armaModelo;
+  const tipoArma = displayWeaponType(tipoArmaRaw);
   const serialArma = arma?.serie || puesto.armaSerial || armed?.weaponSerial;
   const calibreArma = displayCaliber(arma?.calibre || armed?.weaponCaliber);
   const estadoArma = arma?.estatus || armed?.weaponCondition;
-  const hasWeaponData = puesto.requiereArma || !!serialArma || !!tipoArma || !!arma || !!armed;
+  const hasWeaponData = puesto.requiereArma || !!serialArma || !!tipoArmaRaw || !!arma || !!armed;
   const printFicha = () => printAgentFicha(puesto, cliente, { emp, armed, photo: match.photo, movs, arma, fotosArma });
 
   return (
@@ -1161,12 +1162,13 @@ function printAgentFicha(
   const emp = extra?.emp;
   const armed = extra?.armed;
   const arma = extra?.arma || p.arma;
-  const weaponType = displayWeaponType(arma?.tipo || arma?.categoria || arma?.calibre || armed?.weaponCaliber || armed?.weaponType || p.armaModelo);
+  const weaponTypeRaw = arma?.tipo || arma?.categoria || arma?.calibre || armed?.weaponCaliber || armed?.weaponType || p.armaModelo;
+  const weaponType = displayWeaponType(weaponTypeRaw);
   const weaponSerial = arma?.serie || p.armaSerial || armed?.weaponSerial;
   const weaponCaliber = displayCaliber(arma?.calibre || armed?.weaponCaliber);
   const weaponStatus = arma?.estatus || armed?.weaponCondition;
   const weaponPhotos = (extra?.fotosArma || []).map((u) => getFileUrl(u));
-  const hasWeaponData = p.requiereArma || !!weaponSerial || !!weaponType || !!arma || !!armed;
+  const hasWeaponData = p.requiereArma || !!weaponSerial || !!weaponTypeRaw || !!arma || !!armed;
   const movs = extra?.movs || [];
   const initials = (p.vigilante || "?").split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("");
   const photoHtml = extra?.photo
