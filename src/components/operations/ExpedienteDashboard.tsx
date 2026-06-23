@@ -165,6 +165,7 @@ const ExpedienteDashboard = () => {
   }, [rows]);
 
   const armasSinAsignar = comparisons.filter((c) => c.puesto.requiereArma && !(c.puesto.armaSerial || "").trim());
+  const armasAsignadas = comparisons.filter((c) => (c.puesto.armaSerial || "").trim());
 
   const exportExcel = () => {
     exportToExcel({
@@ -292,9 +293,9 @@ const ExpedienteDashboard = () => {
             <h3 className="font-semibold text-sm">Asignación de armas</h3>
           </div>
           {armasSinAsignar.length === 0 && dupSerials.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic">Todas las armas están asignadas y sin duplicados.</p>
+            <p className="text-xs text-muted-foreground italic mb-2">Todas las armas están asignadas y sin duplicados.</p>
           ) : (
-            <div className="space-y-2 text-xs">
+            <div className="space-y-2 text-xs mb-3">
               {armasSinAsignar.map((c) => (
                 <div key={"sa" + c.key + c.puesto.lineaOID} className="flex items-center gap-2">
                   <ShieldCheck className="h-3.5 w-3.5 text-amber-500" />
@@ -309,6 +310,19 @@ const ExpedienteDashboard = () => {
               ))}
             </div>
           )}
+          <div className="space-y-1 text-xs max-h-64 overflow-auto">
+            {armasAsignadas.length === 0 ? (
+              <p className="text-xs text-muted-foreground italic">No hay armas reportadas para esta fecha.</p>
+            ) : armasAsignadas.slice(0, 40).map((c) => (
+              <div key={"aa" + c.key + c.puesto.lineaOID} className="flex items-center gap-2 border-b border-border/40 pb-1 last:border-0">
+                <span className="min-w-0 flex-1 truncate">
+                  <strong>{displayWeaponType(c.puesto.arma?.tipo || c.puesto.arma?.categoria || c.puesto.arma?.calibre)}</strong>
+                  <span className="text-muted-foreground"> · {c.puesto.armaSerial} · {c.cliente.nombre} / {c.puesto.puesto}</span>
+                </span>
+                {c.puesto.vigilante && <span className="shrink-0 text-muted-foreground truncate max-w-[160px]">{c.puesto.vigilante}</span>}
+              </div>
+            ))}
+          </div>
         </Card>
 
         {/* Vigilantes por puesto */}
