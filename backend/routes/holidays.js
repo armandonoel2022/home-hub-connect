@@ -33,8 +33,14 @@ function canEdit(user) {
 }
 
 async function fetchFromNager(year) {
+  if (typeof fetch !== 'function') {
+    throw new Error('fetch no disponible en este Node (requiere Node 18+).');
+  }
   const url = `https://date.nager.at/api/v3/PublicHolidays/${year}/DO`;
-  const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+  const signal = (typeof AbortSignal !== 'undefined' && AbortSignal.timeout)
+    ? AbortSignal.timeout(8000)
+    : undefined;
+  const res = await fetch(url, signal ? { signal } : {});
   if (!res.ok) throw new Error(`Nager.Date HTTP ${res.status}`);
   const arr = await res.json();
   return (Array.isArray(arr) ? arr : []).map((h) => ({
