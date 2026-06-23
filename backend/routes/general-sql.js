@@ -34,6 +34,25 @@ function guard(req, res, next) {
 
 const fullName = (r) => [r.Nombre1, r.Apellido1].filter(Boolean).join(' ').trim();
 
+// Algunas instalaciones de GENERAL/gSafeOne no exponen la columna "Codigo" en
+// todos los maestros (Cliente, HoraContratada, etc.). Para no romper la lectura
+// del reporte diario, las columnas no críticas se seleccionan solo si existen.
+const _tableColumnsCache = new Map();
+async function tableColumnsMap(tableName) {
+  const key = String(tableName || '').toLowerCase();
+  if (_tableColumnsCache.has(key)) return _tableColumnsCache.get(key);
+  const cols = await sql.listColumns(tableName);
+  const map = new Map(cols.map((c) => [String(c.name).toLowerCase(), c.name]));
+  _tableColumnsCache.set(key, map);
+  return map;
+}
+
+async function optionalColumnExpr(tableName, alias, columnName, outAlias, fallback = 'NULL') {
+  const cols = await tableColumnsMap(tableName);
+  const real = cols.get(String(columnName).toLowerCase());
+  return real ? `${alias}.[${real}] AS [${outAlias}]` : `${fallback} AS [${outAlias}]`;
+}
+
 // ─── Descubrimiento dinámico de columnas de PagoD ───
 // La estructura de XAF varía: PagoD suele tener varias filas por empleado
 // (una por concepto/TipoPago) y la columna de importe puede llamarse
@@ -531,16 +550,22 @@ router.get('/expediente', auth, guard, async (req, res) => {
     const fecha = pedida || (await latestReportDate());
     if (!fecha) return res.json({ fecha: null, clientes: [], totals: {} });
 
+    const [clienteCodigoExpr, puestoCodigoExpr, vigilanteCodigoExpr] = await Promise.all([
+      optionalColumnExpr('Cliente', 'c', 'Codigo', 'ClienteCodigo'),
+      optionalColumnExpr('HoraContratada', 'h', 'Codigo', 'PuestoCodigo'),
+      optionalColumnExpr('Empleado', 'e', 'Codigo', 'VigilanteCodigo'),
+    ]);
+
     // Estructura oficial: ReportePuesto → HoraContratada (Puesto) → Cliente,
     // con Zona (localidad) y Tanda (turno) del ReporteDiario.
     const rows = await sql.query(
       `SELECT rp.OID AS LineaOID, rp.Horas, rp.Incentivo, rp.Arma AS ArmaOID,
               rp.Novedad AS NovedadOID, rp.Comentario,
-              c.OID AS ClienteOID, c.Codigo AS ClienteCodigo, c.Nombre AS ClienteNombre,
+              c.OID AS ClienteOID, ${clienteCodigoExpr}, c.Nombre AS ClienteNombre,
               c.Direccion, c.Telefono, c.Email, c.RNC, c.Cedula, c.Contacto, c.Inactivo,
-              h.OID AS PuestoOID, h.Codigo AS PuestoCodigo, h.Descripcion AS PuestoDesc,
+              h.OID AS PuestoOID, ${puestoCodigoExpr}, h.Descripcion AS PuestoDesc,
               z.Descripcion AS Zona, t.Descripcion AS Tanda,
-              e.OID AS VigilanteOID, e.Codigo AS VigilanteCodigo,
+              e.OID AS VigilanteOID, ${vigilanteCodigoExpr},
               e.Nombre1, e.Apellido1, e.Cedula AS VigilanteCedula,
               e.FechaNacimiento AS VigilanteNacimiento
        FROM ReportePuesto rp

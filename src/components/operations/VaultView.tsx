@@ -9,6 +9,7 @@ import {
   type GeneralExpediente, type ExpedienteOverlayMap, type ExpedienteMovement,
 } from "@/lib/api";
 import { exportToExcel } from "@/lib/exportUtils";
+import { displayCaliber, displayWeaponType } from "@/lib/expedienteHelpers";
 import { Crosshair, RefreshCw, Search, MapPin, ShieldCheck, Warehouse, ArrowRightLeft, Download, AlertTriangle } from "lucide-react";
 
 interface VaultWeapon {
@@ -17,6 +18,7 @@ interface VaultWeapon {
   marca: string | null;
   tipo: string | null;
   calibre: string | null;
+  categoria: string | null;
   noLicencia: string | null;
   estatus: string | null;
   propietario: string | null;
@@ -84,6 +86,8 @@ const VaultView = () => {
           ...w,
           estatus: ov?.estatus ?? w.estatus,
           noLicencia: ov?.noLicencia ?? w.noLicencia,
+          tipoArma: displayWeaponType(ov?.tipo ?? w.tipo ?? w.categoria ?? w.calibre),
+          calibreMostrar: displayCaliber(ov?.calibre ?? w.calibre),
           ubicacion: loc ? `${loc.cliente} · ${loc.puesto}` : "Bóveda / sin asignar",
           custodio: loc?.custodio || "—",
           enUso: !!loc,
@@ -92,7 +96,7 @@ const VaultView = () => {
       })
       .filter((w) =>
         !q ||
-        `${w.serie ?? ""} ${w.marca ?? ""} ${w.tipo ?? ""} ${w.noLicencia ?? ""} ${w.ubicacion} ${w.custodio}`.toLowerCase().includes(q),
+        `${w.serie ?? ""} ${w.marca ?? ""} ${w.tipoArma ?? ""} ${w.categoria ?? ""} ${w.noLicencia ?? ""} ${w.ubicacion} ${w.custodio}`.toLowerCase().includes(q),
       );
   }, [weapons, overlay, locBySerie, search]);
 
@@ -113,7 +117,7 @@ const VaultView = () => {
         { header: "Custodio", key: "custodio", width: 30 },
       ],
       data: rows.map((r) => ({
-        serie: r.serie, tipo: r.tipo, marca: r.marca, calibre: r.calibre,
+        serie: r.serie, tipo: r.tipoArma, marca: r.marca, calibre: r.calibreMostrar,
         noLicencia: r.noLicencia, estatus: r.estatus, ubicacion: r.ubicacion, custodio: r.custodio,
       })) as unknown as Record<string, unknown>[],
       filename: "boveda_armas",
@@ -169,8 +173,8 @@ const VaultView = () => {
             {rows.map((w, i) => (
               <tr key={`${w.serie}-${i}`} className="border-t border-border hover:bg-muted/40">
                 <td className="p-2 font-mono font-medium">{w.serie || "—"} {w.fotos > 0 && <span className="text-[9px]">{w.fotos}📷</span>}</td>
-                <td className="p-2">{[w.tipo, w.marca].filter(Boolean).join(" · ") || "—"}</td>
-                <td className="p-2">{w.calibre || "—"}</td>
+                <td className="p-2">{[w.tipoArma, w.marca].filter((x) => x && x !== "—").join(" · ") || "—"}</td>
+                <td className="p-2">{w.calibreMostrar || "—"}</td>
                 <td className="p-2">{w.noLicencia || "—"}</td>
                 <td className="p-2">{w.estatus ? <span className={`px-1.5 py-0.5 rounded ${statusColor(w.estatus)}`}>{w.estatus}</span> : "—"}</td>
                 <td className="p-2">

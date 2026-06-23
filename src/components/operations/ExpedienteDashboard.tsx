@@ -9,11 +9,14 @@ import { useToast } from "@/hooks/use-toast";
 import {
   generalSqlApi, expedienteOverlayApi,
   type GeneralExpediente, type GeneralExpedienteCliente, type GeneralExpedientePuesto,
-  type PostScheduleEntry, type DiaSemana, type Holiday,
+  type PostScheduleEntry, type DiaSemana, type Holiday, type GeneralWeapon,
 } from "@/lib/api";
 import { exportToExcel } from "@/lib/exportUtils";
 import { loadHolidays, getHolidayName, dayClassification, DIA_LABELS, DIAS_ORDEN } from "@/lib/holidays";
-import { displayCaliber } from "@/lib/expedienteHelpers";
+import { displayCaliber, displayWeaponType } from "@/lib/expedienteHelpers";
+import { useArmedPersonnel } from "@/hooks/useApiHooks";
+import { loadPosts } from "@/lib/postsData";
+import { mergeOperacionesIntoExpediente } from "@/lib/opsExpedienteMerge";
 import {
   Building2, Users, Crosshair, RefreshCw, Download, CalendarDays, AlertTriangle,
   ShieldCheck, CalendarClock, Pencil, Plus, Trash2, CircleX, Sparkles,
@@ -34,7 +37,9 @@ interface FlatRow {
 
 const ExpedienteDashboard = () => {
   const { toast } = useToast();
-  const [exp, setExp] = useState<GeneralExpediente | null>(null);
+  const { data: personnel } = useArmedPersonnel();
+  const [rawExp, setRawExp] = useState<GeneralExpediente | null>(null);
+  const [sqlWeapons, setSqlWeapons] = useState<GeneralWeapon[]>([]);
   const [dates, setDates] = useState<string[]>([]);
   const [fecha, setFecha] = useState<string>("");
   const [holidays, setHolidays] = useState<Holiday[]>([]);
@@ -49,17 +54,22 @@ const ExpedienteDashboard = () => {
     setLoading(true);
     setError(null);
     try {
-      const [e, ds, sc, ce] = await Promise.all([
-        generalSqlApi.expediente(f),
+      const [eResult, ds, sc, ce, weapons] = await Promise.all([
+        generalSqlApi.expediente(f)
+          .then((data) => ({ data, error: null as string | null }))
+          .catch((err) => ({ data: null as GeneralExpediente | null, error: (err as Error)?.message || "GENERAL no está disponible" })),
         generalSqlApi.expedienteDates().catch(() => [] as string[]),
         expedienteOverlayApi.schedules().catch(() => ({} as Record<string, PostScheduleEntry>)),
         expedienteOverlayApi.canEdit ? expedienteOverlayApi.canEdit().then((r) => r.canEdit).catch(() => false) : Promise.resolve(false),
+        generalSqlApi.weapons().catch(() => [] as GeneralWeapon[]),
       ]);
-      setExp(e);
+      setRawExp(eResult.data);
+      setSqlWeapons(weapons || []);
       setDates(ds);
       setSchedules(sc || {});
       setCanEdit(ce);
-      const usedDate = e.fecha || f || "";
+      setError(eResult.error);
+      const usedDate = eResult.data?.fecha || f || "";
       setFecha(usedDate);
       if (usedDate) {
         const year = Number(usedDate.slice(0, 4)) || new Date().getFullYear();
@@ -75,6 +85,16 @@ const ExpedienteDashboard = () => {
   useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
 
   const onDateChange = (v: string) => { setFecha(v); load(v); };
+
+  const exp = useMemo<GeneralExpediente | null>(() => {
+    const generalHasData = !!(rawExp && rawExp.clientes && rawExp.clientes.length > 0);
+    return mergeOperacionesIntoExpediente(
+      rawExp,
+      generalHasData ? [] : (personnel || []),
+      generalHasData ? [] : loadPosts(),
+      sqlWeapons,
+    );
+  }, [rawExp, personnel, sqlWeapons]);
 
   const rows = useMemo<FlatRow[]>(() => {
     if (!exp) return [];
@@ -145,6 +165,7 @@ const ExpedienteDashboard = () => {
   }, [rows]);
 
   const armasSinAsignar = comparisons.filter((c) => c.puesto.requiereArma && !(c.puesto.armaSerial || "").trim());
+  const armasAsignadas = comparisons.filter((c) => (c.puesto.armaSerial || "").trim());
 
   const exportExcel = () => {
     exportToExcel({
@@ -156,6 +177,7 @@ const ExpedienteDashboard = () => {
         { header: "Puesto", key: "puesto" },
         { header: "Tanda", key: "tanda" },
         { header: "Vigilante", key: "vigilante" },
+        { header: "Tipo de arma", key: "tipoArma" },
         { header: "Arma", key: "arma" },
         { header: "Calibre", key: "calibre" },
         { header: "Estado vs plantilla", key: "estado" },
@@ -166,6 +188,7 @@ const ExpedienteDashboard = () => {
         puesto: c.puesto.puesto,
         tanda: c.puesto.tanda || "",
         vigilante: c.puesto.vigilante || "—",
+        tipoArma: displayWeaponType(c.puesto.arma?.tipo || c.puesto.arma?.categoria || c.puesto.arma?.calibre),
         arma: c.puesto.armaSerial || "—",
         calibre: displayCaliber(c.puesto.arma?.calibre),
         estado: c.detalle || c.estado,
@@ -176,7 +199,7 @@ const ExpedienteDashboard = () => {
   if (loading) {
     return <Card className="p-10 text-center text-sm text-muted-foreground"><RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2" /> Cargando dashboard…</Card>;
   }
-  if (error) {
+  if (error && rows.length === 0) {
     return (
       <Card className="p-6 text-center space-y-3">
         <AlertTriangle className="h-6 w-6 text-amber-500 mx-auto" />
@@ -188,6 +211,13 @@ const ExpedienteDashboard = () => {
 
   return (
     <div className="space-y-5">
+      {error && (
+        <Card className="p-3 flex items-start gap-2 border-amber-300 bg-amber-50 text-amber-800 text-xs">
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+          <span>GENERAL no está disponible; mostrando el dashboard con datos de Operaciones. <button onClick={() => load(fecha)} className="underline font-medium">Reintentar</button></span>
+        </Card>
+      )}
+
       {/* Controles */}
       <div className="flex flex-wrap items-end gap-3">
         <div>
@@ -263,9 +293,9 @@ const ExpedienteDashboard = () => {
             <h3 className="font-semibold text-sm">Asignación de armas</h3>
           </div>
           {armasSinAsignar.length === 0 && dupSerials.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic">Todas las armas están asignadas y sin duplicados.</p>
+            <p className="text-xs text-muted-foreground italic mb-2">Todas las armas están asignadas y sin duplicados.</p>
           ) : (
-            <div className="space-y-2 text-xs">
+            <div className="space-y-2 text-xs mb-3">
               {armasSinAsignar.map((c) => (
                 <div key={"sa" + c.key + c.puesto.lineaOID} className="flex items-center gap-2">
                   <ShieldCheck className="h-3.5 w-3.5 text-amber-500" />
@@ -280,6 +310,19 @@ const ExpedienteDashboard = () => {
               ))}
             </div>
           )}
+          <div className="space-y-1 text-xs max-h-64 overflow-auto">
+            {armasAsignadas.length === 0 ? (
+              <p className="text-xs text-muted-foreground italic">No hay armas reportadas para esta fecha.</p>
+            ) : armasAsignadas.slice(0, 40).map((c) => (
+              <div key={"aa" + c.key + c.puesto.lineaOID} className="flex items-center gap-2 border-b border-border/40 pb-1 last:border-0">
+                <span className="min-w-0 flex-1 truncate">
+                  <strong>{displayWeaponType(c.puesto.arma?.tipo || c.puesto.arma?.categoria || c.puesto.arma?.calibre)}</strong>
+                  <span className="text-muted-foreground"> · {c.puesto.armaSerial} · {c.cliente.nombre} / {c.puesto.puesto}</span>
+                </span>
+                {c.puesto.vigilante && <span className="shrink-0 text-muted-foreground truncate max-w-[160px]">{c.puesto.vigilante}</span>}
+              </div>
+            ))}
+          </div>
         </Card>
 
         {/* Vigilantes por puesto */}

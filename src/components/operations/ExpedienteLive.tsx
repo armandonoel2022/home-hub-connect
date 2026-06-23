@@ -20,7 +20,7 @@ import { exportToPDF, exportToExcel } from "@/lib/exportUtils";
 import { useArmedPersonnel } from "@/hooks/useApiHooks";
 import { loadPosts } from "@/lib/postsData";
 import { mergeOperacionesIntoExpediente } from "@/lib/opsExpedienteMerge";
-import { displayCaliber, lineHideKey, applyWeaponOverride } from "@/lib/expedienteHelpers";
+import { displayCaliber, displayWeaponType, lineHideKey, applyWeaponOverride } from "@/lib/expedienteHelpers";
 import {
   Building2, MapPin, Crosshair, Users, ChevronDown, ChevronRight, RefreshCw,
   AlertTriangle, FileText, Phone, Mail, ExternalLink, ShieldCheck, ShieldOff, ListChecks,
@@ -602,7 +602,7 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
                                 >
                                   {ctx.canEdit ? <Pencil className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                                   <span className="truncate">
-                                    {[arma?.tipo || p.armaModelo, p.armaSerial].filter(Boolean).join(" · ") || "Armado"}
+                                    {[displayWeaponType(arma?.tipo || arma?.categoria || arma?.calibre || p.armaModelo), p.armaSerial].filter((x) => x && x !== "—").join(" · ") || "Armado"}
                                   </span>
                                   {estatus && <span className={`px-1.5 py-0.5 rounded ${statusColor(estatus)}`}>{estatus}</span>}
                                   {fotos > 0 && <Badge variant="outline" className="text-[9px]">{fotos}📷</Badge>}
@@ -714,7 +714,7 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Crosshair className="h-5 w-5 text-gold" /> {puesto.arma?.tipo || "Arma"} · Serial {serie}
+            <Crosshair className="h-5 w-5 text-gold" /> {displayWeaponType(tipo || categoria || calibre || puesto.arma?.tipo) || "Arma"} · Serial {serie}
           </DialogTitle>
         </DialogHeader>
 
@@ -722,7 +722,7 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
             <Field label="Serie" value={serie} />
             <Field label="Marca" value={marca} />
-            <Field label="Tipo" value={tipo} />
+            <Field label="Tipo de arma" value={displayWeaponType(tipo || categoria || calibre)} />
             <Field label="Calibre" value={displayCaliber(calibre)} />
             <Field label="Categoría" value={categoria} />
             <Field label="No. Licencia" value={noLicencia} />
@@ -738,8 +738,8 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
                 <Input value={marca} onChange={(e) => setMarca(e.target.value)} placeholder="Marca del arma" />
               </label>
               <label className="text-xs space-y-1">
-                <span className="font-medium">Tipo</span>
-                <Input value={tipo} onChange={(e) => setTipo(e.target.value)} placeholder="Pistola / Escopeta / Revólver…" />
+                <span className="font-medium">Tipo de arma</span>
+                <Input value={tipo} onChange={(e) => setTipo(e.target.value)} placeholder="Letal / Menos que letal" />
               </label>
               <label className="text-xs space-y-1">
                 <span className="font-medium">Calibre</span>
@@ -849,7 +849,7 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
               <TransferForm
                 tipo="arma"
                 serie={serie}
-                armaModelo={puesto.arma?.tipo || puesto.armaModelo || ""}
+                armaModelo={displayWeaponType(puesto.arma?.tipo || puesto.arma?.categoria || puesto.arma?.calibre || puesto.armaModelo)}
                 defaultFrom={`${cliente.nombre} · ${puesto.puesto}`}
                 onDone={() => { setShowTransfer(false); refreshMovs(); }}
               />
@@ -899,11 +899,12 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
   const fotosArma = ov?.fotosArma || [];
   const fotoLicenciaFrente = ov?.fotoLicenciaFrente || null;
   const fotoLicenciaDorso = ov?.fotoLicenciaDorso || null;
-  const tipoArma = arma?.tipo || armed?.weaponType || puesto.armaModelo;
+  const tipoArmaRaw = arma?.tipo || arma?.categoria || arma?.calibre || armed?.weaponCaliber || armed?.weaponType || puesto.armaModelo;
+  const tipoArma = displayWeaponType(tipoArmaRaw);
   const serialArma = arma?.serie || puesto.armaSerial || armed?.weaponSerial;
   const calibreArma = displayCaliber(arma?.calibre || armed?.weaponCaliber);
   const estadoArma = arma?.estatus || armed?.weaponCondition;
-  const hasWeaponData = puesto.requiereArma || !!serialArma || !!tipoArma || !!arma || !!armed;
+  const hasWeaponData = puesto.requiereArma || !!serialArma || !!tipoArmaRaw || !!arma || !!armed;
   const printFicha = () => printAgentFicha(puesto, cliente, { emp, armed, photo: match.photo, movs, arma, fotosArma });
 
   return (
@@ -1059,7 +1060,7 @@ function PostDialog({ puesto, cliente, ctx, onClose }: {
           <Field label="Requiere arma" value={puesto.requiereArma ? "Sí" : "No"} />
           <Field label="Vigilante" value={puesto.vigilante} />
           <Field label="Horas" value={`${puesto.horas}h`} />
-          {puesto.requiereArma && <Field label="Arma" value={[puesto.arma?.tipo, puesto.armaSerial].filter(Boolean).join(" · ")} />}
+          {puesto.requiereArma && <Field label="Arma" value={[displayWeaponType(puesto.arma?.tipo || puesto.arma?.categoria || puesto.arma?.calibre), puesto.armaSerial].filter((x) => x && x !== "—").join(" · ")} />}
           {puesto.novedad && <Field label="Novedad" value={puesto.comentario || "Sí"} />}
         </div>
         <DialogFooter>
@@ -1161,12 +1162,13 @@ function printAgentFicha(
   const emp = extra?.emp;
   const armed = extra?.armed;
   const arma = extra?.arma || p.arma;
-  const weaponType = arma?.tipo || armed?.weaponType || p.armaModelo;
+  const weaponTypeRaw = arma?.tipo || arma?.categoria || arma?.calibre || armed?.weaponCaliber || armed?.weaponType || p.armaModelo;
+  const weaponType = displayWeaponType(weaponTypeRaw);
   const weaponSerial = arma?.serie || p.armaSerial || armed?.weaponSerial;
   const weaponCaliber = displayCaliber(arma?.calibre || armed?.weaponCaliber);
   const weaponStatus = arma?.estatus || armed?.weaponCondition;
   const weaponPhotos = (extra?.fotosArma || []).map((u) => getFileUrl(u));
-  const hasWeaponData = p.requiereArma || !!weaponSerial || !!weaponType || !!arma || !!armed;
+  const hasWeaponData = p.requiereArma || !!weaponSerial || !!weaponTypeRaw || !!arma || !!armed;
   const movs = extra?.movs || [];
   const initials = (p.vigilante || "?").split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("");
   const photoHtml = extra?.photo
@@ -1238,7 +1240,7 @@ function printPostFichaLive(p: GeneralExpedientePuesto, c: GeneralExpedienteClie
     <h1>Ficha del Puesto</h1>
     ${rowHtml("Puesto", p.puesto)}${rowHtml("Cliente", c.nombre)}${rowHtml("Dirección", c.direccion)}
     ${rowHtml("Requiere arma", p.requiereArma ? "Sí" : "No")}${rowHtml("Vigilante", p.vigilante)}
-    ${p.requiereArma ? rowHtml("Arma", [p.arma?.tipo, p.armaSerial].filter(Boolean).join(" · ")) : ""}
+    ${p.requiereArma ? rowHtml("Arma", [displayWeaponType(p.arma?.tipo || p.arma?.categoria || p.arma?.calibre), p.armaSerial].filter((x) => x && x !== "—").join(" · ")) : ""}
     ${rowHtml("Reporte", fecha ? new Date(fecha).toLocaleDateString("es-DO") : "—")}
     ${p.novedad ? rowHtml("Novedad", p.comentario || "Sí") : ""}
   </body></html>`);
