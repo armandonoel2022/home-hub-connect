@@ -926,7 +926,7 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
               <h2 className="font-heading text-xl font-bold leading-tight truncate">{puesto.vigilante || "Sin asignar"}</h2>
               <p className="text-xs text-muted-foreground truncate">{emp?.position || "Oficial de Seguridad"} · {emp?.department || "Safeone"}</p>
               <div className="mt-2 flex flex-wrap gap-1.5">
-                {puesto.requiereArma && <Badge className="gap-1 text-[10px]"><Crosshair className="h-3 w-3" /> Requiere arma</Badge>}
+                {requiereArmaEff && <Badge className="gap-1 text-[10px]"><Crosshair className="h-3 w-3" /> Requiere arma</Badge>}
                 {serialArma && <Badge variant="outline" className="gap-1 text-[10px]"><Shield className="h-3 w-3" /> {serialArma}</Badge>}
                 {puesto.novedad && <Badge variant="destructive" className="text-[10px]">Novedad</Badge>}
               </div>
