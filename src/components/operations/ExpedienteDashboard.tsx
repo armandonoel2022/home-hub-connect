@@ -19,7 +19,7 @@ import { loadPosts } from "@/lib/postsData";
 import { mergeOperacionesIntoExpediente } from "@/lib/opsExpedienteMerge";
 import {
   Building2, Users, Crosshair, RefreshCw, Download, CalendarDays, AlertTriangle,
-  ShieldCheck, CalendarClock, Pencil, Plus, Trash2, CircleX, Sparkles,
+  ShieldCheck, CalendarClock, Pencil, Plus, Trash2, CircleX, Sparkles, ListFilter,
 } from "lucide-react";
 
 // Clave estable del puesto para la plantilla de horario (cliente|puesto).
