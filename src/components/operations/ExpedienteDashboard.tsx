@@ -116,10 +116,10 @@ const ExpedienteDashboard = () => {
   // KPIs
   const kpis = useMemo(() => {
     const puestos = rows.length;
-    const conArma = rows.filter((r) => r.puesto.requiereArma).length;
+    const conArma = rows.filter((r) => postRequiresWeapon(r.puesto)).length;
     const vigilantes = new Set(rows.map((r) => (r.puesto.vigilante || "").trim()).filter(Boolean)).size;
     const sinCobertura = rows.filter((r) => !(r.puesto.vigilante || "").trim()).length;
-    const sinArma = rows.filter((r) => r.puesto.requiereArma && !(r.puesto.armaSerial || "").trim()).length;
+    const sinArma = rows.filter((r) => postRequiresWeapon(r.puesto) && !realSerial(r.puesto.armaSerial)).length;
     return { puestos, conArma, vigilantes, sinCobertura, sinArma };
   }, [rows]);
 
@@ -153,19 +153,29 @@ const ExpedienteDashboard = () => {
 
   const changes = comparisons.filter((c) => c.estado === "cambio" || c.estado === "ausente");
 
-  // Armas: duplicados (mismo serial en varios puestos)
+  // Armas: duplicados reales = mismo serial REAL en puestos DISTINTOS (un mismo
+  // puesto con varios turnos no es un duplicado).
   const dupSerials = useMemo(() => {
     const m = new Map<string, FlatRow[]>();
     rows.forEach((r) => {
-      const s = (r.puesto.armaSerial || "").trim();
+      const s = realSerial(r.puesto.armaSerial);
       if (!s) return;
       m.set(s, [...(m.get(s) || []), r]);
     });
-    return Array.from(m.entries()).filter(([, v]) => v.length > 1);
+    return Array.from(m.entries())
+      .map(([serie, list]) => {
+        const distinct = new Map<string, FlatRow>();
+        list.forEach((r) => {
+          const k = `${r.cliente.nombre}|${r.puesto.puesto}`.toLowerCase();
+          if (!distinct.has(k)) distinct.set(k, r);
+        });
+        return { serie, list, distinctPosts: [...distinct.values()] };
+      })
+      .filter((x) => x.distinctPosts.length > 1);
   }, [rows]);
 
-  const armasSinAsignar = comparisons.filter((c) => c.puesto.requiereArma && !(c.puesto.armaSerial || "").trim());
-  const armasAsignadas = comparisons.filter((c) => (c.puesto.armaSerial || "").trim());
+  const armasSinAsignar = comparisons.filter((c) => postRequiresWeapon(c.puesto) && !realSerial(c.puesto.armaSerial));
+  const armasAsignadas = comparisons.filter((c) => realSerial(c.puesto.armaSerial));
 
   const exportExcel = () => {
     exportToExcel({
