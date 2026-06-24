@@ -1057,10 +1057,10 @@ function PostDialog({ puesto, cliente, ctx, onClose }: {
           <Field label="Cliente" value={cliente.nombre} />
           <Field label="Código cliente" value={cliente.codigo} />
           <Field label="Dirección" value={cliente.direccion} />
-          <Field label="Requiere arma" value={puesto.requiereArma ? "Sí" : "No"} />
+          <Field label="Requiere arma" value={postRequiresWeapon(puesto) ? "Sí" : "No"} />
           <Field label="Vigilante" value={puesto.vigilante} />
           <Field label="Horas" value={`${puesto.horas}h`} />
-          {puesto.requiereArma && <Field label="Arma" value={[displayWeaponType(puesto.arma?.tipo || puesto.arma?.categoria || puesto.arma?.calibre), puesto.armaSerial].filter((x) => x && x !== "—").join(" · ")} />}
+          {postRequiresWeapon(puesto) && <Field label="Arma" value={[weaponCategoryLabel(puesto.arma, puesto.armaModelo), realSerial(puesto.armaSerial)].filter((x) => x && x !== "—").join(" · ")} />}
           {puesto.novedad && <Field label="Novedad" value={puesto.comentario || "Sí"} />}
         </div>
         <DialogFooter>
