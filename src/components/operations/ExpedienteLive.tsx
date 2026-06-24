@@ -20,7 +20,7 @@ import { exportToPDF, exportToExcel } from "@/lib/exportUtils";
 import { useArmedPersonnel } from "@/hooks/useApiHooks";
 import { loadPosts } from "@/lib/postsData";
 import { mergeOperacionesIntoExpediente } from "@/lib/opsExpedienteMerge";
-import { displayCaliber, displayWeaponType, lineHideKey, applyWeaponOverride } from "@/lib/expedienteHelpers";
+import { displayCaliber, displayWeaponType, lineHideKey, applyWeaponOverride, weaponCategoryLabel, realSerial, postRequiresWeapon } from "@/lib/expedienteHelpers";
 import {
   Building2, MapPin, Crosshair, Users, ChevronDown, ChevronRight, RefreshCw,
   AlertTriangle, FileText, Phone, Mail, ExternalLink, ShieldCheck, ShieldOff, ListChecks,
@@ -434,7 +434,7 @@ function groupByLocalidad(puestos: GeneralExpedientePuesto[]): LocalidadGroup[] 
     let pg = loc.puestos.find((x) => x.nombre.toLowerCase() === puestoName.toLowerCase());
     if (!pg) { pg = { nombre: puestoName, requiereArma: false, rows: [] }; loc.puestos.push(pg); }
     pg.rows.push(p);
-    if (p.requiereArma) pg.requiereArma = true;
+    if (postRequiresWeapon(p)) pg.requiereArma = true;
   }
   return [...locs.values()];
 }
@@ -470,10 +470,10 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
             puesto: p.puesto,
             vigilante: p.vigilante,
             horas: p.horas,
-            arma: p.requiereArma
-              ? [p.arma?.tipo || p.armaModelo, p.armaSerial, lic ? `Lic. ${lic}` : ""].filter(Boolean).join(" · ") || "Armado"
+            arma: postRequiresWeapon(p)
+              ? [weaponCategoryLabel(p.arma, p.armaModelo), realSerial(p.armaSerial), lic ? `Lic. ${lic}` : ""].filter((x) => x && x !== "—").join(" · ") || "Armado"
               : "—",
-            estado: p.requiereArma ? (estatus || "—") : "—",
+            estado: postRequiresWeapon(p) ? (estatus || "—") : "—",
             comentario: p.comentario || (p.novedad ? "Con novedad" : ""),
           };
         }),
@@ -551,7 +551,7 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
                             {pg.requiereArma ? (
                               <Badge className="text-[10px] gap-1"><Crosshair className="h-3 w-3" /> Requiere arma</Badge>
                             ) : (
-                              <Badge variant="outline" className="text-[10px]">Sin arma</Badge>
+                              <Badge variant="outline" className="text-[10px]">No requiere arma</Badge>
                             )}
                             {opsOrigin && <Badge variant="secondary" className="text-[10px]">Operaciones</Badge>}
                           </div>
@@ -594,7 +594,7 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
                               </button>
                               {p.tanda && <Badge variant="outline" className="text-[10px] shrink-0">{p.tanda}</Badge>}
                               {p.horas > 0 && <span className="text-muted-foreground shrink-0">{p.horas}h</span>}
-                              {p.requiereArma && (
+                              {postRequiresWeapon(p) && (
                                 <button
                                   onClick={() => ctx.openWeapon(p, client)}
                                   className="inline-flex items-center gap-1 shrink-0 max-w-[260px] rounded-md border border-border px-2 py-1 font-medium hover:border-primary hover:text-primary"
@@ -602,7 +602,7 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
                                 >
                                   {ctx.canEdit ? <Pencil className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                                   <span className="truncate">
-                                    {[displayWeaponType(arma?.tipo || arma?.categoria || arma?.calibre || p.armaModelo), p.armaSerial].filter((x) => x && x !== "—").join(" · ") || "Armado"}
+                                    {[weaponCategoryLabel(arma, p.armaModelo), realSerial(p.armaSerial)].filter((x) => x && x !== "—").join(" · ") || "Armado"}
                                   </span>
                                   {estatus && <span className={`px-1.5 py-0.5 rounded ${statusColor(estatus)}`}>{estatus}</span>}
                                   {fotos > 0 && <Badge variant="outline" className="text-[9px]">{fotos}📷</Badge>}
@@ -645,6 +645,7 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
 }) {
   const { toast } = useToast();
   const serie = puesto.armaSerial || "";
+  const armedMatch = ctx.matchEmployee(puesto).armed;
   const ov: ExpedienteOverlayEntry = (serie && ctx.overlay[serie]) || {};
   const [estatus, setEstatus] = useState(ov.estatus ?? puesto.arma?.estatus ?? "");
   const [noLicencia, setNoLicencia] = useState(ov.noLicencia ?? puesto.arma?.noLicencia ?? "");
@@ -726,6 +727,7 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
             <Field label="Calibre" value={displayCaliber(calibre)} />
             <Field label="Categoría" value={categoria} />
             <Field label="No. Licencia" value={noLicencia} />
+            {armedMatch?.ammunitionCount != null && <Field label="Munición" value={`${armedMatch.ammunitionCount} cápsulas`} />}
             <Field label="Propietario" value={propietario} />
             <Field label="Ubicación" value={`${cliente.nombre} · ${puesto.puesto}`} />
             <Field label="Custodio" value={puesto.vigilante} />
@@ -901,10 +903,11 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
   const fotoLicenciaDorso = ov?.fotoLicenciaDorso || null;
   const tipoArmaRaw = arma?.tipo || arma?.categoria || arma?.calibre || armed?.weaponCaliber || armed?.weaponType || puesto.armaModelo;
   const tipoArma = displayWeaponType(tipoArmaRaw);
-  const serialArma = arma?.serie || puesto.armaSerial || armed?.weaponSerial;
+  const serialArma = realSerial(arma?.serie || puesto.armaSerial || armed?.weaponSerial);
   const calibreArma = displayCaliber(arma?.calibre || armed?.weaponCaliber);
   const estadoArma = arma?.estatus || armed?.weaponCondition;
-  const hasWeaponData = puesto.requiereArma || !!serialArma || !!tipoArmaRaw || !!arma || !!armed;
+  const requiereArmaEff = postRequiresWeapon(puesto);
+  const hasWeaponData = requiereArmaEff || !!serialArma || !!arma?.marca || !!arma?.categoria;
   const printFicha = () => printAgentFicha(puesto, cliente, { emp, armed, photo: match.photo, movs, arma, fotosArma });
 
   return (
@@ -923,7 +926,7 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
               <h2 className="font-heading text-xl font-bold leading-tight truncate">{puesto.vigilante || "Sin asignar"}</h2>
               <p className="text-xs text-muted-foreground truncate">{emp?.position || "Oficial de Seguridad"} · {emp?.department || "Safeone"}</p>
               <div className="mt-2 flex flex-wrap gap-1.5">
-                {puesto.requiereArma && <Badge className="gap-1 text-[10px]"><Crosshair className="h-3 w-3" /> Requiere arma</Badge>}
+                {requiereArmaEff && <Badge className="gap-1 text-[10px]"><Crosshair className="h-3 w-3" /> Requiere arma</Badge>}
                 {serialArma && <Badge variant="outline" className="gap-1 text-[10px]"><Shield className="h-3 w-3" /> {serialArma}</Badge>}
                 {puesto.novedad && <Badge variant="destructive" className="text-[10px]">Novedad</Badge>}
               </div>
@@ -957,7 +960,6 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
             <Field label="Cliente" value={cliente.nombre} />
             <Field label="Puesto" value={puesto.puesto} />
             <Field label="Horas" value={`${puesto.horas}h`} />
-            <Field label="Incentivo" value={puesto.incentivo ? `RD$ ${puesto.incentivo}` : "—"} />
             {puesto.comentario && <Field label="Comentario" value={puesto.comentario} />}
           </div>
 
@@ -979,8 +981,6 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
                 <Field label="Calibre" value={calibreArma} />
                 <Field label="Categoría" value={arma?.categoria} />
                 <Field label="No. Licencia" value={arma?.noLicencia} />
-                <Field label="Estado Arma" value={estadoArma} />
-                <Field label="Propietario" value={arma?.propietario} />
                 {armed?.ammunitionCount != null && <Field label="Munición" value={`${armed.ammunitionCount} cápsulas`} />}
                 {armed?.province && <Field label="Provincia" value={armed.province} />}
               </div>
@@ -1057,10 +1057,10 @@ function PostDialog({ puesto, cliente, ctx, onClose }: {
           <Field label="Cliente" value={cliente.nombre} />
           <Field label="Código cliente" value={cliente.codigo} />
           <Field label="Dirección" value={cliente.direccion} />
-          <Field label="Requiere arma" value={puesto.requiereArma ? "Sí" : "No"} />
+          <Field label="Requiere arma" value={postRequiresWeapon(puesto) ? "Sí" : "No"} />
           <Field label="Vigilante" value={puesto.vigilante} />
           <Field label="Horas" value={`${puesto.horas}h`} />
-          {puesto.requiereArma && <Field label="Arma" value={[displayWeaponType(puesto.arma?.tipo || puesto.arma?.categoria || puesto.arma?.calibre), puesto.armaSerial].filter((x) => x && x !== "—").join(" · ")} />}
+          {postRequiresWeapon(puesto) && <Field label="Arma" value={[weaponCategoryLabel(puesto.arma, puesto.armaModelo), realSerial(puesto.armaSerial)].filter((x) => x && x !== "—").join(" · ")} />}
           {puesto.novedad && <Field label="Novedad" value={puesto.comentario || "Sí"} />}
         </div>
         <DialogFooter>
@@ -1164,11 +1164,11 @@ function printAgentFicha(
   const arma = extra?.arma || p.arma;
   const weaponTypeRaw = arma?.tipo || arma?.categoria || arma?.calibre || armed?.weaponCaliber || armed?.weaponType || p.armaModelo;
   const weaponType = displayWeaponType(weaponTypeRaw);
-  const weaponSerial = arma?.serie || p.armaSerial || armed?.weaponSerial;
+  const weaponCategory = weaponCategoryLabel(arma, p.armaModelo);
+  const weaponSerial = realSerial(arma?.serie || p.armaSerial || armed?.weaponSerial);
   const weaponCaliber = displayCaliber(arma?.calibre || armed?.weaponCaliber);
-  const weaponStatus = arma?.estatus || armed?.weaponCondition;
   const weaponPhotos = (extra?.fotosArma || []).map((u) => getFileUrl(u));
-  const hasWeaponData = p.requiereArma || !!weaponSerial || !!weaponTypeRaw || !!arma || !!armed;
+  const hasWeaponData = postRequiresWeapon(p) || !!weaponSerial || !!arma?.marca || !!arma?.categoria;
   const movs = extra?.movs || [];
   const initials = (p.vigilante || "?").split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("");
   const photoHtml = extra?.photo
@@ -1188,8 +1188,7 @@ function printAgentFicha(
     cell("Cliente", c.nombre),
     cell("Puesto", p.puesto),
     cell("Horas", p.horas + "h"),
-    cell("Incentivo", p.incentivo ? "RD$ " + p.incentivo : "—"),
-    hasWeaponData ? cell("Arma asignada", [weaponType, weaponSerial].filter(Boolean).join(" · ")) : "",
+    hasWeaponData ? cell("Arma asignada", [weaponCategory, weaponSerial].filter((x) => x && x !== "—").join(" · ")) : "",
     p.comentario ? cell("Comentario", p.comentario) : "",
   ].join("");
 
@@ -1203,8 +1202,6 @@ function printAgentFicha(
           ${cell("Calibre", weaponCaliber)}
           ${cell("Categoría", arma?.categoria)}
           ${cell("No. Licencia", arma?.noLicencia || armed?.licenseNumber)}
-          ${cell("Estado Arma", weaponStatus)}
-          ${cell("Propietario", arma?.propietario)}
           ${armed?.ammunitionCount != null ? cell("Munición", `${armed.ammunitionCount} cápsulas`) : ""}
           ${cell("Cliente / Puesto", [c.nombre, p.puesto].filter(Boolean).join(" · "))}
           ${armed?.province ? cell("Provincia", armed.province) : ""}
@@ -1227,7 +1224,7 @@ function printAgentFicha(
       <div>
         <div class="name">${escHtml(p.vigilante || "Sin asignar")}</div>
         <div class="sub">${escHtml((emp?.position || "Oficial de Seguridad") + " · " + (emp?.department || "Safeone"))}</div>
-        <div class="chips">${hasWeaponData ? `<span class="chip gold">Arma: ${escHtml([weaponType, weaponSerial].filter(Boolean).join(" · ") || "Asignada")}</span>` : ""}${p.novedad ? `<span class="chip">Novedad</span>` : ""}</div>
+        <div class="chips">${hasWeaponData ? `<span class="chip gold">Arma: ${escHtml([weaponCategory, weaponSerial].filter((x) => x && x !== "—").join(" · ") || "Asignada")}</span>` : ""}${p.novedad ? `<span class="chip">Novedad</span>` : ""}</div>
       </div>
     </div>
     <div class="grid">${datosGrid}</div>
@@ -1239,8 +1236,8 @@ function printPostFichaLive(p: GeneralExpedientePuesto, c: GeneralExpedienteClie
   openPrint(`<html><head><title>Ficha del Puesto</title><style>${fichaStyles}</style></head><body>
     <h1>Ficha del Puesto</h1>
     ${rowHtml("Puesto", p.puesto)}${rowHtml("Cliente", c.nombre)}${rowHtml("Dirección", c.direccion)}
-    ${rowHtml("Requiere arma", p.requiereArma ? "Sí" : "No")}${rowHtml("Vigilante", p.vigilante)}
-    ${p.requiereArma ? rowHtml("Arma", [displayWeaponType(p.arma?.tipo || p.arma?.categoria || p.arma?.calibre), p.armaSerial].filter((x) => x && x !== "—").join(" · ")) : ""}
+    ${rowHtml("Requiere arma", postRequiresWeapon(p) ? "Sí" : "No")}${rowHtml("Vigilante", p.vigilante)}
+    ${postRequiresWeapon(p) ? rowHtml("Arma", [weaponCategoryLabel(p.arma, p.armaModelo), realSerial(p.armaSerial)].filter((x) => x && x !== "—").join(" · ")) : ""}
     ${rowHtml("Reporte", fecha ? new Date(fecha).toLocaleDateString("es-DO") : "—")}
     ${p.novedad ? rowHtml("Novedad", p.comentario || "Sí") : ""}
   </body></html>`);
