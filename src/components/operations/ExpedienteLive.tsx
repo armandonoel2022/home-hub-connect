@@ -903,10 +903,11 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
   const fotoLicenciaDorso = ov?.fotoLicenciaDorso || null;
   const tipoArmaRaw = arma?.tipo || arma?.categoria || arma?.calibre || armed?.weaponCaliber || armed?.weaponType || puesto.armaModelo;
   const tipoArma = displayWeaponType(tipoArmaRaw);
-  const serialArma = arma?.serie || puesto.armaSerial || armed?.weaponSerial;
+  const serialArma = realSerial(arma?.serie || puesto.armaSerial || armed?.weaponSerial);
   const calibreArma = displayCaliber(arma?.calibre || armed?.weaponCaliber);
   const estadoArma = arma?.estatus || armed?.weaponCondition;
-  const hasWeaponData = puesto.requiereArma || !!serialArma || !!tipoArmaRaw || !!arma || !!armed;
+  const requiereArmaEff = postRequiresWeapon(puesto);
+  const hasWeaponData = requiereArmaEff || !!serialArma || !!arma?.marca || !!arma?.categoria;
   const printFicha = () => printAgentFicha(puesto, cliente, { emp, armed, photo: match.photo, movs, arma, fotosArma });
 
   return (
