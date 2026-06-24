@@ -594,7 +594,7 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
                               </button>
                               {p.tanda && <Badge variant="outline" className="text-[10px] shrink-0">{p.tanda}</Badge>}
                               {p.horas > 0 && <span className="text-muted-foreground shrink-0">{p.horas}h</span>}
-                              {p.requiereArma && (
+                              {postRequiresWeapon(p) && (
                                 <button
                                   onClick={() => ctx.openWeapon(p, client)}
                                   className="inline-flex items-center gap-1 shrink-0 max-w-[260px] rounded-md border border-border px-2 py-1 font-medium hover:border-primary hover:text-primary"
@@ -602,7 +602,7 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
                                 >
                                   {ctx.canEdit ? <Pencil className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                                   <span className="truncate">
-                                    {[displayWeaponType(arma?.tipo || arma?.categoria || arma?.calibre || p.armaModelo), p.armaSerial].filter((x) => x && x !== "—").join(" · ") || "Armado"}
+                                    {[weaponCategoryLabel(arma, p.armaModelo), realSerial(p.armaSerial)].filter((x) => x && x !== "—").join(" · ") || "Armado"}
                                   </span>
                                   {estatus && <span className={`px-1.5 py-0.5 rounded ${statusColor(estatus)}`}>{estatus}</span>}
                                   {fotos > 0 && <Badge variant="outline" className="text-[9px]">{fotos}📷</Badge>}
