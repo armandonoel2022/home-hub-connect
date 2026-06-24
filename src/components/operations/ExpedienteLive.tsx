@@ -1202,8 +1202,6 @@ function printAgentFicha(
           ${cell("Calibre", weaponCaliber)}
           ${cell("Categoría", arma?.categoria)}
           ${cell("No. Licencia", arma?.noLicencia || armed?.licenseNumber)}
-          ${cell("Estado Arma", weaponStatus)}
-          ${cell("Propietario", arma?.propietario)}
           ${armed?.ammunitionCount != null ? cell("Munición", `${armed.ammunitionCount} cápsulas`) : ""}
           ${cell("Cliente / Puesto", [c.nombre, p.puesto].filter(Boolean).join(" · "))}
           ${armed?.province ? cell("Provincia", armed.province) : ""}
