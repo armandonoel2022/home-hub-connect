@@ -470,10 +470,10 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
             puesto: p.puesto,
             vigilante: p.vigilante,
             horas: p.horas,
-            arma: p.requiereArma
-              ? [p.arma?.tipo || p.armaModelo, p.armaSerial, lic ? `Lic. ${lic}` : ""].filter(Boolean).join(" · ") || "Armado"
+            arma: postRequiresWeapon(p)
+              ? [weaponCategoryLabel(p.arma, p.armaModelo), realSerial(p.armaSerial), lic ? `Lic. ${lic}` : ""].filter((x) => x && x !== "—").join(" · ") || "Armado"
               : "—",
-            estado: p.requiereArma ? (estatus || "—") : "—",
+            estado: postRequiresWeapon(p) ? (estatus || "—") : "—",
             comentario: p.comentario || (p.novedad ? "Con novedad" : ""),
           };
         }),
