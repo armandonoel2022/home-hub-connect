@@ -1164,11 +1164,11 @@ function printAgentFicha(
   const arma = extra?.arma || p.arma;
   const weaponTypeRaw = arma?.tipo || arma?.categoria || arma?.calibre || armed?.weaponCaliber || armed?.weaponType || p.armaModelo;
   const weaponType = displayWeaponType(weaponTypeRaw);
-  const weaponSerial = arma?.serie || p.armaSerial || armed?.weaponSerial;
+  const weaponCategory = weaponCategoryLabel(arma, p.armaModelo);
+  const weaponSerial = realSerial(arma?.serie || p.armaSerial || armed?.weaponSerial);
   const weaponCaliber = displayCaliber(arma?.calibre || armed?.weaponCaliber);
-  const weaponStatus = arma?.estatus || armed?.weaponCondition;
   const weaponPhotos = (extra?.fotosArma || []).map((u) => getFileUrl(u));
-  const hasWeaponData = p.requiereArma || !!weaponSerial || !!weaponTypeRaw || !!arma || !!armed;
+  const hasWeaponData = postRequiresWeapon(p) || !!weaponSerial || !!arma?.marca || !!arma?.categoria;
   const movs = extra?.movs || [];
   const initials = (p.vigilante || "?").split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("");
   const photoHtml = extra?.photo
