@@ -49,6 +49,7 @@ const ExpedienteDashboard = () => {
   const [error, setError] = useState<string | null>(null);
   const [filterClient, setFilterClient] = useState("");
   const [editing, setEditing] = useState<FlatRow | null>(null);
+  const [kpiView, setKpiView] = useState<null | "puestos" | "vigilantes" | "conArma" | "sinCobertura" | "sinArma">(null);
 
   const load = async (f?: string) => {
     setLoading(true);
