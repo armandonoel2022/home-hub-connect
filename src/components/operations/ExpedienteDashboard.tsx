@@ -13,7 +13,7 @@ import {
 } from "@/lib/api";
 import { exportToExcel } from "@/lib/exportUtils";
 import { loadHolidays, getHolidayName, dayClassification, DIA_LABELS, DIAS_ORDEN } from "@/lib/holidays";
-import { displayCaliber, displayWeaponType } from "@/lib/expedienteHelpers";
+import { displayCaliber, displayWeaponType, realSerial, postRequiresWeapon, weaponCategoryLabel } from "@/lib/expedienteHelpers";
 import { useArmedPersonnel } from "@/hooks/useApiHooks";
 import { loadPosts } from "@/lib/postsData";
 import { mergeOperacionesIntoExpediente } from "@/lib/opsExpedienteMerge";
