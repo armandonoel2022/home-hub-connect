@@ -1224,7 +1224,7 @@ function printAgentFicha(
       <div>
         <div class="name">${escHtml(p.vigilante || "Sin asignar")}</div>
         <div class="sub">${escHtml((emp?.position || "Oficial de Seguridad") + " · " + (emp?.department || "Safeone"))}</div>
-        <div class="chips">${hasWeaponData ? `<span class="chip gold">Arma: ${escHtml([weaponType, weaponSerial].filter(Boolean).join(" · ") || "Asignada")}</span>` : ""}${p.novedad ? `<span class="chip">Novedad</span>` : ""}</div>
+        <div class="chips">${hasWeaponData ? `<span class="chip gold">Arma: ${escHtml([weaponCategory, weaponSerial].filter((x) => x && x !== "—").join(" · ") || "Asignada")}</span>` : ""}${p.novedad ? `<span class="chip">Novedad</span>` : ""}</div>
       </div>
     </div>
     <div class="grid">${datosGrid}</div>
