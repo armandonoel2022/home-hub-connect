@@ -727,6 +727,7 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
             <Field label="Calibre" value={displayCaliber(calibre)} />
             <Field label="Categoría" value={categoria} />
             <Field label="No. Licencia" value={noLicencia} />
+            {armedMatch?.ammunitionCount != null && <Field label="Munición" value={`${armedMatch.ammunitionCount} cápsulas`} />}
             <Field label="Propietario" value={propietario} />
             <Field label="Ubicación" value={`${cliente.nombre} · ${puesto.puesto}`} />
             <Field label="Custodio" value={puesto.vigilante} />
