@@ -446,9 +446,12 @@ const ExpedienteDashboard = () => {
   );
 };
 
-function KpiCard({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: number; tone?: "warn" }) {
+function KpiCard({ icon, label, value, tone, active, onClick }: { icon: React.ReactNode; label: string; value: number; tone?: "warn"; active?: boolean; onClick?: () => void }) {
   return (
-    <Card className={`p-3 ${tone === "warn" ? "border-amber-300 bg-amber-50/50" : ""}`}>
+    <Card
+      onClick={onClick}
+      className={`p-3 transition ${onClick ? "cursor-pointer hover:border-primary hover:shadow-sm" : ""} ${active ? "border-primary ring-1 ring-primary/40 bg-primary/5" : tone === "warn" ? "border-amber-300 bg-amber-50/50" : ""}`}
+    >
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">{icon}{label}</div>
       <p className="text-2xl font-bold">{value}</p>
     </Card>
