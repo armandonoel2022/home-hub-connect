@@ -980,8 +980,6 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
                 <Field label="Calibre" value={calibreArma} />
                 <Field label="Categoría" value={arma?.categoria} />
                 <Field label="No. Licencia" value={arma?.noLicencia} />
-                <Field label="Estado Arma" value={estadoArma} />
-                <Field label="Propietario" value={arma?.propietario} />
                 {armed?.ammunitionCount != null && <Field label="Munición" value={`${armed.ammunitionCount} cápsulas`} />}
                 {armed?.province && <Field label="Provincia" value={armed.province} />}
               </div>
