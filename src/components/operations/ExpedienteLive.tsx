@@ -434,7 +434,7 @@ function groupByLocalidad(puestos: GeneralExpedientePuesto[]): LocalidadGroup[] 
     let pg = loc.puestos.find((x) => x.nombre.toLowerCase() === puestoName.toLowerCase());
     if (!pg) { pg = { nombre: puestoName, requiereArma: false, rows: [] }; loc.puestos.push(pg); }
     pg.rows.push(p);
-    if (p.requiereArma) pg.requiereArma = true;
+    if (postRequiresWeapon(p)) pg.requiereArma = true;
   }
   return [...locs.values()];
 }
