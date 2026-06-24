@@ -293,14 +293,42 @@ const ExpedienteDashboard = () => {
         </Card>
       )}
 
-      {/* KPIs */}
+      {/* KPIs (clicables) */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <KpiCard icon={<Building2 className="h-4 w-4" />} label="Puestos" value={kpis.puestos} />
-        <KpiCard icon={<Users className="h-4 w-4" />} label="Vigilantes" value={kpis.vigilantes} />
-        <KpiCard icon={<Crosshair className="h-4 w-4" />} label="Con arma" value={kpis.conArma} />
-        <KpiCard icon={<CircleX className="h-4 w-4" />} label="Sin cobertura" value={kpis.sinCobertura} tone={kpis.sinCobertura ? "warn" : undefined} />
-        <KpiCard icon={<ShieldCheck className="h-4 w-4" />} label="Arma faltante" value={kpis.sinArma} tone={kpis.sinArma ? "warn" : undefined} />
+        <KpiCard icon={<Building2 className="h-4 w-4" />} label="Puestos" value={kpis.puestos} active={kpiView === "puestos"} onClick={() => setKpiView(kpiView === "puestos" ? null : "puestos")} />
+        <KpiCard icon={<Users className="h-4 w-4" />} label="Vigilantes" value={kpis.vigilantes} active={kpiView === "vigilantes"} onClick={() => setKpiView(kpiView === "vigilantes" ? null : "vigilantes")} />
+        <KpiCard icon={<Crosshair className="h-4 w-4" />} label="Con arma" value={kpis.conArma} active={kpiView === "conArma"} onClick={() => setKpiView(kpiView === "conArma" ? null : "conArma")} />
+        <KpiCard icon={<CircleX className="h-4 w-4" />} label="Sin cobertura" value={kpis.sinCobertura} tone={kpis.sinCobertura ? "warn" : undefined} active={kpiView === "sinCobertura"} onClick={() => setKpiView(kpiView === "sinCobertura" ? null : "sinCobertura")} />
+        <KpiCard icon={<ShieldCheck className="h-4 w-4" />} label="Arma faltante" value={kpis.sinArma} tone={kpis.sinArma ? "warn" : undefined} active={kpiView === "sinArma"} onClick={() => setKpiView(kpiView === "sinArma" ? null : "sinArma")} />
       </div>
+
+      {/* Detalle del KPI seleccionado */}
+      {kpiView && (
+        <Card className="p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <ListFilter className="h-4 w-4 text-primary" />
+            <h3 className="font-semibold text-sm">{kpiLabel[kpiView]}</h3>
+            <Badge variant="outline" className="text-[10px]">{kpiDetail.length}</Badge>
+            <Button variant="ghost" size="sm" className="ml-auto h-7 text-xs" onClick={() => setKpiView(null)}>Cerrar</Button>
+          </div>
+          {kpiDetail.length === 0 ? (
+            <p className="text-xs text-muted-foreground italic">Sin registros.</p>
+          ) : (
+            <div className="space-y-1 text-xs max-h-72 overflow-auto">
+              {kpiDetail.map((r) => (
+                <div key={"kd" + r.key + r.puesto.lineaOID} className="flex items-center gap-2 border-b border-border/40 pb-1 last:border-0">
+                  <span className="min-w-0 flex-1 truncate"><strong>{r.puesto.puesto}</strong> <span className="text-muted-foreground">· {r.cliente.nombre}</span></span>
+                  {r.puesto.tanda && <Badge variant="outline" className="text-[9px] shrink-0">{r.puesto.tanda}</Badge>}
+                  <span className="shrink-0 text-muted-foreground truncate max-w-[160px]">{r.puesto.vigilante || <span className="text-red-500">sin asignar</span>}</span>
+                  {postRequiresWeapon(r.puesto) && (
+                    <span className="shrink-0 text-[10px] text-gold">{[weaponCategoryLabel(r.puesto.arma, r.puesto.armaModelo), realSerial(r.puesto.armaSerial)].filter((x) => x && x !== "—").join(" · ") || "Arma"}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* Cambios de turno por día */}
       <Card className="p-4">
@@ -329,67 +357,78 @@ const ExpedienteDashboard = () => {
         )}
       </Card>
 
-      {/* Armas */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card className="p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Crosshair className="h-4 w-4 text-primary" />
-            <h3 className="font-semibold text-sm">Asignación de armas</h3>
-          </div>
-          {armasSinAsignar.length === 0 && dupSerials.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic mb-2">Todas las armas están asignadas y sin duplicados.</p>
-          ) : (
-            <div className="space-y-2 text-xs mb-3">
-              {armasSinAsignar.map((c) => (
-                <div key={"sa" + c.key + c.puesto.lineaOID} className="flex items-center gap-2">
-                  <ShieldCheck className="h-3.5 w-3.5 text-amber-500" />
-                  <span><strong>{c.puesto.puesto}</strong> ({c.cliente.nombre}) requiere arma y no reportó serial.</span>
-                </div>
-              ))}
-              {dupSerials.map(([serie, list]) => (
-                <div key={"dup" + serie} className="flex items-center gap-2">
-                  <AlertTriangle className="h-3.5 w-3.5 text-red-500" />
-                  <span>Serial <strong>{serie}</strong> aparece en {list.length} puestos: {list.map((l) => l.puesto.puesto).join(", ")}</span>
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="space-y-1 text-xs max-h-64 overflow-auto">
-            {armasAsignadas.length === 0 ? (
-              <p className="text-xs text-muted-foreground italic">No hay armas reportadas para esta fecha.</p>
-            ) : armasAsignadas.slice(0, 40).map((c) => (
-              <div key={"aa" + c.key + c.puesto.lineaOID} className="flex items-center gap-2 border-b border-border/40 pb-1 last:border-0">
-                <span className="min-w-0 flex-1 truncate">
-                  <strong>{displayWeaponType(c.puesto.arma?.tipo || c.puesto.arma?.categoria || c.puesto.arma?.calibre)}</strong>
-                  <span className="text-muted-foreground"> · {c.puesto.armaSerial} · {c.cliente.nombre} / {c.puesto.puesto}</span>
-                </span>
-                {c.puesto.vigilante && <span className="shrink-0 text-muted-foreground truncate max-w-[160px]">{c.puesto.vigilante}</span>}
+      {/* Alertas de armas (sin asignar / duplicados reales) */}
+      <Card className="p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Crosshair className="h-4 w-4 text-primary" />
+          <h3 className="font-semibold text-sm">Asignación de armas</h3>
+          <Badge variant="outline" className="text-[10px]">{armasSinAsignar.length + dupSerials.length} alerta(s)</Badge>
+        </div>
+        {armasSinAsignar.length === 0 && dupSerials.length === 0 ? (
+          <p className="text-xs text-muted-foreground italic">Todas las armas están asignadas y sin duplicados reales.</p>
+        ) : (
+          <div className="space-y-2 text-xs max-h-72 overflow-auto">
+            {armasSinAsignar.map((c) => (
+              <div key={"sa" + c.key + c.puesto.lineaOID} className="flex items-center gap-2">
+                <ShieldCheck className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                <span><strong>{c.puesto.puesto}</strong> ({c.cliente.nombre}) requiere arma y no reportó serial.</span>
+              </div>
+            ))}
+            {dupSerials.map(({ serie, distinctPosts }) => (
+              <div key={"dup" + serie} className="flex items-start gap-2">
+                <AlertTriangle className="h-3.5 w-3.5 text-red-500 shrink-0 mt-0.5" />
+                <span>Serial <strong>{serie}</strong> aparece en {distinctPosts.length} puestos distintos: {distinctPosts.map((l) => `${l.puesto.puesto} (${l.cliente.nombre})`).join("; ")}</span>
               </div>
             ))}
           </div>
-        </Card>
+        )}
+      </Card>
 
-        {/* Vigilantes por puesto */}
-        <Card className="p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Users className="h-4 w-4 text-primary" />
-            <h3 className="font-semibold text-sm">Vigilantes por puesto</h3>
-          </div>
-          <div className="space-y-1 text-xs max-h-64 overflow-auto">
-            {rows.map((r) => (
-              <div key={"vp" + r.key + r.puesto.lineaOID} className="flex items-center gap-2 border-b border-border/40 pb-1 last:border-0">
-                <span className="min-w-0 flex-1 truncate"><strong>{r.puesto.puesto}</strong> <span className="text-muted-foreground">· {r.cliente.nombre}</span></span>
-                <span className="shrink-0">{r.puesto.vigilante || <span className="text-red-500">sin asignar</span>}</span>
-                {canEdit && (
-                  <Button variant="ghost" size="icon" className="h-6 w-6" title="Editar plantilla de horario" onClick={() => setEditing(r)}>
-                    <Pencil className="h-3 w-3" />
-                  </Button>
-                )}
+      {/* Vigilantes por puesto — agrupado por Cliente → Puesto (turnos) */}
+      <Card className="p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Users className="h-4 w-4 text-primary" />
+          <h3 className="font-semibold text-sm">Vigilantes por puesto</h3>
+          <Badge variant="outline" className="text-[10px]">{vigByClient.length} cliente(s)</Badge>
+        </div>
+        <div className="space-y-3 max-h-[28rem] overflow-auto pr-1">
+          {vigByClient.map((cg) => (
+            <div key={"vc" + (cg.cliente.codigo ?? cg.cliente.nombre)} className="rounded-lg border border-border/60 overflow-hidden">
+              <div className="bg-secondary/60 px-3 py-1.5 flex items-center gap-2">
+                <Building2 className="h-3.5 w-3.5 text-gold shrink-0" />
+                <span className="text-xs font-semibold truncate">{cg.cliente.nombre}</span>
+                <Badge variant="outline" className="text-[9px] ml-auto shrink-0">{cg.puestos.length} puesto(s)</Badge>
               </div>
-            ))}
-          </div>
-        </Card>
-      </div>
+              <div className="divide-y divide-border/40">
+                {cg.puestos.map((pg) => (
+                  <div key={"vpst" + pg.nombre} className="px-3 py-2">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="text-xs font-medium truncate">{pg.nombre}</span>
+                      {pg.localidad && <span className="text-[10px] text-muted-foreground truncate">· {pg.localidad}</span>}
+                      {pg.turnos.length > 1 && <Badge variant="secondary" className="text-[9px] shrink-0">{pg.turnos.length} turnos</Badge>}
+                    </div>
+                    <div className="space-y-0.5 pl-1">
+                      {pg.turnos.map((p) => (
+                        <div key={"vt" + p.lineaOID} className="flex items-center gap-2 text-xs">
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${p.vigilante ? "bg-emerald-500" : "bg-red-400"}`} />
+                          {p.tanda && <Badge variant="outline" className="text-[9px] shrink-0">{p.tanda}</Badge>}
+                          <span className="truncate flex-1">{p.vigilante || <span className="text-red-500">sin asignar</span>}</span>
+                          {postRequiresWeapon(p) && <span className="shrink-0 text-[10px] text-gold inline-flex items-center gap-0.5"><Crosshair className="h-3 w-3" />{weaponCategoryLabel(p.arma, p.armaModelo)}</span>}
+                          {canEdit && (
+                            <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" title="Editar plantilla de horario" onClick={() => setEditing({ cliente: cg.cliente, puesto: p, key: `${cg.cliente.codigo != null ? `c${cg.cliente.codigo}` : cg.cliente.nombre.toLowerCase()}|${(p.puesto || "").toLowerCase()}` })}>
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
 
       {editing && (
         <ScheduleDialog
