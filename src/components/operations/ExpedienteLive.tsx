@@ -1188,8 +1188,7 @@ function printAgentFicha(
     cell("Cliente", c.nombre),
     cell("Puesto", p.puesto),
     cell("Horas", p.horas + "h"),
-    cell("Incentivo", p.incentivo ? "RD$ " + p.incentivo : "—"),
-    hasWeaponData ? cell("Arma asignada", [weaponType, weaponSerial].filter(Boolean).join(" · ")) : "",
+    hasWeaponData ? cell("Arma asignada", [weaponCategory, weaponSerial].filter((x) => x && x !== "—").join(" · ")) : "",
     p.comentario ? cell("Comentario", p.comentario) : "",
   ].join("");
 
