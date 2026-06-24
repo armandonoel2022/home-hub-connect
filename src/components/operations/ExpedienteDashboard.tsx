@@ -178,6 +178,39 @@ const ExpedienteDashboard = () => {
   const armasSinAsignar = comparisons.filter((c) => postRequiresWeapon(c.puesto) && !realSerial(c.puesto.armaSerial));
   const armasAsignadas = comparisons.filter((c) => realSerial(c.puesto.armaSerial));
 
+  // Vigilantes agrupados por Cliente → Puesto (un puesto puede tener varios
+  // turnos/vigilantes). Vista limpia e inmersiva.
+  const vigByClient = useMemo(() => {
+    const clients = new Map<string, { cliente: GeneralExpedienteCliente; puestos: Map<string, { nombre: string; localidad?: string; turnos: GeneralExpedientePuesto[] }> }>();
+    rows.forEach((r) => {
+      const ck = r.cliente.codigo != null ? `c${r.cliente.codigo}` : r.cliente.nombre.toLowerCase();
+      let cg = clients.get(ck);
+      if (!cg) { cg = { cliente: r.cliente, puestos: new Map() }; clients.set(ck, cg); }
+      const pk = (r.puesto.puesto || "").toLowerCase();
+      let pg = cg.puestos.get(pk);
+      if (!pg) { pg = { nombre: r.puesto.puesto, localidad: r.puesto.localidad, turnos: [] }; cg.puestos.set(pk, pg); }
+      pg.turnos.push(r.puesto);
+    });
+    return [...clients.values()].map((c) => ({ cliente: c.cliente, puestos: [...c.puestos.values()] }));
+  }, [rows]);
+
+  // Filas de detalle según el KPI seleccionado (KPIs clicables).
+  const kpiDetail = useMemo<FlatRow[]>(() => {
+    if (!kpiView) return [];
+    if (kpiView === "puestos") return rows;
+    if (kpiView === "vigilantes") return rows.filter((r) => (r.puesto.vigilante || "").trim());
+    if (kpiView === "conArma") return rows.filter((r) => postRequiresWeapon(r.puesto));
+    if (kpiView === "sinCobertura") return rows.filter((r) => !(r.puesto.vigilante || "").trim());
+    if (kpiView === "sinArma") return rows.filter((r) => postRequiresWeapon(r.puesto) && !realSerial(r.puesto.armaSerial));
+    return [];
+  }, [kpiView, rows]);
+
+  const kpiLabel: Record<string, string> = {
+    puestos: "Puestos", vigilantes: "Vigilantes", conArma: "Puestos con arma",
+    sinCobertura: "Puestos sin cobertura", sinArma: "Puestos con arma faltante",
+  };
+
+
   const exportExcel = () => {
     exportToExcel({
       title: `Expediente Clientes ${fecha}`,
