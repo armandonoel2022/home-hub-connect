@@ -551,7 +551,7 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
                             {pg.requiereArma ? (
                               <Badge className="text-[10px] gap-1"><Crosshair className="h-3 w-3" /> Requiere arma</Badge>
                             ) : (
-                              <Badge variant="outline" className="text-[10px]">Sin arma</Badge>
+                              <Badge variant="outline" className="text-[10px]">No requiere arma</Badge>
                             )}
                             {opsOrigin && <Badge variant="secondary" className="text-[10px]">Operaciones</Badge>}
                           </div>
