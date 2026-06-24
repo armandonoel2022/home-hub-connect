@@ -959,7 +959,6 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
             <Field label="Cliente" value={cliente.nombre} />
             <Field label="Puesto" value={puesto.puesto} />
             <Field label="Horas" value={`${puesto.horas}h`} />
-            <Field label="Incentivo" value={puesto.incentivo ? `RD$ ${puesto.incentivo}` : "—"} />
             {puesto.comentario && <Field label="Comentario" value={puesto.comentario} />}
           </div>
 
