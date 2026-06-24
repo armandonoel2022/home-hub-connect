@@ -645,6 +645,7 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
 }) {
   const { toast } = useToast();
   const serie = puesto.armaSerial || "";
+  const armedMatch = ctx.matchEmployee(puesto).armed;
   const ov: ExpedienteOverlayEntry = (serie && ctx.overlay[serie]) || {};
   const [estatus, setEstatus] = useState(ov.estatus ?? puesto.arma?.estatus ?? "");
   const [noLicencia, setNoLicencia] = useState(ov.noLicencia ?? puesto.arma?.noLicencia ?? "");
