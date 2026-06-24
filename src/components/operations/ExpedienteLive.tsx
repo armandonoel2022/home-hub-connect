@@ -1236,8 +1236,8 @@ function printPostFichaLive(p: GeneralExpedientePuesto, c: GeneralExpedienteClie
   openPrint(`<html><head><title>Ficha del Puesto</title><style>${fichaStyles}</style></head><body>
     <h1>Ficha del Puesto</h1>
     ${rowHtml("Puesto", p.puesto)}${rowHtml("Cliente", c.nombre)}${rowHtml("Dirección", c.direccion)}
-    ${rowHtml("Requiere arma", p.requiereArma ? "Sí" : "No")}${rowHtml("Vigilante", p.vigilante)}
-    ${p.requiereArma ? rowHtml("Arma", [displayWeaponType(p.arma?.tipo || p.arma?.categoria || p.arma?.calibre), p.armaSerial].filter((x) => x && x !== "—").join(" · ")) : ""}
+    ${rowHtml("Requiere arma", postRequiresWeapon(p) ? "Sí" : "No")}${rowHtml("Vigilante", p.vigilante)}
+    ${postRequiresWeapon(p) ? rowHtml("Arma", [weaponCategoryLabel(p.arma, p.armaModelo), realSerial(p.armaSerial)].filter((x) => x && x !== "—").join(" · ")) : ""}
     ${rowHtml("Reporte", fecha ? new Date(fecha).toLocaleDateString("es-DO") : "—")}
     ${p.novedad ? rowHtml("Novedad", p.comentario || "Sí") : ""}
   </body></html>`);
