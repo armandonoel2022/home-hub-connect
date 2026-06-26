@@ -737,6 +737,8 @@ export default function KronosActivityTab({ clients }: Props) {
                     <TableHead className="text-xs">Cierre</TableHead>
                     <TableHead className="text-xs">Ciclo</TableHead>
                     <TableHead className="text-xs">Horario</TableHead>
+                    <TableHead className="text-xs text-center">Puntualidad</TableHead>
+                    <TableHead className="text-xs text-center">Energía</TableHead>
                     <TableHead>Criticidad</TableHead>
                     <TableHead className="text-xs">Teléfono</TableHead>
                     <TableHead className="text-xs max-w-[220px]">Alerta</TableHead>
