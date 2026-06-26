@@ -24,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
   FileUp, AlertTriangle, Phone, Download, Search, X, ShieldAlert, Pencil, Settings2, Siren,
-  Users, MapPin, Link2,
+  Users, MapPin, Link2, Plug, PlugZap, BatteryWarning, Stethoscope, Clock, CheckCircle2, Circle, MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
