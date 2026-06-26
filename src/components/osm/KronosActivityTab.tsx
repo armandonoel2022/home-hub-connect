@@ -117,6 +117,58 @@ function fmtDate(iso: string | null): string {
   return new Date(iso).toLocaleString("es-DO", { dateStyle: "short", timeStyle: "short" });
 }
 
+function fmtTime(iso: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleTimeString("es-DO", { hour: "2-digit", minute: "2-digit" });
+}
+
+// ─── Puntualidad (semáforo apertura / cierre) ───
+type PuntStatus = "ontime" | "late" | "verylate" | "missing" | "none";
+const PUNT_TOLERANCE = 15;   // min: dentro de esto = a tiempo
+const PUNT_LATE_LIMIT = 45;  // min: hasta esto = tardío; más = muy tardío
+
+function hhmmToMin(hhmm?: string | null): number | null {
+  if (!hhmm) return null;
+  const m = hhmm.match(/^(\d{1,2}):(\d{2})/);
+  return m ? parseInt(m[1]) * 60 + parseInt(m[2]) : null;
+}
+function isoToMin(iso: string | null): number | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return d.getHours() * 60 + d.getMinutes();
+}
+/** Compara la señal real con el horario esperado. diffMin>0 = tarde. */
+function punctuality(actualIso: string | null, expected?: string | null): { status: PuntStatus; diffMin: number | null } {
+  const exp = hhmmToMin(expected);
+  if (exp === null) return { status: "none", diffMin: null };
+  if (!actualIso) return { status: "missing", diffMin: null };
+  const act = isoToMin(actualIso);
+  if (act === null) return { status: "missing", diffMin: null };
+  const diff = act - exp;
+  if (diff <= PUNT_TOLERANCE) return { status: "ontime", diffMin: diff };
+  if (diff <= PUNT_LATE_LIMIT) return { status: "late", diffMin: diff };
+  return { status: "verylate", diffMin: diff };
+}
+const PUNT_DOT: Record<PuntStatus, string> = {
+  ontime: "bg-emerald-500",
+  late: "bg-amber-500",
+  verylate: "bg-red-500",
+  missing: "bg-red-500",
+  none: "bg-muted-foreground/30",
+};
+const PUNT_LABEL: Record<PuntStatus, string> = {
+  ontime: "A tiempo",
+  late: "Tardío",
+  verylate: "Muy tardío",
+  missing: "Sin señal",
+  none: "Sin horario",
+};
+function fmtDiff(diffMin: number | null): string {
+  if (diffMin === null) return "";
+  if (diffMin <= 0) return `${Math.abs(diffMin)} min antes`;
+  return `+${diffMin} min`;
+}
+
 /** Score simple de similitud para auto-sugerir cliente CxC desde el nombre de la LX. */
 function simScore(a: string, b: string): number {
   const A = a.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]+/g, " ");
