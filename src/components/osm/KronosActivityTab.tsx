@@ -884,6 +884,11 @@ export default function KronosActivityTab({ clients }: Props) {
                       <TableCell>
                         <div className="flex items-center gap-0.5">
                           <Button size="icon" variant="ghost" className="h-7 w-7"
+                            onClick={() => setTroubleshoot(r)}
+                            title="Troubleshooting / diagnóstico antes de reportar">
+                            <Stethoscope className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-7 w-7"
                             onClick={() => openEdit(r.accountCode, r.osm?.businessName || r.accountName)}
                             title="Editar configuración">
                             <Pencil className="h-3.5 w-3.5" />
