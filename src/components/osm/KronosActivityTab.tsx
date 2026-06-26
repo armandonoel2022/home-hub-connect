@@ -442,6 +442,17 @@ export default function KronosActivityTab({ clients }: Props) {
         }
       }
 
+      // Alerta de puntualidad y de energía
+      const evalOpenClose = !noOpenClose && !isMuted;
+      const openPunt = evalOpenClose ? punctuality(r.lastOpen, setting?.expectedOpen) : { status: "none" as PuntStatus, diffMin: null };
+      const closePunt = evalOpenClose ? punctuality(r.lastClose, setting?.expectedClose) : { status: "none" as PuntStatus, diffMin: null };
+      if (evalOpenClose) {
+        if (openPunt.status === "late" || openPunt.status === "verylate") alertas.push(`Apertura ${PUNT_LABEL[openPunt.status].toLowerCase()} (${fmtDiff(openPunt.diffMin)})`);
+        if (closePunt.status === "late" || closePunt.status === "verylate") alertas.push(`Cierre ${PUNT_LABEL[closePunt.status].toLowerCase()} (${fmtDiff(closePunt.diffMin)})`);
+      }
+      if (r.powerOk === false) alertas.push("Sin energía eléctrica (falla de CA sin restaurar)");
+      if (r.lowBattery) alertas.push("Batería baja");
+
       list.push({
         accountCode: r.accountCode,
         accountName: r.accountName,
@@ -454,6 +465,8 @@ export default function KronosActivityTab({ clients }: Props) {
         criticidad: (isMuted || noOpenClose) ? "ok" : r.criticidad,
         osm, setting, billingClient, isPanic, isBaton, noOpenClose, isMuted,
         discrepancia: alertas.join(" • ") || undefined,
+        powerOk: r.powerOk, lastPowerLoss: r.lastPowerLoss, lastPowerRestore: r.lastPowerRestore, lowBattery: r.lowBattery,
+        openPunt, closePunt,
       });
     });
 
