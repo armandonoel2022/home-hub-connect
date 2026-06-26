@@ -218,6 +218,14 @@ export async function parseKronosHtmFile(file: File): Promise<KronosParsedReport
     }
     r.criticidad = classify(r.daysSince);
     r.sameDayCycle = sameDay(r.lastOpen, reportDate) && sameDay(r.lastClose, reportDate);
+    // Estado de energía: si la última restauración es posterior a la última falla → OK
+    if (r.lastPowerLoss || r.lastPowerRestore) {
+      if (r.lastPowerLoss && r.lastPowerRestore) r.powerOk = r.lastPowerRestore >= r.lastPowerLoss;
+      else if (r.lastPowerLoss) r.powerOk = false;
+      else r.powerOk = true;
+    } else {
+      r.powerOk = null;
+    }
   });
 
   return {
