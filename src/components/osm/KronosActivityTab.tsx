@@ -1091,10 +1091,124 @@ export default function KronosActivityTab({ clients }: Props) {
         fromUser={user ? { name: user.fullName, email: user.email } : null}
       />
 
+      <TroubleshootDialog
+        row={troubleshoot}
+        onClose={() => setTroubleshoot(null)}
+        onNotify={(subject, message) => { setTroubleshoot(null); setNotifyCtx({ subject, message }); }}
+      />
 
     </div>
   );
 }
+
+// ─── Diálogo de troubleshooting inicial antes de levantar un reporte ───
+function TroubleshootDialog({ row, onClose, onNotify }: {
+  row: CombinedRow | null;
+  onClose: () => void;
+  onNotify: (subject: string, message: string) => void;
+}) {
+  const CHECKLIST = [
+    "Confirmar energía eléctrica en la zona (vecinos / EDE)",
+    "Verificar comunicador en línea (Ethernet / GPRS / WiFi)",
+    "Revisar batería de respaldo del panel",
+    "Validar última señal de prueba / supervisión",
+    "Intentar comunicación bidireccional con el sitio",
+    "Confirmar con el cliente antes de despachar",
+  ];
+  const [checked, setChecked] = useState<Set<number>>(new Set());
+  useEffect(() => { setChecked(new Set()); }, [row?.accountCode]);
+  if (!row) return null;
+  const name = row.osm?.businessName || row.accountName;
+  const toggle = (i: number) => setChecked(s => { const n = new Set(s); n.has(i) ? n.delete(i) : n.add(i); return n; });
+
+  const powerLine = row.powerOk === false
+    ? `⚠️ SIN ENERGÍA — última falla de CA ${fmtDate(row.lastPowerLoss)} sin restauración.`
+    : row.powerOk === true
+      ? `✅ Energía OK — restaurada ${fmtDate(row.lastPowerRestore)}.`
+      : "Sin datos de energía en el reporte.";
+
+  const buildReport = () => {
+    const done = CHECKLIST.filter((_, i) => checked.has(i));
+    const subject = `Incidente LX ${row.accountCode} — ${name}`;
+    const message = [
+      `Diagnóstico LX ${row.accountCode} (${name})`,
+      `Última señal: ${fmtDate(row.lastSignal)} (${row.daysSince ?? "?"} días)`,
+      `Apertura: ${fmtTime(row.lastOpen)} · Cierre: ${fmtTime(row.lastClose)}`,
+      `Puntualidad apertura: ${PUNT_LABEL[row.openPunt.status]} ${fmtDiff(row.openPunt.diffMin)}`,
+      `Puntualidad cierre: ${PUNT_LABEL[row.closePunt.status]} ${fmtDiff(row.closePunt.diffMin)}`,
+      `Energía: ${powerLine}`,
+      row.lowBattery ? "Batería baja reportada." : "",
+      "",
+      "Verificaciones realizadas:",
+      ...(done.length ? done.map(d => `✔ ${d}`) : ["(ninguna marcada)"]),
+      "",
+    ].filter(Boolean).join("\n");
+    onNotify(subject, message);
+  };
+
+  return (
+    <Dialog open={!!row} onOpenChange={o => !o && onClose()}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Stethoscope className="h-4 w-4 text-primary" /> Troubleshooting inicial
+          </DialogTitle>
+          <DialogDescription>
+            {name} <span className="font-mono text-xs">(LX {row.accountCode})</span>
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3 text-sm">
+          {/* Estado energía */}
+          <div className={`rounded-lg border p-3 ${row.powerOk === false ? "border-red-500/40 bg-red-500/5" : row.powerOk === true ? "border-emerald-500/30 bg-emerald-500/5" : "border-border bg-muted/20"}`}>
+            <p className="font-semibold flex items-center gap-1.5">
+              {row.powerOk === false ? <PlugZap className="h-4 w-4 text-red-400" /> : <Plug className="h-4 w-4 text-emerald-400" />}
+              Conectividad eléctrica
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">{powerLine}</p>
+            {row.lowBattery && <p className="text-xs text-amber-400 mt-1 flex items-center gap-1"><BatteryWarning className="h-3 w-3" /> Batería baja reportada</p>}
+          </div>
+
+          {/* Resumen señales */}
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="rounded border border-border p-2">
+              <p className="text-muted-foreground">Última señal</p>
+              <p className="font-medium">{fmtDate(row.lastSignal)}</p>
+            </div>
+            <div className="rounded border border-border p-2">
+              <p className="text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" /> Apertura / Cierre</p>
+              <p className="font-medium">{fmtTime(row.lastOpen)} → {fmtTime(row.lastClose)}</p>
+            </div>
+          </div>
+
+          {/* Checklist */}
+          <div>
+            <p className="font-semibold text-xs mb-2">Verificaciones previas a levantar incidente</p>
+            <div className="space-y-1.5">
+              {CHECKLIST.map((item, i) => (
+                <button key={i} onClick={() => toggle(i)}
+                  className="flex items-start gap-2 w-full text-left text-xs hover:bg-muted/40 rounded px-2 py-1.5 transition">
+                  {checked.has(i)
+                    ? <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                    : <Circle className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />}
+                  <span className={checked.has(i) ? "line-through text-muted-foreground" : ""}>{item}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Cerrar</Button>
+          <Button onClick={buildReport}>
+            <MessageSquare className="h-4 w-4 mr-2" /> Levantar incidente / notificar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 function KpiCard({ label, value, color, active, onClick }: {
   label: string; value: number; color: string; active: boolean; onClick: () => void;
