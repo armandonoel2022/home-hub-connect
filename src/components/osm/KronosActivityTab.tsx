@@ -208,6 +208,7 @@ export default function KronosActivityTab({ clients }: Props) {
   const [reportMeta, setReportMeta] = useState<MonitoringReportMeta | null>(null);
   const [showBillingMgr, setShowBillingMgr] = useState(false);
   const [notifyCtx, setNotifyCtx] = useState<{ subject: string; message: string } | null>(null);
+  const [troubleshoot, setTroubleshoot] = useState<CombinedRow | null>(null);
   const { user } = useAuth();
 
   const loadSettings = async () => {
