@@ -834,6 +834,31 @@ export default function KronosActivityTab({ clients }: Props) {
                           </span>
                         ) : <span className="text-muted-foreground italic">sin definir</span>}
                       </TableCell>
+                      <TableCell className="text-center">
+                        {r.noOpenClose || r.isMuted ? <span className="text-xs text-muted-foreground">—</span> : (
+                          <div className="flex items-center justify-center gap-2">
+                            <span className="inline-flex items-center gap-1" title={`Apertura: ${PUNT_LABEL[r.openPunt.status]} ${fmtDiff(r.openPunt.diffMin)}`}>
+                              <span className={`h-2.5 w-2.5 rounded-full ${PUNT_DOT[r.openPunt.status]}`} />
+                              <span className="text-[10px] text-muted-foreground">A</span>
+                            </span>
+                            <span className="inline-flex items-center gap-1" title={`Cierre: ${PUNT_LABEL[r.closePunt.status]} ${fmtDiff(r.closePunt.diffMin)}`}>
+                              <span className={`h-2.5 w-2.5 rounded-full ${PUNT_DOT[r.closePunt.status]}`} />
+                              <span className="text-[10px] text-muted-foreground">C</span>
+                            </span>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {r.powerOk === false ? (
+                          <Badge variant="outline" className="text-red-400 border-red-500/30 gap-1" title={`Última falla CA: ${fmtDate(r.lastPowerLoss)}`}>
+                            <PlugZap className="h-3 w-3" /> Sin energía
+                          </Badge>
+                        ) : r.lowBattery ? (
+                          <Badge variant="outline" className="text-amber-400 border-amber-500/30 gap-1"><BatteryWarning className="h-3 w-3" /> Batería</Badge>
+                        ) : r.powerOk === true ? (
+                          <Badge variant="outline" className="text-emerald-400 border-emerald-500/30 gap-1" title={`Energía restaurada: ${fmtDate(r.lastPowerRestore)}`}><Plug className="h-3 w-3" /> OK</Badge>
+                        ) : <span className="text-xs text-muted-foreground">—</span>}
+                      </TableCell>
                       <TableCell>
                         {r.isPanic ? <Badge variant="outline" className="text-purple-400 border-purple-500/30">N/A</Badge>
                           : r.isBaton ? <Badge variant="outline" className="text-cyan-400 border-cyan-500/30">→ Punches</Badge>
