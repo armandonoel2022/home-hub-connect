@@ -508,6 +508,8 @@ export default function KronosActivityTab({ clients }: Props) {
       inactiveCancelled: combined.filter(isInactiveCancelled).length,
       deleted: combined.filter(isDeleted).length,
       discrepancias: visible.filter(r => r.discrepancia).length,
+      tardio: operational.filter(r => ["late", "verylate", "missing"].includes(r.openPunt.status) || ["late", "verylate", "missing"].includes(r.closePunt.status)).length,
+      power: visible.filter(r => r.powerOk === false || r.lowBattery).length,
     };
   }, [combined]);
 
