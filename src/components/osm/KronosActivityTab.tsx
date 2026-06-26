@@ -527,6 +527,8 @@ export default function KronosActivityTab({ clients }: Props) {
         else if (filterCrit === "baton") { if (!r.isBaton) return false; }
         else if (filterCrit === "muted") { if (!r.isMuted || r.noOpenClose) return false; }
         else if (filterCrit === "discrepancia") { if (!r.discrepancia) return false; }
+        else if (filterCrit === "tardio") { if (r.noOpenClose || r.isMuted) return false; if (!["late", "verylate", "missing"].includes(r.openPunt.status) && !["late", "verylate", "missing"].includes(r.closePunt.status)) return false; }
+        else if (filterCrit === "power") { if (r.powerOk !== false && !r.lowBattery) return false; }
         else if (filterCrit === "unlinked") { if (r.setting?.clientId) return false; }
         else if (filterCrit !== "all") {
           if (r.noOpenClose || r.isMuted) return false;
