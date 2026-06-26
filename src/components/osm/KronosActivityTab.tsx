@@ -105,9 +105,17 @@ interface CombinedRow {
   isMuted: boolean; // estado LX que silencia alertas
   noOpenClose: boolean; // panic OR baton: ignora aperturas/cierres
   discrepancia?: string;
+  // Conectividad eléctrica
+  powerOk: boolean | null;
+  lastPowerLoss: string | null;
+  lastPowerRestore: string | null;
+  lowBattery: boolean;
+  // Puntualidad
+  openPunt: { status: PuntStatus; diffMin: number | null };
+  closePunt: { status: PuntStatus; diffMin: number | null };
 }
 
-type FilterKey = "all" | "ok" | CriticidadInactividad | "discrepancia" | "panic" | "baton" | "muted" | "inactive-cancelled" | "deleted" | "unlinked";
+type FilterKey = "all" | "ok" | CriticidadInactividad | "discrepancia" | "panic" | "baton" | "muted" | "inactive-cancelled" | "deleted" | "unlinked" | "tardio" | "power";
 
 const INACTIVE_CANCELLED = new Set<LxStatus>(["Cancelada", "Inactiva"]);
 const DELETED_STATUSES = new Set<LxStatus>(["Dada de baja"]);
