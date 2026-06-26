@@ -482,6 +482,8 @@ export default function KronosActivityTab({ clients }: Props) {
         daysSince: null, criticidad: (isMuted || noOpenClose) ? "ok" : "alta",
         osm: c, setting, billingClient, isPanic, isBaton, noOpenClose, isMuted,
         discrepancia: (isMuted || noOpenClose) ? undefined : "Activo en OSM pero NO aparece en reporte Kronos",
+        powerOk: null, lastPowerLoss: null, lastPowerRestore: null, lowBattery: false,
+        openPunt: { status: "none", diffMin: null }, closePunt: { status: "none", diffMin: null },
       });
     });
 
