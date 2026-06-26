@@ -701,6 +701,8 @@ export default function KronosActivityTab({ clients }: Props) {
                 <SelectItem value="baja">🔵 Baja (1d)</SelectItem>
                 <SelectItem value="media">🟡 Media (2d)</SelectItem>
                 <SelectItem value="alta">🔴 Alta (3+d)</SelectItem>
+                <SelectItem value="tardio">⏰ Apertura/Cierre tardío ({stats.tardio})</SelectItem>
+                <SelectItem value="power">🔌 Sin energía / batería baja ({stats.power})</SelectItem>
                 <SelectItem value="panic">🚨 Botón de pánico</SelectItem>
                 <SelectItem value="baton">🛰️ Active Track (Punches)</SelectItem>
                 <SelectItem value="muted">🔇 Silenciadas (estado LX)</SelectItem>
