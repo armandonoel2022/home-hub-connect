@@ -36,6 +36,11 @@ export interface KronosAccountRow {
   sameDayCycle: boolean;     // hubo apertura Y cierre el día del reporte
   daysSince: number | null;
   criticidad: CriticidadInactividad | "ok";
+  // ─── Conectividad eléctrica (troubleshooting) ───
+  lastPowerLoss: string | null;    // ISO última falla de energía (CA)
+  lastPowerRestore: string | null; // ISO última restauración de energía
+  powerOk: boolean | null;         // true=con energía, false=sin energía, null=sin dato
+  lowBattery: boolean;             // hay señal de batería baja vigente
 }
 
 export interface KronosParsedReport {
@@ -178,14 +183,25 @@ export async function parseKronosHtmFile(file: File): Promise<KronosParsedReport
       sameDayCycle: false,
       daysSince: null,
       criticidad: "alta" as const,
+      lastPowerLoss: null,
+      lastPowerRestore: null,
+      powerOk: null,
+      lowBattery: false,
     };
     if (sig.name && !cur.accountName) cur.accountName = sig.name;
 
     const isOpen = /abierto/i.test(sig.estado);
     const isClose = /cerrado/i.test(sig.estado);
+    // Señales de conectividad eléctrica
+    const isPowerLoss = /(falla|fallo|p[eé]rdida|perdida|baja|corte|sin)\s*(de\s*)?(energ|corriente|c\.?\s?a\.?|220|ac\b)|ac\s*loss|power\s*(loss|fail)/i.test(sig.estado);
+    const isPowerRestore = /(restaur|restablec|retorno|normaliz)\w*\s*(de\s*)?(energ|corriente|c\.?\s?a\.?|ac\b)|ac\s*restor|power\s*restor/i.test(sig.estado);
+    const isLowBattery = /(bater[ií]a|battery).*(baja|low)|low\s*batt/i.test(sig.estado);
     if (sig.iso) {
       if (isOpen && (!cur.lastOpen || sig.iso > cur.lastOpen)) cur.lastOpen = sig.iso;
       if (isClose && (!cur.lastClose || sig.iso > cur.lastClose)) cur.lastClose = sig.iso;
+      if (isPowerLoss && (!cur.lastPowerLoss || sig.iso > cur.lastPowerLoss)) cur.lastPowerLoss = sig.iso;
+      if (isPowerRestore && (!cur.lastPowerRestore || sig.iso > cur.lastPowerRestore)) cur.lastPowerRestore = sig.iso;
+      if (isLowBattery) cur.lowBattery = true;
       if (!cur.lastSignal || sig.iso > cur.lastSignal) {
         cur.lastSignal = sig.iso;
         cur.estado = sig.estado;
@@ -202,6 +218,14 @@ export async function parseKronosHtmFile(file: File): Promise<KronosParsedReport
     }
     r.criticidad = classify(r.daysSince);
     r.sameDayCycle = sameDay(r.lastOpen, reportDate) && sameDay(r.lastClose, reportDate);
+    // Estado de energía: si la última restauración es posterior a la última falla → OK
+    if (r.lastPowerLoss || r.lastPowerRestore) {
+      if (r.lastPowerLoss && r.lastPowerRestore) r.powerOk = r.lastPowerRestore >= r.lastPowerLoss;
+      else if (r.lastPowerLoss) r.powerOk = false;
+      else r.powerOk = true;
+    } else {
+      r.powerOk = null;
+    }
   });
 
   return {

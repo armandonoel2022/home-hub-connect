@@ -24,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
   FileUp, AlertTriangle, Phone, Download, Search, X, ShieldAlert, Pencil, Settings2, Siren,
-  Users, MapPin, Link2,
+  Users, MapPin, Link2, Plug, PlugZap, BatteryWarning, Stethoscope, Clock, CheckCircle2, Circle, MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -105,9 +105,17 @@ interface CombinedRow {
   isMuted: boolean; // estado LX que silencia alertas
   noOpenClose: boolean; // panic OR baton: ignora aperturas/cierres
   discrepancia?: string;
+  // Conectividad eléctrica
+  powerOk: boolean | null;
+  lastPowerLoss: string | null;
+  lastPowerRestore: string | null;
+  lowBattery: boolean;
+  // Puntualidad
+  openPunt: { status: PuntStatus; diffMin: number | null };
+  closePunt: { status: PuntStatus; diffMin: number | null };
 }
 
-type FilterKey = "all" | "ok" | CriticidadInactividad | "discrepancia" | "panic" | "baton" | "muted" | "inactive-cancelled" | "deleted" | "unlinked";
+type FilterKey = "all" | "ok" | CriticidadInactividad | "discrepancia" | "panic" | "baton" | "muted" | "inactive-cancelled" | "deleted" | "unlinked" | "tardio" | "power";
 
 const INACTIVE_CANCELLED = new Set<LxStatus>(["Cancelada", "Inactiva"]);
 const DELETED_STATUSES = new Set<LxStatus>(["Dada de baja"]);
@@ -115,6 +123,58 @@ const DELETED_STATUSES = new Set<LxStatus>(["Dada de baja"]);
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleString("es-DO", { dateStyle: "short", timeStyle: "short" });
+}
+
+function fmtTime(iso: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleTimeString("es-DO", { hour: "2-digit", minute: "2-digit" });
+}
+
+// ─── Puntualidad (semáforo apertura / cierre) ───
+type PuntStatus = "ontime" | "late" | "verylate" | "missing" | "none";
+const PUNT_TOLERANCE = 15;   // min: dentro de esto = a tiempo
+const PUNT_LATE_LIMIT = 45;  // min: hasta esto = tardío; más = muy tardío
+
+function hhmmToMin(hhmm?: string | null): number | null {
+  if (!hhmm) return null;
+  const m = hhmm.match(/^(\d{1,2}):(\d{2})/);
+  return m ? parseInt(m[1]) * 60 + parseInt(m[2]) : null;
+}
+function isoToMin(iso: string | null): number | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return d.getHours() * 60 + d.getMinutes();
+}
+/** Compara la señal real con el horario esperado. diffMin>0 = tarde. */
+function punctuality(actualIso: string | null, expected?: string | null): { status: PuntStatus; diffMin: number | null } {
+  const exp = hhmmToMin(expected);
+  if (exp === null) return { status: "none", diffMin: null };
+  if (!actualIso) return { status: "missing", diffMin: null };
+  const act = isoToMin(actualIso);
+  if (act === null) return { status: "missing", diffMin: null };
+  const diff = act - exp;
+  if (diff <= PUNT_TOLERANCE) return { status: "ontime", diffMin: diff };
+  if (diff <= PUNT_LATE_LIMIT) return { status: "late", diffMin: diff };
+  return { status: "verylate", diffMin: diff };
+}
+const PUNT_DOT: Record<PuntStatus, string> = {
+  ontime: "bg-emerald-500",
+  late: "bg-amber-500",
+  verylate: "bg-red-500",
+  missing: "bg-red-500",
+  none: "bg-muted-foreground/30",
+};
+const PUNT_LABEL: Record<PuntStatus, string> = {
+  ontime: "A tiempo",
+  late: "Tardío",
+  verylate: "Muy tardío",
+  missing: "Sin señal",
+  none: "Sin horario",
+};
+function fmtDiff(diffMin: number | null): string {
+  if (diffMin === null) return "";
+  if (diffMin <= 0) return `${Math.abs(diffMin)} min antes`;
+  return `+${diffMin} min`;
 }
 
 /** Score simple de similitud para auto-sugerir cliente CxC desde el nombre de la LX. */
@@ -148,6 +208,7 @@ export default function KronosActivityTab({ clients }: Props) {
   const [reportMeta, setReportMeta] = useState<MonitoringReportMeta | null>(null);
   const [showBillingMgr, setShowBillingMgr] = useState(false);
   const [notifyCtx, setNotifyCtx] = useState<{ subject: string; message: string } | null>(null);
+  const [troubleshoot, setTroubleshoot] = useState<CombinedRow | null>(null);
   const { user } = useAuth();
 
   const loadSettings = async () => {
@@ -382,6 +443,17 @@ export default function KronosActivityTab({ clients }: Props) {
         }
       }
 
+      // Alerta de puntualidad y de energía
+      const evalOpenClose = !noOpenClose && !isMuted;
+      const openPunt = evalOpenClose ? punctuality(r.lastOpen, setting?.expectedOpen) : { status: "none" as PuntStatus, diffMin: null };
+      const closePunt = evalOpenClose ? punctuality(r.lastClose, setting?.expectedClose) : { status: "none" as PuntStatus, diffMin: null };
+      if (evalOpenClose) {
+        if (openPunt.status === "late" || openPunt.status === "verylate") alertas.push(`Apertura ${PUNT_LABEL[openPunt.status].toLowerCase()} (${fmtDiff(openPunt.diffMin)})`);
+        if (closePunt.status === "late" || closePunt.status === "verylate") alertas.push(`Cierre ${PUNT_LABEL[closePunt.status].toLowerCase()} (${fmtDiff(closePunt.diffMin)})`);
+      }
+      if (r.powerOk === false) alertas.push("Sin energía eléctrica (falla de CA sin restaurar)");
+      if (r.lowBattery) alertas.push("Batería baja");
+
       list.push({
         accountCode: r.accountCode,
         accountName: r.accountName,
@@ -394,6 +466,8 @@ export default function KronosActivityTab({ clients }: Props) {
         criticidad: (isMuted || noOpenClose) ? "ok" : r.criticidad,
         osm, setting, billingClient, isPanic, isBaton, noOpenClose, isMuted,
         discrepancia: alertas.join(" • ") || undefined,
+        powerOk: r.powerOk, lastPowerLoss: r.lastPowerLoss, lastPowerRestore: r.lastPowerRestore, lowBattery: r.lowBattery,
+        openPunt, closePunt,
       });
     });
 
@@ -409,6 +483,8 @@ export default function KronosActivityTab({ clients }: Props) {
         daysSince: null, criticidad: (isMuted || noOpenClose) ? "ok" : "alta",
         osm: c, setting, billingClient, isPanic, isBaton, noOpenClose, isMuted,
         discrepancia: (isMuted || noOpenClose) ? undefined : "Activo en OSM pero NO aparece en reporte Kronos",
+        powerOk: null, lastPowerLoss: null, lastPowerRestore: null, lowBattery: false,
+        openPunt: { status: "none", diffMin: null }, closePunt: { status: "none", diffMin: null },
       });
     });
 
@@ -433,6 +509,8 @@ export default function KronosActivityTab({ clients }: Props) {
       inactiveCancelled: combined.filter(isInactiveCancelled).length,
       deleted: combined.filter(isDeleted).length,
       discrepancias: visible.filter(r => r.discrepancia).length,
+      tardio: operational.filter(r => ["late", "verylate", "missing"].includes(r.openPunt.status) || ["late", "verylate", "missing"].includes(r.closePunt.status)).length,
+      power: visible.filter(r => r.powerOk === false || r.lowBattery).length,
     };
   }, [combined]);
 
@@ -450,6 +528,8 @@ export default function KronosActivityTab({ clients }: Props) {
         else if (filterCrit === "baton") { if (!r.isBaton) return false; }
         else if (filterCrit === "muted") { if (!r.isMuted || r.noOpenClose) return false; }
         else if (filterCrit === "discrepancia") { if (!r.discrepancia) return false; }
+        else if (filterCrit === "tardio") { if (r.noOpenClose || r.isMuted) return false; if (!["late", "verylate", "missing"].includes(r.openPunt.status) && !["late", "verylate", "missing"].includes(r.closePunt.status)) return false; }
+        else if (filterCrit === "power") { if (r.powerOk !== false && !r.lowBattery) return false; }
         else if (filterCrit === "unlinked") { if (r.setting?.clientId) return false; }
         else if (filterCrit !== "all") {
           if (r.noOpenClose || r.isMuted) return false;
@@ -567,7 +647,7 @@ export default function KronosActivityTab({ clients }: Props) {
 
       {report && (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-8 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-10 gap-3">
             <KpiCard label="Total" value={stats.total} color="text-foreground"
               active={filterCrit === "all"} onClick={() => setFilterCrit("all")} />
             <KpiCard label="🟢 Al día" value={stats.ok} color="text-emerald-400"
@@ -578,6 +658,10 @@ export default function KronosActivityTab({ clients }: Props) {
               active={filterCrit === "media"} onClick={() => setFilterCrit("media")} />
             <KpiCard label="🔴 Alta" value={stats.alta} color="text-red-400"
               active={filterCrit === "alta"} onClick={() => setFilterCrit("alta")} />
+            <KpiCard label="⏰ Tardíos" value={stats.tardio} color="text-amber-400"
+              active={filterCrit === "tardio"} onClick={() => setFilterCrit("tardio")} />
+            <KpiCard label="🔌 Sin energía" value={stats.power} color="text-orange-400"
+              active={filterCrit === "power"} onClick={() => setFilterCrit("power")} />
             <KpiCard label="🚨 Pánico" value={stats.panic} color="text-purple-400"
               active={filterCrit === "panic"} onClick={() => setFilterCrit("panic")} />
             <KpiCard label="🛰️ Active Track" value={stats.baton} color="text-cyan-400"
@@ -585,6 +669,7 @@ export default function KronosActivityTab({ clients }: Props) {
             <KpiCard label="🔇 Silenciadas" value={stats.muted} color="text-muted-foreground"
               active={filterCrit === "muted"} onClick={() => setFilterCrit("muted")} />
           </div>
+
 
           {stats.discrepancias > 0 && (
             <Card className="border-amber-500/40 bg-amber-500/5">
@@ -616,6 +701,8 @@ export default function KronosActivityTab({ clients }: Props) {
                 <SelectItem value="baja">🔵 Baja (1d)</SelectItem>
                 <SelectItem value="media">🟡 Media (2d)</SelectItem>
                 <SelectItem value="alta">🔴 Alta (3+d)</SelectItem>
+                <SelectItem value="tardio">⏰ Apertura/Cierre tardío ({stats.tardio})</SelectItem>
+                <SelectItem value="power">🔌 Sin energía / batería baja ({stats.power})</SelectItem>
                 <SelectItem value="panic">🚨 Botón de pánico</SelectItem>
                 <SelectItem value="baton">🛰️ Active Track (Punches)</SelectItem>
                 <SelectItem value="muted">🔇 Silenciadas (estado LX)</SelectItem>
@@ -650,6 +737,8 @@ export default function KronosActivityTab({ clients }: Props) {
                     <TableHead className="text-xs">Cierre</TableHead>
                     <TableHead className="text-xs">Ciclo</TableHead>
                     <TableHead className="text-xs">Horario</TableHead>
+                    <TableHead className="text-xs text-center">Puntualidad</TableHead>
+                    <TableHead className="text-xs text-center">Energía</TableHead>
                     <TableHead>Criticidad</TableHead>
                     <TableHead className="text-xs">Teléfono</TableHead>
                     <TableHead className="text-xs max-w-[220px]">Alerta</TableHead>
@@ -658,7 +747,7 @@ export default function KronosActivityTab({ clients }: Props) {
                 </TableHeader>
                 <TableBody>
                   {filtered.length === 0 ? (
-                    <TableRow><TableCell colSpan={15} className="text-center text-muted-foreground py-8">Sin resultados</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={17} className="text-center text-muted-foreground py-8">Sin resultados</TableCell></TableRow>
                   ) : filtered.map(r => (
                     <TableRow key={r.accountCode} className={
                       r.setting?.lxStatus && (INACTIVE_CANCELLED.has(r.setting.lxStatus) || DELETED_STATUSES.has(r.setting.lxStatus))
@@ -745,6 +834,31 @@ export default function KronosActivityTab({ clients }: Props) {
                           </span>
                         ) : <span className="text-muted-foreground italic">sin definir</span>}
                       </TableCell>
+                      <TableCell className="text-center">
+                        {r.noOpenClose || r.isMuted ? <span className="text-xs text-muted-foreground">—</span> : (
+                          <div className="flex items-center justify-center gap-2">
+                            <span className="inline-flex items-center gap-1" title={`Apertura: ${PUNT_LABEL[r.openPunt.status]} ${fmtDiff(r.openPunt.diffMin)}`}>
+                              <span className={`h-2.5 w-2.5 rounded-full ${PUNT_DOT[r.openPunt.status]}`} />
+                              <span className="text-[10px] text-muted-foreground">A</span>
+                            </span>
+                            <span className="inline-flex items-center gap-1" title={`Cierre: ${PUNT_LABEL[r.closePunt.status]} ${fmtDiff(r.closePunt.diffMin)}`}>
+                              <span className={`h-2.5 w-2.5 rounded-full ${PUNT_DOT[r.closePunt.status]}`} />
+                              <span className="text-[10px] text-muted-foreground">C</span>
+                            </span>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {r.powerOk === false ? (
+                          <Badge variant="outline" className="text-red-400 border-red-500/30 gap-1" title={`Última falla CA: ${fmtDate(r.lastPowerLoss)}`}>
+                            <PlugZap className="h-3 w-3" /> Sin energía
+                          </Badge>
+                        ) : r.lowBattery ? (
+                          <Badge variant="outline" className="text-amber-400 border-amber-500/30 gap-1"><BatteryWarning className="h-3 w-3" /> Batería</Badge>
+                        ) : r.powerOk === true ? (
+                          <Badge variant="outline" className="text-emerald-400 border-emerald-500/30 gap-1" title={`Energía restaurada: ${fmtDate(r.lastPowerRestore)}`}><Plug className="h-3 w-3" /> OK</Badge>
+                        ) : <span className="text-xs text-muted-foreground">—</span>}
+                      </TableCell>
                       <TableCell>
                         {r.isPanic ? <Badge variant="outline" className="text-purple-400 border-purple-500/30">N/A</Badge>
                           : r.isBaton ? <Badge variant="outline" className="text-cyan-400 border-cyan-500/30">→ Punches</Badge>
@@ -769,6 +883,11 @@ export default function KronosActivityTab({ clients }: Props) {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-0.5">
+                          <Button size="icon" variant="ghost" className="h-7 w-7"
+                            onClick={() => setTroubleshoot(r)}
+                            title="Troubleshooting / diagnóstico antes de reportar">
+                            <Stethoscope className="h-3.5 w-3.5" />
+                          </Button>
                           <Button size="icon" variant="ghost" className="h-7 w-7"
                             onClick={() => openEdit(r.accountCode, r.osm?.businessName || r.accountName)}
                             title="Editar configuración">
@@ -972,10 +1091,124 @@ export default function KronosActivityTab({ clients }: Props) {
         fromUser={user ? { name: user.fullName, email: user.email } : null}
       />
 
+      <TroubleshootDialog
+        row={troubleshoot}
+        onClose={() => setTroubleshoot(null)}
+        onNotify={(subject, message) => { setTroubleshoot(null); setNotifyCtx({ subject, message }); }}
+      />
 
     </div>
   );
 }
+
+// ─── Diálogo de troubleshooting inicial antes de levantar un reporte ───
+function TroubleshootDialog({ row, onClose, onNotify }: {
+  row: CombinedRow | null;
+  onClose: () => void;
+  onNotify: (subject: string, message: string) => void;
+}) {
+  const CHECKLIST = [
+    "Confirmar energía eléctrica en la zona (vecinos / EDE)",
+    "Verificar comunicador en línea (Ethernet / GPRS / WiFi)",
+    "Revisar batería de respaldo del panel",
+    "Validar última señal de prueba / supervisión",
+    "Intentar comunicación bidireccional con el sitio",
+    "Confirmar con el cliente antes de despachar",
+  ];
+  const [checked, setChecked] = useState<Set<number>>(new Set());
+  useEffect(() => { setChecked(new Set()); }, [row?.accountCode]);
+  if (!row) return null;
+  const name = row.osm?.businessName || row.accountName;
+  const toggle = (i: number) => setChecked(s => { const n = new Set(s); n.has(i) ? n.delete(i) : n.add(i); return n; });
+
+  const powerLine = row.powerOk === false
+    ? `⚠️ SIN ENERGÍA — última falla de CA ${fmtDate(row.lastPowerLoss)} sin restauración.`
+    : row.powerOk === true
+      ? `✅ Energía OK — restaurada ${fmtDate(row.lastPowerRestore)}.`
+      : "Sin datos de energía en el reporte.";
+
+  const buildReport = () => {
+    const done = CHECKLIST.filter((_, i) => checked.has(i));
+    const subject = `Incidente LX ${row.accountCode} — ${name}`;
+    const message = [
+      `Diagnóstico LX ${row.accountCode} (${name})`,
+      `Última señal: ${fmtDate(row.lastSignal)} (${row.daysSince ?? "?"} días)`,
+      `Apertura: ${fmtTime(row.lastOpen)} · Cierre: ${fmtTime(row.lastClose)}`,
+      `Puntualidad apertura: ${PUNT_LABEL[row.openPunt.status]} ${fmtDiff(row.openPunt.diffMin)}`,
+      `Puntualidad cierre: ${PUNT_LABEL[row.closePunt.status]} ${fmtDiff(row.closePunt.diffMin)}`,
+      `Energía: ${powerLine}`,
+      row.lowBattery ? "Batería baja reportada." : "",
+      "",
+      "Verificaciones realizadas:",
+      ...(done.length ? done.map(d => `✔ ${d}`) : ["(ninguna marcada)"]),
+      "",
+    ].filter(Boolean).join("\n");
+    onNotify(subject, message);
+  };
+
+  return (
+    <Dialog open={!!row} onOpenChange={o => !o && onClose()}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Stethoscope className="h-4 w-4 text-primary" /> Troubleshooting inicial
+          </DialogTitle>
+          <DialogDescription>
+            {name} <span className="font-mono text-xs">(LX {row.accountCode})</span>
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3 text-sm">
+          {/* Estado energía */}
+          <div className={`rounded-lg border p-3 ${row.powerOk === false ? "border-red-500/40 bg-red-500/5" : row.powerOk === true ? "border-emerald-500/30 bg-emerald-500/5" : "border-border bg-muted/20"}`}>
+            <p className="font-semibold flex items-center gap-1.5">
+              {row.powerOk === false ? <PlugZap className="h-4 w-4 text-red-400" /> : <Plug className="h-4 w-4 text-emerald-400" />}
+              Conectividad eléctrica
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">{powerLine}</p>
+            {row.lowBattery && <p className="text-xs text-amber-400 mt-1 flex items-center gap-1"><BatteryWarning className="h-3 w-3" /> Batería baja reportada</p>}
+          </div>
+
+          {/* Resumen señales */}
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="rounded border border-border p-2">
+              <p className="text-muted-foreground">Última señal</p>
+              <p className="font-medium">{fmtDate(row.lastSignal)}</p>
+            </div>
+            <div className="rounded border border-border p-2">
+              <p className="text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" /> Apertura / Cierre</p>
+              <p className="font-medium">{fmtTime(row.lastOpen)} → {fmtTime(row.lastClose)}</p>
+            </div>
+          </div>
+
+          {/* Checklist */}
+          <div>
+            <p className="font-semibold text-xs mb-2">Verificaciones previas a levantar incidente</p>
+            <div className="space-y-1.5">
+              {CHECKLIST.map((item, i) => (
+                <button key={i} onClick={() => toggle(i)}
+                  className="flex items-start gap-2 w-full text-left text-xs hover:bg-muted/40 rounded px-2 py-1.5 transition">
+                  {checked.has(i)
+                    ? <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                    : <Circle className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />}
+                  <span className={checked.has(i) ? "line-through text-muted-foreground" : ""}>{item}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Cerrar</Button>
+          <Button onClick={buildReport}>
+            <MessageSquare className="h-4 w-4 mr-2" /> Levantar incidente / notificar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 function KpiCard({ label, value, color, active, onClick }: {
   label: string; value: number; color: string; active: boolean; onClick: () => void;
