@@ -747,7 +747,7 @@ export default function KronosActivityTab({ clients }: Props) {
                 </TableHeader>
                 <TableBody>
                   {filtered.length === 0 ? (
-                    <TableRow><TableCell colSpan={15} className="text-center text-muted-foreground py-8">Sin resultados</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={17} className="text-center text-muted-foreground py-8">Sin resultados</TableCell></TableRow>
                   ) : filtered.map(r => (
                     <TableRow key={r.accountCode} className={
                       r.setting?.lxStatus && (INACTIVE_CANCELLED.has(r.setting.lxStatus) || DELETED_STATUSES.has(r.setting.lxStatus))
