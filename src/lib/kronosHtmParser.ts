@@ -36,6 +36,11 @@ export interface KronosAccountRow {
   sameDayCycle: boolean;     // hubo apertura Y cierre el día del reporte
   daysSince: number | null;
   criticidad: CriticidadInactividad | "ok";
+  // ─── Conectividad eléctrica (troubleshooting) ───
+  lastPowerLoss: string | null;    // ISO última falla de energía (CA)
+  lastPowerRestore: string | null; // ISO última restauración de energía
+  powerOk: boolean | null;         // true=con energía, false=sin energía, null=sin dato
+  lowBattery: boolean;             // hay señal de batería baja vigente
 }
 
 export interface KronosParsedReport {
