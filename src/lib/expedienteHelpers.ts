@@ -1,10 +1,18 @@
 import type { GeneralExpedientePuesto, GeneralExpedienteCliente, ExpedienteOverlayEntry, GeneralWeaponDetail } from "@/lib/api";
 
-// "No letal" se muestra en toda la intranet como "Menos que letal".
+// ¿El texto es una clasificación de letalidad (no un calibre real)?
+const LETHALITY_RE = /^(no\s*letal|menos\s+que\s+letal|less\s+lethal|letal|lethal)$/i;
+
+export function isLethalityLabel(value?: string | null): boolean {
+  return LETHALITY_RE.test((value || "").trim());
+}
+
+// El campo Calibre debe mostrar SOLO un calibre real. En GENERAL el catálogo de
+// "Calibre" a veces guarda la letalidad ("Menos que letal"/"Letal"); esos textos
+// no son calibres, así que se ocultan (se muestran como —).
 export function displayCaliber(value?: string | null): string {
   const v = (value || "").trim();
-  if (!v) return "—";
-  if (/^no\s*letal$/i.test(v)) return "Menos que letal";
+  if (!v || isLethalityLabel(v)) return "—";
   return v;
 }
 
