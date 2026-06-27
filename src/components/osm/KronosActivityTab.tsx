@@ -296,7 +296,7 @@ export default function KronosActivityTab({ clients }: Props) {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { loadSettings(); loadBillingClients(); loadHistory(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { loadSettings(); loadBillingClients(); loadGeneralClients(); loadHistory(); /* eslint-disable-next-line */ }, []);
 
   /** Sugerencia automática de cliente CxC para una LX sin vincular, basada en nombres. */
   const suggestClient = (lxName: string): BillingClient | null => {
