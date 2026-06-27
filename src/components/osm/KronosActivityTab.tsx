@@ -33,9 +33,13 @@ import {
 import type { OSMClient } from "@/lib/osmClientData";
 import {
   monitoringReportsApi, monitoringAccountSettingsApi, billingClientsApi, monitoringSnapshotsApi,
+  generalSqlApi,
   type MonitoringReportMeta, type MonitoringAccountSetting, type LxStatus, type BillingClient,
-  type ServiceType, type CommType, type BrandType,
+  type ServiceType, type CommType, type BrandType, type GeneralClient,
 } from "@/lib/api";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Check, ChevronsUpDown, DatabaseZap } from "lucide-react";
 import BillingClientsManager from "./BillingClientsManager";
 import TeamNotifyDialog from "./TeamNotifyDialog";
 import { queueEmail } from "@/lib/emailService";
