@@ -317,16 +317,57 @@ export default function KronosActivityTab({ clients }: Props) {
       setDraft({ ...cur });
     } else {
       const suggested = suggestClient(name);
+      // Sugerir horario de apertura/cierre desde el reporte Kronos cargado.
+      const histRow = report?.rows.find(r => r.accountCode.trim() === code.trim());
       setDraft({
         accountCode: code, accountName: name, kind: "regular",
         lxStatus: "Activa",
         clientId: suggested?.id || null,
-        expectedOpen: null, expectedClose: null, notes: "",
+        commType: "EBS LX-EPX", // valor por defecto del parque instalado
+        expectedOpen: roundIsoToHalfHour(histRow?.lastOpen),
+        expectedClose: roundIsoToHalfHour(histRow?.lastClose),
+        notes: "",
         locationAddress: "", locationMapsUrl: "",
       });
       if (suggested) toast.info(`Cliente sugerido: ${suggested.code} — ${suggested.name}`);
     }
   };
+
+  /** Vincula una LX a un cliente leído de gSafeOne: crea/halla su BillingClient y prefija datos. */
+  const linkGeneralClient = async (gc: GeneralClient) => {
+    setGcPickerOpen(false);
+    const code = String(gc.codigo ?? gc.oid);
+    try {
+      setLinkingGc(true);
+      let bc = billingClients.find(b => b.code === code);
+      if (!bc) {
+        bc = await billingClientsApi.create({
+          code,
+          name: gc.nombre,
+          contact: gc.contacto || "",
+          phone: gc.telefono || "",
+          email: gc.email || "",
+          locationAddress: gc.direccion || "",
+          notes: [gc.rnc ? `RNC: ${gc.rnc}` : "", gc.cedula ? `Cédula: ${gc.cedula}` : ""].filter(Boolean).join(" · "),
+        });
+        setBillingClients(p => [...p, bc!]);
+      }
+      const svc = matchServiceType(gc.servicio);
+      setDraft(d => ({
+        ...d,
+        clientId: bc!.id,
+        serviceType: svc ?? d.serviceType ?? null,
+        kind: svc === "Botón de pánico" ? "panic" : (d.kind || "regular"),
+        commType: d.commType || "EBS LX-EPX",
+        locationAddress: d.locationAddress || gc.direccion || "",
+      }));
+      toast.success(`Cliente gSafeOne vinculado: ${code} — ${gc.nombre}`);
+      if (gc.servicio && !svc) toast.info(`Servicio en gSafeOne: "${gc.servicio}" (revisa el Tipo de servicio)`);
+    } catch (e: any) {
+      toast.error(`No se pudo vincular el cliente: ${e.message}`);
+    } finally { setLinkingGc(false); }
+  };
+
 
   const saveEdit = async () => {
     if (!editing) return;
