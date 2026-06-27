@@ -263,6 +263,17 @@ export default function KronosActivityTab({ clients }: Props) {
     }
   };
 
+  const loadGeneralClients = async () => {
+    try {
+      const list = await generalSqlApi.clients();
+      setGeneralClients(Array.isArray(list) ? list : []);
+    } catch (e: any) {
+      // gSafeOne puede no estar disponible: el selector manual sigue funcionando.
+      if (e.message !== "API_NOT_CONFIGURED") console.warn("GENERAL clients:", e.message);
+    }
+  };
+
+
   const loadHistory = async () => {
     try {
       const list = await monitoringReportsApi.list("kronos");
