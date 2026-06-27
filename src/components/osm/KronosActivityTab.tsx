@@ -80,6 +80,31 @@ const MUTING_LX_STATUSES = new Set<LxStatus>([
   "Prueba", "Cancelada", "Suspendida", "Dada de baja", "Sin notificaciones", "Inactiva",
 ]);
 
+/** Mapea la descripción de servicio de gSafeOne (ClienteServicio.Descripcion) a un ServiceType conocido. */
+function matchServiceType(descripcion?: string | null): ServiceType | null {
+  const d = (descripcion || "").toLowerCase();
+  if (!d) return null;
+  if (/p[áa]nico/.test(d)) return "Botón de pánico";
+  if (/incendio|fuego|fire/.test(d)) return "Panel de Incendio";
+  if (/energ|el[ée]ctric|interrup/.test(d)) return "Interrupción Energética";
+  if (/active\s*track|bast[óo]n|gps|ronda/.test(d)) return "Active Track";
+  if (/con\s*respuesta|c\/r|reacci[óo]n/.test(d)) return "Monitoreado con Respuesta";
+  if (/sin\s*respuesta|s\/r|monitore/.test(d)) return "Monitoreado sin respuesta";
+  return null;
+}
+
+/** Redondea una hora ISO a la media hora más cercana → "HH:MM" (para sugerir apertura/cierre). */
+function roundIsoToHalfHour(iso?: string | null): string | null {
+  if (!iso) return null;
+  const dt = new Date(iso);
+  if (isNaN(dt.getTime())) return null;
+  let h = dt.getHours();
+  let m = dt.getMinutes();
+  const rounded = Math.round(m / 30) * 30;
+  if (rounded === 60) { h = (h + 1) % 24; m = 0; } else { m = rounded; }
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
 const CRIT_LABEL: Record<CriticidadInactividad, string> = {
   baja: "Baja (1 día)",
   media: "Media (2 días)",
