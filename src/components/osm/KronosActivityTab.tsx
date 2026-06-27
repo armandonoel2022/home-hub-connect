@@ -1041,7 +1041,55 @@ export default function KronosActivityTab({ clients }: Props) {
                   Ubicación del cliente: {billingClientById.get(draft.clientId)?.locationAddress}
                 </p>
               )}
+
+              {/* Buscar y vincular cliente directamente desde gSafeOne (tabla Cliente) */}
+              {generalClients.length > 0 && (
+                <div className="mt-2">
+                  <Popover open={gcPickerOpen} onOpenChange={setGcPickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" role="combobox" disabled={linkingGc}
+                        className="w-full justify-between text-xs h-9 font-normal">
+                        <span className="flex items-center gap-1.5 text-muted-foreground">
+                          <DatabaseZap className="h-3.5 w-3.5 text-primary" />
+                          {linkingGc ? "Vinculando…" : `Buscar cliente en gSafeOne (${generalClients.length})`}
+                        </span>
+                        <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command filter={(value, search) => value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0}>
+                        <CommandInput placeholder="Nombre, código, RNC…" className="text-xs" />
+                        <CommandList>
+                          <CommandEmpty>Sin resultados.</CommandEmpty>
+                          <CommandGroup>
+                            {generalClients.map(gc => (
+                              <CommandItem
+                                key={gc.oid}
+                                value={`${gc.codigo ?? ""} ${gc.nombre} ${gc.rnc ?? ""} ${gc.cedula ?? ""}`}
+                                onSelect={() => linkGeneralClient(gc)}
+                                className="text-xs">
+                                <Check className={`mr-2 h-3.5 w-3.5 ${billingClients.find(b => b.code === String(gc.codigo ?? gc.oid))?.id === draft.clientId ? "opacity-100" : "opacity-0"}`} />
+                                <div className="flex flex-col">
+                                  <span className="flex items-center gap-1.5">
+                                    <span className="font-mono text-[10px] text-muted-foreground">{gc.codigo ?? "—"}</span>
+                                    <span className={gc.inactivo ? "text-muted-foreground line-through" : ""}>{gc.nombre}</span>
+                                  </span>
+                                  {gc.servicio && <span className="text-[10px] text-muted-foreground">{gc.servicio}</span>}
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Carga los datos del cliente (y sugiere el tipo de servicio) sin reingresarlos a mano.
+                  </p>
+                </div>
+              )}
             </div>
+
 
             <div className="grid grid-cols-2 gap-3">
               <div>
