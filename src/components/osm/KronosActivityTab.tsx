@@ -238,6 +238,9 @@ export default function KronosActivityTab({ clients }: Props) {
   const [showBillingMgr, setShowBillingMgr] = useState(false);
   const [notifyCtx, setNotifyCtx] = useState<{ subject: string; message: string } | null>(null);
   const [troubleshoot, setTroubleshoot] = useState<CombinedRow | null>(null);
+  const [generalClients, setGeneralClients] = useState<GeneralClient[]>([]);
+  const [gcPickerOpen, setGcPickerOpen] = useState(false);
+  const [linkingGc, setLinkingGc] = useState(false);
   const { user } = useAuth();
 
   const loadSettings = async () => {
