@@ -33,9 +33,13 @@ import {
 import type { OSMClient } from "@/lib/osmClientData";
 import {
   monitoringReportsApi, monitoringAccountSettingsApi, billingClientsApi, monitoringSnapshotsApi,
+  generalSqlApi,
   type MonitoringReportMeta, type MonitoringAccountSetting, type LxStatus, type BillingClient,
-  type ServiceType, type CommType, type BrandType,
+  type ServiceType, type CommType, type BrandType, type GeneralClient,
 } from "@/lib/api";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Check, ChevronsUpDown, DatabaseZap } from "lucide-react";
 import BillingClientsManager from "./BillingClientsManager";
 import TeamNotifyDialog from "./TeamNotifyDialog";
 import { queueEmail } from "@/lib/emailService";
@@ -75,6 +79,31 @@ const LX_STATUS_COLOR: Record<LxStatus, string> = {
 const MUTING_LX_STATUSES = new Set<LxStatus>([
   "Prueba", "Cancelada", "Suspendida", "Dada de baja", "Sin notificaciones", "Inactiva",
 ]);
+
+/** Mapea la descripción de servicio de gSafeOne (ClienteServicio.Descripcion) a un ServiceType conocido. */
+function matchServiceType(descripcion?: string | null): ServiceType | null {
+  const d = (descripcion || "").toLowerCase();
+  if (!d) return null;
+  if (/p[áa]nico/.test(d)) return "Botón de pánico";
+  if (/incendio|fuego|fire/.test(d)) return "Panel de Incendio";
+  if (/energ|el[ée]ctric|interrup/.test(d)) return "Interrupción Energética";
+  if (/active\s*track|bast[óo]n|gps|ronda/.test(d)) return "Active Track";
+  if (/con\s*respuesta|c\/r|reacci[óo]n/.test(d)) return "Monitoreado con Respuesta";
+  if (/sin\s*respuesta|s\/r|monitore/.test(d)) return "Monitoreado sin respuesta";
+  return null;
+}
+
+/** Redondea una hora ISO a la media hora más cercana → "HH:MM" (para sugerir apertura/cierre). */
+function roundIsoToHalfHour(iso?: string | null): string | null {
+  if (!iso) return null;
+  const dt = new Date(iso);
+  if (isNaN(dt.getTime())) return null;
+  let h = dt.getHours();
+  let m = dt.getMinutes();
+  const rounded = Math.round(m / 30) * 30;
+  if (rounded === 60) { h = (h + 1) % 24; m = 0; } else { m = rounded; }
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
 
 const CRIT_LABEL: Record<CriticidadInactividad, string> = {
   baja: "Baja (1 día)",
@@ -209,6 +238,9 @@ export default function KronosActivityTab({ clients }: Props) {
   const [showBillingMgr, setShowBillingMgr] = useState(false);
   const [notifyCtx, setNotifyCtx] = useState<{ subject: string; message: string } | null>(null);
   const [troubleshoot, setTroubleshoot] = useState<CombinedRow | null>(null);
+  const [generalClients, setGeneralClients] = useState<GeneralClient[]>([]);
+  const [gcPickerOpen, setGcPickerOpen] = useState(false);
+  const [linkingGc, setLinkingGc] = useState(false);
   const { user } = useAuth();
 
   const loadSettings = async () => {
@@ -230,6 +262,17 @@ export default function KronosActivityTab({ clients }: Props) {
       if (e.message !== "API_NOT_CONFIGURED") console.warn("BillingClients:", e.message);
     }
   };
+
+  const loadGeneralClients = async () => {
+    try {
+      const list = await generalSqlApi.clients();
+      setGeneralClients(Array.isArray(list) ? list : []);
+    } catch (e: any) {
+      // gSafeOne puede no estar disponible: el selector manual sigue funcionando.
+      if (e.message !== "API_NOT_CONFIGURED") console.warn("GENERAL clients:", e.message);
+    }
+  };
+
 
   const loadHistory = async () => {
     try {
@@ -253,7 +296,7 @@ export default function KronosActivityTab({ clients }: Props) {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { loadSettings(); loadBillingClients(); loadHistory(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { loadSettings(); loadBillingClients(); loadGeneralClients(); loadHistory(); /* eslint-disable-next-line */ }, []);
 
   /** Sugerencia automática de cliente CxC para una LX sin vincular, basada en nombres. */
   const suggestClient = (lxName: string): BillingClient | null => {
@@ -274,16 +317,57 @@ export default function KronosActivityTab({ clients }: Props) {
       setDraft({ ...cur });
     } else {
       const suggested = suggestClient(name);
+      // Sugerir horario de apertura/cierre desde el reporte Kronos cargado.
+      const histRow = report?.rows.find(r => r.accountCode.trim() === code.trim());
       setDraft({
         accountCode: code, accountName: name, kind: "regular",
         lxStatus: "Activa",
         clientId: suggested?.id || null,
-        expectedOpen: null, expectedClose: null, notes: "",
+        commType: "EBS LX-EPX", // valor por defecto del parque instalado
+        expectedOpen: roundIsoToHalfHour(histRow?.lastOpen),
+        expectedClose: roundIsoToHalfHour(histRow?.lastClose),
+        notes: "",
         locationAddress: "", locationMapsUrl: "",
       });
       if (suggested) toast.info(`Cliente sugerido: ${suggested.code} — ${suggested.name}`);
     }
   };
+
+  /** Vincula una LX a un cliente leído de gSafeOne: crea/halla su BillingClient y prefija datos. */
+  const linkGeneralClient = async (gc: GeneralClient) => {
+    setGcPickerOpen(false);
+    const code = String(gc.codigo ?? gc.oid);
+    try {
+      setLinkingGc(true);
+      let bc = billingClients.find(b => b.code === code);
+      if (!bc) {
+        bc = await billingClientsApi.create({
+          code,
+          name: gc.nombre,
+          contact: gc.contacto || "",
+          phone: gc.telefono || "",
+          email: gc.email || "",
+          locationAddress: gc.direccion || "",
+          notes: [gc.rnc ? `RNC: ${gc.rnc}` : "", gc.cedula ? `Cédula: ${gc.cedula}` : ""].filter(Boolean).join(" · "),
+        });
+        setBillingClients(p => [...p, bc!]);
+      }
+      const svc = matchServiceType(gc.servicio);
+      setDraft(d => ({
+        ...d,
+        clientId: bc!.id,
+        serviceType: svc ?? d.serviceType ?? null,
+        kind: svc === "Botón de pánico" ? "panic" : (d.kind || "regular"),
+        commType: d.commType || "EBS LX-EPX",
+        locationAddress: d.locationAddress || gc.direccion || "",
+      }));
+      toast.success(`Cliente gSafeOne vinculado: ${code} — ${gc.nombre}`);
+      if (gc.servicio && !svc) toast.info(`Servicio en gSafeOne: "${gc.servicio}" (revisa el Tipo de servicio)`);
+    } catch (e: any) {
+      toast.error(`No se pudo vincular el cliente: ${e.message}`);
+    } finally { setLinkingGc(false); }
+  };
+
 
   const saveEdit = async () => {
     if (!editing) return;
@@ -957,7 +1041,55 @@ export default function KronosActivityTab({ clients }: Props) {
                   Ubicación del cliente: {billingClientById.get(draft.clientId)?.locationAddress}
                 </p>
               )}
+
+              {/* Buscar y vincular cliente directamente desde gSafeOne (tabla Cliente) */}
+              {generalClients.length > 0 && (
+                <div className="mt-2">
+                  <Popover open={gcPickerOpen} onOpenChange={setGcPickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" role="combobox" disabled={linkingGc}
+                        className="w-full justify-between text-xs h-9 font-normal">
+                        <span className="flex items-center gap-1.5 text-muted-foreground">
+                          <DatabaseZap className="h-3.5 w-3.5 text-primary" />
+                          {linkingGc ? "Vinculando…" : `Buscar cliente en gSafeOne (${generalClients.length})`}
+                        </span>
+                        <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command filter={(value, search) => value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0}>
+                        <CommandInput placeholder="Nombre, código, RNC…" className="text-xs" />
+                        <CommandList>
+                          <CommandEmpty>Sin resultados.</CommandEmpty>
+                          <CommandGroup>
+                            {generalClients.map(gc => (
+                              <CommandItem
+                                key={gc.oid}
+                                value={`${gc.codigo ?? ""} ${gc.nombre} ${gc.rnc ?? ""} ${gc.cedula ?? ""}`}
+                                onSelect={() => linkGeneralClient(gc)}
+                                className="text-xs">
+                                <Check className={`mr-2 h-3.5 w-3.5 ${billingClients.find(b => b.code === String(gc.codigo ?? gc.oid))?.id === draft.clientId ? "opacity-100" : "opacity-0"}`} />
+                                <div className="flex flex-col">
+                                  <span className="flex items-center gap-1.5">
+                                    <span className="font-mono text-[10px] text-muted-foreground">{gc.codigo ?? "—"}</span>
+                                    <span className={gc.inactivo ? "text-muted-foreground line-through" : ""}>{gc.nombre}</span>
+                                  </span>
+                                  {gc.servicio && <span className="text-[10px] text-muted-foreground">{gc.servicio}</span>}
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Carga los datos del cliente (y sugiere el tipo de servicio) sin reingresarlos a mano.
+                  </p>
+                </div>
+              )}
             </div>
+
 
             <div className="grid grid-cols-2 gap-3">
               <div>

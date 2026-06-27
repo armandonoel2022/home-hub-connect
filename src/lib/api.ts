@@ -1117,7 +1117,24 @@ export const generalSqlApi = {
   expediente: (fecha?: string) =>
     apiFetch<GeneralExpediente>(`/general-sql/expediente${fecha ? `?fecha=${encodeURIComponent(fecha)}` : ""}`),
   schemaKeys: () => apiFetch<Array<{ tabla: string; tipo: string; columna: string; restriccion: string }>>("/general-sql/schema-keys"),
+  clients: () => apiFetch<GeneralClient[]>("/general-sql/clients"),
 };
+
+// Cliente leído desde gSafeOne (tabla Cliente + ClienteServicio.Descripcion)
+export interface GeneralClient {
+  oid: number;
+  codigo: number | null;
+  nombre: string;
+  direccion?: string | null;
+  telefono?: string | null;
+  email?: string | null;
+  rnc?: string | null;
+  cedula?: string | null;
+  contacto?: string | null;
+  inactivo?: boolean;
+  servicio?: string | null;
+}
+
 
 // ─── Expediente Overlay (capa editable local sobre GENERAL) ───
 export interface ExpedienteOverlayEntry {

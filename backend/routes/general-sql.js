@@ -333,6 +333,68 @@ router.get('/employees', auth, guard, async (req, res) => {
   } catch (e) { res.status(502).json({ message: e.message }); }
 });
 
+// ─── Clientes (tabla Cliente + último servicio en ClienteServicio) ───
+// Alimenta el selector de "Cliente CxC" en Seguimiento Clientes Monitoreo para
+// no tener que reingresar los datos a mano. La descripción del servicio activo
+// más reciente (ClienteServicio.Descripcion) se usa para sugerir el "Tipo de
+// servicio" de la LX.
+router.get('/clients', auth, guard, async (req, res) => {
+  try {
+    const codigoExpr = await optionalColumnExpr('Cliente', 'c', 'Codigo', 'Codigo');
+    const inactivoExpr = await optionalColumnExpr('Cliente', 'c', 'Inactivo', 'Inactivo', '0');
+    const rncExpr = await optionalColumnExpr('Cliente', 'c', 'RNC', 'RNC');
+    const cedExpr = await optionalColumnExpr('Cliente', 'c', 'Cedula', 'Cedula');
+    const contExpr = await optionalColumnExpr('Cliente', 'c', 'Contacto', 'Contacto');
+    const dirExpr = await optionalColumnExpr('Cliente', 'c', 'Direccion', 'Direccion');
+    const telExpr = await optionalColumnExpr('Cliente', 'c', 'Telefono', 'Telefono');
+    const emailExpr = await optionalColumnExpr('Cliente', 'c', 'Email', 'Email');
+
+    // ¿Existe la tabla ClienteServicio? Si no, omitimos el OUTER APPLY.
+    let servicioExpr = 'NULL AS [Servicio]';
+    let outerApply = '';
+    try {
+      const csCols = await tableColumnsMap('ClienteServicio');
+      if (csCols && csCols.size > 0) {
+        servicioExpr = 'cs.[Descripcion] AS [Servicio]';
+        outerApply =
+          ` OUTER APPLY (
+              SELECT TOP 1 s.[Descripcion]
+              FROM [ClienteServicio] s
+              WHERE s.[Cliente] = c.[OID] AND s.[GCRecord] IS NULL
+                AND (s.[FechaFin] IS NULL OR s.[FechaFin] >= GETDATE())
+              ORDER BY s.[FechaInicio] DESC
+            ) cs`;
+      }
+    } catch (_) { /* sin tabla de servicios: se deja NULL */ }
+
+    const rows = await sql.query(
+      `SELECT c.[OID], ${codigoExpr}, c.[Nombre], ${dirExpr}, ${telExpr},
+              ${emailExpr}, ${rncExpr}, ${cedExpr}, ${contExpr}, ${inactivoExpr},
+              ${servicioExpr}
+       FROM [Cliente] c${outerApply}
+       WHERE c.[GCRecord] IS NULL
+       ORDER BY c.[Nombre]`
+    );
+
+    const mapped = rows.map(r => ({
+      oid: r.OID,
+      codigo: r.Codigo ?? null,
+      nombre: (r.Nombre || '').trim(),
+      direccion: r.Direccion ?? null,
+      telefono: r.Telefono ?? null,
+      email: r.Email ?? null,
+      rnc: r.RNC ?? null,
+      cedula: r.Cedula ?? null,
+      contacto: r.Contacto ?? null,
+      inactivo: !!r.Inactivo,
+      servicio: r.Servicio ?? null,
+    }));
+    res.json(mapped);
+  } catch (e) { res.status(502).json({ message: e.message }); }
+});
+
+
+
 // ─── Préstamos (tabla Prestamo) ───
 router.get('/loans', auth, guard, async (req, res) => {
   try {
