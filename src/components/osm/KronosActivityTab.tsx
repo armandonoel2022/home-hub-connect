@@ -669,7 +669,7 @@ export default function KronosActivityTab({ clients }: Props) {
       }
       return true;
     });
-  }, [combined, filterCrit, search]);
+  }, [combined, filterCrit, search, changeByCode]);
 
 
   const exportCallList = () => {
