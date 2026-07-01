@@ -30,8 +30,9 @@ import {
 import { toast } from "sonner";
 import {
   parsePunchHtmFile, evaluatePunchReport,
-  type PunchParsedReport, type ExpectedRound,
+  type PunchParsedReport, type ExpectedRound, type PunchClientSummary,
 } from "@/lib/punchHtmParser";
+import type { KronosParsedReport } from "@/lib/kronosHtmParser";
 import {
   monitoringReportsApi, punchRulesApi, monitoringAccountSettingsApi,
   type MonitoringReportMeta, type PunchRule, type PunchRoundConfig, type MonitoringAccountSetting,
