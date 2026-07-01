@@ -1444,3 +1444,14 @@ function KpiCard({ label, value, color, active, onClick }: {
     </Card>
   );
 }
+
+function ChangeBadge({ change }: { change?: AccountChange }) {
+  if (!change) return <span className="text-muted-foreground text-xs">—</span>;
+  const critLabel = (c: string | null) => c === "ok" ? "Al día" : c === "baja" ? "Baja" : c === "media" ? "Media" : c === "alta" ? "Sin señal" : "—";
+  const tip = `Antes: ${critLabel(change.prevCrit)} → Ahora: ${critLabel(change.currCrit)}`;
+  if (change.direction === "worse") return <span title={tip} className="text-red-400 font-bold">↑</span>;
+  if (change.direction === "better") return <span title={tip} className="text-emerald-400 font-bold">↓</span>;
+  if (change.direction === "new") return <span title="Cuenta nueva (no estaba ayer)" className="text-cyan-400 font-bold">●</span>;
+  if (change.powerChanged || change.newLowBattery) return <span title="Cambio de energía" className="text-orange-400">🔌</span>;
+  return <span className="text-muted-foreground text-xs">=</span>;
+}
