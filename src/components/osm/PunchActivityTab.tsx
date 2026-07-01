@@ -128,7 +128,20 @@ export default function PunchActivityTab() {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { loadRules(); loadSettings(); loadHistory(); /* eslint-disable-next-line */ }, []);
+  const loadLatestKronos = async () => {
+    try {
+      const list = await monitoringReportsApi.list("kronos");
+      if (list.length === 0) return;
+      const latest = list[0];
+      const doc = await monitoringReportsApi.get<KronosParsedReport>(latest.id);
+      setKronosReport(doc.payload);
+      setKronosMeta({ id: doc.id, kind: doc.kind, reportDate: doc.reportDate, fileName: doc.fileName, uploadedAt: doc.uploadedAt, uploadedBy: doc.uploadedBy });
+    } catch (e: any) {
+      if (e.message !== "API_NOT_CONFIGURED") console.warn("Kronos p/Punches:", e.message);
+    }
+  };
+
+  useEffect(() => { loadRules(); loadSettings(); loadHistory(); loadLatestKronos(); /* eslint-disable-next-line */ }, []);
 
   /** Códigos de cuenta marcados como Active Track en Actividad Kronos.
    *  Incluye: (a) LX con serviceType="Active Track" directamente,
