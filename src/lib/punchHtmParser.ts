@@ -40,6 +40,10 @@ export interface PunchClientSummary {
   expectedRounds: ExpectedRound[];   // [] si no aplica para este cliente
   ruleLabel?: string;
   compliance: "ok" | "partial" | "missed" | "no-rules";
+  // Origen de los datos: reporte de punches (.htm) o derivado de Actividad Kronos.
+  source?: "punch-report" | "kronos";
+  kronosDaysSince?: number | null;   // días sin señal (si viene de Kronos)
+  kronosCrit?: "ok" | "baja" | "media" | "alta"; // criticidad Kronos
 }
 
 export interface PunchParsedReport {
