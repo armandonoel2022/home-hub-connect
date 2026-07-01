@@ -627,6 +627,10 @@ export default function KronosActivityTab({ clients }: Props) {
     };
   }, [combined]);
 
+  // Comparación día a día (reporte actual vs. reporte anterior)
+  const diff = useMemo<KronosDiff>(() => diffKronosReports(prevReport, report), [prevReport, report]);
+  const changeByCode = diff.byCode;
+
   const filtered = useMemo(() => {
     const isInactiveCancelled = (r: CombinedRow) => !!r.setting?.lxStatus && INACTIVE_CANCELLED.has(r.setting.lxStatus);
     const isDeleted = (r: CombinedRow) => !!r.setting?.lxStatus && DELETED_STATUSES.has(r.setting.lxStatus);
