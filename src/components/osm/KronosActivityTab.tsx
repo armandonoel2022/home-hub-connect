@@ -145,7 +145,7 @@ interface CombinedRow {
   closePunt: { status: PuntStatus; diffMin: number | null };
 }
 
-type FilterKey = "all" | "ok" | CriticidadInactividad | "discrepancia" | "panic" | "baton" | "muted" | "inactive-cancelled" | "deleted" | "unlinked" | "tardio" | "power";
+type FilterKey = "all" | "ok" | CriticidadInactividad | "discrepancia" | "panic" | "baton" | "muted" | "inactive-cancelled" | "deleted" | "unlinked" | "tardio" | "power" | "chg-worse" | "chg-better" | "chg-new" | "chg-gone";
 
 const INACTIVE_CANCELLED = new Set<LxStatus>(["Cancelada", "Inactiva"]);
 const DELETED_STATUSES = new Set<LxStatus>(["Dada de baja"]);
