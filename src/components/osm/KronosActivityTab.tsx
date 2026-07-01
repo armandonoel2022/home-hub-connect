@@ -648,6 +648,10 @@ export default function KronosActivityTab({ clients }: Props) {
         else if (filterCrit === "tardio") { if (r.noOpenClose || r.isMuted) return false; if (!["late", "verylate", "missing"].includes(r.openPunt.status) && !["late", "verylate", "missing"].includes(r.closePunt.status)) return false; }
         else if (filterCrit === "power") { if (r.powerOk !== false && !r.lowBattery) return false; }
         else if (filterCrit === "unlinked") { if (r.setting?.clientId) return false; }
+        else if (filterCrit === "chg-worse") { if (changeByCode.get(r.accountCode.trim())?.direction !== "worse") return false; }
+        else if (filterCrit === "chg-better") { if (changeByCode.get(r.accountCode.trim())?.direction !== "better") return false; }
+        else if (filterCrit === "chg-new") { if (changeByCode.get(r.accountCode.trim())?.direction !== "new") return false; }
+        else if (filterCrit === "chg-gone") { return false; /* desaparecidas no están en combined */ }
         else if (filterCrit !== "all") {
           if (r.noOpenClose || r.isMuted) return false;
           if (r.criticidad !== filterCrit) return false;
