@@ -236,6 +236,8 @@ export default function KronosActivityTab({ clients }: Props) {
   const [history, setHistory] = useState<MonitoringReportMeta[]>([]);
   const [activeReportId, setActiveReportId] = useState<string | null>(null);
   const [reportMeta, setReportMeta] = useState<MonitoringReportMeta | null>(null);
+  const [prevReport, setPrevReport] = useState<KronosParsedReport | null>(null);
+  const [compareReportId, setCompareReportId] = useState<string | null>(null);
   const [showBillingMgr, setShowBillingMgr] = useState(false);
   const [notifyCtx, setNotifyCtx] = useState<{ subject: string; message: string } | null>(null);
   const [troubleshoot, setTroubleshoot] = useState<CombinedRow | null>(null);
