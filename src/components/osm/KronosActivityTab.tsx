@@ -898,6 +898,7 @@ export default function KronosActivityTab({ clients }: Props) {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[40px] text-center text-xs" title="Cambio vs. día anterior">Δ</TableHead>
                     <TableHead className="w-[80px]">Cuenta LX</TableHead>
                     <TableHead>Nombre LX</TableHead>
                     <TableHead className="text-xs">Cliente CxC</TableHead>
