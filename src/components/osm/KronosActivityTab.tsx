@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import {
   parseKronosHtmFile, type KronosParsedReport, type CriticidadInactividad,
 } from "@/lib/kronosHtmParser";
+import { diffKronosReports, type KronosDiff, type AccountChange } from "@/lib/kronosDiff";
 import type { OSMClient } from "@/lib/osmClientData";
 import {
   monitoringReportsApi, monitoringAccountSettingsApi, billingClientsApi, monitoringSnapshotsApi,
