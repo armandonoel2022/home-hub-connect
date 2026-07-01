@@ -41,6 +41,15 @@ import OperatorsTab from "@/components/osm/OperatorsTab";
 import TrendsTab from "@/components/osm/TrendsTab";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RePieChart, Pie, Cell, Legend } from "recharts";
 import { toast } from "sonner";
+import { monitoringReportsApi } from "@/lib/api";
+import type { KronosParsedReport, KronosAccountRow } from "@/lib/kronosHtmParser";
+import { assessIncidentVsKronos, type IncidentKronosVerdict } from "@/lib/incidentKronosCheck";
+
+const INC_KRONOS_BADGE: Record<IncidentKronosVerdict, string> = {
+  "persiste": "bg-red-500/10 text-red-400 border-red-500/20",
+  "posible-resuelta": "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+  "sin-datos": "bg-muted text-muted-foreground border-border",
+};
 
 const STATUS_COLORS: Record<ClientMonitoringStatus, string> = {
   "Activo": "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
