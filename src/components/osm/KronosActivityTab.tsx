@@ -929,6 +929,7 @@ export default function KronosActivityTab({ clients }: Props) {
                       : r.isBaton ? "bg-cyan-500/5"
                       : r.isMuted ? "opacity-60" : ""
                     }>
+                      <TableCell className="text-center"><ChangeBadge change={diff.hasPrev ? changeByCode.get(r.accountCode.trim()) : undefined} /></TableCell>
                       <TableCell className="font-mono text-xs">{r.accountCode}</TableCell>
                       <TableCell className="font-medium text-sm">{r.osm?.businessName || r.accountName}</TableCell>
                       <TableCell className="text-xs">
