@@ -30,8 +30,9 @@ import {
 import { toast } from "sonner";
 import {
   parsePunchHtmFile, evaluatePunchReport,
-  type PunchParsedReport, type ExpectedRound,
+  type PunchParsedReport, type ExpectedRound, type PunchClientSummary,
 } from "@/lib/punchHtmParser";
+import type { KronosParsedReport } from "@/lib/kronosHtmParser";
 import {
   monitoringReportsApi, punchRulesApi, monitoringAccountSettingsApi,
   type MonitoringReportMeta, type PunchRule, type PunchRoundConfig, type MonitoringAccountSetting,
@@ -84,6 +85,8 @@ export default function PunchActivityTab() {
   const [history, setHistory] = useState<MonitoringReportMeta[]>([]);
   const [activeReportId, setActiveReportId] = useState<string | null>(null);
   const [meta, setMeta] = useState<MonitoringReportMeta | null>(null);
+  const [kronosReport, setKronosReport] = useState<KronosParsedReport | null>(null);
+  const [kronosMeta, setKronosMeta] = useState<MonitoringReportMeta | null>(null);
   const [filter, setFilter] = useState<"all" | "missed" | "partial" | "ok" | "no-rules" | "baton">("all");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -125,7 +128,20 @@ export default function PunchActivityTab() {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { loadRules(); loadSettings(); loadHistory(); /* eslint-disable-next-line */ }, []);
+  const loadLatestKronos = async () => {
+    try {
+      const list = await monitoringReportsApi.list("kronos");
+      if (list.length === 0) return;
+      const latest = list[0];
+      const doc = await monitoringReportsApi.get<KronosParsedReport>(latest.id);
+      setKronosReport(doc.payload);
+      setKronosMeta({ id: doc.id, kind: doc.kind, reportDate: doc.reportDate, fileName: doc.fileName, uploadedAt: doc.uploadedAt, uploadedBy: doc.uploadedBy });
+    } catch (e: any) {
+      if (e.message !== "API_NOT_CONFIGURED") console.warn("Kronos p/Punches:", e.message);
+    }
+  };
+
+  useEffect(() => { loadRules(); loadSettings(); loadHistory(); loadLatestKronos(); /* eslint-disable-next-line */ }, []);
 
   /** Códigos de cuenta marcados como Active Track en Actividad Kronos.
    *  Incluye: (a) LX con serviceType="Active Track" directamente,
@@ -147,7 +163,37 @@ export default function PunchActivityTab() {
   }, [settings]);
 
   // Reevaluar cuando cambien las reglas o el reporte
-  const report = useMemo(() => rawReport ? evaluatePunchReport(rawReport, rules) : null, [rawReport, rules]);
+  const baseReport = useMemo(() => rawReport ? evaluatePunchReport(rawReport, rules) : null, [rawReport, rules]);
+
+  /** Cuentas Active Track detectadas en el último reporte de Actividad Kronos
+   *  que NO tienen punches en el reporte cargado. Se agregan para no tener
+   *  que ingresarlas a mano y para ver su última señal. */
+  const kronosActiveTrack = useMemo<PunchClientSummary[]>(() => {
+    if (!kronosReport) return [];
+    const present = new Set((baseReport?.clients || []).map(c => c.accountCode.trim()));
+    return kronosReport.rows
+      .filter(r => batonCodes.has(r.accountCode.trim()) && !present.has(r.accountCode.trim()))
+      .map(r => ({
+        accountCode: r.accountCode,
+        accountName: r.accountName,
+        punches: [],
+        uniquePoints: [],
+        firstPunch: null,
+        lastPunch: r.lastSignal,
+        expectedRounds: [],
+        compliance: "no-rules" as const,
+        source: "kronos" as const,
+        kronosDaysSince: r.daysSince,
+        kronosCrit: r.criticidad === "ok" ? "ok" : r.criticidad,
+      }));
+  }, [kronosReport, baseReport, batonCodes]);
+
+  // Reporte visible = punches cargados + Active Track derivados de Kronos
+  const report = useMemo(() => {
+    if (!baseReport) return null;
+    const withSource = baseReport.clients.map(c => ({ ...c, source: c.source ?? ("punch-report" as const) }));
+    return { ...baseReport, clients: [...withSource, ...kronosActiveTrack] };
+  }, [baseReport, kronosActiveTrack]);
 
   const handleFile = async (file: File) => {
     setLoading(true);
@@ -257,6 +303,16 @@ export default function PunchActivityTab() {
                 </Button>
               </div>
             )}
+
+            {report && kronosActiveTrack.length > 0 && (
+              <div className="flex items-start gap-2 pt-2 border-t border-border/50 text-xs text-amber-500">
+                <Footprints className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                <span>
+                  Se agregaron <strong>{kronosActiveTrack.length}</strong> cuentas Active Track detectadas en
+                  Actividad Kronos{kronosMeta ? ` (reporte del ${kronosMeta.reportDate})` : ""} que aún no tienen punches.
+                </span>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -307,6 +363,11 @@ export default function PunchActivityTab() {
                               <span>{c.accountName}</span>
                               {batonCodes.has(c.accountCode) && (
                                 <Badge variant="outline" className="text-cyan-400 border-cyan-500/30 text-[10px]">🛰️ Active Track</Badge>
+                              )}
+                              {c.source === "kronos" && (
+                                <Badge variant="outline" className="text-amber-400 border-amber-500/30 text-[10px]">
+                                  desde Kronos · sin punches{typeof c.kronosDaysSince === "number" ? ` · ${c.kronosDaysSince}d s/señal` : ""}
+                                </Badge>
                               )}
                             </div>
                             <div className="text-xs text-muted-foreground font-mono">{c.accountCode}</div>

@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import {
   parseKronosHtmFile, type KronosParsedReport, type CriticidadInactividad,
 } from "@/lib/kronosHtmParser";
+import { diffKronosReports, type KronosDiff, type AccountChange } from "@/lib/kronosDiff";
 import type { OSMClient } from "@/lib/osmClientData";
 import {
   monitoringReportsApi, monitoringAccountSettingsApi, billingClientsApi, monitoringSnapshotsApi,
@@ -144,7 +145,7 @@ interface CombinedRow {
   closePunt: { status: PuntStatus; diffMin: number | null };
 }
 
-type FilterKey = "all" | "ok" | CriticidadInactividad | "discrepancia" | "panic" | "baton" | "muted" | "inactive-cancelled" | "deleted" | "unlinked" | "tardio" | "power";
+type FilterKey = "all" | "ok" | CriticidadInactividad | "discrepancia" | "panic" | "baton" | "muted" | "inactive-cancelled" | "deleted" | "unlinked" | "tardio" | "power" | "chg-worse" | "chg-better" | "chg-new" | "chg-gone";
 
 const INACTIVE_CANCELLED = new Set<LxStatus>(["Cancelada", "Inactiva"]);
 const DELETED_STATUSES = new Set<LxStatus>(["Dada de baja"]);
@@ -235,6 +236,8 @@ export default function KronosActivityTab({ clients }: Props) {
   const [history, setHistory] = useState<MonitoringReportMeta[]>([]);
   const [activeReportId, setActiveReportId] = useState<string | null>(null);
   const [reportMeta, setReportMeta] = useState<MonitoringReportMeta | null>(null);
+  const [prevReport, setPrevReport] = useState<KronosParsedReport | null>(null);
+  const [compareReportId, setCompareReportId] = useState<string | null>(null);
   const [showBillingMgr, setShowBillingMgr] = useState(false);
   const [notifyCtx, setNotifyCtx] = useState<{ subject: string; message: string } | null>(null);
   const [troubleshoot, setTroubleshoot] = useState<CombinedRow | null>(null);
@@ -278,22 +281,46 @@ export default function KronosActivityTab({ clients }: Props) {
     try {
       const list = await monitoringReportsApi.list("kronos");
       setHistory(list);
-      if (!activeReportId && list.length > 0) await loadReport(list[0].id);
+      if (!activeReportId && list.length > 0) await loadReport(list[0].id, list);
     } catch (e: any) {
       if (e.message !== "API_NOT_CONFIGURED") console.warn("Historial Kronos:", e.message);
     }
   };
 
-  const loadReport = async (id: string) => {
+  /** Carga el reporte anterior (por fecha) para la comparación día a día. */
+  const loadComparison = async (currentId: string, histList: MonitoringReportMeta[]) => {
+    const sorted = [...histList].sort((a, b) => (b.reportDate || "").localeCompare(a.reportDate || ""));
+    const idx = sorted.findIndex(h => h.id === currentId);
+    const prevMeta = idx >= 0 ? sorted.slice(idx + 1).find(h => h.id !== currentId) : undefined;
+    if (!prevMeta) { setPrevReport(null); setCompareReportId(null); return; }
+    try {
+      const prevDoc = await monitoringReportsApi.get<KronosParsedReport>(prevMeta.id);
+      setPrevReport(prevDoc.payload);
+      setCompareReportId(prevDoc.id);
+    } catch { setPrevReport(null); setCompareReportId(null); }
+  };
+
+  const loadReport = async (id: string, histList?: MonitoringReportMeta[]) => {
     setLoading(true);
     try {
       const doc = await monitoringReportsApi.get<KronosParsedReport>(id);
       setReport(doc.payload);
       setActiveReportId(doc.id);
       setReportMeta({ id: doc.id, kind: doc.kind, reportDate: doc.reportDate, fileName: doc.fileName, uploadedAt: doc.uploadedAt, uploadedBy: doc.uploadedBy });
+      await loadComparison(doc.id, histList || history);
     } catch (e: any) {
       toast.error(`Error al cargar reporte: ${e.message}`);
     } finally { setLoading(false); }
+  };
+
+  /** Cambia manualmente contra qué reporte comparar. */
+  const changeComparison = async (id: string) => {
+    if (id === "none") { setPrevReport(null); setCompareReportId(null); return; }
+    try {
+      const prevDoc = await monitoringReportsApi.get<KronosParsedReport>(id);
+      setPrevReport(prevDoc.payload);
+      setCompareReportId(prevDoc.id);
+    } catch (e: any) { toast.error(`No se pudo cargar el reporte de comparación: ${e.message}`); }
   };
 
   useEffect(() => { loadSettings(); loadBillingClients(); loadGeneralClients(); loadHistory(); /* eslint-disable-next-line */ }, []);
@@ -445,7 +472,9 @@ export default function KronosActivityTab({ clients }: Props) {
         });
         setActiveReportId(saved.id);
         setReportMeta({ id: saved.id, kind: saved.kind, reportDate: saved.reportDate, fileName: saved.fileName, uploadedAt: saved.uploadedAt, uploadedBy: saved.uploadedBy });
-        await loadHistory();
+        const freshList = await monitoringReportsApi.list("kronos");
+        setHistory(freshList);
+        await loadComparison(saved.id, freshList);
         toast.success(`Reporte guardado (${parsed.rows.length} cuentas) — visible para todo el equipo`);
         // Snapshot automático para tendencias
         try {
@@ -598,6 +627,10 @@ export default function KronosActivityTab({ clients }: Props) {
     };
   }, [combined]);
 
+  // Comparación día a día (reporte actual vs. reporte anterior)
+  const diff = useMemo<KronosDiff>(() => diffKronosReports(prevReport, report), [prevReport, report]);
+  const changeByCode = diff.byCode;
+
   const filtered = useMemo(() => {
     const isInactiveCancelled = (r: CombinedRow) => !!r.setting?.lxStatus && INACTIVE_CANCELLED.has(r.setting.lxStatus);
     const isDeleted = (r: CombinedRow) => !!r.setting?.lxStatus && DELETED_STATUSES.has(r.setting.lxStatus);
@@ -615,6 +648,10 @@ export default function KronosActivityTab({ clients }: Props) {
         else if (filterCrit === "tardio") { if (r.noOpenClose || r.isMuted) return false; if (!["late", "verylate", "missing"].includes(r.openPunt.status) && !["late", "verylate", "missing"].includes(r.closePunt.status)) return false; }
         else if (filterCrit === "power") { if (r.powerOk !== false && !r.lowBattery) return false; }
         else if (filterCrit === "unlinked") { if (r.setting?.clientId) return false; }
+        else if (filterCrit === "chg-worse") { if (changeByCode.get(r.accountCode.trim())?.direction !== "worse") return false; }
+        else if (filterCrit === "chg-better") { if (changeByCode.get(r.accountCode.trim())?.direction !== "better") return false; }
+        else if (filterCrit === "chg-new") { if (changeByCode.get(r.accountCode.trim())?.direction !== "new") return false; }
+        else if (filterCrit === "chg-gone") { return false; /* desaparecidas no están en combined */ }
         else if (filterCrit !== "all") {
           if (r.noOpenClose || r.isMuted) return false;
           if (r.criticidad !== filterCrit) return false;
@@ -632,7 +669,7 @@ export default function KronosActivityTab({ clients }: Props) {
       }
       return true;
     });
-  }, [combined, filterCrit, search]);
+  }, [combined, filterCrit, search, changeByCode]);
 
 
   const exportCallList = () => {
@@ -703,6 +740,24 @@ export default function KronosActivityTab({ clients }: Props) {
                   </SelectContent>
                 </Select>
                 <span className="text-xs text-muted-foreground">{history.length} reportes guardados</span>
+                {history.length > 1 && (
+                  <>
+                    <Label className="text-xs whitespace-nowrap ml-2">Comparar con:</Label>
+                    <Select value={compareReportId || "none"} onValueChange={changeComparison}>
+                      <SelectTrigger className="w-[240px] h-8 text-xs">
+                        <SelectValue placeholder="Reporte anterior" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none" className="text-xs">Sin comparación</SelectItem>
+                        {history.filter(h => h.id !== activeReportId).map(h => (
+                          <SelectItem key={h.id} value={h.id} className="text-xs">
+                            {h.reportDate} · {h.fileName || "reporte"}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </>
+                )}
               </div>
             )}
 
@@ -753,6 +808,39 @@ export default function KronosActivityTab({ clients }: Props) {
             <KpiCard label="🔇 Silenciadas" value={stats.muted} color="text-muted-foreground"
               active={filterCrit === "muted"} onClick={() => setFilterCrit("muted")} />
           </div>
+
+          {diff.hasPrev && (
+            <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <AlertTriangle className="h-4 w-4 text-primary" />
+                Cambios de un día para otro
+                <span className="text-xs text-muted-foreground font-normal">
+                  (vs. reporte del {prevReport?.reportDate ? new Date(prevReport.reportDate).toLocaleDateString("es-DO") : "anterior"})
+                </span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <KpiCard label="↑ Empeoraron" value={diff.worse.length} color="text-red-400"
+                  active={filterCrit === "chg-worse"} onClick={() => setFilterCrit(filterCrit === "chg-worse" ? "all" : "chg-worse")} />
+                <KpiCard label="↓ Mejoraron" value={diff.better.length} color="text-emerald-400"
+                  active={filterCrit === "chg-better"} onClick={() => setFilterCrit(filterCrit === "chg-better" ? "all" : "chg-better")} />
+                <KpiCard label="● Nuevas" value={diff.added.length} color="text-cyan-400"
+                  active={filterCrit === "chg-new"} onClick={() => setFilterCrit(filterCrit === "chg-new" ? "all" : "chg-new")} />
+                <KpiCard label="✕ Dejaron de aparecer" value={diff.disappeared.length} color="text-muted-foreground"
+                  active={false} onClick={() => {}} />
+                <KpiCard label="🔌 Cambios energía" value={diff.powerChanges.length} color="text-orange-400"
+                  active={false} onClick={() => {}} />
+              </div>
+              {diff.disappeared.length > 0 && (
+                <div className="text-xs text-muted-foreground">
+                  <span className="font-medium">Dejaron de aparecer:</span>{" "}
+                  {diff.disappeared.slice(0, 12).map(c => `${c.accountCode} (${c.accountName})`).join(" · ")}
+                  {diff.disappeared.length > 12 && ` … +${diff.disappeared.length - 12}`}
+                </div>
+              )}
+            </div>
+          )}
+
+
 
 
           {stats.discrepancias > 0 && (
@@ -810,6 +898,7 @@ export default function KronosActivityTab({ clients }: Props) {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[40px] text-center text-xs" title="Cambio vs. día anterior">Δ</TableHead>
                     <TableHead className="w-[80px]">Cuenta LX</TableHead>
                     <TableHead>Nombre LX</TableHead>
                     <TableHead className="text-xs">Cliente CxC</TableHead>
@@ -831,7 +920,7 @@ export default function KronosActivityTab({ clients }: Props) {
                 </TableHeader>
                 <TableBody>
                   {filtered.length === 0 ? (
-                    <TableRow><TableCell colSpan={17} className="text-center text-muted-foreground py-8">Sin resultados</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={18} className="text-center text-muted-foreground py-8">Sin resultados</TableCell></TableRow>
                   ) : filtered.map(r => (
                     <TableRow key={r.accountCode} className={
                       r.setting?.lxStatus && (INACTIVE_CANCELLED.has(r.setting.lxStatus) || DELETED_STATUSES.has(r.setting.lxStatus))
@@ -840,6 +929,7 @@ export default function KronosActivityTab({ clients }: Props) {
                       : r.isBaton ? "bg-cyan-500/5"
                       : r.isMuted ? "opacity-60" : ""
                     }>
+                      <TableCell className="text-center"><ChangeBadge change={diff.hasPrev ? changeByCode.get(r.accountCode.trim()) : undefined} /></TableCell>
                       <TableCell className="font-mono text-xs">{r.accountCode}</TableCell>
                       <TableCell className="font-medium text-sm">{r.osm?.businessName || r.accountName}</TableCell>
                       <TableCell className="text-xs">
@@ -1353,4 +1443,15 @@ function KpiCard({ label, value, color, active, onClick }: {
       </CardContent>
     </Card>
   );
+}
+
+function ChangeBadge({ change }: { change?: AccountChange }) {
+  if (!change) return <span className="text-muted-foreground text-xs">—</span>;
+  const critLabel = (c: string | null) => c === "ok" ? "Al día" : c === "baja" ? "Baja" : c === "media" ? "Media" : c === "alta" ? "Sin señal" : "—";
+  const tip = `Antes: ${critLabel(change.prevCrit)} → Ahora: ${critLabel(change.currCrit)}`;
+  if (change.direction === "worse") return <span title={tip} className="text-red-400 font-bold">↑</span>;
+  if (change.direction === "better") return <span title={tip} className="text-emerald-400 font-bold">↓</span>;
+  if (change.direction === "new") return <span title="Cuenta nueva (no estaba ayer)" className="text-cyan-400 font-bold">●</span>;
+  if (change.powerChanged || change.newLowBattery) return <span title="Cambio de energía" className="text-orange-400">🔌</span>;
+  return <span className="text-muted-foreground text-xs">=</span>;
 }

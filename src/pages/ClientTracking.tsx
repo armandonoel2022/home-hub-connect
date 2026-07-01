@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import Navbar from "@/components/Navbar";
@@ -41,6 +41,15 @@ import OperatorsTab from "@/components/osm/OperatorsTab";
 import TrendsTab from "@/components/osm/TrendsTab";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RePieChart, Pie, Cell, Legend } from "recharts";
 import { toast } from "sonner";
+import { monitoringReportsApi } from "@/lib/api";
+import type { KronosParsedReport, KronosAccountRow } from "@/lib/kronosHtmParser";
+import { assessIncidentVsKronos, type IncidentKronosVerdict } from "@/lib/incidentKronosCheck";
+
+const INC_KRONOS_BADGE: Record<IncidentKronosVerdict, string> = {
+  "persiste": "bg-red-500/10 text-red-400 border-red-500/20",
+  "posible-resuelta": "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+  "sin-datos": "bg-muted text-muted-foreground border-border",
+};
 
 const STATUS_COLORS: Record<ClientMonitoringStatus, string> = {
   "Activo": "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
@@ -105,6 +114,26 @@ const ClientTracking = () => {
   const [csOverlayOpen, setCsOverlayOpen] = useState(false);
   const [selectedCSRequest, setSelectedCSRequest] = useState<CSRequestType | null>(null);
   const [csMessage, setCsMessage] = useState("");
+
+  // Último reporte Kronos para contrastar incidencias
+  const [kronosReport, setKronosReport] = useState<KronosParsedReport | null>(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const list = await monitoringReportsApi.list("kronos");
+        if (list.length === 0) return;
+        const doc = await monitoringReportsApi.get<KronosParsedReport>(list[0].id);
+        setKronosReport(doc.payload);
+      } catch (e: any) {
+        if (e.message !== "API_NOT_CONFIGURED") console.warn("Kronos p/Incidencias:", e.message);
+      }
+    })();
+  }, []);
+  const kronosByCode = useMemo(() => {
+    const m = new Map<string, KronosAccountRow>();
+    kronosReport?.rows.forEach(r => m.set(r.accountCode.trim(), r));
+    return m;
+  }, [kronosReport]);
 
   const [reportType, setReportType] = useState<"diario" | "semanal">("diario");
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -510,6 +539,10 @@ const ClientTracking = () => {
                             <h3 className="font-semibold text-foreground text-sm">{inc.clientName}</h3>
                             {inc.accountCode && <span className="text-xs text-muted-foreground font-mono">#{inc.accountCode}</span>}
                             <Badge className={`${INC_PRIORITY_COLORS[inc.priority]} text-xs`}>{inc.priority}</Badge>
+                            {kronosReport && inc.accountCode && inc.status !== "resuelta" && inc.status !== "cerrada" && (() => {
+                              const a = assessIncidentVsKronos(inc.createdAt, kronosByCode.get(inc.accountCode.trim()), kronosReport.reportDate);
+                              return <Badge variant="outline" className={`${INC_KRONOS_BADGE[a.verdict]} text-[10px]`} title={a.detail}>Kronos: {a.label}</Badge>;
+                            })()}
                           </div>
                           <p className="text-sm text-foreground mt-0.5">{inc.title}</p>
                           {inc.description && <p className="text-xs text-muted-foreground mt-1">{inc.description}</p>}
