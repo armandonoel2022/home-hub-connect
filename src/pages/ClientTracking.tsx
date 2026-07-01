@@ -539,6 +539,10 @@ const ClientTracking = () => {
                             <h3 className="font-semibold text-foreground text-sm">{inc.clientName}</h3>
                             {inc.accountCode && <span className="text-xs text-muted-foreground font-mono">#{inc.accountCode}</span>}
                             <Badge className={`${INC_PRIORITY_COLORS[inc.priority]} text-xs`}>{inc.priority}</Badge>
+                            {kronosReport && inc.accountCode && inc.status !== "resuelta" && inc.status !== "cerrada" && (() => {
+                              const a = assessIncidentVsKronos(inc.createdAt, kronosByCode.get(inc.accountCode.trim()), kronosReport.reportDate);
+                              return <Badge variant="outline" className={`${INC_KRONOS_BADGE[a.verdict]} text-[10px]`} title={a.detail}>Kronos: {a.label}</Badge>;
+                            })()}
                           </div>
                           <p className="text-sm text-foreground mt-0.5">{inc.title}</p>
                           {inc.description && <p className="text-xs text-muted-foreground mt-1">{inc.description}</p>}
