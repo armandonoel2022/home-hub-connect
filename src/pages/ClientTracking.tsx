@@ -115,6 +115,26 @@ const ClientTracking = () => {
   const [selectedCSRequest, setSelectedCSRequest] = useState<CSRequestType | null>(null);
   const [csMessage, setCsMessage] = useState("");
 
+  // Último reporte Kronos para contrastar incidencias
+  const [kronosReport, setKronosReport] = useState<KronosParsedReport | null>(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const list = await monitoringReportsApi.list("kronos");
+        if (list.length === 0) return;
+        const doc = await monitoringReportsApi.get<KronosParsedReport>(list[0].id);
+        setKronosReport(doc.payload);
+      } catch (e: any) {
+        if (e.message !== "API_NOT_CONFIGURED") console.warn("Kronos p/Incidencias:", e.message);
+      }
+    })();
+  }, []);
+  const kronosByCode = useMemo(() => {
+    const m = new Map<string, KronosAccountRow>();
+    kronosReport?.rows.forEach(r => m.set(r.accountCode.trim(), r));
+    return m;
+  }, [kronosReport]);
+
   const [reportType, setReportType] = useState<"diario" | "semanal">("diario");
   const [activeTab, setActiveTab] = useState("dashboard");
 
