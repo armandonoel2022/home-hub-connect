@@ -354,6 +354,11 @@ export default function PunchActivityTab() {
                               {batonCodes.has(c.accountCode) && (
                                 <Badge variant="outline" className="text-cyan-400 border-cyan-500/30 text-[10px]">🛰️ Active Track</Badge>
                               )}
+                              {c.source === "kronos" && (
+                                <Badge variant="outline" className="text-amber-400 border-amber-500/30 text-[10px]">
+                                  desde Kronos · sin punches{typeof c.kronosDaysSince === "number" ? ` · ${c.kronosDaysSince}d s/señal` : ""}
+                                </Badge>
+                              )}
                             </div>
                             <div className="text-xs text-muted-foreground font-mono">{c.accountCode}</div>
                             {c.ruleLabel && <div className="text-[10px] text-primary mt-0.5">{c.ruleLabel}</div>}
