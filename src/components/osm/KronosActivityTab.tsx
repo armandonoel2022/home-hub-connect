@@ -281,22 +281,46 @@ export default function KronosActivityTab({ clients }: Props) {
     try {
       const list = await monitoringReportsApi.list("kronos");
       setHistory(list);
-      if (!activeReportId && list.length > 0) await loadReport(list[0].id);
+      if (!activeReportId && list.length > 0) await loadReport(list[0].id, list);
     } catch (e: any) {
       if (e.message !== "API_NOT_CONFIGURED") console.warn("Historial Kronos:", e.message);
     }
   };
 
-  const loadReport = async (id: string) => {
+  /** Carga el reporte anterior (por fecha) para la comparación día a día. */
+  const loadComparison = async (currentId: string, histList: MonitoringReportMeta[]) => {
+    const sorted = [...histList].sort((a, b) => (b.reportDate || "").localeCompare(a.reportDate || ""));
+    const idx = sorted.findIndex(h => h.id === currentId);
+    const prevMeta = idx >= 0 ? sorted.slice(idx + 1).find(h => h.id !== currentId) : undefined;
+    if (!prevMeta) { setPrevReport(null); setCompareReportId(null); return; }
+    try {
+      const prevDoc = await monitoringReportsApi.get<KronosParsedReport>(prevMeta.id);
+      setPrevReport(prevDoc.payload);
+      setCompareReportId(prevDoc.id);
+    } catch { setPrevReport(null); setCompareReportId(null); }
+  };
+
+  const loadReport = async (id: string, histList?: MonitoringReportMeta[]) => {
     setLoading(true);
     try {
       const doc = await monitoringReportsApi.get<KronosParsedReport>(id);
       setReport(doc.payload);
       setActiveReportId(doc.id);
       setReportMeta({ id: doc.id, kind: doc.kind, reportDate: doc.reportDate, fileName: doc.fileName, uploadedAt: doc.uploadedAt, uploadedBy: doc.uploadedBy });
+      await loadComparison(doc.id, histList || history);
     } catch (e: any) {
       toast.error(`Error al cargar reporte: ${e.message}`);
     } finally { setLoading(false); }
+  };
+
+  /** Cambia manualmente contra qué reporte comparar. */
+  const changeComparison = async (id: string) => {
+    if (id === "none") { setPrevReport(null); setCompareReportId(null); return; }
+    try {
+      const prevDoc = await monitoringReportsApi.get<KronosParsedReport>(id);
+      setPrevReport(prevDoc.payload);
+      setCompareReportId(prevDoc.id);
+    } catch (e: any) { toast.error(`No se pudo cargar el reporte de comparación: ${e.message}`); }
   };
 
   useEffect(() => { loadSettings(); loadBillingClients(); loadGeneralClients(); loadHistory(); /* eslint-disable-next-line */ }, []);
