@@ -303,6 +303,16 @@ export default function PunchActivityTab() {
                 </Button>
               </div>
             )}
+
+            {report && kronosActiveTrack.length > 0 && (
+              <div className="flex items-start gap-2 pt-2 border-t border-border/50 text-xs text-amber-500">
+                <Footprints className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                <span>
+                  Se agregaron <strong>{kronosActiveTrack.length}</strong> cuentas Active Track detectadas en
+                  Actividad Kronos{kronosMeta ? ` (reporte del ${kronosMeta.reportDate})` : ""} que aún no tienen punches.
+                </span>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
