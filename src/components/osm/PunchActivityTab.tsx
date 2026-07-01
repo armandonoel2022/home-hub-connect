@@ -175,7 +175,7 @@ export default function PunchActivityTab() {
       .filter(r => batonCodes.has(r.accountCode.trim()) && !present.has(r.accountCode.trim()))
       .map(r => ({
         accountCode: r.accountCode,
-        clientName: r.accountName,
+        accountName: r.accountName,
         punches: [],
         uniquePoints: [],
         firstPunch: null,
