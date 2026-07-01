@@ -85,6 +85,8 @@ export default function PunchActivityTab() {
   const [history, setHistory] = useState<MonitoringReportMeta[]>([]);
   const [activeReportId, setActiveReportId] = useState<string | null>(null);
   const [meta, setMeta] = useState<MonitoringReportMeta | null>(null);
+  const [kronosReport, setKronosReport] = useState<KronosParsedReport | null>(null);
+  const [kronosMeta, setKronosMeta] = useState<MonitoringReportMeta | null>(null);
   const [filter, setFilter] = useState<"all" | "missed" | "partial" | "ok" | "no-rules" | "baton">("all");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [rulesOpen, setRulesOpen] = useState(false);
