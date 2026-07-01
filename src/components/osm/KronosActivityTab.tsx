@@ -472,7 +472,9 @@ export default function KronosActivityTab({ clients }: Props) {
         });
         setActiveReportId(saved.id);
         setReportMeta({ id: saved.id, kind: saved.kind, reportDate: saved.reportDate, fileName: saved.fileName, uploadedAt: saved.uploadedAt, uploadedBy: saved.uploadedBy });
-        await loadHistory();
+        const freshList = await monitoringReportsApi.list("kronos");
+        setHistory(freshList);
+        await loadComparison(saved.id, freshList);
         toast.success(`Reporte guardado (${parsed.rows.length} cuentas) — visible para todo el equipo`);
         // Snapshot automático para tendencias
         try {
