@@ -163,7 +163,37 @@ export default function PunchActivityTab() {
   }, [settings]);
 
   // Reevaluar cuando cambien las reglas o el reporte
-  const report = useMemo(() => rawReport ? evaluatePunchReport(rawReport, rules) : null, [rawReport, rules]);
+  const baseReport = useMemo(() => rawReport ? evaluatePunchReport(rawReport, rules) : null, [rawReport, rules]);
+
+  /** Cuentas Active Track detectadas en el último reporte de Actividad Kronos
+   *  que NO tienen punches en el reporte cargado. Se agregan para no tener
+   *  que ingresarlas a mano y para ver su última señal. */
+  const kronosActiveTrack = useMemo<PunchClientSummary[]>(() => {
+    if (!kronosReport) return [];
+    const present = new Set((baseReport?.clients || []).map(c => c.accountCode.trim()));
+    return kronosReport.rows
+      .filter(r => batonCodes.has(r.accountCode.trim()) && !present.has(r.accountCode.trim()))
+      .map(r => ({
+        accountCode: r.accountCode,
+        clientName: r.accountName,
+        punches: [],
+        uniquePoints: [],
+        firstPunch: null,
+        lastPunch: r.lastSignal,
+        expectedRounds: [],
+        compliance: "no-rules" as const,
+        source: "kronos" as const,
+        kronosDaysSince: r.daysSince,
+        kronosCrit: r.criticidad === "ok" ? "ok" : r.criticidad,
+      }));
+  }, [kronosReport, baseReport, batonCodes]);
+
+  // Reporte visible = punches cargados + Active Track derivados de Kronos
+  const report = useMemo(() => {
+    if (!baseReport) return null;
+    const withSource = baseReport.clients.map(c => ({ ...c, source: c.source ?? ("punch-report" as const) }));
+    return { ...baseReport, clients: [...withSource, ...kronosActiveTrack] };
+  }, [baseReport, kronosActiveTrack]);
 
   const handleFile = async (file: File) => {
     setLoading(true);
