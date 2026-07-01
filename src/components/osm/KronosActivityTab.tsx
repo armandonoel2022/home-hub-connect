@@ -740,6 +740,24 @@ export default function KronosActivityTab({ clients }: Props) {
                   </SelectContent>
                 </Select>
                 <span className="text-xs text-muted-foreground">{history.length} reportes guardados</span>
+                {history.length > 1 && (
+                  <>
+                    <Label className="text-xs whitespace-nowrap ml-2">Comparar con:</Label>
+                    <Select value={compareReportId || "none"} onValueChange={changeComparison}>
+                      <SelectTrigger className="w-[240px] h-8 text-xs">
+                        <SelectValue placeholder="Reporte anterior" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none" className="text-xs">Sin comparación</SelectItem>
+                        {history.filter(h => h.id !== activeReportId).map(h => (
+                          <SelectItem key={h.id} value={h.id} className="text-xs">
+                            {h.reportDate} · {h.fileName || "reporte"}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </>
+                )}
               </div>
             )}
 
