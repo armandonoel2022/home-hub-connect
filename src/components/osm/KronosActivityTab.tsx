@@ -809,6 +809,39 @@ export default function KronosActivityTab({ clients }: Props) {
               active={filterCrit === "muted"} onClick={() => setFilterCrit("muted")} />
           </div>
 
+          {diff.hasPrev && (
+            <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <AlertTriangle className="h-4 w-4 text-primary" />
+                Cambios de un día para otro
+                <span className="text-xs text-muted-foreground font-normal">
+                  (vs. reporte del {prevReport?.reportDate ? new Date(prevReport.reportDate).toLocaleDateString("es-DO") : "anterior"})
+                </span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <KpiCard label="↑ Empeoraron" value={diff.worse.length} color="text-red-400"
+                  active={filterCrit === "chg-worse"} onClick={() => setFilterCrit(filterCrit === "chg-worse" ? "all" : "chg-worse")} />
+                <KpiCard label="↓ Mejoraron" value={diff.better.length} color="text-emerald-400"
+                  active={filterCrit === "chg-better"} onClick={() => setFilterCrit(filterCrit === "chg-better" ? "all" : "chg-better")} />
+                <KpiCard label="● Nuevas" value={diff.added.length} color="text-cyan-400"
+                  active={filterCrit === "chg-new"} onClick={() => setFilterCrit(filterCrit === "chg-new" ? "all" : "chg-new")} />
+                <KpiCard label="✕ Dejaron de aparecer" value={diff.disappeared.length} color="text-muted-foreground"
+                  active={false} onClick={() => {}} />
+                <KpiCard label="🔌 Cambios energía" value={diff.powerChanges.length} color="text-orange-400"
+                  active={false} onClick={() => {}} />
+              </div>
+              {diff.disappeared.length > 0 && (
+                <div className="text-xs text-muted-foreground">
+                  <span className="font-medium">Dejaron de aparecer:</span>{" "}
+                  {diff.disappeared.slice(0, 12).map(c => `${c.accountCode} (${c.accountName})`).join(" · ")}
+                  {diff.disappeared.length > 12 && ` … +${diff.disappeared.length - 12}`}
+                </div>
+              )}
+            </div>
+          )}
+
+
+
 
           {stats.discrepancias > 0 && (
             <Card className="border-amber-500/40 bg-amber-500/5">
