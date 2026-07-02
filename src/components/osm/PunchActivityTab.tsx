@@ -453,6 +453,11 @@ export default function PunchActivityTab() {
                             {c.ruleLabel && <div className="text-[10px] text-primary mt-0.5">{c.ruleLabel}</div>}
                           </TableCell>
                           <TableCell className="text-center">{c.punches.length}</TableCell>
+                          {diff.hasPrev && (
+                            <TableCell className="text-center">
+                              <DeltaBadge change={diff.byCode.get((c.accountCode || c.accountName).trim())} />
+                            </TableCell>
+                          )}
                           <TableCell className="text-center">{c.uniquePoints.length}</TableCell>
                           <TableCell className="text-xs">
                             <div>{fmtDateTime(c.firstPunch)}</div>
