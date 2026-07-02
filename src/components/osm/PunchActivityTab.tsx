@@ -240,7 +240,9 @@ export default function PunchActivityTab() {
         });
         setActiveReportId(saved.id);
         setMeta({ id: saved.id, kind: saved.kind, reportDate: saved.reportDate, fileName: saved.fileName, uploadedAt: saved.uploadedAt, uploadedBy: saved.uploadedBy });
-        await loadHistory();
+        const freshList = await monitoringReportsApi.list("punches");
+        setHistory(freshList);
+        await loadComparison(saved.id, freshList);
         toast.success(`Reporte guardado (${parsed.clients.length} clientes, ${parsed.rawRowCount} punches)`);
       } catch (e: any) {
         if (e.message === "API_NOT_CONFIGURED") toast.warning("Backend no configurado: el reporte solo es visible en esta sesión");
