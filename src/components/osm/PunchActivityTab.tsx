@@ -32,6 +32,10 @@ import {
   parsePunchHtmFile, evaluatePunchReport,
   type PunchParsedReport, type ExpectedRound, type PunchClientSummary,
 } from "@/lib/punchHtmParser";
+import {
+  analyzePunchTiming, diffPunchReports, fmtMinutes,
+  type PunchDiff, type PunchChange,
+} from "@/lib/punchAnalytics";
 import type { KronosParsedReport } from "@/lib/kronosHtmParser";
 import {
   monitoringReportsApi, punchRulesApi, monitoringAccountSettingsApi,
