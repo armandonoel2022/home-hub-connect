@@ -704,3 +704,28 @@ function KpiCard({ label, value, color, active, onClick }: {
     </Card>
   );
 }
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-muted/20 p-3">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="text-xl font-bold text-foreground">{value}</p>
+    </div>
+  );
+}
+
+function DeltaBadge({ change }: { change?: PunchChange }) {
+  if (!change) return <span className="text-muted-foreground text-xs">—</span>;
+  if (change.direction === "new")
+    return <Badge variant="outline" className="text-cyan-400 border-cyan-500/30 text-[10px]">● nueva</Badge>;
+  if (change.direction === "gone")
+    return <Badge variant="outline" className="text-muted-foreground text-[10px]">✗ no aparece</Badge>;
+  const d = change.deltaCount;
+  const deltaTxt = d !== null && d !== 0 ? ` ${d > 0 ? "+" : ""}${d}` : "";
+  if (change.direction === "worse")
+    return <Badge variant="outline" className="text-red-400 border-red-500/30 text-[10px]"><TrendingDown className="h-3 w-3 mr-1" />peor{deltaTxt}</Badge>;
+  if (change.direction === "better")
+    return <Badge variant="outline" className="text-emerald-400 border-emerald-500/30 text-[10px]"><TrendingUp className="h-3 w-3 mr-1" />mejor{deltaTxt}</Badge>;
+  return <span className="text-muted-foreground text-xs">=</span>;
+}
+
