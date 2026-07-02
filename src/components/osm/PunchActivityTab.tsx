@@ -414,6 +414,7 @@ export default function PunchActivityTab() {
                     <TableHead className="w-[40px]"></TableHead>
                     <TableHead>Cliente / Active Track</TableHead>
                     <TableHead className="text-center">Punches</TableHead>
+                    {diff.hasPrev && <TableHead className="text-center">Δ</TableHead>}
                     <TableHead className="text-center">Puntos</TableHead>
                     <TableHead>Primer / Último</TableHead>
                     <TableHead>Rondas esperadas</TableHead>
