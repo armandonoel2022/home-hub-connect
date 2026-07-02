@@ -224,6 +224,13 @@ export default function PunchActivityTab() {
     return { ...baseReport, clients: [...withSource, ...kronosActiveTrack] };
   }, [baseReport, kronosActiveTrack]);
 
+  // Media de tiempos de las rondas (Active Track) del reporte actual.
+  const timing = useMemo(() => analyzePunchTiming(report), [report]);
+
+  // Comparación contra el reporte anterior (o el elegido manualmente).
+  const prevEvaluated = useMemo(() => (prevReport ? evaluatePunchReport(prevReport, rules) : null), [prevReport, rules]);
+  const diff: PunchDiff = useMemo(() => diffPunchReports(prevEvaluated, report), [prevEvaluated, report]);
+
   const handleFile = async (file: File) => {
     setLoading(true);
     try {
