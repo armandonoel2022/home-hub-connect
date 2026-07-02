@@ -25,7 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
   FileUp, X, CheckCircle2, AlertTriangle, XCircle, ChevronDown, ChevronRight,
-  Footprints, Settings2, Plus, Trash2, Pencil, TrendingUp, TrendingDown, Timer, ArrowRight,
+  Footprints, Settings2, Plus, Trash2, Pencil, TrendingUp, TrendingDown, Timer,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
