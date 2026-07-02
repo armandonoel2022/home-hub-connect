@@ -380,6 +380,32 @@ export default function PunchActivityTab() {
             <KpiCard label="🛰️ Active Track" value={stats.baton} color="text-cyan-400" active={filter === "baton"} onClick={() => setFilter("baton")} />
           </div>
 
+          {/* Media de tiempos de rondas (Active Track) */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Timer className="h-4 w-4 text-cyan-400" /> Media de tiempos de rondas (Active Track)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-0">
+              <MiniStat label="Punches / cuenta (media)" value={`${timing.avgPunchesPerClient}`} />
+              <MiniStat label="Intervalo medio entre punches" value={fmtMinutes(timing.avgIntervalMin)} />
+              <MiniStat label="Hora media de los punches" value={timing.avgTimeOfDay || "—"} />
+              <MiniStat label="Total punches / cuentas activas" value={`${timing.totalPunches} / ${timing.totalClients}`} />
+            </CardContent>
+          </Card>
+
+          {/* Comparación con reporte anterior */}
+          {diff.hasPrev && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <KpiCard label="↑ Mejoraron" value={diff.better.length} color="text-emerald-400" active={false} onClick={() => {}} />
+              <KpiCard label="↓ Empeoraron" value={diff.worse.length} color="text-red-400" active={false} onClick={() => {}} />
+              <KpiCard label="● Nuevas cuentas" value={diff.added.length} color="text-cyan-400" active={false} onClick={() => {}} />
+              <KpiCard label="Dejaron de aparecer" value={diff.gone.length} color="text-muted-foreground" active={false} onClick={() => {}} />
+            </div>
+          )}
+
+
           <Card>
             <CardContent className="p-0 overflow-x-auto">
               <Table>
