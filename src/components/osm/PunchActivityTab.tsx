@@ -322,6 +322,20 @@ export default function PunchActivityTab() {
                   </SelectContent>
                 </Select>
                 <span className="text-xs text-muted-foreground">{history.length} reportes guardados</span>
+                <Label className="text-xs whitespace-nowrap ml-2">Comparar con:</Label>
+                <Select value={compareReportId || "none"} onValueChange={changeComparison}>
+                  <SelectTrigger className="w-[260px] h-8 text-xs">
+                    <SelectValue placeholder="Sin comparación" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none" className="text-xs">Sin comparación</SelectItem>
+                    {history.filter(h => h.id !== activeReportId).map(h => (
+                      <SelectItem key={h.id} value={h.id} className="text-xs">
+                        {h.reportDate} · {h.fileName || "reporte"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
 
