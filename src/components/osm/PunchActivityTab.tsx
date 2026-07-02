@@ -116,19 +116,42 @@ export default function PunchActivityTab() {
     try {
       const list = await monitoringReportsApi.list("punches");
       setHistory(list);
-      if (!activeReportId && list.length > 0) await loadReport(list[0].id);
+      if (!activeReportId && list.length > 0) await loadReport(list[0].id, list);
     } catch (e: any) {
       if (e.message !== "API_NOT_CONFIGURED") console.warn("Historial Punches:", e.message);
     }
   };
 
-  const loadReport = async (id: string) => {
+  /** Carga el reporte inmediatamente anterior (por fecha) para comparar. */
+  const loadComparison = async (currentId: string, histList: MonitoringReportMeta[]) => {
+    const sorted = [...histList].sort((a, b) => (b.reportDate || "").localeCompare(a.reportDate || ""));
+    const idx = sorted.findIndex(h => h.id === currentId);
+    const prevMeta = idx >= 0 ? sorted.slice(idx + 1).find(h => h.id !== currentId) : undefined;
+    if (!prevMeta) { setPrevReport(null); setCompareReportId(null); return; }
+    try {
+      const prevDoc = await monitoringReportsApi.get<PunchParsedReport>(prevMeta.id);
+      setPrevReport(prevDoc.payload);
+      setCompareReportId(prevDoc.id);
+    } catch { setPrevReport(null); setCompareReportId(null); }
+  };
+
+  const changeComparison = async (id: string) => {
+    if (id === "none") { setPrevReport(null); setCompareReportId(null); return; }
+    try {
+      const prevDoc = await monitoringReportsApi.get<PunchParsedReport>(id);
+      setPrevReport(prevDoc.payload);
+      setCompareReportId(prevDoc.id);
+    } catch (e: any) { toast.error(`No se pudo cargar el reporte de comparación: ${e.message}`); }
+  };
+
+  const loadReport = async (id: string, histList?: MonitoringReportMeta[]) => {
     setLoading(true);
     try {
       const doc = await monitoringReportsApi.get<PunchParsedReport>(id);
       setRawReport(doc.payload);
       setActiveReportId(doc.id);
       setMeta({ id: doc.id, kind: doc.kind, reportDate: doc.reportDate, fileName: doc.fileName, uploadedAt: doc.uploadedAt, uploadedBy: doc.uploadedBy });
+      await loadComparison(doc.id, histList || history);
     } catch (e: any) {
       toast.error(`Error al cargar reporte: ${e.message}`);
     } finally { setLoading(false); }
