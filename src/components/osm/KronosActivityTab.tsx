@@ -633,7 +633,7 @@ export default function KronosActivityTab({ clients }: Props) {
 
 
     return list.sort((a, b) => (b.daysSince ?? 9999) - (a.daysSince ?? 9999));
-  }, [report, clients, osmByCode, settings, billingClientById]);
+  }, [report, clients, osmByCode, settings, billingClientById, punchByCode]);
 
   const stats = useMemo(() => {
     const isInactiveCancelled = (r: CombinedRow) => !!r.setting?.lxStatus && INACTIVE_CANCELLED.has(r.setting.lxStatus);
