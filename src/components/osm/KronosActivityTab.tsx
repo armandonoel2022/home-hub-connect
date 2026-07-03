@@ -592,11 +592,16 @@ export default function KronosActivityTab({ clients }: Props) {
       if (r.powerOk === false) alertas.push("Sin energía eléctrica (falla de CA sin restaurar)");
       if (r.lowBattery) alertas.push("Batería baja");
 
+      // Active Track: usar la última señal del reporte de Punches si es más reciente.
+      let effLastSignal = r.lastSignal;
+      const punchSig = isBaton ? punchByCode.get(r.accountCode.trim()) : undefined;
+      if (punchSig && (!effLastSignal || punchSig > effLastSignal)) effLastSignal = punchSig;
+
       list.push({
         accountCode: r.accountCode,
         accountName: r.accountName,
         estado: r.estado,
-        lastSignal: r.lastSignal,
+        lastSignal: effLastSignal,
         lastOpen: noOpenClose ? null : r.lastOpen,
         lastClose: noOpenClose ? null : r.lastClose,
         sameDayCycle: !noOpenClose && r.sameDayCycle,
