@@ -338,7 +338,17 @@ export default function KronosActivityTab({ clients }: Props) {
     } catch (e: any) { toast.error(`No se pudo cargar el reporte de comparación: ${e.message}`); }
   };
 
-  useEffect(() => { loadSettings(); loadBillingClients(); loadGeneralClients(); loadHistory(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { loadSettings(); loadBillingClients(); loadGeneralClients(); loadHistory(); loadLatestPunches(); /* eslint-disable-next-line */ }, []);
+
+  /** Última señal por cuenta derivada del reporte de Punches (Active Track). */
+  const punchByCode = useMemo(() => {
+    const m = new Map<string, string>();
+    (punchReport?.clients || []).forEach(c => {
+      const code = (c.accountCode || "").trim();
+      if (code && c.lastPunch) m.set(code, c.lastPunch);
+    });
+    return m;
+  }, [punchReport]);
 
   /** Sugerencia automática de cliente CxC para una LX sin vincular, basada en nombres. */
   const suggestClient = (lxName: string): BillingClient | null => {
