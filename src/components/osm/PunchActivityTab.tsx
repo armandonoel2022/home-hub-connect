@@ -25,13 +25,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
   FileUp, X, CheckCircle2, AlertTriangle, XCircle, ChevronDown, ChevronRight,
-  Footprints, Settings2, Plus, Trash2, Pencil,
+  Footprints, Settings2, Plus, Trash2, Pencil, TrendingUp, TrendingDown, Timer,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
   parsePunchHtmFile, evaluatePunchReport,
   type PunchParsedReport, type ExpectedRound, type PunchClientSummary,
 } from "@/lib/punchHtmParser";
+import {
+  analyzePunchTiming, diffPunchReports, fmtMinutes,
+  type PunchDiff, type PunchChange,
+} from "@/lib/punchAnalytics";
 import type { KronosParsedReport } from "@/lib/kronosHtmParser";
 import {
   monitoringReportsApi, punchRulesApi, monitoringAccountSettingsApi,
@@ -85,6 +89,8 @@ export default function PunchActivityTab() {
   const [history, setHistory] = useState<MonitoringReportMeta[]>([]);
   const [activeReportId, setActiveReportId] = useState<string | null>(null);
   const [meta, setMeta] = useState<MonitoringReportMeta | null>(null);
+  const [prevReport, setPrevReport] = useState<PunchParsedReport | null>(null);
+  const [compareReportId, setCompareReportId] = useState<string | null>(null);
   const [kronosReport, setKronosReport] = useState<KronosParsedReport | null>(null);
   const [kronosMeta, setKronosMeta] = useState<MonitoringReportMeta | null>(null);
   const [filter, setFilter] = useState<"all" | "missed" | "partial" | "ok" | "no-rules" | "baton">("all");
@@ -110,19 +116,42 @@ export default function PunchActivityTab() {
     try {
       const list = await monitoringReportsApi.list("punches");
       setHistory(list);
-      if (!activeReportId && list.length > 0) await loadReport(list[0].id);
+      if (!activeReportId && list.length > 0) await loadReport(list[0].id, list);
     } catch (e: any) {
       if (e.message !== "API_NOT_CONFIGURED") console.warn("Historial Punches:", e.message);
     }
   };
 
-  const loadReport = async (id: string) => {
+  /** Carga el reporte inmediatamente anterior (por fecha) para comparar. */
+  const loadComparison = async (currentId: string, histList: MonitoringReportMeta[]) => {
+    const sorted = [...histList].sort((a, b) => (b.reportDate || "").localeCompare(a.reportDate || ""));
+    const idx = sorted.findIndex(h => h.id === currentId);
+    const prevMeta = idx >= 0 ? sorted.slice(idx + 1).find(h => h.id !== currentId) : undefined;
+    if (!prevMeta) { setPrevReport(null); setCompareReportId(null); return; }
+    try {
+      const prevDoc = await monitoringReportsApi.get<PunchParsedReport>(prevMeta.id);
+      setPrevReport(prevDoc.payload);
+      setCompareReportId(prevDoc.id);
+    } catch { setPrevReport(null); setCompareReportId(null); }
+  };
+
+  const changeComparison = async (id: string) => {
+    if (id === "none") { setPrevReport(null); setCompareReportId(null); return; }
+    try {
+      const prevDoc = await monitoringReportsApi.get<PunchParsedReport>(id);
+      setPrevReport(prevDoc.payload);
+      setCompareReportId(prevDoc.id);
+    } catch (e: any) { toast.error(`No se pudo cargar el reporte de comparación: ${e.message}`); }
+  };
+
+  const loadReport = async (id: string, histList?: MonitoringReportMeta[]) => {
     setLoading(true);
     try {
       const doc = await monitoringReportsApi.get<PunchParsedReport>(id);
       setRawReport(doc.payload);
       setActiveReportId(doc.id);
       setMeta({ id: doc.id, kind: doc.kind, reportDate: doc.reportDate, fileName: doc.fileName, uploadedAt: doc.uploadedAt, uploadedBy: doc.uploadedBy });
+      await loadComparison(doc.id, histList || history);
     } catch (e: any) {
       toast.error(`Error al cargar reporte: ${e.message}`);
     } finally { setLoading(false); }
@@ -195,6 +224,13 @@ export default function PunchActivityTab() {
     return { ...baseReport, clients: [...withSource, ...kronosActiveTrack] };
   }, [baseReport, kronosActiveTrack]);
 
+  // Media de tiempos de las rondas (Active Track) del reporte actual.
+  const timing = useMemo(() => analyzePunchTiming(report), [report]);
+
+  // Comparación contra el reporte anterior (o el elegido manualmente).
+  const prevEvaluated = useMemo(() => (prevReport ? evaluatePunchReport(prevReport, rules) : null), [prevReport, rules]);
+  const diff: PunchDiff = useMemo(() => diffPunchReports(prevEvaluated, report), [prevEvaluated, report]);
+
   const handleFile = async (file: File) => {
     setLoading(true);
     try {
@@ -211,7 +247,9 @@ export default function PunchActivityTab() {
         });
         setActiveReportId(saved.id);
         setMeta({ id: saved.id, kind: saved.kind, reportDate: saved.reportDate, fileName: saved.fileName, uploadedAt: saved.uploadedAt, uploadedBy: saved.uploadedBy });
-        await loadHistory();
+        const freshList = await monitoringReportsApi.list("punches");
+        setHistory(freshList);
+        await loadComparison(saved.id, freshList);
         toast.success(`Reporte guardado (${parsed.clients.length} clientes, ${parsed.rawRowCount} punches)`);
       } catch (e: any) {
         if (e.message === "API_NOT_CONFIGURED") toast.warning("Backend no configurado: el reporte solo es visible en esta sesión");
@@ -284,6 +322,20 @@ export default function PunchActivityTab() {
                   </SelectContent>
                 </Select>
                 <span className="text-xs text-muted-foreground">{history.length} reportes guardados</span>
+                <Label className="text-xs whitespace-nowrap ml-2">Comparar con:</Label>
+                <Select value={compareReportId || "none"} onValueChange={changeComparison}>
+                  <SelectTrigger className="w-[260px] h-8 text-xs">
+                    <SelectValue placeholder="Sin comparación" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none" className="text-xs">Sin comparación</SelectItem>
+                    {history.filter(h => h.id !== activeReportId).map(h => (
+                      <SelectItem key={h.id} value={h.id} className="text-xs">
+                        {h.reportDate} · {h.fileName || "reporte"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
 
@@ -328,6 +380,32 @@ export default function PunchActivityTab() {
             <KpiCard label="🛰️ Active Track" value={stats.baton} color="text-cyan-400" active={filter === "baton"} onClick={() => setFilter("baton")} />
           </div>
 
+          {/* Media de tiempos de rondas (Active Track) */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Timer className="h-4 w-4 text-cyan-400" /> Media de tiempos de rondas (Active Track)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-0">
+              <MiniStat label="Punches / cuenta (media)" value={`${timing.avgPunchesPerClient}`} />
+              <MiniStat label="Intervalo medio entre punches" value={fmtMinutes(timing.avgIntervalMin)} />
+              <MiniStat label="Hora media de los punches" value={timing.avgTimeOfDay || "—"} />
+              <MiniStat label="Total punches / cuentas activas" value={`${timing.totalPunches} / ${timing.totalClients}`} />
+            </CardContent>
+          </Card>
+
+          {/* Comparación con reporte anterior */}
+          {diff.hasPrev && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <KpiCard label="↑ Mejoraron" value={diff.better.length} color="text-emerald-400" active={false} onClick={() => {}} />
+              <KpiCard label="↓ Empeoraron" value={diff.worse.length} color="text-red-400" active={false} onClick={() => {}} />
+              <KpiCard label="● Nuevas cuentas" value={diff.added.length} color="text-cyan-400" active={false} onClick={() => {}} />
+              <KpiCard label="Dejaron de aparecer" value={diff.gone.length} color="text-muted-foreground" active={false} onClick={() => {}} />
+            </div>
+          )}
+
+
           <Card>
             <CardContent className="p-0 overflow-x-auto">
               <Table>
@@ -336,6 +414,7 @@ export default function PunchActivityTab() {
                     <TableHead className="w-[40px]"></TableHead>
                     <TableHead>Cliente / Active Track</TableHead>
                     <TableHead className="text-center">Punches</TableHead>
+                    {diff.hasPrev && <TableHead className="text-center">Δ</TableHead>}
                     <TableHead className="text-center">Puntos</TableHead>
                     <TableHead>Primer / Último</TableHead>
                     <TableHead>Rondas esperadas</TableHead>
@@ -345,7 +424,7 @@ export default function PunchActivityTab() {
                 </TableHeader>
                 <TableBody>
                   {filtered.length === 0 ? (
-                    <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Sin resultados</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={diff.hasPrev ? 9 : 8} className="text-center text-muted-foreground py-8">Sin resultados</TableCell></TableRow>
                   ) : filtered.map(c => {
                     const badge = COMPLIANCE_BADGE[c.compliance];
                     const Icon = badge.icon;
@@ -374,6 +453,11 @@ export default function PunchActivityTab() {
                             {c.ruleLabel && <div className="text-[10px] text-primary mt-0.5">{c.ruleLabel}</div>}
                           </TableCell>
                           <TableCell className="text-center">{c.punches.length}</TableCell>
+                          {diff.hasPrev && (
+                            <TableCell className="text-center">
+                              <DeltaBadge change={diff.byCode.get((c.accountCode || c.accountName).trim())} />
+                            </TableCell>
+                          )}
                           <TableCell className="text-center">{c.uniquePoints.length}</TableCell>
                           <TableCell className="text-xs">
                             <div>{fmtDateTime(c.firstPunch)}</div>
@@ -620,3 +704,28 @@ function KpiCard({ label, value, color, active, onClick }: {
     </Card>
   );
 }
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-muted/20 p-3">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="text-xl font-bold text-foreground">{value}</p>
+    </div>
+  );
+}
+
+function DeltaBadge({ change }: { change?: PunchChange }) {
+  if (!change) return <span className="text-muted-foreground text-xs">—</span>;
+  if (change.direction === "new")
+    return <Badge variant="outline" className="text-cyan-400 border-cyan-500/30 text-[10px]">● nueva</Badge>;
+  if (change.direction === "gone")
+    return <Badge variant="outline" className="text-muted-foreground text-[10px]">✗ no aparece</Badge>;
+  const d = change.deltaCount;
+  const deltaTxt = d !== null && d !== 0 ? ` ${d > 0 ? "+" : ""}${d}` : "";
+  if (change.direction === "worse")
+    return <Badge variant="outline" className="text-red-400 border-red-500/30 text-[10px]"><TrendingDown className="h-3 w-3 mr-1" />peor{deltaTxt}</Badge>;
+  if (change.direction === "better")
+    return <Badge variant="outline" className="text-emerald-400 border-emerald-500/30 text-[10px]"><TrendingUp className="h-3 w-3 mr-1" />mejor{deltaTxt}</Badge>;
+  return <span className="text-muted-foreground text-xs">=</span>;
+}
+

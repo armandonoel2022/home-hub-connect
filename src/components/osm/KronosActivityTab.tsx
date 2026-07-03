@@ -244,7 +244,22 @@ export default function KronosActivityTab({ clients }: Props) {
   const [generalClients, setGeneralClients] = useState<GeneralClient[]>([]);
   const [gcPickerOpen, setGcPickerOpen] = useState(false);
   const [linkingGc, setLinkingGc] = useState(false);
+  const [punchReport, setPunchReport] = useState<import("@/lib/punchHtmParser").PunchParsedReport | null>(null);
+  const [punchMeta, setPunchMeta] = useState<MonitoringReportMeta | null>(null);
   const { user } = useAuth();
+
+  /** Carga el último reporte de Punches para alimentar las cuentas Active Track. */
+  const loadLatestPunches = async () => {
+    try {
+      const list = await monitoringReportsApi.list("punches");
+      if (list.length === 0) return;
+      const doc = await monitoringReportsApi.get<import("@/lib/punchHtmParser").PunchParsedReport>(list[0].id);
+      setPunchReport(doc.payload);
+      setPunchMeta({ id: doc.id, kind: doc.kind, reportDate: doc.reportDate, fileName: doc.fileName, uploadedAt: doc.uploadedAt, uploadedBy: doc.uploadedBy });
+    } catch (e: any) {
+      if (e.message !== "API_NOT_CONFIGURED") console.warn("Punches p/Kronos:", e.message);
+    }
+  };
 
   const loadSettings = async () => {
     try {
@@ -323,7 +338,17 @@ export default function KronosActivityTab({ clients }: Props) {
     } catch (e: any) { toast.error(`No se pudo cargar el reporte de comparación: ${e.message}`); }
   };
 
-  useEffect(() => { loadSettings(); loadBillingClients(); loadGeneralClients(); loadHistory(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { loadSettings(); loadBillingClients(); loadGeneralClients(); loadHistory(); loadLatestPunches(); /* eslint-disable-next-line */ }, []);
+
+  /** Última señal por cuenta derivada del reporte de Punches (Active Track). */
+  const punchByCode = useMemo(() => {
+    const m = new Map<string, string>();
+    (punchReport?.clients || []).forEach(c => {
+      const code = (c.accountCode || "").trim();
+      if (code && c.lastPunch) m.set(code, c.lastPunch);
+    });
+    return m;
+  }, [punchReport]);
 
   /** Sugerencia automática de cliente CxC para una LX sin vincular, basada en nombres. */
   const suggestClient = (lxName: string): BillingClient | null => {
@@ -567,11 +592,16 @@ export default function KronosActivityTab({ clients }: Props) {
       if (r.powerOk === false) alertas.push("Sin energía eléctrica (falla de CA sin restaurar)");
       if (r.lowBattery) alertas.push("Batería baja");
 
+      // Active Track: usar la última señal del reporte de Punches si es más reciente.
+      let effLastSignal = r.lastSignal;
+      const punchSig = isBaton ? punchByCode.get(r.accountCode.trim()) : undefined;
+      if (punchSig && (!effLastSignal || punchSig > effLastSignal)) effLastSignal = punchSig;
+
       list.push({
         accountCode: r.accountCode,
         accountName: r.accountName,
         estado: r.estado,
-        lastSignal: r.lastSignal,
+        lastSignal: effLastSignal,
         lastOpen: noOpenClose ? null : r.lastOpen,
         lastClose: noOpenClose ? null : r.lastClose,
         sameDayCycle: !noOpenClose && r.sameDayCycle,
@@ -603,7 +633,7 @@ export default function KronosActivityTab({ clients }: Props) {
 
 
     return list.sort((a, b) => (b.daysSince ?? 9999) - (a.daysSince ?? 9999));
-  }, [report, clients, osmByCode, settings, billingClientById]);
+  }, [report, clients, osmByCode, settings, billingClientById, punchByCode]);
 
   const stats = useMemo(() => {
     const isInactiveCancelled = (r: CombinedRow) => !!r.setting?.lxStatus && INACTIVE_CANCELLED.has(r.setting.lxStatus);
