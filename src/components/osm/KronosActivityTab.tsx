@@ -244,7 +244,22 @@ export default function KronosActivityTab({ clients }: Props) {
   const [generalClients, setGeneralClients] = useState<GeneralClient[]>([]);
   const [gcPickerOpen, setGcPickerOpen] = useState(false);
   const [linkingGc, setLinkingGc] = useState(false);
+  const [punchReport, setPunchReport] = useState<import("@/lib/punchHtmParser").PunchParsedReport | null>(null);
+  const [punchMeta, setPunchMeta] = useState<MonitoringReportMeta | null>(null);
   const { user } = useAuth();
+
+  /** Carga el último reporte de Punches para alimentar las cuentas Active Track. */
+  const loadLatestPunches = async () => {
+    try {
+      const list = await monitoringReportsApi.list("punches");
+      if (list.length === 0) return;
+      const doc = await monitoringReportsApi.get<import("@/lib/punchHtmParser").PunchParsedReport>(list[0].id);
+      setPunchReport(doc.payload);
+      setPunchMeta({ id: doc.id, kind: doc.kind, reportDate: doc.reportDate, fileName: doc.fileName, uploadedAt: doc.uploadedAt, uploadedBy: doc.uploadedBy });
+    } catch (e: any) {
+      if (e.message !== "API_NOT_CONFIGURED") console.warn("Punches p/Kronos:", e.message);
+    }
+  };
 
   const loadSettings = async () => {
     try {
