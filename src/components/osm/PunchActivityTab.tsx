@@ -29,6 +29,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import {
+  ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis,
+  Tooltip as RTooltip,
+} from "recharts";
+import {
   parsePunchHtmFile, evaluatePunchReport, mergePunchReports,
   type PunchParsedReport, type ExpectedRound, type PunchClientSummary,
 } from "@/lib/punchHtmParser";
