@@ -96,6 +96,12 @@ export default function PunchActivityTab() {
   const [filter, setFilter] = useState<"all" | "missed" | "partial" | "ok" | "no-rules" | "baton">("all");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [rulePreset, setRulePreset] = useState<{ pattern: string; label: string } | null>(null);
+
+  const openDefineRule = (c: PunchClientSummary) => {
+    setRulePreset({ pattern: c.accountName, label: c.accountName });
+    setRulesOpen(true);
+  };
 
   const toggleExpand = (k: string) => setExpanded(p => { const n = new Set(p); n.has(k) ? n.delete(k) : n.add(k); return n; });
 
