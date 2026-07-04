@@ -29,7 +29,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  parsePunchHtmFile, evaluatePunchReport,
+  ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis,
+  Tooltip as RTooltip,
+} from "recharts";
+import {
+  parsePunchHtmFile, evaluatePunchReport, mergePunchReports,
   type PunchParsedReport, type ExpectedRound, type PunchClientSummary,
 } from "@/lib/punchHtmParser";
 import {
@@ -96,6 +100,12 @@ export default function PunchActivityTab() {
   const [filter, setFilter] = useState<"all" | "missed" | "partial" | "ok" | "no-rules" | "baton">("all");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [rulePreset, setRulePreset] = useState<{ pattern: string; label: string } | null>(null);
+
+  const openDefineRule = (c: PunchClientSummary) => {
+    setRulePreset({ pattern: c.accountName, label: c.accountName });
+    setRulesOpen(true);
+  };
 
   const toggleExpand = (k: string) => setExpanded(p => { const n = new Set(p); n.has(k) ? n.delete(k) : n.add(k); return n; });
 
@@ -239,18 +249,38 @@ export default function PunchActivityTab() {
         toast.error("No se detectaron punches. Verifica que el archivo sea el reporte Active Track de Kronos NET.");
         return;
       }
-      setRawReport(parsed);
+      const dateKey = parsed.reportDate ? parsed.reportDate.slice(0, 10) : new Date().toISOString().slice(0, 10);
+
+      // ── FUSIÓN: si ya hay un reporte de ese día, agregamos las cuentas nuevas
+      // (naves) en lugar de reemplazar el anterior.
+      let toSave = parsed;
+      let mergedNote = "";
       try {
-        const dateKey = parsed.reportDate ? parsed.reportDate.slice(0, 10) : new Date().toISOString().slice(0, 10);
+        const existingMeta = history.find(h => (h.reportDate || "").slice(0, 10) === dateKey);
+        if (existingMeta) {
+          const existingDoc = await monitoringReportsApi.get<PunchParsedReport>(existingMeta.id);
+          const before = existingDoc.payload.clients.length;
+          toSave = mergePunchReports(existingDoc.payload, parsed);
+          const added = toSave.clients.length - before;
+          mergedNote = added > 0
+            ? ` · +${added} cuenta(s) agregada(s) al día`
+            : " · datos actualizados";
+        }
+      } catch (e: any) {
+        if (e.message !== "API_NOT_CONFIGURED") console.warn("Merge punches:", e.message);
+      }
+
+      setRawReport(toSave);
+      try {
         const saved = await monitoringReportsApi.upsert<PunchParsedReport>({
-          kind: "punches", reportDate: dateKey, fileName: file.name, payload: parsed,
+          kind: "punches", reportDate: dateKey, fileName: toSave.fileName || file.name, payload: toSave,
         });
         setActiveReportId(saved.id);
         setMeta({ id: saved.id, kind: saved.kind, reportDate: saved.reportDate, fileName: saved.fileName, uploadedAt: saved.uploadedAt, uploadedBy: saved.uploadedBy });
         const freshList = await monitoringReportsApi.list("punches");
         setHistory(freshList);
         await loadComparison(saved.id, freshList);
-        toast.success(`Reporte guardado (${parsed.clients.length} clientes, ${parsed.rawRowCount} punches)`);
+        toast.success(`Reporte guardado (${toSave.clients.length} clientes, ${toSave.rawRowCount} punches)${mergedNote}`);
       } catch (e: any) {
         if (e.message === "API_NOT_CONFIGURED") toast.warning("Backend no configurado: el reporte solo es visible en esta sesión");
         else toast.error(`Reporte cargado pero no se pudo guardar: ${e.message}`);
@@ -372,13 +402,16 @@ export default function PunchActivityTab() {
       {report && stats && (
         <>
           <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-            <KpiCard label="Total clientes" value={stats.total} color="text-foreground" active={filter === "all"} onClick={() => setFilter("all")} />
-            <KpiCard label="✅ Cumplió" value={stats.ok} color="text-emerald-400" active={filter === "ok"} onClick={() => setFilter("ok")} />
-            <KpiCard label="⚠️ Parcial" value={stats.partial} color="text-amber-400" active={filter === "partial"} onClick={() => setFilter("partial")} />
-            <KpiCard label="❌ Incumplió" value={stats.missed} color="text-red-400" active={filter === "missed"} onClick={() => setFilter("missed")} />
-            <KpiCard label="Sin regla" value={stats.noRules} color="text-muted-foreground" active={filter === "no-rules"} onClick={() => setFilter("no-rules")} />
-            <KpiCard label="🛰️ Active Track" value={stats.baton} color="text-cyan-400" active={filter === "baton"} onClick={() => setFilter("baton")} />
+            <KpiCard label="Total clientes" value={stats.total} tone="slate" active={filter === "all"} onClick={() => setFilter("all")} />
+            <KpiCard label="Cumplió" value={stats.ok} tone="emerald" active={filter === "ok"} onClick={() => setFilter("ok")} />
+            <KpiCard label="Parcial" value={stats.partial} tone="amber" active={filter === "partial"} onClick={() => setFilter("partial")} />
+            <KpiCard label="Incumplió" value={stats.missed} tone="red" active={filter === "missed"} onClick={() => setFilter("missed")} />
+            <KpiCard label="Sin regla" value={stats.noRules} tone="slate" active={filter === "no-rules"} onClick={() => setFilter("no-rules")} />
+            <KpiCard label="Active Track" value={stats.baton} tone="cyan" active={filter === "baton"} onClick={() => setFilter("baton")} />
           </div>
+
+          <PunchDashboard report={report} stats={stats} timing={timing} onFilter={setFilter} />
+
 
           {/* Media de tiempos de rondas (Active Track) */}
           <Card>
@@ -398,10 +431,11 @@ export default function PunchActivityTab() {
           {/* Comparación con reporte anterior */}
           {diff.hasPrev && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <KpiCard label="↑ Mejoraron" value={diff.better.length} color="text-emerald-400" active={false} onClick={() => {}} />
-              <KpiCard label="↓ Empeoraron" value={diff.worse.length} color="text-red-400" active={false} onClick={() => {}} />
-              <KpiCard label="● Nuevas cuentas" value={diff.added.length} color="text-cyan-400" active={false} onClick={() => {}} />
-              <KpiCard label="Dejaron de aparecer" value={diff.gone.length} color="text-muted-foreground" active={false} onClick={() => {}} />
+              <KpiCard label="Mejoraron" value={diff.better.length} tone="emerald" active={false} onClick={() => {}} />
+              <KpiCard label="Empeoraron" value={diff.worse.length} tone="red" active={false} onClick={() => {}} />
+              <KpiCard label="Nuevas cuentas" value={diff.added.length} tone="cyan" active={false} onClick={() => {}} />
+              <KpiCard label="Dejaron de aparecer" value={diff.gone.length} tone="slate" active={false} onClick={() => {}} />
+
             </div>
           )}
 
@@ -466,7 +500,7 @@ export default function PunchActivityTab() {
                           <TableCell className="text-xs">
                             {c.expectedRounds.length === 0 ? (
                               <Button size="sm" variant="outline" className="h-7 text-xs"
-                                onClick={() => { setRulesOpen(true); }}>
+                                onClick={() => openDefineRule(c)}>
                                 <Plus className="h-3 w-3 mr-1" /> Definir regla
                               </Button>
                             ) : (
@@ -514,7 +548,7 @@ export default function PunchActivityTab() {
         </>
       )}
 
-      <RulesManager open={rulesOpen} onOpenChange={setRulesOpen} rules={rules} reload={loadRules} />
+      <RulesManager open={rulesOpen} onOpenChange={(b) => { setRulesOpen(b); if (!b) setRulePreset(null); }} rules={rules} reload={loadRules} preset={rulePreset} />
     </div>
   );
 }
@@ -523,8 +557,9 @@ export default function PunchActivityTab() {
 
 function emptyRound(): PunchRoundConfig { return { time: "03:30", toleranceMin: 60, precisionMin: 10 }; }
 
-function RulesManager({ open, onOpenChange, rules, reload }: {
+function RulesManager({ open, onOpenChange, rules, reload, preset }: {
   open: boolean; onOpenChange: (b: boolean) => void; rules: PunchRule[]; reload: () => Promise<void>;
+  preset?: { pattern: string; label: string } | null;
 }) {
   const [editing, setEditing] = useState<PunchRule | null>(null);
   const [draft, setDraft] = useState<{ id?: string; clientPattern: string; label: string; rounds: PunchRoundConfig[]; active: boolean }>({
@@ -537,6 +572,24 @@ function RulesManager({ open, onOpenChange, rules, reload }: {
     setEditing(r);
     setDraft({ id: r.id, clientPattern: r.clientPattern, label: r.label, rounds: r.rounds.map(x => ({ ...x })), active: r.active });
   };
+
+  // Al abrir desde "Definir regla" para una cuenta específica, precargar patrón/etiqueta.
+  useEffect(() => {
+    if (open && preset) {
+      setEditing(null);
+      setDraft({ clientPattern: preset.pattern, label: preset.label, rounds: [emptyRound()], active: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, preset]);
+
+  // Copiar las rondas de una regla existente hacia el borrador actual.
+  const copyRoundsFrom = (ruleId: string) => {
+    const r = rules.find(x => x.id === ruleId);
+    if (!r) return;
+    setDraft(d => ({ ...d, rounds: r.rounds.map(x => ({ ...x })) }));
+    toast.success(`Rondas copiadas de "${r.label}"`);
+  };
+
 
   const save = async () => {
     if (!draft.clientPattern.trim() || draft.rounds.length === 0) {
@@ -642,6 +695,25 @@ function RulesManager({ open, onOpenChange, rules, reload }: {
             </div>
           </div>
 
+          {rules.length > 0 && (
+            <div className="rounded-md border border-border bg-muted/20 p-2 flex flex-wrap items-center gap-2">
+              <Label className="text-xs whitespace-nowrap">Aplicar regla existente:</Label>
+              <Select onValueChange={copyRoundsFrom}>
+                <SelectTrigger className="h-8 text-xs w-[280px]">
+                  <SelectValue placeholder="Copiar rondas de una regla ya creada…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {rules.map(r => (
+                    <SelectItem key={r.id} value={r.id} className="text-xs">
+                      {r.label} · {r.rounds.map(rd => rd.time).join(" / ")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-[10px] text-muted-foreground">Copia sus horarios/tolerancias a esta cuenta.</span>
+            </div>
+          )}
+
           <div>
             <div className="flex items-center justify-between mb-2">
               <Label className="text-xs">Rondas esperadas</Label>
@@ -650,6 +722,7 @@ function RulesManager({ open, onOpenChange, rules, reload }: {
                 <Plus className="h-3 w-3 mr-1" /> Añadir ronda
               </Button>
             </div>
+
             <div className="space-y-2">
               {draft.rounds.map((rd, i) => (
                 <div key={i} className="grid grid-cols-[1fr_1fr_1fr_40px] gap-2 items-end">
@@ -692,18 +765,110 @@ function RulesManager({ open, onOpenChange, rules, reload }: {
   );
 }
 
-function KpiCard({ label, value, color, active, onClick }: {
-  label: string; value: number; color: string; active: boolean; onClick: () => void;
+type KpiTone = "slate" | "emerald" | "amber" | "red" | "cyan" | "violet";
+const TONE_STYLES: Record<KpiTone, { bg: string; value: string; ring: string }> = {
+  slate:   { bg: "from-slate-500/10 to-slate-500/5 border-slate-500/20",     value: "text-slate-200",   ring: "ring-slate-400" },
+  emerald: { bg: "from-emerald-500/15 to-emerald-500/5 border-emerald-500/25", value: "text-emerald-400", ring: "ring-emerald-400" },
+  amber:   { bg: "from-amber-500/15 to-amber-500/5 border-amber-500/25",     value: "text-amber-400",   ring: "ring-amber-400" },
+  red:     { bg: "from-red-500/15 to-red-500/5 border-red-500/25",           value: "text-red-400",     ring: "ring-red-400" },
+  cyan:    { bg: "from-cyan-500/15 to-cyan-500/5 border-cyan-500/25",        value: "text-cyan-400",    ring: "ring-cyan-400" },
+  violet:  { bg: "from-violet-500/15 to-violet-500/5 border-violet-500/25",  value: "text-violet-400",  ring: "ring-violet-400" },
+};
+
+function KpiCard({ label, value, tone = "slate", active, onClick }: {
+  label: string; value: number; tone?: KpiTone; active: boolean; onClick: () => void;
 }) {
+  const t = TONE_STYLES[tone];
   return (
-    <Card className={`cursor-pointer transition ${active ? "ring-2 ring-primary" : "hover:shadow-md"}`} onClick={onClick}>
+    <Card
+      className={`cursor-pointer transition bg-gradient-to-br ${t.bg} ${active ? `ring-2 ${t.ring}` : "hover:shadow-md hover:-translate-y-0.5"}`}
+      onClick={onClick}
+    >
       <CardContent className="pt-4 pb-3">
         <p className="text-xs text-muted-foreground">{label}</p>
-        <p className={`text-2xl font-bold ${color}`}>{value}</p>
+        <p className={`text-3xl font-bold ${t.value}`}>{value}</p>
       </CardContent>
     </Card>
   );
 }
+
+// ───────────────── Dashboard visual (clicable) ─────────────────
+function PunchDashboard({ report, stats, timing, onFilter }: {
+  report: PunchParsedReport;
+  stats: { total: number; ok: number; partial: number; missed: number; noRules: number; baton: number };
+  timing: ReturnType<typeof analyzePunchTiming>;
+  onFilter: (f: "all" | "missed" | "partial" | "ok" | "no-rules" | "baton") => void;
+}) {
+  const complianceData = [
+    { key: "ok", name: "Cumplió", value: stats.ok, color: "#34d399" },
+    { key: "partial", name: "Parcial", value: stats.partial, color: "#fbbf24" },
+    { key: "missed", name: "Incumplió", value: stats.missed, color: "#f87171" },
+    { key: "no-rules", name: "Sin regla", value: stats.noRules, color: "#94a3b8" },
+  ].filter(d => d.value > 0);
+
+  const topClients = [...timing.perClient]
+    .sort((a, b) => b.punchCount - a.punchCount)
+    .slice(0, 8)
+    .map(c => ({ name: c.accountName.length > 18 ? c.accountName.slice(0, 18) + "…" : c.accountName, punches: c.punchCount }));
+
+  const compliancePct = stats.total ? Math.round(((stats.ok + stats.partial) / stats.total) * 100) : 0;
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <Card>
+        <CardHeader className="pb-1">
+          <CardTitle className="text-sm">Distribución de cumplimiento</CardTitle>
+        </CardHeader>
+        <CardContent className="h-[240px]">
+          {complianceData.length === 0 ? (
+            <p className="text-xs text-muted-foreground pt-8 text-center">Sin datos</p>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={complianceData} dataKey="value" nameKey="name"
+                  cx="50%" cy="50%" innerRadius={55} outerRadius={85} paddingAngle={3}
+                  onClick={(d: any) => d?.key && onFilter(d.key)}
+                  label={(e: any) => `${e.name}: ${e.value}`}
+                  labelLine={false}
+                >
+                  {complianceData.map(d => (
+                    <Cell key={d.key} fill={d.color} className="cursor-pointer" />
+                  ))}
+                </Pie>
+                <RTooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+          <p className="text-center text-xs text-muted-foreground -mt-6">
+            <span className="text-lg font-bold text-foreground">{compliancePct}%</span> con actividad · clic para filtrar
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-1">
+          <CardTitle className="text-sm">Top cuentas por punches</CardTitle>
+        </CardHeader>
+        <CardContent className="h-[240px]">
+          {topClients.length === 0 ? (
+            <p className="text-xs text-muted-foreground pt-8 text-center">Sin datos</p>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={topClients} layout="vertical" margin={{ left: 10, right: 20 }}>
+                <XAxis type="number" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                <RTooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} cursor={{ fill: "hsl(var(--muted)/0.3)" }} />
+                <Bar dataKey="punches" radius={[0, 4, 4, 0]} fill="#22d3ee" />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
