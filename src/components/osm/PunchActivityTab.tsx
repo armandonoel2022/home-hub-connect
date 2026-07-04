@@ -492,7 +492,7 @@ export default function PunchActivityTab() {
                           <TableCell className="text-xs">
                             {c.expectedRounds.length === 0 ? (
                               <Button size="sm" variant="outline" className="h-7 text-xs"
-                                onClick={() => { setRulesOpen(true); }}>
+                                onClick={() => openDefineRule(c)}>
                                 <Plus className="h-3 w-3 mr-1" /> Definir regla
                               </Button>
                             ) : (
