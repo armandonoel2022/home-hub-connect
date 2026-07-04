@@ -239,18 +239,38 @@ export default function PunchActivityTab() {
         toast.error("No se detectaron punches. Verifica que el archivo sea el reporte Active Track de Kronos NET.");
         return;
       }
-      setRawReport(parsed);
+      const dateKey = parsed.reportDate ? parsed.reportDate.slice(0, 10) : new Date().toISOString().slice(0, 10);
+
+      // ── FUSIÓN: si ya hay un reporte de ese día, agregamos las cuentas nuevas
+      // (naves) en lugar de reemplazar el anterior.
+      let toSave = parsed;
+      let mergedNote = "";
       try {
-        const dateKey = parsed.reportDate ? parsed.reportDate.slice(0, 10) : new Date().toISOString().slice(0, 10);
+        const existingMeta = history.find(h => (h.reportDate || "").slice(0, 10) === dateKey);
+        if (existingMeta) {
+          const existingDoc = await monitoringReportsApi.get<PunchParsedReport>(existingMeta.id);
+          const before = existingDoc.payload.clients.length;
+          toSave = mergePunchReports(existingDoc.payload, parsed);
+          const added = toSave.clients.length - before;
+          mergedNote = added > 0
+            ? ` · +${added} cuenta(s) agregada(s) al día`
+            : " · datos actualizados";
+        }
+      } catch (e: any) {
+        if (e.message !== "API_NOT_CONFIGURED") console.warn("Merge punches:", e.message);
+      }
+
+      setRawReport(toSave);
+      try {
         const saved = await monitoringReportsApi.upsert<PunchParsedReport>({
-          kind: "punches", reportDate: dateKey, fileName: file.name, payload: parsed,
+          kind: "punches", reportDate: dateKey, fileName: toSave.fileName || file.name, payload: toSave,
         });
         setActiveReportId(saved.id);
         setMeta({ id: saved.id, kind: saved.kind, reportDate: saved.reportDate, fileName: saved.fileName, uploadedAt: saved.uploadedAt, uploadedBy: saved.uploadedBy });
         const freshList = await monitoringReportsApi.list("punches");
         setHistory(freshList);
         await loadComparison(saved.id, freshList);
-        toast.success(`Reporte guardado (${parsed.clients.length} clientes, ${parsed.rawRowCount} punches)`);
+        toast.success(`Reporte guardado (${toSave.clients.length} clientes, ${toSave.rawRowCount} punches)${mergedNote}`);
       } catch (e: any) {
         if (e.message === "API_NOT_CONFIGURED") toast.warning("Backend no configurado: el reporte solo es visible en esta sesión");
         else toast.error(`Reporte cargado pero no se pudo guardar: ${e.message}`);
