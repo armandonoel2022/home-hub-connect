@@ -398,13 +398,16 @@ export default function PunchActivityTab() {
       {report && stats && (
         <>
           <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-            <KpiCard label="Total clientes" value={stats.total} color="text-foreground" active={filter === "all"} onClick={() => setFilter("all")} />
-            <KpiCard label="✅ Cumplió" value={stats.ok} color="text-emerald-400" active={filter === "ok"} onClick={() => setFilter("ok")} />
-            <KpiCard label="⚠️ Parcial" value={stats.partial} color="text-amber-400" active={filter === "partial"} onClick={() => setFilter("partial")} />
-            <KpiCard label="❌ Incumplió" value={stats.missed} color="text-red-400" active={filter === "missed"} onClick={() => setFilter("missed")} />
-            <KpiCard label="Sin regla" value={stats.noRules} color="text-muted-foreground" active={filter === "no-rules"} onClick={() => setFilter("no-rules")} />
-            <KpiCard label="🛰️ Active Track" value={stats.baton} color="text-cyan-400" active={filter === "baton"} onClick={() => setFilter("baton")} />
+            <KpiCard label="Total clientes" value={stats.total} tone="slate" active={filter === "all"} onClick={() => setFilter("all")} />
+            <KpiCard label="Cumplió" value={stats.ok} tone="emerald" active={filter === "ok"} onClick={() => setFilter("ok")} />
+            <KpiCard label="Parcial" value={stats.partial} tone="amber" active={filter === "partial"} onClick={() => setFilter("partial")} />
+            <KpiCard label="Incumplió" value={stats.missed} tone="red" active={filter === "missed"} onClick={() => setFilter("missed")} />
+            <KpiCard label="Sin regla" value={stats.noRules} tone="slate" active={filter === "no-rules"} onClick={() => setFilter("no-rules")} />
+            <KpiCard label="Active Track" value={stats.baton} tone="cyan" active={filter === "baton"} onClick={() => setFilter("baton")} />
           </div>
+
+          <PunchDashboard report={report} stats={stats} timing={timing} onFilter={setFilter} />
+
 
           {/* Media de tiempos de rondas (Active Track) */}
           <Card>
