@@ -170,6 +170,65 @@ export async function parsePunchHtmFile(file: File): Promise<PunchParsedReport> 
   };
 }
 
+/**
+ * Fusiona un reporte existente con uno nuevo (mismo día) SIN reemplazar.
+ * - Las cuentas nuevas se agregan.
+ * - Si una cuenta ya existía, sus punches se combinan y deduplican
+ *   (por tiempo + punto + hardware), de modo que re-subir el mismo archivo
+ *   no genera duplicados pero sí se acumulan naves/cuentas distintas.
+ */
+export function mergePunchReports(
+  existing: PunchParsedReport | null | undefined,
+  incoming: PunchParsedReport,
+): PunchParsedReport {
+  if (!existing) return incoming;
+
+  const keyOfClient = (c: PunchClientSummary) => (c.accountCode || c.accountName).trim().toUpperCase();
+  const punchKey = (p: PunchRow) => `${p.receivedAt || ""}|${p.pointDescription}|${p.hardware}`;
+
+  const map = new Map<string, PunchClientSummary>();
+  existing.clients.forEach(c => map.set(keyOfClient(c), { ...c, punches: [...c.punches] }));
+
+  incoming.clients.forEach(inc => {
+    const k = keyOfClient(inc);
+    const prev = map.get(k);
+    if (!prev) {
+      map.set(k, { ...inc, punches: [...inc.punches] });
+      return;
+    }
+    const seen = new Set(prev.punches.map(punchKey));
+    const merged = [...prev.punches];
+    inc.punches.forEach(p => { if (!seen.has(punchKey(p))) { seen.add(punchKey(p)); merged.push(p); } });
+    merged.sort((a, b) => (a.receivedAt || "").localeCompare(b.receivedAt || ""));
+    map.set(k, {
+      ...prev,
+      accountName: prev.accountName || inc.accountName,
+      accountCode: prev.accountCode || inc.accountCode,
+      punches: merged,
+      uniquePoints: Array.from(new Set(merged.map(p => p.pointDescription))).filter(Boolean),
+      firstPunch: merged[0]?.receivedAt || null,
+      lastPunch: merged[merged.length - 1]?.receivedAt || null,
+    });
+  });
+
+  const clients = Array.from(map.values());
+  const rawRowCount = clients.reduce((a, c) => a + c.punches.length, 0);
+
+  // Nombre de archivo agregado (lista de fuentes del día)
+  const files = new Set<string>();
+  [existing.fileName, incoming.fileName].forEach(f => { if (f) f.split(" + ").forEach(x => files.add(x.trim())); });
+
+  return {
+    reportDate: existing.reportDate || incoming.reportDate,
+    reportPeriod: incoming.reportPeriod || existing.reportPeriod,
+    generatedAt: new Date().toISOString(),
+    rawRowCount,
+    clients,
+    fileName: Array.from(files).join(" + ") || incoming.fileName,
+  };
+}
+
+
 // ──────────────────────────────────────────────────────────────
 // Evaluación de cumplimiento (puede correr cuando llegan las reglas)
 // ──────────────────────────────────────────────────────────────
