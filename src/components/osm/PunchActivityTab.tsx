@@ -687,6 +687,25 @@ function RulesManager({ open, onOpenChange, rules, reload, preset }: {
             </div>
           </div>
 
+          {rules.length > 0 && (
+            <div className="rounded-md border border-border bg-muted/20 p-2 flex flex-wrap items-center gap-2">
+              <Label className="text-xs whitespace-nowrap">Aplicar regla existente:</Label>
+              <Select onValueChange={copyRoundsFrom}>
+                <SelectTrigger className="h-8 text-xs w-[280px]">
+                  <SelectValue placeholder="Copiar rondas de una regla ya creada…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {rules.map(r => (
+                    <SelectItem key={r.id} value={r.id} className="text-xs">
+                      {r.label} · {r.rounds.map(rd => rd.time).join(" / ")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-[10px] text-muted-foreground">Copia sus horarios/tolerancias a esta cuenta.</span>
+            </div>
+          )}
+
           <div>
             <div className="flex items-center justify-between mb-2">
               <Label className="text-xs">Rondas esperadas</Label>
@@ -695,6 +714,7 @@ function RulesManager({ open, onOpenChange, rules, reload, preset }: {
                 <Plus className="h-3 w-3 mr-1" /> Añadir ronda
               </Button>
             </div>
+
             <div className="space-y-2">
               {draft.rounds.map((rd, i) => (
                 <div key={i} className="grid grid-cols-[1fr_1fr_1fr_40px] gap-2 items-end">
