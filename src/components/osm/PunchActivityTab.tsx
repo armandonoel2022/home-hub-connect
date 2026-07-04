@@ -427,10 +427,11 @@ export default function PunchActivityTab() {
           {/* Comparación con reporte anterior */}
           {diff.hasPrev && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <KpiCard label="↑ Mejoraron" value={diff.better.length} color="text-emerald-400" active={false} onClick={() => {}} />
-              <KpiCard label="↓ Empeoraron" value={diff.worse.length} color="text-red-400" active={false} onClick={() => {}} />
-              <KpiCard label="● Nuevas cuentas" value={diff.added.length} color="text-cyan-400" active={false} onClick={() => {}} />
-              <KpiCard label="Dejaron de aparecer" value={diff.gone.length} color="text-muted-foreground" active={false} onClick={() => {}} />
+              <KpiCard label="Mejoraron" value={diff.better.length} tone="emerald" active={false} onClick={() => {}} />
+              <KpiCard label="Empeoraron" value={diff.worse.length} tone="red" active={false} onClick={() => {}} />
+              <KpiCard label="Nuevas cuentas" value={diff.added.length} tone="cyan" active={false} onClick={() => {}} />
+              <KpiCard label="Dejaron de aparecer" value={diff.gone.length} tone="slate" active={false} onClick={() => {}} />
+
             </div>
           )}
 
