@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  parsePunchHtmFile, evaluatePunchReport,
+  parsePunchHtmFile, evaluatePunchReport, mergePunchReports,
   type PunchParsedReport, type ExpectedRound, type PunchClientSummary,
 } from "@/lib/punchHtmParser";
 import {
