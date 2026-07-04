@@ -549,8 +549,9 @@ export default function PunchActivityTab() {
 
 function emptyRound(): PunchRoundConfig { return { time: "03:30", toleranceMin: 60, precisionMin: 10 }; }
 
-function RulesManager({ open, onOpenChange, rules, reload }: {
+function RulesManager({ open, onOpenChange, rules, reload, preset }: {
   open: boolean; onOpenChange: (b: boolean) => void; rules: PunchRule[]; reload: () => Promise<void>;
+  preset?: { pattern: string; label: string } | null;
 }) {
   const [editing, setEditing] = useState<PunchRule | null>(null);
   const [draft, setDraft] = useState<{ id?: string; clientPattern: string; label: string; rounds: PunchRoundConfig[]; active: boolean }>({
@@ -563,6 +564,24 @@ function RulesManager({ open, onOpenChange, rules, reload }: {
     setEditing(r);
     setDraft({ id: r.id, clientPattern: r.clientPattern, label: r.label, rounds: r.rounds.map(x => ({ ...x })), active: r.active });
   };
+
+  // Al abrir desde "Definir regla" para una cuenta específica, precargar patrón/etiqueta.
+  useEffect(() => {
+    if (open && preset) {
+      setEditing(null);
+      setDraft({ clientPattern: preset.pattern, label: preset.label, rounds: [emptyRound()], active: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, preset]);
+
+  // Copiar las rondas de una regla existente hacia el borrador actual.
+  const copyRoundsFrom = (ruleId: string) => {
+    const r = rules.find(x => x.id === ruleId);
+    if (!r) return;
+    setDraft(d => ({ ...d, rounds: r.rounds.map(x => ({ ...x })) }));
+    toast.success(`Rondas copiadas de "${r.label}"`);
+  };
+
 
   const save = async () => {
     if (!draft.clientPattern.trim() || draft.rounds.length === 0) {
