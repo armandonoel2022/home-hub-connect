@@ -540,7 +540,7 @@ export default function PunchActivityTab() {
         </>
       )}
 
-      <RulesManager open={rulesOpen} onOpenChange={setRulesOpen} rules={rules} reload={loadRules} />
+      <RulesManager open={rulesOpen} onOpenChange={(b) => { setRulesOpen(b); if (!b) setRulePreset(null); }} rules={rules} reload={loadRules} preset={rulePreset} />
     </div>
   );
 }
