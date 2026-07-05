@@ -40,6 +40,8 @@ import {
   analyzePunchTiming, diffPunchReports, fmtMinutes,
   type PunchDiff, type PunchChange,
 } from "@/lib/punchAnalytics";
+import PunchPointTracker from "./PunchPointTracker";
+import { assignPunchToPoint } from "@/lib/punchPoints";
 import type { KronosParsedReport } from "@/lib/kronosHtmParser";
 import {
   monitoringReportsApi, punchRulesApi, monitoringAccountSettingsApi,
