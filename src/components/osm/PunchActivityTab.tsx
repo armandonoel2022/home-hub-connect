@@ -251,7 +251,26 @@ export default function PunchActivityTab() {
         toast.error("No se detectaron punches. Verifica que el archivo sea el reporte Active Track de Kronos NET.");
         return;
       }
-      const dateKey = parsed.reportDate ? parsed.reportDate.slice(0, 10) : new Date().toISOString().slice(0, 10);
+      // La fecha del reporte se toma de: (1) la fecha declarada en el HTM,
+      // (2) la fecha MÁS FRECUENTE entre los punches (los reportes Active Track
+      // muchas veces no traen encabezado con fecha), o (3) hoy como último recurso.
+      // Sin esto, todos los reportes sin fecha caían en "hoy" y se solapaban,
+      // dejando un solo reporte y sin nada con que comparar.
+      const deriveDateFromPunches = (): string | null => {
+        const counts = new Map<string, number>();
+        parsed.clients.forEach(c => c.punches.forEach(p => {
+          if (p.receivedAt) {
+            const d = p.receivedAt.slice(0, 10);
+            counts.set(d, (counts.get(d) || 0) + 1);
+          }
+        }));
+        let best: string | null = null, bestN = -1;
+        counts.forEach((n, d) => { if (n > bestN) { best = d; bestN = n; } });
+        return best;
+      };
+      const dateKey = (parsed.reportDate ? parsed.reportDate.slice(0, 10) : null)
+        || deriveDateFromPunches()
+        || new Date().toISOString().slice(0, 10);
 
       // ── FUSIÓN: si ya hay un reporte de ese día, agregamos las cuentas nuevas
       // (naves) en lugar de reemplazar el anterior.
@@ -272,6 +291,7 @@ export default function PunchActivityTab() {
         if (e.message !== "API_NOT_CONFIGURED") console.warn("Merge punches:", e.message);
       }
 
+      if (!toSave.reportDate) toSave = { ...toSave, reportDate: dateKey };
       setRawReport(toSave);
       try {
         const saved = await monitoringReportsApi.upsert<PunchParsedReport>({
