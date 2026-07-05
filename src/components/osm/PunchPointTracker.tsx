@@ -19,7 +19,7 @@ import {
 import { monitoringReportsApi, type MonitoringReportMeta } from "@/lib/api";
 import type { PunchParsedReport } from "@/lib/punchHtmParser";
 import {
-  PUNCH_CLIENTS, ALL_PUNCH_POINTS, buildPointSeries, fmtMinutes as _unused,
+  PUNCH_CLIENTS, ALL_PUNCH_POINTS, buildPointSeries,
 } from "@/lib/punchPoints";
 import { fmtMinutes } from "@/lib/punchAnalytics";
 
