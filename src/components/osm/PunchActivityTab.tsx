@@ -550,6 +550,8 @@ export default function PunchActivityTab() {
         </>
       )}
 
+      {history.length > 0 && <PunchPointTracker history={history} />}
+
       <RulesManager open={rulesOpen} onOpenChange={(b) => { setRulesOpen(b); if (!b) setRulePreset(null); }} rules={rules} reload={loadRules} preset={rulePreset} />
     </div>
   );
