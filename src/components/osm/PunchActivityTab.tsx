@@ -523,13 +523,17 @@ export default function PunchActivityTab() {
                             <TableCell colSpan={8} className="bg-muted/20">
                               <div className="text-xs space-y-1 p-2 max-h-64 overflow-y-auto">
                                 <p className="font-semibold mb-2">{c.punches.length} punches registrados:</p>
-                                {c.punches.map((p, i) => (
-                                  <div key={i} className="grid grid-cols-[160px_1fr_120px] gap-2">
-                                    <span className="font-mono text-muted-foreground">{fmtDateTime(p.receivedAt)}</span>
-                                    <span>{p.pointDescription}</span>
-                                    <span className="text-muted-foreground font-mono">{p.hardware}</span>
-                                  </div>
-                                ))}
+                                {c.punches.map((p, i) => {
+                                  const pt = assignPunchToPoint(p, c.accountName);
+                                  return (
+                                    <div key={i} className="grid grid-cols-[160px_1fr_140px_120px] gap-2">
+                                      <span className="font-mono text-muted-foreground">{fmtDateTime(p.receivedAt)}</span>
+                                      <span>{p.pointDescription}</span>
+                                      <span>{pt ? <Badge variant="outline" className="text-violet-400 border-violet-500/30 text-[10px]">{pt.point}</Badge> : <span className="text-muted-foreground text-[10px]">—</span>}</span>
+                                      <span className="text-muted-foreground font-mono">{p.hardware}</span>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </TableCell>
                           </TableRow>
