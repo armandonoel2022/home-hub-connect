@@ -291,6 +291,7 @@ export default function PunchActivityTab() {
         if (e.message !== "API_NOT_CONFIGURED") console.warn("Merge punches:", e.message);
       }
 
+      if (!toSave.reportDate) toSave = { ...toSave, reportDate: dateKey };
       setRawReport(toSave);
       try {
         const saved = await monitoringReportsApi.upsert<PunchParsedReport>({
