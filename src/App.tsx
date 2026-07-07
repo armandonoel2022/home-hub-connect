@@ -254,6 +254,7 @@ const App = () => {
                   <Route path="/registro" element={<RegisterPage />} />
                   <Route path="/kiosko" element={<Kiosk />} />
                   <Route path="/presentacion" element={<Presentation />} />
+                  <Route path="/encuesta/:id" element={<SurveyPublic />} />
                   <Route path="/*" element={<ProtectedRoutes />} />
                 </Routes>
                 <ChatWindow />
@@ -263,6 +264,7 @@ const App = () => {
                 <HRNotificationOverlay />
                 <DeviceRegisterOverlay />
                 <AnnouncementOverlay />
+                <SurveyOverlay />
                 
               </ChatProvider>
             </NotificationProvider>
