@@ -74,6 +74,8 @@ import AdminFolderPermissions from "./pages/AdminFolderPermissions";
 import NotFound from "./pages/NotFound";
 import RouteGuard from "@/components/RouteGuard";
 import AnnouncementOverlay from "@/components/AnnouncementOverlay";
+import SurveyOverlay from "@/components/SurveyOverlay";
+import SurveyPublic from "./pages/SurveyPublic";
 
 
 const queryClient = new QueryClient();
@@ -252,6 +254,7 @@ const App = () => {
                   <Route path="/registro" element={<RegisterPage />} />
                   <Route path="/kiosko" element={<Kiosk />} />
                   <Route path="/presentacion" element={<Presentation />} />
+                  <Route path="/encuesta/:id" element={<SurveyPublic />} />
                   <Route path="/*" element={<ProtectedRoutes />} />
                 </Routes>
                 <ChatWindow />
@@ -261,6 +264,7 @@ const App = () => {
                 <HRNotificationOverlay />
                 <DeviceRegisterOverlay />
                 <AnnouncementOverlay />
+                <SurveyOverlay />
                 
               </ChatProvider>
             </NotificationProvider>

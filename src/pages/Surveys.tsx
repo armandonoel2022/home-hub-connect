@@ -270,6 +270,33 @@ const SurveysPage = () => {
         </div>
 
         <div className="px-6 pb-8 space-y-4 mt-4">
+          {/* Enlace público de la Encuesta de Clima 2026 */}
+          <div className="bg-gradient-to-r from-charcoal-dark to-charcoal text-secondary-foreground rounded-xl p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex-1">
+              <p className="text-xs font-bold uppercase tracking-wider text-gold">Encuesta publicada</p>
+              <p className="font-heading font-bold text-lg">Encuesta de Clima 2026 (2)</p>
+              <p className="text-sm text-secondary-foreground/70 mt-1">
+                Comparte este enlace con todo el equipo. Todos verán un recordatorio hasta completarla.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => window.open(`${window.location.origin}/encuesta/clima-2026`, "_blank")}
+                className="text-sm px-4 py-2 rounded-lg border border-gold/40 text-gold hover:bg-gold/10 transition-colors"
+              >
+                Abrir encuesta
+              </button>
+              <button
+                onClick={() => {
+                  navigator.clipboard?.writeText(`${window.location.origin}/encuesta/clima-2026`);
+                }}
+                className="btn-gold text-sm"
+              >
+                Copiar enlace
+              </button>
+            </div>
+          </div>
+
           {visibleSurveys.map((s) => (
             <div key={s.id} className="bg-card rounded-xl border border-border overflow-hidden hover:shadow-md transition-shadow">
               <div className="h-1 w-full bg-secondary" />
