@@ -1018,6 +1018,63 @@ export const announcementsApi = {
     apiFetch<void>(`/announcements/${id}`, { method: "DELETE" }),
 };
 
+// ─── Encuestas (clima laboral) — enlace público + overlay ───
+export interface SurveyQuestionApi {
+  id: string;
+  text: string;
+  type: "rating" | "multiple" | "text";
+  options?: string[];
+}
+export interface SurveyApi {
+  id: string;
+  title: string;
+  description: string;
+  questions: SurveyQuestionApi[];
+  status: "activa" | "cerrada";
+  isPublic?: boolean;
+  showAsOverlay?: boolean;
+  startDate?: string;
+  endDate?: string;
+  createdBy?: string;
+  createdAt?: string;
+  responses?: any[];
+  resultsVisibleTo?: string[];
+}
+
+/** Fetch público (sin token, sin redirección a login) para encuestas por enlace */
+async function publicFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  if (!BASE_URL) throw new Error("API_NOT_CONFIGURED");
+  const res = await fetch(`${BASE_URL}${endpoint}`, {
+    ...options,
+    headers: { "Content-Type": "application/json", ...options?.headers },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: "Error del servidor" }));
+    throw new Error(err.message || `Error ${res.status}`);
+  }
+  if (res.status === 204) return {} as T;
+  return res.json();
+}
+
+export const surveysApi = {
+  // Autenticado
+  getAll: () => apiFetch<SurveyApi[]>("/surveys"),
+  create: (s: Partial<SurveyApi>) =>
+    apiFetch<SurveyApi>("/surveys", { method: "POST", body: JSON.stringify(s) }),
+  update: (id: string, s: Partial<SurveyApi>) =>
+    apiFetch<SurveyApi>(`/surveys/${id}`, { method: "PUT", body: JSON.stringify(s) }),
+  remove: (id: string, reason?: string) =>
+    apiFetch<void>(`/surveys/${id}`, { method: "DELETE", body: JSON.stringify({ reason }) }),
+  // Público
+  getActiveOverlay: () => publicFetch<SurveyApi[]>("/surveys/public/active"),
+  getPublic: (id: string) => publicFetch<SurveyApi>(`/surveys/public/${id}`),
+  respond: (id: string, payload: { answers: Record<string, string | number>; userId?: string; userName?: string; department?: string }) =>
+    publicFetch<{ ok: boolean }>(`/surveys/public/${id}/respond`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+};
+
 // ─── HR Requests (persistencia compartida) ───
 export const hrRequestsApi = {
   list: () => apiFetch<any[]>("/hr-requests"),
