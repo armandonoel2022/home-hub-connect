@@ -39,6 +39,7 @@ export type ModuleKey =
   | "procedures"
   | "wiki"
   | "surveys"
+  | "vacations"
   | "minorPurchases"
   | "clientTracking"
   | "userManagement"
