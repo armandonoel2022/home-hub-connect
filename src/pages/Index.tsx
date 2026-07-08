@@ -35,7 +35,22 @@ const Index = () => {
       to: "/capacitaciones",
       gradient: "linear-gradient(135deg, hsl(160 60% 40%), hsl(160 60% 28%))",
     },
+    {
+      label: "Encuestas",
+      sublabel: "Clima laboral y formularios",
+      icon: ClipboardList,
+      to: "/encuestas",
+      gradient: "linear-gradient(135deg, hsl(265 70% 55%), hsl(280 70% 40%))",
+    },
+    {
+      label: "Provisionamiento de Vacaciones",
+      sublabel: "Planifica vacaciones por departamento",
+      icon: Palmtree,
+      to: "/provisionamiento-vacaciones",
+      gradient: "linear-gradient(135deg, hsl(160 60% 35%), hsl(190 70% 30%))",
+    },
   ];
+
 
   return (
     <AppLayout>
