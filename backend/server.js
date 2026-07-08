@@ -96,6 +96,7 @@ app.use('/api/vault-movements', require('./routes/vault-movements'));
 app.use('/api/expediente-overlay', require('./routes/expediente-overlay'));
 app.use('/api/holidays', require('./routes/holidays'));
 app.use('/api/surveys', require('./routes/surveys'));
+app.use('/api/vacations', require('./routes/vacations'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({
