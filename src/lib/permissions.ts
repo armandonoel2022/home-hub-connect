@@ -181,6 +181,15 @@ export function canView(module: ModuleKey, user: IntranetUser | null | undefined
         inDept(user, "Recursos Humanos", "Tecnología", "Tecnología y Monitoreo")
       );
 
+    // Provisionamiento de Vacaciones — RRHH, líderes, Tecnología y Monitoreo, admin
+    case "vacations":
+      return (
+        isAdmin(user) ||
+        isLeader(user) ||
+        inDept(user, "Recursos Humanos", "Tecnología", "Tecnología y Monitoreo")
+      );
+
+
     // Constancias RRHH (Auditoría) — SOLO super
     case "hrConstancias":
       return isSuperUser(user);
