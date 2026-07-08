@@ -1414,6 +1414,34 @@ export const opsPostsApi = crudApi<{ id: string }>("ops-posts");
 export const opsDailyReportsApi = crudApi<{ id: string }>("ops-daily-reports");
 export const vaultMovementsApi = crudApi<{ id: string }>("vault-movements");
 
+// ─── Provisionamiento de Vacaciones ───
+export interface VacationDept { id: string; name: string; available: boolean; }
+export interface VacationPolicy { under5Days: number; from5Days: number; tenureThresholdYears: number; }
+export interface VacationPeriod { start: string; end: string; days: number; }
+export interface VacationPlan {
+  codigo: string; nombre?: string; ubicacion?: string; notes?: string;
+  periods: VacationPeriod[]; updatedAt?: string; updatedBy?: string;
+}
+export interface VacationEmployee {
+  codigo: string; nombre: string; ubicacion: string; horario: string;
+  cumpleanos: string; celular: string;
+  fechaIngreso: string | null; salario: number | null; activo: boolean | null;
+  antiguedadAnios: number | null; diasDerecho: number; diasEstimados: boolean;
+  plan: VacationPlan | null; diasTomados: number;
+}
+export interface VacationRoster {
+  department: string; available: boolean; sqlConnected?: boolean; employees: VacationEmployee[];
+}
+export const vacationsApi = {
+  departments: () => apiFetch<VacationDept[]>("/vacations/departments"),
+  policy: () => apiFetch<VacationPolicy>("/vacations/policy"),
+  savePolicy: (body: VacationPolicy) =>
+    apiFetch<VacationPolicy>("/vacations/policy", { method: "PUT", body: JSON.stringify(body) }),
+  roster: (deptId: string) => apiFetch<VacationRoster>(`/vacations/roster/${encodeURIComponent(deptId)}`),
+  savePlan: (codigo: string, body: Partial<VacationPlan>) =>
+    apiFetch<VacationPlan>(`/vacations/plans/${encodeURIComponent(codigo)}`, { method: "PUT", body: JSON.stringify(body) }),
+};
+
 export default apiFetch;
 
 

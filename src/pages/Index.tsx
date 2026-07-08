@@ -8,7 +8,7 @@ import Announcements from "@/components/Announcements";
 import { GraduationCap } from "lucide-react";
 import DashboardMetrics from "@/components/DashboardMetrics";
 import Footer from "@/components/Footer";
-import { LifeBuoy, Users } from "lucide-react";
+import { LifeBuoy, Users, ClipboardList, Palmtree } from "lucide-react";
  
 const Index = () => {
   const navigate = useNavigate();
@@ -35,7 +35,22 @@ const Index = () => {
       to: "/capacitaciones",
       gradient: "linear-gradient(135deg, hsl(160 60% 40%), hsl(160 60% 28%))",
     },
+    {
+      label: "Encuestas",
+      sublabel: "Clima laboral y formularios",
+      icon: ClipboardList,
+      to: "/encuestas",
+      gradient: "linear-gradient(135deg, hsl(265 70% 55%), hsl(280 70% 40%))",
+    },
+    {
+      label: "Provisionamiento de Vacaciones",
+      sublabel: "Planifica vacaciones por departamento",
+      icon: Palmtree,
+      to: "/provisionamiento-vacaciones",
+      gradient: "linear-gradient(135deg, hsl(160 60% 35%), hsl(190 70% 30%))",
+    },
   ];
+
 
   return (
     <AppLayout>
@@ -45,7 +60,7 @@ const Index = () => {
 
         {/* Quick Request Buttons */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 w-full pt-8 pb-2">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {requestButtons.map((b) => {
               const Icon = b.icon;
               return (

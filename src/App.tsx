@@ -34,6 +34,7 @@ import SharedFiles from "./pages/SharedFiles";
 import Procedures from "./pages/Procedures";
 import KPIDashboard from "./pages/KPIDashboard";
 import Surveys from "./pages/Surveys";
+import VacationProvisioning from "./pages/VacationProvisioning";
 import Wiki from "./pages/Wiki";
 import TaskInbox from "./pages/TaskInbox";
 import MonitoringCenter from "./pages/MonitoringCenter";
@@ -180,6 +181,7 @@ function ProtectedRoutes() {
       />
       <Routes>
         <Route path="/" element={<Index />} />
+        <Route path="/provisionamiento-vacaciones" element={<RouteGuard module="vacations"><VacationProvisioning /></RouteGuard>} />
         <Route path="/kpis" element={<RouteGuard module="kpis"><KPIDashboard /></RouteGuard>} />
         <Route path="/tareas" element={<RouteGuard module="tasks"><TaskInbox /></RouteGuard>} />
         <Route path="/directorio" element={<Directory />} />
