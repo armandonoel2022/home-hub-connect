@@ -180,6 +180,7 @@ function ProtectedRoutes() {
       />
       <Routes>
         <Route path="/" element={<Index />} />
+        <Route path="/provisionamiento-vacaciones" element={<RouteGuard module="vacations"><VacationProvisioning /></RouteGuard>} />
         <Route path="/kpis" element={<RouteGuard module="kpis"><KPIDashboard /></RouteGuard>} />
         <Route path="/tareas" element={<RouteGuard module="tasks"><TaskInbox /></RouteGuard>} />
         <Route path="/directorio" element={<Directory />} />
