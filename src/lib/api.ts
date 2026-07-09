@@ -1415,31 +1415,64 @@ export const opsDailyReportsApi = crudApi<{ id: string }>("ops-daily-reports");
 export const vaultMovementsApi = crudApi<{ id: string }>("vault-movements");
 
 // ─── Provisionamiento de Vacaciones ───
-export interface VacationDept { id: string; name: string; available: boolean; }
+export interface VacationDept {
+  id: string; name: string; available: boolean;
+  count?: number; leaderCode?: string | null; leaderName?: string | null;
+  pendingCount?: number; approvedCount?: number;
+}
 export interface VacationPolicy { under5Days: number; from5Days: number; tenureThresholdYears: number; }
 export interface VacationPeriod { start: string; end: string; days: number; }
-export interface VacationPlan {
-  codigo: string; nombre?: string; ubicacion?: string; notes?: string;
-  periods: VacationPeriod[]; updatedAt?: string; updatedBy?: string;
+export type VacationStatus = "pendiente" | "aprobada" | "rechazada";
+export interface VacationHistory { at: string; by: string; action: string; detail: string; }
+export interface VacationRequest {
+  id: string; codigo: string; nombre: string; department: string;
+  periods: VacationPeriod[]; notes?: string; status: VacationStatus;
+  requestedBy: string; requestedByName: string; requestedAt: string;
+  approverName?: string; decidedAt?: string; decisionNotes?: string;
+  updatedAt?: string; history?: VacationHistory[];
 }
 export interface VacationEmployee {
-  codigo: string; nombre: string; ubicacion: string; horario: string;
-  cumpleanos: string; celular: string;
-  fechaIngreso: string | null; salario: number | null; activo: boolean | null;
+  codigo: string; nombre: string; position: string; cumpleanos: string;
+  isLeader: boolean;
+  fechaIngreso: string | null;
   antiguedadAnios: number | null; diasDerecho: number; diasEstimados: boolean;
-  plan: VacationPlan | null; diasTomados: number;
+  diasAprobados: number; diasPendientes: number;
+  requests: VacationRequest[];
 }
 export interface VacationRoster {
-  department: string; available: boolean; sqlConnected?: boolean; employees: VacationEmployee[];
+  department: string; name?: string; available: boolean; sqlConnected?: boolean;
+  leaderCode?: string | null; leaderName?: string | null;
+  employees: VacationEmployee[];
 }
+export interface OnVacationEntry { codigo: string; nombre: string; department: string; periods: VacationPeriod[]; requestId: string; }
+export interface OnVacationResult { from: string; to: string; employees: OnVacationEntry[]; }
 export const vacationsApi = {
   departments: () => apiFetch<VacationDept[]>("/vacations/departments"),
   policy: () => apiFetch<VacationPolicy>("/vacations/policy"),
   savePolicy: (body: VacationPolicy) =>
     apiFetch<VacationPolicy>("/vacations/policy", { method: "PUT", body: JSON.stringify(body) }),
   roster: (deptId: string) => apiFetch<VacationRoster>(`/vacations/roster/${encodeURIComponent(deptId)}`),
-  savePlan: (codigo: string, body: Partial<VacationPlan>) =>
-    apiFetch<VacationPlan>(`/vacations/plans/${encodeURIComponent(codigo)}`, { method: "PUT", body: JSON.stringify(body) }),
+  requests: (params?: { status?: string; codigo?: string }) => {
+    const q = new URLSearchParams(params as Record<string, string>).toString();
+    return apiFetch<VacationRequest[]>(`/vacations/requests${q ? `?${q}` : ""}`);
+  },
+  onVacation: (from?: string, to?: string) => {
+    const q = new URLSearchParams();
+    if (from) q.set("from", from);
+    if (to) q.set("to", to);
+    const s = q.toString();
+    return apiFetch<OnVacationResult>(`/vacations/on-vacation${s ? `?${s}` : ""}`);
+  },
+  createRequest: (body: {
+    codigo: string; nombre: string; department: string;
+    periods: VacationPeriod[]; notes?: string; requestedByName?: string;
+  }) => apiFetch<VacationRequest>("/vacations/requests", { method: "POST", body: JSON.stringify(body) }),
+  updateRequest: (id: string, body: { periods?: VacationPeriod[]; notes?: string; actorName?: string }) =>
+    apiFetch<VacationRequest>(`/vacations/requests/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(body) }),
+  decide: (id: string, body: { decision: VacationStatus; approverName?: string; decisionNotes?: string }) =>
+    apiFetch<VacationRequest>(`/vacations/requests/${encodeURIComponent(id)}/decision`, { method: "POST", body: JSON.stringify(body) }),
+  deleteRequest: (id: string) =>
+    apiFetch<{ success: boolean }>(`/vacations/requests/${encodeURIComponent(id)}`, { method: "DELETE" }),
 };
 
 export default apiFetch;
