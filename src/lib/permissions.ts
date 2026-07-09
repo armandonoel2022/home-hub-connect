@@ -181,13 +181,10 @@ export function canView(module: ModuleKey, user: IntranetUser | null | undefined
         inDept(user, "Recursos Humanos", "Tecnología", "Tecnología y Monitoreo")
       );
 
-    // Provisionamiento de Vacaciones — RRHH, líderes, Tecnología y Monitoreo, admin
+    // Provisionamiento de Vacaciones — todo el personal con acceso a la intranet
+    // puede solicitar sus propias vacaciones. Líderes/RRHH/admin gestionan y aprueban.
     case "vacations":
-      return (
-        isAdmin(user) ||
-        isLeader(user) ||
-        inDept(user, "Recursos Humanos", "Tecnología", "Tecnología y Monitoreo")
-      );
+      return !!user;
 
 
     // Constancias RRHH (Auditoría) — SOLO super
