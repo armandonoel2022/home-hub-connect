@@ -452,31 +452,62 @@ router.post('/requests/:id/decision', auth, (req, res) => {
     return res.status(400).json({ message: 'Decisión inválida.' });
   }
   const now = new Date().toISOString();
-  r.status = decision;
-  r.approverName = approverName || (req.user ? req.user.email : 'sistema');
-  r.decidedAt = now;
-  r.decisionNotes = decisionNotes || '';
-  r.history = r.history || [];
-  r.history.push({ at: now, by: r.approverName, action: decision, detail: decisionNotes || '' });
-  store.requests[idx] = r;
-  writeData(FILE, store);
+  const actorName = approverName || (req.user ? req.user.email : 'sistema');
+  const esGerencia = isGerenciaComercial(req.user);
 
-  if (decision === 'aprobada') {
-    // Notificar a TODO el equipo de RRHH (y al solicitante)
-    const recipients = [...hrAndAdminUserIds(), userIdByCode(r.codigo)];
-    pushNotifications(recipients, {
-      title: 'Vacaciones aprobadas',
-      message: `${r.approverName} aprobó ${totalDays(r.periods)} día(s) de vacaciones de ${r.nombre || r.codigo}.`,
-      relatedId: r.id,
-    });
-  } else {
+  if (decision === 'rechazada') {
+    r.status = 'rechazada';
+    r.approverName = actorName;
+    r.decidedAt = now;
+    r.decisionNotes = decisionNotes || '';
+    r.history = r.history || [];
+    r.history.push({ at: now, by: actorName, action: 'rechazada', detail: decisionNotes || '' });
+    store.requests[idx] = r;
+    writeData(FILE, store);
     const su = userIdByCode(r.codigo);
     if (su) pushNotifications([su], {
       title: 'Vacaciones rechazadas',
       message: `Tu solicitud de vacaciones fue rechazada. ${decisionNotes || ''}`.trim(),
       relatedId: r.id,
     });
+    return res.json(r);
   }
+
+  // decision === 'aprobada'
+  // Si requiere fraccionamiento (>2 períodos) y aún no lo aprueba la Gerencia Comercial,
+  // la aprobación del líder solo escala a "pendiente-gerencia".
+  if (r.needsManagement && !r.managementApproved && !esGerencia) {
+    r.status = 'pendiente-gerencia';
+    r.approverName = actorName;
+    r.history = r.history || [];
+    r.history.push({ at: now, by: actorName, action: 'aprobada-lider', detail: 'Aprobada por el líder. Escalada a Gerencia Comercial por fraccionamiento en más de dos períodos.' });
+    store.requests[idx] = r;
+    writeData(FILE, store);
+    pushNotifications(gerenciaComercialUserIds(), {
+      title: 'Aprobación de fraccionamiento requerida',
+      message: `Las vacaciones de ${r.nombre || r.codigo} se dividen en más de dos períodos y requieren aprobación de la Gerencia Comercial.`,
+      relatedId: r.id,
+    });
+    return res.json(r);
+  }
+
+  // Aprobación final (líder normal, o Gerencia Comercial cuando aplica fraccionamiento).
+  if (esGerencia) r.managementApproved = true;
+  r.status = 'aprobada';
+  r.approverName = actorName;
+  r.decidedAt = now;
+  r.decisionNotes = decisionNotes || '';
+  r.history = r.history || [];
+  r.history.push({ at: now, by: actorName, action: 'aprobada', detail: (esGerencia && r.needsManagement ? 'Aprobación final de la Gerencia Comercial. ' : '') + (decisionNotes || '') });
+  store.requests[idx] = r;
+  writeData(FILE, store);
+
+  const recipients = [...hrAndAdminUserIds(), userIdByCode(r.codigo)];
+  pushNotifications(recipients, {
+    title: 'Vacaciones aprobadas',
+    message: `${actorName} aprobó ${totalDays(r.periods)} día(s) de vacaciones de ${r.nombre || r.codigo}.`,
+    relatedId: r.id,
+  });
   res.json(r);
 });
 
