@@ -232,7 +232,7 @@ router.get('/departments', auth, (req, res) => {
     const slug = slugify(emp ? emp.department : r.department);
     const d = bySlug.get(slug);
     if (!d) return;
-    d.pendingCount = (d.pendingCount || 0) + (r.status === 'pendiente' ? 1 : 0);
+    d.pendingCount = (d.pendingCount || 0) + (r.status === 'pendiente' || r.status === 'pendiente-gerencia' ? 1 : 0);
     d.approvedCount = (d.approvedCount || 0) + (r.status === 'aprobada' ? 1 : 0);
   });
   res.json(depts);
