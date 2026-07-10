@@ -37,6 +37,7 @@ import {
   ShieldCheck,
   UserCircle2,
   CalendarDays,
+  FileText,
 } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
