@@ -120,6 +120,8 @@ const VacationProvisioning = () => {
   const [selectedDept, setSelectedDept] = useState<string | null>(null);
   const [roster, setRoster] = useState<VacationRoster | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showOps, setShowOps] = useState(false);
+  const [policyOpen, setPolicyOpen] = useState(false);
 
   // On-vacation view
   const [onVacDate, setOnVacDate] = useState<string>(new Date().toISOString().slice(0, 10));
