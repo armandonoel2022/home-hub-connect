@@ -519,7 +519,7 @@ const VacationProvisioning = () => {
               <div className="mt-3 space-y-1.5 text-xs text-muted-foreground">
                 <p className="flex items-center gap-1.5">
                   <CalendarCheck className="h-3.5 w-3.5" />
-                  {e.antiguedadAnios != null ? `${e.antiguedadAnios} años de servicio` : "Antigüedad no disponible"}
+                  Tiempo de servicio: {e.tiempoServicio ? formatServiceTime(e.tiempoServicio) : (e.antiguedadAnios != null ? `${e.antiguedadAnios} años` : "no disponible")}
                   {e.diasEstimados && " (estimado)"}
                 </p>
                 {e.cumpleanos && <p className="flex items-center gap-1.5"><Cake className="h-3.5 w-3.5" /> {e.cumpleanos}</p>}
