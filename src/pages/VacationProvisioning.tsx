@@ -592,8 +592,20 @@ const VacationProvisioning = () => {
                 <Badge variant="secondary">Derecho: {editEmp.diasDerecho} días</Badge>
                 <Badge className="bg-emerald-500/15 text-emerald-600 border-0">Aprobados: {editEmp.diasAprobados}</Badge>
                 {editEmp.diasPendientes > 0 && <Badge className="bg-amber-500/15 text-amber-600 border-0">Pendientes: {editEmp.diasPendientes}</Badge>}
-                <Badge variant="outline">Restan: {Math.max(0, editEmp.diasDerecho - editEmp.diasAprobados - editEmp.diasPendientes)}</Badge>
+                {draftTotal > 0 && <Badge className="bg-sky-500/15 text-sky-600 border-0">En selección: {draftTotal}</Badge>}
+                <Badge variant="outline" className={remainingDays === 0 ? "text-destructive border-destructive/40" : ""}>Restan: {remainingDays}</Badge>
               </div>
+              <p className="text-xs text-muted-foreground -mt-2">
+                Tiempo de servicio: <strong className="text-foreground">{formatServiceTime(editEmp.tiempoServicio)}</strong>
+                {editEmp.diasEstimados && " · derecho estimado"}
+              </p>
+              {willNeedManagement && (
+                <div className="flex items-start gap-2 rounded-lg bg-purple-500/10 border border-purple-500/20 p-3 text-xs text-purple-700">
+                  <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>Estás dividiendo las vacaciones en más de dos períodos. Según la política, esto requiere la aprobación de la <strong>Gerencia Comercial</strong> (Samuel Aurelio Pérez o Leonela Báez) y será escalado automáticamente.</span>
+                </div>
+              )}
+
 
               {/* Solicitudes existentes */}
               {editEmp.requests.length > 0 && (
