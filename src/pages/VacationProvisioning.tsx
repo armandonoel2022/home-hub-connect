@@ -547,7 +547,7 @@ const VacationProvisioning = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex items-center gap-4 text-white">
             <div className="p-3 rounded-2xl bg-white/15"><Palmtree className="h-8 w-8" /></div>
             <div>
-              <h1 className="font-heading font-bold text-2xl">Provisionamiento de Vacaciones</h1>
+              <h1 className="font-heading font-bold text-2xl">Vacaciones</h1>
               <p className="text-sm text-white/85">Solicita, aprueba y da seguimiento a las vacaciones por departamento.</p>
             </div>
           </div>
