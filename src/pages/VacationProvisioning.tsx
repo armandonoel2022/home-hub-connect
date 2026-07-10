@@ -73,11 +73,37 @@ const fmt = (s: string) => new Date(s + "T00:00:00").toLocaleDateString("es-DO",
 
 const STATUS_STYLE: Record<string, string> = {
   pendiente: "bg-amber-500/15 text-amber-600",
+  "pendiente-gerencia": "bg-purple-500/15 text-purple-600",
   aprobada: "bg-emerald-500/15 text-emerald-600",
   rechazada: "bg-red-500/15 text-red-600",
 };
 const STATUS_LABEL: Record<string, string> = {
-  pendiente: "Pendiente", aprobada: "Aprobada", rechazada: "Rechazada",
+  pendiente: "Pendiente", "pendiente-gerencia": "Pendiente Gerencia Comercial", aprobada: "Aprobada", rechazada: "Rechazada",
+};
+
+// Departamentos que forman parte de Operaciones (se agrupan bajo un solo botón).
+const OPERATIONS_DEPT_SLUGS = [
+  "safeone",
+  "macrotech",
+  "asoc-nacional",
+  "asociacion-nacional",
+  "galeria-360",
+  "juancito-sport",
+  "supervisores",
+  "superintendencia-de-bancos",
+  "operadores-interior",
+];
+const isOperationsDept = (id: string) =>
+  OPERATIONS_DEPT_SLUGS.some((s) => id === s || id.startsWith(s));
+
+// Tiempo de servicio legible: "2 años, 5 meses, 3 días".
+const formatServiceTime = (t?: { years: number; months: number; days: number } | null) => {
+  if (!t) return "Antigüedad no disponible";
+  const parts: string[] = [];
+  if (t.years) parts.push(`${t.years} año${t.years !== 1 ? "s" : ""}`);
+  if (t.months) parts.push(`${t.months} mes${t.months !== 1 ? "es" : ""}`);
+  parts.push(`${t.days} día${t.days !== 1 ? "s" : ""}`);
+  return parts.join(", ");
 };
 
 type Tab = "departamentos" | "en-vacaciones";
