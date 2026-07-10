@@ -703,7 +703,59 @@ const VacationProvisioning = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Política de Gestión de Vacaciones */}
+      <Dialog open={policyOpen} onOpenChange={setPolicyOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><FileText className="h-5 w-5" /> Política de Gestión de Vacaciones — SafeOne (v01, Julio 2026)</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-sm text-foreground">
+            <div>
+              <p className="font-semibold">Objetivo</p>
+              <p className="text-muted-foreground">Establecer el marco bajo el cual SafeOne gestiona el disfrute de vacaciones, garantizando el derecho al descanso conforme al Código de Trabajo, protegiendo la continuidad operativa.</p>
+            </div>
+            <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3">
+              <p className="font-semibold text-amber-700">Principio General</p>
+              <p className="text-amber-800/90">LA EMPRESA EXIGE QUE EL PERSONAL DISFRUTE SUS VACACIONES. El pago no sustituye el descanso, salvo casos excepcionales definidos en esta política.</p>
+            </div>
+            <div>
+              <p className="font-semibold">Días según antigüedad (Art. 177 CT)</p>
+              <ul className="list-disc pl-5 text-muted-foreground space-y-0.5">
+                <li>Menos de 1 año: proporcional a los meses trabajados (6 meses = la mitad, ej. 7 de 14 días).</li>
+                <li>De 1 a 4 años: 14 días hábiles.</li>
+                <li>5 años o más: 18 días hábiles.</li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-semibold">Fraccionamiento (prorrateo)</p>
+              <p className="text-muted-foreground">Se permite dividir el período vacacional en un máximo de dos bloques, sujeto a aprobación del líder del área. No se fracciona en más de dos períodos sin la aprobación excepcional de la <strong className="text-foreground">Gerencia Comercial</strong> (Samuel Aurelio Pérez Rodríguez o Leonela Báez).</p>
+            </div>
+            <div>
+              <p className="font-semibold">No exceder los días correspondientes</p>
+              <p className="text-muted-foreground">El sistema no permite solicitar más días de los que le corresponden al colaborador. El uso queda registrado de forma persistente para reflejar siempre el saldo real disponible.</p>
+            </div>
+            <div>
+              <p className="font-semibold">Rutas de cobertura</p>
+              <ul className="list-disc pl-5 text-muted-foreground space-y-0.5">
+                <li><strong className="text-foreground">Ruta 1 — Cobertura interna simple:</strong> otro colaborador del área cubre la función.</li>
+                <li><strong className="text-foreground">Ruta 2 — Reemplazo temporal:</strong> se contrata cobertura temporal para puestos críticos.</li>
+                <li><strong className="text-foreground">Ruta 3 — Pago excepcional:</strong> solo si es imposible cubrir la ausencia y se alcanza el plazo máximo; requiere solicitud formal del gerente y aprobación de Gerencia.</li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-semibold">Responsables</p>
+              <ul className="list-disc pl-5 text-muted-foreground space-y-0.5">
+                <li>Gerente del área: solicita la programación y evalúa la cobertura.</li>
+                <li>Recursos Humanos (Dilia Aguasvivas): gestiona programación y cobertura.</li>
+                <li>Gerencia Comercial: aprueba fraccionamientos y casos fuera del marco estándar.</li>
+              </ul>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
+
   );
 };
 
