@@ -343,6 +343,34 @@ router.post('/requests', auth, (req, res) => {
   if (!codigo || !Array.isArray(periods) || !periods.length) {
     return res.status(400).json({ message: 'Código y al menos un período son requeridos.' });
   }
+
+  // ── Validaciones de política ──────────────────────────────────────────────
+  const employees = loadEmployees();
+  const emp = employees.find((e) => e.codigo === String(codigo));
+  const service = serviceTime(emp && emp.hireDate);
+  const entitled = entitledDays(service, store.policy);
+  const diasDerecho = entitled != null ? entitled : store.policy.under5Days;
+
+  // Solicitudes vigentes del colaborador (no rechazadas).
+  const existing = store.requests.filter(
+    (r) => String(r.codigo) === String(codigo) && r.status !== 'rechazada'
+  );
+  const usadosDias = totalDays(existing.flatMap((r) => r.periods));
+  const nuevosDias = totalDays(periods);
+
+  // 1) No se pueden solicitar más días de los que corresponden.
+  if (usadosDias + nuevosDias > diasDerecho) {
+    return res.status(400).json({
+      message: `No es posible solicitar ${nuevosDias} día(s). Te corresponden ${diasDerecho} día(s) de vacaciones y ya tienes ${usadosDias} solicitado(s). Disponibles: ${Math.max(0, diasDerecho - usadosDias)}. (Política de Gestión de Vacaciones — SafeOne).`,
+      code: 'EXCEEDS_ENTITLEMENT',
+    });
+  }
+
+  // 2) No se fracciona en más de dos períodos sin aprobación de la Gerencia Comercial.
+  const periodosExistentes = existing.reduce((a, r) => a + (r.periods ? r.periods.length : 0), 0);
+  const totalPeriodos = periodosExistentes + periods.length;
+  const needsManagement = totalPeriodos > 2;
+
   const now = new Date().toISOString();
   const request = {
     id: generateId('VAC', store.requests),
@@ -352,10 +380,12 @@ router.post('/requests', auth, (req, res) => {
     periods,
     notes: notes || '',
     status: 'pendiente',
+    needsManagement,
+    managementApproved: false,
     requestedBy: req.user ? req.user.email : 'sistema',
     requestedByName: requestedByName || (req.user ? req.user.email : 'sistema'),
     requestedAt: now,
-    history: [{ at: now, by: requestedByName || (req.user && req.user.email) || 'sistema', action: 'creada', detail: `Solicitud de ${totalDays(periods)} día(s)` }],
+    history: [{ at: now, by: requestedByName || (req.user && req.user.email) || 'sistema', action: 'creada', detail: `Solicitud de ${totalDays(periods)} día(s)${needsManagement ? ' — fraccionamiento >2 períodos (requiere Gerencia Comercial)' : ''}` }],
   };
   store.requests.unshift(request);
   writeData(FILE, store);
@@ -363,7 +393,7 @@ router.post('/requests', auth, (req, res) => {
   // Notificar a RRHH/admins que hay una nueva solicitud pendiente
   pushNotifications(hrAndAdminUserIds(), {
     title: 'Nueva solicitud de vacaciones',
-    message: `${request.nombre || codigo} solicitó ${totalDays(periods)} día(s) de vacaciones. Pendiente de aprobación.`,
+    message: `${request.nombre || codigo} solicitó ${totalDays(periods)} día(s) de vacaciones. Pendiente de aprobación.${needsManagement ? ' Requiere aprobación de la Gerencia Comercial (fraccionamiento en más de dos períodos).' : ''}`,
     relatedId: request.id,
   });
   res.json(request);
