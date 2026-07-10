@@ -1422,20 +1422,23 @@ export interface VacationDept {
 }
 export interface VacationPolicy { under5Days: number; from5Days: number; tenureThresholdYears: number; }
 export interface VacationPeriod { start: string; end: string; days: number; }
-export type VacationStatus = "pendiente" | "aprobada" | "rechazada";
+export type VacationStatus = "pendiente" | "pendiente-gerencia" | "aprobada" | "rechazada";
 export interface VacationHistory { at: string; by: string; action: string; detail: string; }
 export interface VacationRequest {
   id: string; codigo: string; nombre: string; department: string;
   periods: VacationPeriod[]; notes?: string; status: VacationStatus;
+  needsManagement?: boolean; managementApproved?: boolean;
   requestedBy: string; requestedByName: string; requestedAt: string;
   approverName?: string; decidedAt?: string; decisionNotes?: string;
   updatedAt?: string; history?: VacationHistory[];
 }
+export interface VacationServiceTime { years: number; months: number; days: number; }
 export interface VacationEmployee {
   codigo: string; nombre: string; position: string; cumpleanos: string;
   isLeader: boolean;
   fechaIngreso: string | null;
-  antiguedadAnios: number | null; diasDerecho: number; diasEstimados: boolean;
+  antiguedadAnios: number | null; tiempoServicio?: VacationServiceTime | null;
+  diasDerecho: number; diasEstimados: boolean;
   diasAprobados: number; diasPendientes: number;
   requests: VacationRequest[];
 }

@@ -37,6 +37,7 @@ import {
   ShieldCheck,
   UserCircle2,
   CalendarDays,
+  FileText,
 } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
@@ -73,11 +74,37 @@ const fmt = (s: string) => new Date(s + "T00:00:00").toLocaleDateString("es-DO",
 
 const STATUS_STYLE: Record<string, string> = {
   pendiente: "bg-amber-500/15 text-amber-600",
+  "pendiente-gerencia": "bg-purple-500/15 text-purple-600",
   aprobada: "bg-emerald-500/15 text-emerald-600",
   rechazada: "bg-red-500/15 text-red-600",
 };
 const STATUS_LABEL: Record<string, string> = {
-  pendiente: "Pendiente", aprobada: "Aprobada", rechazada: "Rechazada",
+  pendiente: "Pendiente", "pendiente-gerencia": "Pendiente Gerencia Comercial", aprobada: "Aprobada", rechazada: "Rechazada",
+};
+
+// Departamentos que forman parte de Operaciones (se agrupan bajo un solo botón).
+const OPERATIONS_DEPT_SLUGS = [
+  "safeone",
+  "macrotech",
+  "asoc-nacional",
+  "asociacion-nacional",
+  "galeria-360",
+  "juancito-sport",
+  "supervisores",
+  "superintendencia-de-bancos",
+  "operadores-interior",
+];
+const isOperationsDept = (id: string) =>
+  OPERATIONS_DEPT_SLUGS.some((s) => id === s || id.startsWith(s));
+
+// Tiempo de servicio legible: "2 años, 5 meses, 3 días".
+const formatServiceTime = (t?: { years: number; months: number; days: number } | null) => {
+  if (!t) return "Antigüedad no disponible";
+  const parts: string[] = [];
+  if (t.years) parts.push(`${t.years} año${t.years !== 1 ? "s" : ""}`);
+  if (t.months) parts.push(`${t.months} mes${t.months !== 1 ? "es" : ""}`);
+  parts.push(`${t.days} día${t.days !== 1 ? "s" : ""}`);
+  return parts.join(", ");
 };
 
 type Tab = "departamentos" | "en-vacaciones";
@@ -94,6 +121,8 @@ const VacationProvisioning = () => {
   const [selectedDept, setSelectedDept] = useState<string | null>(null);
   const [roster, setRoster] = useState<VacationRoster | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showOps, setShowOps] = useState(false);
+  const [policyOpen, setPolicyOpen] = useState(false);
 
   // On-vacation view
   const [onVacDate, setOnVacDate] = useState<string>(new Date().toISOString().slice(0, 10));
@@ -166,16 +195,44 @@ const VacationProvisioning = () => {
     }
   };
 
+  const draftTotal = useMemo(() => draftPeriods.reduce((a, p) => a + p.days, 0), [draftPeriods]);
+
+  // Días ya comprometidos (aprobados + pendientes) y restantes en vivo.
+  const alreadyUsed = editEmp ? editEmp.diasAprobados + editEmp.diasPendientes : 0;
+  const remainingDays = editEmp ? Math.max(0, editEmp.diasDerecho - alreadyUsed - draftTotal) : 0;
+  // Períodos vigentes existentes (no rechazados) + los del borrador.
+  const existingPeriodCount = editEmp
+    ? editEmp.requests.filter((r) => r.status !== "rechazada").reduce((a, r) => a + r.periods.length, 0)
+    : 0;
+  const totalPeriodCount = existingPeriodCount + draftPeriods.length;
+  const willNeedManagement = totalPeriodCount > 2;
+
   const addPeriod = () => {
     if (!range?.from || !range?.to) {
       toast({ title: "Selecciona un rango", description: "Elige fecha de inicio y fin en el calendario.", variant: "destructive" });
       return;
     }
-    setDraftPeriods((p) => [...p, { start: iso(range.from!), end: iso(range.to!), days: businessDays(range.from!, range.to!) }]);
+    if (!editEmp) return;
+    const days = businessDays(range.from, range.to);
+    // Restricción: no exceder los días a los que tiene derecho.
+    if (days > remainingDays) {
+      toast({
+        title: "Excede tus días de vacaciones",
+        description: `Solo te quedan ${remainingDays} día(s) disponibles de ${editEmp.diasDerecho}. Según la Política de Gestión de Vacaciones de SafeOne no puedes solicitar más de lo que te corresponde.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    // Aviso de fraccionamiento en más de dos períodos (requiere Gerencia Comercial).
+    if (existingPeriodCount + draftPeriods.length + 1 > 2) {
+      toast({
+        title: "Fraccionamiento en más de dos períodos",
+        description: "Dividir las vacaciones en más de dos cortes requiere la aprobación de la Gerencia Comercial (Samuel Aurelio Pérez o Leonela Báez). La solicitud será escalada automáticamente.",
+      });
+    }
+    setDraftPeriods((p) => [...p, { start: iso(range.from!), end: iso(range.to!), days }]);
     setRange(undefined);
   };
-
-  const draftTotal = useMemo(() => draftPeriods.reduce((a, p) => a + p.days, 0), [draftPeriods]);
 
   const submitRequest = async () => {
     if (!editEmp || !draftPeriods.length) {
@@ -192,14 +249,20 @@ const VacationProvisioning = () => {
         notes,
         requestedByName: user?.fullName || user?.email,
       });
-      toast({ title: "Solicitud enviada", description: "Se notificó a RRHH para su aprobación." });
+      toast({
+        title: "Solicitud enviada",
+        description: willNeedManagement
+          ? "Se notificó a RRHH y se escalará a la Gerencia Comercial por el fraccionamiento en más de dos períodos."
+          : "Se notificó a RRHH para su aprobación.",
+      });
       setEditEmp(null);
       await reloadRoster();
-    } catch {
-      toast({ title: "Error", description: "No se pudo enviar la solicitud.", variant: "destructive" });
+    } catch (e) {
+      toast({ title: "No se pudo enviar", description: e instanceof Error ? e.message : "Error al enviar la solicitud.", variant: "destructive" });
     } finally {
       setSaving(false);
     }
+
   };
 
   const decide = async (req: VacationRequest, decision: "aprobada" | "rechazada") => {
@@ -241,8 +304,53 @@ const VacationProvisioning = () => {
     ? departments
     : departments.filter((d) => slugify(user?.department || "") === d.id);
 
+  const opsDepts = visibleDepts.filter((d) => isOperationsDept(d.id));
+  const otherDepts = visibleDepts.filter((d) => !isOperationsDept(d.id));
+  const opsPending = opsDepts.reduce((a, d) => a + (d.pendingCount || 0), 0);
+  const opsApproved = opsDepts.reduce((a, d) => a + (d.approvedCount || 0), 0);
+  const opsCount = opsDepts.reduce((a, d) => a + (d.count || 0), 0);
+
+  const renderDeptCard = (d: VacationDept, i: number) => (
+    <button
+      key={d.id}
+      onClick={() => openDept(d)}
+      className="group relative overflow-hidden rounded-2xl p-6 text-left transition-all hover:-translate-y-1 shadow-md cursor-pointer"
+      style={{ background: DEPT_GRADIENTS[i % DEPT_GRADIENTS.length] }}
+    >
+      <div className="flex items-center justify-between text-white">
+        <Users className="h-8 w-8 opacity-90" />
+        <div className="flex gap-1.5">
+          {!!d.pendingCount && <Badge className="bg-white/25 text-white border-0">{d.pendingCount} pend.</Badge>}
+          {!!d.approvedCount && <Badge className="bg-white/15 text-white border-0">{d.approvedCount} aprob.</Badge>}
+        </div>
+      </div>
+      <p className="mt-4 font-heading font-bold text-lg text-white leading-tight">{d.name}</p>
+      <p className="text-xs text-white/85 mt-1">{d.count ?? 0} colaboradores</p>
+      {d.leaderName && (
+        <p className="text-[11px] text-white/80 mt-2 flex items-center gap-1">
+          <ShieldCheck className="h-3.5 w-3.5" /> Aprueba: {d.leaderName}
+        </p>
+      )}
+    </button>
+  );
+
+  const PolicyBanner = (
+    <Card className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-amber-500/10 border-amber-500/20">
+      <div className="flex items-center gap-3">
+        <div className="p-2 rounded-lg bg-amber-500/15 text-amber-600"><FileText className="h-5 w-5" /></div>
+        <div>
+          <p className="font-heading font-semibold text-foreground">Política de Gestión de Vacaciones</p>
+          <p className="text-xs text-muted-foreground">SafeOne exige que el personal disfrute sus vacaciones. Máximo dos períodos salvo aprobación de la Gerencia Comercial.</p>
+        </div>
+      </div>
+      <Button variant="outline" onClick={() => setPolicyOpen(true)} className="gap-2 shrink-0"><FileText className="h-4 w-4" /> Ver política</Button>
+    </Card>
+  );
+
   const DeptSelector = (
     <div className="space-y-6">
+      {PolicyBanner}
+
       {/* Self-service CTA */}
       <Card className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-br from-teal-500/10 to-emerald-500/10 border-teal-500/20">
         <div className="flex items-center gap-3">
@@ -255,39 +363,53 @@ const VacationProvisioning = () => {
         <Button onClick={requestForMyself} className="gap-2"><Plus className="h-4 w-4" /> Solicitar mis vacaciones</Button>
       </Card>
 
-      <div className="flex items-center gap-3">
-        <div className="w-1 h-8 rounded-full" style={{ background: "var(--gradient-gold)" }} />
-        <h2 className="section-title text-foreground">
-          {isAdmin || isLeader ? "Selecciona un departamento" : "Mi departamento"}
-        </h2>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {visibleDepts.map((d, i) => (
-          <button
-            key={d.id}
-            onClick={() => openDept(d)}
-            className="group relative overflow-hidden rounded-2xl p-6 text-left transition-all hover:-translate-y-1 shadow-md cursor-pointer"
-            style={{ background: DEPT_GRADIENTS[i % DEPT_GRADIENTS.length] }}
-          >
-            <div className="flex items-center justify-between text-white">
-              <Users className="h-8 w-8 opacity-90" />
-              <div className="flex gap-1.5">
-                {!!d.pendingCount && <Badge className="bg-white/25 text-white border-0">{d.pendingCount} pend.</Badge>}
-                {!!d.approvedCount && <Badge className="bg-white/15 text-white border-0">{d.approvedCount} aprob.</Badge>}
-              </div>
-            </div>
-            <p className="mt-4 font-heading font-bold text-lg text-white leading-tight">{d.name}</p>
-            <p className="text-xs text-white/85 mt-1">{d.count ?? 0} colaboradores</p>
-            {d.leaderName && (
-              <p className="text-[11px] text-white/80 mt-2 flex items-center gap-1">
-                <ShieldCheck className="h-3.5 w-3.5" /> Aprueba: {d.leaderName}
-              </p>
+      {showOps ? (
+        <div className="space-y-4">
+          <Button variant="ghost" onClick={() => setShowOps(false)} className="gap-2">
+            <ArrowLeft className="h-4 w-4" /> Departamentos
+          </Button>
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-8 rounded-full" style={{ background: "var(--gradient-gold)" }} />
+            <h2 className="section-title text-foreground">Operaciones · áreas</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {opsDepts.map((d, i) => renderDeptCard(d, i))}
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-8 rounded-full" style={{ background: "var(--gradient-gold)" }} />
+            <h2 className="section-title text-foreground">
+              {isAdmin || isLeader ? "Selecciona un departamento" : "Mi departamento"}
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {opsDepts.length > 0 && (
+              <button
+                onClick={() => setShowOps(true)}
+                className="group relative overflow-hidden rounded-2xl p-6 text-left transition-all hover:-translate-y-1 shadow-md cursor-pointer"
+                style={{ background: "linear-gradient(135deg, hsl(210 80% 45%), hsl(210 80% 30%))" }}
+              >
+                <div className="flex items-center justify-between text-white">
+                  <ShieldCheck className="h-8 w-8 opacity-90" />
+                  <div className="flex gap-1.5">
+                    {!!opsPending && <Badge className="bg-white/25 text-white border-0">{opsPending} pend.</Badge>}
+                    {!!opsApproved && <Badge className="bg-white/15 text-white border-0">{opsApproved} aprob.</Badge>}
+                  </div>
+                </div>
+                <p className="mt-4 font-heading font-bold text-lg text-white leading-tight">Operaciones</p>
+                <p className="text-xs text-white/85 mt-1">{opsDepts.length} áreas · {opsCount} colaboradores</p>
+                <p className="text-[11px] text-white/80 mt-2">Safeone, Macrotech, Galería 360, Supervisores y más</p>
+              </button>
             )}
-          </button>
-        ))}
-      </div>
+            {otherDepts.map((d, i) => renderDeptCard(d, i + 1))}
+          </div>
+        </>
+      )}
     </div>
   );
+
 
   // ── Vista: en vacaciones ──
   const OnVacationView = (
@@ -397,7 +519,7 @@ const VacationProvisioning = () => {
               <div className="mt-3 space-y-1.5 text-xs text-muted-foreground">
                 <p className="flex items-center gap-1.5">
                   <CalendarCheck className="h-3.5 w-3.5" />
-                  {e.antiguedadAnios != null ? `${e.antiguedadAnios} años de servicio` : "Antigüedad no disponible"}
+                  Tiempo de servicio: {e.tiempoServicio ? formatServiceTime(e.tiempoServicio) : (e.antiguedadAnios != null ? `${e.antiguedadAnios} años` : "no disponible")}
                   {e.diasEstimados && " (estimado)"}
                 </p>
                 {e.cumpleanos && <p className="flex items-center gap-1.5"><Cake className="h-3.5 w-3.5" /> {e.cumpleanos}</p>}
@@ -425,7 +547,7 @@ const VacationProvisioning = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex items-center gap-4 text-white">
             <div className="p-3 rounded-2xl bg-white/15"><Palmtree className="h-8 w-8" /></div>
             <div>
-              <h1 className="font-heading font-bold text-2xl">Provisionamiento de Vacaciones</h1>
+              <h1 className="font-heading font-bold text-2xl">Vacaciones</h1>
               <p className="text-sm text-white/85">Solicita, aprueba y da seguimiento a las vacaciones por departamento.</p>
             </div>
           </div>
@@ -470,8 +592,20 @@ const VacationProvisioning = () => {
                 <Badge variant="secondary">Derecho: {editEmp.diasDerecho} días</Badge>
                 <Badge className="bg-emerald-500/15 text-emerald-600 border-0">Aprobados: {editEmp.diasAprobados}</Badge>
                 {editEmp.diasPendientes > 0 && <Badge className="bg-amber-500/15 text-amber-600 border-0">Pendientes: {editEmp.diasPendientes}</Badge>}
-                <Badge variant="outline">Restan: {Math.max(0, editEmp.diasDerecho - editEmp.diasAprobados - editEmp.diasPendientes)}</Badge>
+                {draftTotal > 0 && <Badge className="bg-sky-500/15 text-sky-600 border-0">En selección: {draftTotal}</Badge>}
+                <Badge variant="outline" className={remainingDays === 0 ? "text-destructive border-destructive/40" : ""}>Restan: {remainingDays}</Badge>
               </div>
+              <p className="text-xs text-muted-foreground -mt-2">
+                Tiempo de servicio: <strong className="text-foreground">{formatServiceTime(editEmp.tiempoServicio)}</strong>
+                {editEmp.diasEstimados && " · derecho estimado"}
+              </p>
+              {willNeedManagement && (
+                <div className="flex items-start gap-2 rounded-lg bg-purple-500/10 border border-purple-500/20 p-3 text-xs text-purple-700">
+                  <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>Estás dividiendo las vacaciones en más de dos períodos. Según la política, esto requiere la aprobación de la <strong>Gerencia Comercial</strong> (Samuel Aurelio Pérez o Leonela Báez) y será escalado automáticamente.</span>
+                </div>
+              )}
+
 
               {/* Solicitudes existentes */}
               {editEmp.requests.length > 0 && (
@@ -513,14 +647,19 @@ const VacationProvisioning = () => {
                           </ul>
                         </details>
                       )}
-                      {canApprove && req.status === "pendiente" && (
-                        <div className="flex gap-2 pt-1">
-                          <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700" onClick={() => decide(req, "aprobada")}>
-                            <CheckCircle2 className="h-4 w-4" /> Aprobar
-                          </Button>
-                          <Button size="sm" variant="outline" className="gap-1.5 text-destructive" onClick={() => decide(req, "rechazada")}>
-                            <XCircle className="h-4 w-4" /> Rechazar
-                          </Button>
+                      {canApprove && (req.status === "pendiente" || req.status === "pendiente-gerencia") && (
+                        <div className="flex flex-col gap-2 pt-1">
+                          {req.status === "pendiente-gerencia" && (
+                            <p className="text-[11px] text-purple-600">Requiere aprobación final de la Gerencia Comercial (fraccionamiento en más de dos períodos).</p>
+                          )}
+                          <div className="flex gap-2">
+                            <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700" onClick={() => decide(req, "aprobada")}>
+                              <CheckCircle2 className="h-4 w-4" /> Aprobar
+                            </Button>
+                            <Button size="sm" variant="outline" className="gap-1.5 text-destructive" onClick={() => decide(req, "rechazada")}>
+                              <XCircle className="h-4 w-4" /> Rechazar
+                            </Button>
+                          </div>
                         </div>
                       )}
                       {canApprove && (
@@ -569,7 +708,59 @@ const VacationProvisioning = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Política de Gestión de Vacaciones */}
+      <Dialog open={policyOpen} onOpenChange={setPolicyOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><FileText className="h-5 w-5" /> Política de Gestión de Vacaciones — SafeOne (v01, Julio 2026)</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-sm text-foreground">
+            <div>
+              <p className="font-semibold">Objetivo</p>
+              <p className="text-muted-foreground">Establecer el marco bajo el cual SafeOne gestiona el disfrute de vacaciones, garantizando el derecho al descanso conforme al Código de Trabajo, protegiendo la continuidad operativa.</p>
+            </div>
+            <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3">
+              <p className="font-semibold text-amber-700">Principio General</p>
+              <p className="text-amber-800/90">LA EMPRESA EXIGE QUE EL PERSONAL DISFRUTE SUS VACACIONES. El pago no sustituye el descanso, salvo casos excepcionales definidos en esta política.</p>
+            </div>
+            <div>
+              <p className="font-semibold">Días según antigüedad (Art. 177 CT)</p>
+              <ul className="list-disc pl-5 text-muted-foreground space-y-0.5">
+                <li>Menos de 1 año: proporcional a los meses trabajados (6 meses = la mitad, ej. 7 de 14 días).</li>
+                <li>De 1 a 4 años: 14 días hábiles.</li>
+                <li>5 años o más: 18 días hábiles.</li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-semibold">Fraccionamiento (prorrateo)</p>
+              <p className="text-muted-foreground">Se permite dividir el período vacacional en un máximo de dos bloques, sujeto a aprobación del líder del área. No se fracciona en más de dos períodos sin la aprobación excepcional de la <strong className="text-foreground">Gerencia Comercial</strong> (Samuel Aurelio Pérez Rodríguez o Leonela Báez).</p>
+            </div>
+            <div>
+              <p className="font-semibold">No exceder los días correspondientes</p>
+              <p className="text-muted-foreground">El sistema no permite solicitar más días de los que le corresponden al colaborador. El uso queda registrado de forma persistente para reflejar siempre el saldo real disponible.</p>
+            </div>
+            <div>
+              <p className="font-semibold">Rutas de cobertura</p>
+              <ul className="list-disc pl-5 text-muted-foreground space-y-0.5">
+                <li><strong className="text-foreground">Ruta 1 — Cobertura interna simple:</strong> otro colaborador del área cubre la función.</li>
+                <li><strong className="text-foreground">Ruta 2 — Reemplazo temporal:</strong> se contrata cobertura temporal para puestos críticos.</li>
+                <li><strong className="text-foreground">Ruta 3 — Pago excepcional:</strong> solo si es imposible cubrir la ausencia y se alcanza el plazo máximo; requiere solicitud formal del gerente y aprobación de Gerencia.</li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-semibold">Responsables</p>
+              <ul className="list-disc pl-5 text-muted-foreground space-y-0.5">
+                <li>Gerente del área: solicita la programación y evalúa la cobertura.</li>
+                <li>Recursos Humanos (Dilia Aguasvivas): gestiona programación y cobertura.</li>
+                <li>Gerencia Comercial: aprueba fraccionamientos y casos fuera del marco estándar.</li>
+              </ul>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
+
   );
 };
 

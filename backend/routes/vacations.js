@@ -74,9 +74,65 @@ function yearsBetween(fecha) {
   return (Date.now() - d.getTime()) / (365.25 * 24 * 3600 * 1000);
 }
 
-function entitledDays(years, policy) {
-  if (years == null) return null;
-  return years >= policy.tenureThresholdYears ? policy.from5Days : policy.under5Days;
+// Tiempo de servicio detallado (años, meses, días) desde la fecha de ingreso.
+function serviceTime(fecha) {
+  if (!fecha) return null;
+  const d = new Date(fecha);
+  if (isNaN(d.getTime())) return null;
+  const now = new Date();
+  let years = now.getFullYear() - d.getFullYear();
+  let months = now.getMonth() - d.getMonth();
+  let days = now.getDate() - d.getDate();
+  if (days < 0) {
+    months--;
+    days += new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+  }
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+  return { years, months, days, totalMonths: years * 12 + months };
+}
+
+// Días de vacaciones a los que tiene derecho según antigüedad (Art. 177 CT).
+//   < 1 año  → proporcional por meses trabajados (6 meses = mitad).
+//   1–4 años → under5Days (14)
+//   >= 5 años → from5Days (18)
+function entitledDays(service, policy) {
+  if (!service) return null;
+  if (service.years >= policy.tenureThresholdYears) return policy.from5Days;
+  if (service.years >= 1) return policy.under5Days;
+  return Math.floor((policy.under5Days * service.totalMonths) / 12);
+}
+
+// Correos de la Gerencia Comercial autorizados para aprobar el fraccionamiento
+// de vacaciones en más de dos períodos (Samuel Aurelio Pérez y Leonela Báez).
+const GERENCIA_COMERCIAL_EMAILS = [
+  'samuel@safeone.com.do',
+  'sperez@safeone.com.do',
+  'aperez@safeone.com.do',
+  'lbaez@safeone.com.do',
+  'leonela@safeone.com.do',
+];
+
+function isGerenciaComercial(user) {
+  if (!user) return false;
+  if (user.isAdmin) return true;
+  const email = (user.email || '').toLowerCase().trim();
+  const name = (user.fullName || user.name || '').toLowerCase();
+  const dept = (user.department || '').toLowerCase();
+  return (
+    GERENCIA_COMERCIAL_EMAILS.includes(email) ||
+    dept.includes('gerencia comercial') ||
+    name.includes('leonela') ||
+    name.includes('samuel aurelio')
+  );
+}
+
+// IDs de usuarios de la Gerencia Comercial (para notificar aprobaciones de fraccionamiento).
+function gerenciaComercialUserIds() {
+  const users = readData('users.json') || [];
+  return users.filter((u) => isGerenciaComercial(u)).map((u) => u.id);
 }
 
 // Enriquecimiento opcional con SQL (FechaIngreso por Código).
@@ -176,7 +232,7 @@ router.get('/departments', auth, (req, res) => {
     const slug = slugify(emp ? emp.department : r.department);
     const d = bySlug.get(slug);
     if (!d) return;
-    d.pendingCount = (d.pendingCount || 0) + (r.status === 'pendiente' ? 1 : 0);
+    d.pendingCount = (d.pendingCount || 0) + (r.status === 'pendiente' || r.status === 'pendiente-gerencia' ? 1 : 0);
     d.approvedCount = (d.approvedCount || 0) + (r.status === 'aprobada' ? 1 : 0);
   });
   res.json(depts);
@@ -209,11 +265,13 @@ router.get('/roster/:deptId', auth, async (req, res) => {
 
   const emps = employees.filter((e) => slugify(e.department) === dept.id).map((e) => {
     const hireDate = sqlDates.get(e.codigo) || e.hireDate;
-    const years = yearsBetween(hireDate);
-    const dias = entitledDays(years, policy);
+    const service = serviceTime(hireDate);
+    const dias = entitledDays(service, policy);
     const requests = store.requests.filter((r) => String(r.codigo) === e.codigo);
     const diasAprobados = totalDays(requests.filter((r) => r.status === 'aprobada').flatMap((r) => r.periods));
-    const diasPendientes = totalDays(requests.filter((r) => r.status === 'pendiente').flatMap((r) => r.periods));
+    const diasPendientes = totalDays(
+      requests.filter((r) => r.status === 'pendiente' || r.status === 'pendiente-gerencia').flatMap((r) => r.periods)
+    );
     return {
       codigo: e.codigo,
       nombre: e.nombre,
@@ -221,7 +279,8 @@ router.get('/roster/:deptId', auth, async (req, res) => {
       cumpleanos: e.cumpleanos,
       isLeader: e.isLeader,
       fechaIngreso: hireDate || null,
-      antiguedadAnios: years != null ? Math.floor(years) : null,
+      antiguedadAnios: service ? service.years : null,
+      tiempoServicio: service ? { years: service.years, months: service.months, days: service.days } : null,
       diasDerecho: dias != null ? dias : policy.under5Days,
       diasEstimados: dias == null,
       diasAprobados,
@@ -284,6 +343,34 @@ router.post('/requests', auth, (req, res) => {
   if (!codigo || !Array.isArray(periods) || !periods.length) {
     return res.status(400).json({ message: 'Código y al menos un período son requeridos.' });
   }
+
+  // ── Validaciones de política ──────────────────────────────────────────────
+  const employees = loadEmployees();
+  const emp = employees.find((e) => e.codigo === String(codigo));
+  const service = serviceTime(emp && emp.hireDate);
+  const entitled = entitledDays(service, store.policy);
+  const diasDerecho = entitled != null ? entitled : store.policy.under5Days;
+
+  // Solicitudes vigentes del colaborador (no rechazadas).
+  const existing = store.requests.filter(
+    (r) => String(r.codigo) === String(codigo) && r.status !== 'rechazada'
+  );
+  const usadosDias = totalDays(existing.flatMap((r) => r.periods));
+  const nuevosDias = totalDays(periods);
+
+  // 1) No se pueden solicitar más días de los que corresponden.
+  if (usadosDias + nuevosDias > diasDerecho) {
+    return res.status(400).json({
+      message: `No es posible solicitar ${nuevosDias} día(s). Te corresponden ${diasDerecho} día(s) de vacaciones y ya tienes ${usadosDias} solicitado(s). Disponibles: ${Math.max(0, diasDerecho - usadosDias)}. (Política de Gestión de Vacaciones — SafeOne).`,
+      code: 'EXCEEDS_ENTITLEMENT',
+    });
+  }
+
+  // 2) No se fracciona en más de dos períodos sin aprobación de la Gerencia Comercial.
+  const periodosExistentes = existing.reduce((a, r) => a + (r.periods ? r.periods.length : 0), 0);
+  const totalPeriodos = periodosExistentes + periods.length;
+  const needsManagement = totalPeriodos > 2;
+
   const now = new Date().toISOString();
   const request = {
     id: generateId('VAC', store.requests),
@@ -293,10 +380,12 @@ router.post('/requests', auth, (req, res) => {
     periods,
     notes: notes || '',
     status: 'pendiente',
+    needsManagement,
+    managementApproved: false,
     requestedBy: req.user ? req.user.email : 'sistema',
     requestedByName: requestedByName || (req.user ? req.user.email : 'sistema'),
     requestedAt: now,
-    history: [{ at: now, by: requestedByName || (req.user && req.user.email) || 'sistema', action: 'creada', detail: `Solicitud de ${totalDays(periods)} día(s)` }],
+    history: [{ at: now, by: requestedByName || (req.user && req.user.email) || 'sistema', action: 'creada', detail: `Solicitud de ${totalDays(periods)} día(s)${needsManagement ? ' — fraccionamiento >2 períodos (requiere Gerencia Comercial)' : ''}` }],
   };
   store.requests.unshift(request);
   writeData(FILE, store);
@@ -304,7 +393,7 @@ router.post('/requests', auth, (req, res) => {
   // Notificar a RRHH/admins que hay una nueva solicitud pendiente
   pushNotifications(hrAndAdminUserIds(), {
     title: 'Nueva solicitud de vacaciones',
-    message: `${request.nombre || codigo} solicitó ${totalDays(periods)} día(s) de vacaciones. Pendiente de aprobación.`,
+    message: `${request.nombre || codigo} solicitó ${totalDays(periods)} día(s) de vacaciones. Pendiente de aprobación.${needsManagement ? ' Requiere aprobación de la Gerencia Comercial (fraccionamiento en más de dos períodos).' : ''}`,
     relatedId: request.id,
   });
   res.json(request);
@@ -363,31 +452,62 @@ router.post('/requests/:id/decision', auth, (req, res) => {
     return res.status(400).json({ message: 'Decisión inválida.' });
   }
   const now = new Date().toISOString();
-  r.status = decision;
-  r.approverName = approverName || (req.user ? req.user.email : 'sistema');
-  r.decidedAt = now;
-  r.decisionNotes = decisionNotes || '';
-  r.history = r.history || [];
-  r.history.push({ at: now, by: r.approverName, action: decision, detail: decisionNotes || '' });
-  store.requests[idx] = r;
-  writeData(FILE, store);
+  const actorName = approverName || (req.user ? req.user.email : 'sistema');
+  const esGerencia = isGerenciaComercial(req.user);
 
-  if (decision === 'aprobada') {
-    // Notificar a TODO el equipo de RRHH (y al solicitante)
-    const recipients = [...hrAndAdminUserIds(), userIdByCode(r.codigo)];
-    pushNotifications(recipients, {
-      title: 'Vacaciones aprobadas',
-      message: `${r.approverName} aprobó ${totalDays(r.periods)} día(s) de vacaciones de ${r.nombre || r.codigo}.`,
-      relatedId: r.id,
-    });
-  } else {
+  if (decision === 'rechazada') {
+    r.status = 'rechazada';
+    r.approverName = actorName;
+    r.decidedAt = now;
+    r.decisionNotes = decisionNotes || '';
+    r.history = r.history || [];
+    r.history.push({ at: now, by: actorName, action: 'rechazada', detail: decisionNotes || '' });
+    store.requests[idx] = r;
+    writeData(FILE, store);
     const su = userIdByCode(r.codigo);
     if (su) pushNotifications([su], {
       title: 'Vacaciones rechazadas',
       message: `Tu solicitud de vacaciones fue rechazada. ${decisionNotes || ''}`.trim(),
       relatedId: r.id,
     });
+    return res.json(r);
   }
+
+  // decision === 'aprobada'
+  // Si requiere fraccionamiento (>2 períodos) y aún no lo aprueba la Gerencia Comercial,
+  // la aprobación del líder solo escala a "pendiente-gerencia".
+  if (r.needsManagement && !r.managementApproved && !esGerencia) {
+    r.status = 'pendiente-gerencia';
+    r.approverName = actorName;
+    r.history = r.history || [];
+    r.history.push({ at: now, by: actorName, action: 'aprobada-lider', detail: 'Aprobada por el líder. Escalada a Gerencia Comercial por fraccionamiento en más de dos períodos.' });
+    store.requests[idx] = r;
+    writeData(FILE, store);
+    pushNotifications(gerenciaComercialUserIds(), {
+      title: 'Aprobación de fraccionamiento requerida',
+      message: `Las vacaciones de ${r.nombre || r.codigo} se dividen en más de dos períodos y requieren aprobación de la Gerencia Comercial.`,
+      relatedId: r.id,
+    });
+    return res.json(r);
+  }
+
+  // Aprobación final (líder normal, o Gerencia Comercial cuando aplica fraccionamiento).
+  if (esGerencia) r.managementApproved = true;
+  r.status = 'aprobada';
+  r.approverName = actorName;
+  r.decidedAt = now;
+  r.decisionNotes = decisionNotes || '';
+  r.history = r.history || [];
+  r.history.push({ at: now, by: actorName, action: 'aprobada', detail: (esGerencia && r.needsManagement ? 'Aprobación final de la Gerencia Comercial. ' : '') + (decisionNotes || '') });
+  store.requests[idx] = r;
+  writeData(FILE, store);
+
+  const recipients = [...hrAndAdminUserIds(), userIdByCode(r.codigo)];
+  pushNotifications(recipients, {
+    title: 'Vacaciones aprobadas',
+    message: `${actorName} aprobó ${totalDays(r.periods)} día(s) de vacaciones de ${r.nombre || r.codigo}.`,
+    relatedId: r.id,
+  });
   res.json(r);
 });
 
