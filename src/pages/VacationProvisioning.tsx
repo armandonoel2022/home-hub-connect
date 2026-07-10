@@ -303,8 +303,53 @@ const VacationProvisioning = () => {
     ? departments
     : departments.filter((d) => slugify(user?.department || "") === d.id);
 
+  const opsDepts = visibleDepts.filter((d) => isOperationsDept(d.id));
+  const otherDepts = visibleDepts.filter((d) => !isOperationsDept(d.id));
+  const opsPending = opsDepts.reduce((a, d) => a + (d.pendingCount || 0), 0);
+  const opsApproved = opsDepts.reduce((a, d) => a + (d.approvedCount || 0), 0);
+  const opsCount = opsDepts.reduce((a, d) => a + (d.count || 0), 0);
+
+  const renderDeptCard = (d: VacationDept, i: number) => (
+    <button
+      key={d.id}
+      onClick={() => openDept(d)}
+      className="group relative overflow-hidden rounded-2xl p-6 text-left transition-all hover:-translate-y-1 shadow-md cursor-pointer"
+      style={{ background: DEPT_GRADIENTS[i % DEPT_GRADIENTS.length] }}
+    >
+      <div className="flex items-center justify-between text-white">
+        <Users className="h-8 w-8 opacity-90" />
+        <div className="flex gap-1.5">
+          {!!d.pendingCount && <Badge className="bg-white/25 text-white border-0">{d.pendingCount} pend.</Badge>}
+          {!!d.approvedCount && <Badge className="bg-white/15 text-white border-0">{d.approvedCount} aprob.</Badge>}
+        </div>
+      </div>
+      <p className="mt-4 font-heading font-bold text-lg text-white leading-tight">{d.name}</p>
+      <p className="text-xs text-white/85 mt-1">{d.count ?? 0} colaboradores</p>
+      {d.leaderName && (
+        <p className="text-[11px] text-white/80 mt-2 flex items-center gap-1">
+          <ShieldCheck className="h-3.5 w-3.5" /> Aprueba: {d.leaderName}
+        </p>
+      )}
+    </button>
+  );
+
+  const PolicyBanner = (
+    <Card className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-amber-500/10 border-amber-500/20">
+      <div className="flex items-center gap-3">
+        <div className="p-2 rounded-lg bg-amber-500/15 text-amber-600"><FileText className="h-5 w-5" /></div>
+        <div>
+          <p className="font-heading font-semibold text-foreground">Política de Gestión de Vacaciones</p>
+          <p className="text-xs text-muted-foreground">SafeOne exige que el personal disfrute sus vacaciones. Máximo dos períodos salvo aprobación de la Gerencia Comercial.</p>
+        </div>
+      </div>
+      <Button variant="outline" onClick={() => setPolicyOpen(true)} className="gap-2 shrink-0"><FileText className="h-4 w-4" /> Ver política</Button>
+    </Card>
+  );
+
   const DeptSelector = (
     <div className="space-y-6">
+      {PolicyBanner}
+
       {/* Self-service CTA */}
       <Card className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-br from-teal-500/10 to-emerald-500/10 border-teal-500/20">
         <div className="flex items-center gap-3">
@@ -317,39 +362,53 @@ const VacationProvisioning = () => {
         <Button onClick={requestForMyself} className="gap-2"><Plus className="h-4 w-4" /> Solicitar mis vacaciones</Button>
       </Card>
 
-      <div className="flex items-center gap-3">
-        <div className="w-1 h-8 rounded-full" style={{ background: "var(--gradient-gold)" }} />
-        <h2 className="section-title text-foreground">
-          {isAdmin || isLeader ? "Selecciona un departamento" : "Mi departamento"}
-        </h2>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {visibleDepts.map((d, i) => (
-          <button
-            key={d.id}
-            onClick={() => openDept(d)}
-            className="group relative overflow-hidden rounded-2xl p-6 text-left transition-all hover:-translate-y-1 shadow-md cursor-pointer"
-            style={{ background: DEPT_GRADIENTS[i % DEPT_GRADIENTS.length] }}
-          >
-            <div className="flex items-center justify-between text-white">
-              <Users className="h-8 w-8 opacity-90" />
-              <div className="flex gap-1.5">
-                {!!d.pendingCount && <Badge className="bg-white/25 text-white border-0">{d.pendingCount} pend.</Badge>}
-                {!!d.approvedCount && <Badge className="bg-white/15 text-white border-0">{d.approvedCount} aprob.</Badge>}
-              </div>
-            </div>
-            <p className="mt-4 font-heading font-bold text-lg text-white leading-tight">{d.name}</p>
-            <p className="text-xs text-white/85 mt-1">{d.count ?? 0} colaboradores</p>
-            {d.leaderName && (
-              <p className="text-[11px] text-white/80 mt-2 flex items-center gap-1">
-                <ShieldCheck className="h-3.5 w-3.5" /> Aprueba: {d.leaderName}
-              </p>
+      {showOps ? (
+        <div className="space-y-4">
+          <Button variant="ghost" onClick={() => setShowOps(false)} className="gap-2">
+            <ArrowLeft className="h-4 w-4" /> Departamentos
+          </Button>
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-8 rounded-full" style={{ background: "var(--gradient-gold)" }} />
+            <h2 className="section-title text-foreground">Operaciones · áreas</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {opsDepts.map((d, i) => renderDeptCard(d, i))}
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-8 rounded-full" style={{ background: "var(--gradient-gold)" }} />
+            <h2 className="section-title text-foreground">
+              {isAdmin || isLeader ? "Selecciona un departamento" : "Mi departamento"}
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {opsDepts.length > 0 && (
+              <button
+                onClick={() => setShowOps(true)}
+                className="group relative overflow-hidden rounded-2xl p-6 text-left transition-all hover:-translate-y-1 shadow-md cursor-pointer"
+                style={{ background: "linear-gradient(135deg, hsl(210 80% 45%), hsl(210 80% 30%))" }}
+              >
+                <div className="flex items-center justify-between text-white">
+                  <ShieldCheck className="h-8 w-8 opacity-90" />
+                  <div className="flex gap-1.5">
+                    {!!opsPending && <Badge className="bg-white/25 text-white border-0">{opsPending} pend.</Badge>}
+                    {!!opsApproved && <Badge className="bg-white/15 text-white border-0">{opsApproved} aprob.</Badge>}
+                  </div>
+                </div>
+                <p className="mt-4 font-heading font-bold text-lg text-white leading-tight">Operaciones</p>
+                <p className="text-xs text-white/85 mt-1">{opsDepts.length} áreas · {opsCount} colaboradores</p>
+                <p className="text-[11px] text-white/80 mt-2">Safeone, Macrotech, Galería 360, Supervisores y más</p>
+              </button>
             )}
-          </button>
-        ))}
-      </div>
+            {otherDepts.map((d, i) => renderDeptCard(d, i + 1))}
+          </div>
+        </>
+      )}
     </div>
   );
+
 
   // ── Vista: en vacaciones ──
   const OnVacationView = (
