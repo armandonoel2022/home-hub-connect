@@ -194,16 +194,44 @@ const VacationProvisioning = () => {
     }
   };
 
+  const draftTotal = useMemo(() => draftPeriods.reduce((a, p) => a + p.days, 0), [draftPeriods]);
+
+  // Días ya comprometidos (aprobados + pendientes) y restantes en vivo.
+  const alreadyUsed = editEmp ? editEmp.diasAprobados + editEmp.diasPendientes : 0;
+  const remainingDays = editEmp ? Math.max(0, editEmp.diasDerecho - alreadyUsed - draftTotal) : 0;
+  // Períodos vigentes existentes (no rechazados) + los del borrador.
+  const existingPeriodCount = editEmp
+    ? editEmp.requests.filter((r) => r.status !== "rechazada").reduce((a, r) => a + r.periods.length, 0)
+    : 0;
+  const totalPeriodCount = existingPeriodCount + draftPeriods.length;
+  const willNeedManagement = totalPeriodCount > 2;
+
   const addPeriod = () => {
     if (!range?.from || !range?.to) {
       toast({ title: "Selecciona un rango", description: "Elige fecha de inicio y fin en el calendario.", variant: "destructive" });
       return;
     }
-    setDraftPeriods((p) => [...p, { start: iso(range.from!), end: iso(range.to!), days: businessDays(range.from!, range.to!) }]);
+    if (!editEmp) return;
+    const days = businessDays(range.from, range.to);
+    // Restricción: no exceder los días a los que tiene derecho.
+    if (days > remainingDays) {
+      toast({
+        title: "Excede tus días de vacaciones",
+        description: `Solo te quedan ${remainingDays} día(s) disponibles de ${editEmp.diasDerecho}. Según la Política de Gestión de Vacaciones de SafeOne no puedes solicitar más de lo que te corresponde.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    // Aviso de fraccionamiento en más de dos períodos (requiere Gerencia Comercial).
+    if (existingPeriodCount + draftPeriods.length + 1 > 2) {
+      toast({
+        title: "Fraccionamiento en más de dos períodos",
+        description: "Dividir las vacaciones en más de dos cortes requiere la aprobación de la Gerencia Comercial (Samuel Aurelio Pérez o Leonela Báez). La solicitud será escalada automáticamente.",
+      });
+    }
+    setDraftPeriods((p) => [...p, { start: iso(range.from!), end: iso(range.to!), days }]);
     setRange(undefined);
   };
-
-  const draftTotal = useMemo(() => draftPeriods.reduce((a, p) => a + p.days, 0), [draftPeriods]);
 
   const submitRequest = async () => {
     if (!editEmp || !draftPeriods.length) {
@@ -220,14 +248,20 @@ const VacationProvisioning = () => {
         notes,
         requestedByName: user?.fullName || user?.email,
       });
-      toast({ title: "Solicitud enviada", description: "Se notificó a RRHH para su aprobación." });
+      toast({
+        title: "Solicitud enviada",
+        description: willNeedManagement
+          ? "Se notificó a RRHH y se escalará a la Gerencia Comercial por el fraccionamiento en más de dos períodos."
+          : "Se notificó a RRHH para su aprobación.",
+      });
       setEditEmp(null);
       await reloadRoster();
-    } catch {
-      toast({ title: "Error", description: "No se pudo enviar la solicitud.", variant: "destructive" });
+    } catch (e) {
+      toast({ title: "No se pudo enviar", description: e instanceof Error ? e.message : "Error al enviar la solicitud.", variant: "destructive" });
     } finally {
       setSaving(false);
     }
+
   };
 
   const decide = async (req: VacationRequest, decision: "aprobada" | "rechazada") => {
