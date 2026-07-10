@@ -74,9 +74,65 @@ function yearsBetween(fecha) {
   return (Date.now() - d.getTime()) / (365.25 * 24 * 3600 * 1000);
 }
 
-function entitledDays(years, policy) {
-  if (years == null) return null;
-  return years >= policy.tenureThresholdYears ? policy.from5Days : policy.under5Days;
+// Tiempo de servicio detallado (años, meses, días) desde la fecha de ingreso.
+function serviceTime(fecha) {
+  if (!fecha) return null;
+  const d = new Date(fecha);
+  if (isNaN(d.getTime())) return null;
+  const now = new Date();
+  let years = now.getFullYear() - d.getFullYear();
+  let months = now.getMonth() - d.getMonth();
+  let days = now.getDate() - d.getDate();
+  if (days < 0) {
+    months--;
+    days += new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+  }
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+  return { years, months, days, totalMonths: years * 12 + months };
+}
+
+// Días de vacaciones a los que tiene derecho según antigüedad (Art. 177 CT).
+//   < 1 año  → proporcional por meses trabajados (6 meses = mitad).
+//   1–4 años → under5Days (14)
+//   >= 5 años → from5Days (18)
+function entitledDays(service, policy) {
+  if (!service) return null;
+  if (service.years >= policy.tenureThresholdYears) return policy.from5Days;
+  if (service.years >= 1) return policy.under5Days;
+  return Math.floor((policy.under5Days * service.totalMonths) / 12);
+}
+
+// Correos de la Gerencia Comercial autorizados para aprobar el fraccionamiento
+// de vacaciones en más de dos períodos (Samuel Aurelio Pérez y Leonela Báez).
+const GERENCIA_COMERCIAL_EMAILS = [
+  'samuel@safeone.com.do',
+  'sperez@safeone.com.do',
+  'aperez@safeone.com.do',
+  'lbaez@safeone.com.do',
+  'leonela@safeone.com.do',
+];
+
+function isGerenciaComercial(user) {
+  if (!user) return false;
+  if (user.isAdmin) return true;
+  const email = (user.email || '').toLowerCase().trim();
+  const name = (user.fullName || user.name || '').toLowerCase();
+  const dept = (user.department || '').toLowerCase();
+  return (
+    GERENCIA_COMERCIAL_EMAILS.includes(email) ||
+    dept.includes('gerencia comercial') ||
+    name.includes('leonela') ||
+    name.includes('samuel aurelio')
+  );
+}
+
+// IDs de usuarios de la Gerencia Comercial (para notificar aprobaciones de fraccionamiento).
+function gerenciaComercialUserIds() {
+  const users = readData('users.json') || [];
+  return users.filter((u) => isGerenciaComercial(u)).map((u) => u.id);
 }
 
 // Enriquecimiento opcional con SQL (FechaIngreso por Código).
