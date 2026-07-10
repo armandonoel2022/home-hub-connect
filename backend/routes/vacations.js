@@ -265,11 +265,13 @@ router.get('/roster/:deptId', auth, async (req, res) => {
 
   const emps = employees.filter((e) => slugify(e.department) === dept.id).map((e) => {
     const hireDate = sqlDates.get(e.codigo) || e.hireDate;
-    const years = yearsBetween(hireDate);
-    const dias = entitledDays(years, policy);
+    const service = serviceTime(hireDate);
+    const dias = entitledDays(service, policy);
     const requests = store.requests.filter((r) => String(r.codigo) === e.codigo);
     const diasAprobados = totalDays(requests.filter((r) => r.status === 'aprobada').flatMap((r) => r.periods));
-    const diasPendientes = totalDays(requests.filter((r) => r.status === 'pendiente').flatMap((r) => r.periods));
+    const diasPendientes = totalDays(
+      requests.filter((r) => r.status === 'pendiente' || r.status === 'pendiente-gerencia').flatMap((r) => r.periods)
+    );
     return {
       codigo: e.codigo,
       nombre: e.nombre,
@@ -277,7 +279,8 @@ router.get('/roster/:deptId', auth, async (req, res) => {
       cumpleanos: e.cumpleanos,
       isLeader: e.isLeader,
       fechaIngreso: hireDate || null,
-      antiguedadAnios: years != null ? Math.floor(years) : null,
+      antiguedadAnios: service ? service.years : null,
+      tiempoServicio: service ? { years: service.years, months: service.months, days: service.days } : null,
       diasDerecho: dias != null ? dias : policy.under5Days,
       diasEstimados: dias == null,
       diasAprobados,
