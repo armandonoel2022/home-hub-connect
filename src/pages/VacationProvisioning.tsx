@@ -647,14 +647,19 @@ const VacationProvisioning = () => {
                           </ul>
                         </details>
                       )}
-                      {canApprove && req.status === "pendiente" && (
-                        <div className="flex gap-2 pt-1">
-                          <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700" onClick={() => decide(req, "aprobada")}>
-                            <CheckCircle2 className="h-4 w-4" /> Aprobar
-                          </Button>
-                          <Button size="sm" variant="outline" className="gap-1.5 text-destructive" onClick={() => decide(req, "rechazada")}>
-                            <XCircle className="h-4 w-4" /> Rechazar
-                          </Button>
+                      {canApprove && (req.status === "pendiente" || req.status === "pendiente-gerencia") && (
+                        <div className="flex flex-col gap-2 pt-1">
+                          {req.status === "pendiente-gerencia" && (
+                            <p className="text-[11px] text-purple-600">Requiere aprobación final de la Gerencia Comercial (fraccionamiento en más de dos períodos).</p>
+                          )}
+                          <div className="flex gap-2">
+                            <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700" onClick={() => decide(req, "aprobada")}>
+                              <CheckCircle2 className="h-4 w-4" /> Aprobar
+                            </Button>
+                            <Button size="sm" variant="outline" className="gap-1.5 text-destructive" onClick={() => decide(req, "rechazada")}>
+                              <XCircle className="h-4 w-4" /> Rechazar
+                            </Button>
+                          </div>
                         </div>
                       )}
                       {canApprove && (
