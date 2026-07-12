@@ -727,7 +727,7 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
             <Field label="Calibre" value={displayCaliber(calibre)} />
             <Field label="Categoría" value={categoria} />
             <Field label="No. Licencia" value={noLicencia} />
-            {armedMatch?.ammunitionCount != null && <Field label="Munición" value={`${armedMatch.ammunitionCount} cápsulas`} />}
+            {(puesto.arma?.capsulas ?? armedMatch?.ammunitionCount) != null && <Field label="Munición" value={`${puesto.arma?.capsulas ?? armedMatch?.ammunitionCount} cápsulas`} />}
             <Field label="Propietario" value={propietario} />
             <Field label="Ubicación" value={`${cliente.nombre} · ${puesto.puesto}`} />
             <Field label="Custodio" value={puesto.vigilante} />
@@ -981,7 +981,7 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
                 <Field label="Calibre" value={calibreArma} />
                 <Field label="Categoría" value={arma?.categoria} />
                 <Field label="No. Licencia" value={arma?.noLicencia} />
-                {armed?.ammunitionCount != null && <Field label="Munición" value={`${armed.ammunitionCount} cápsulas`} />}
+                {(arma?.capsulas ?? armed?.ammunitionCount) != null && <Field label="Munición" value={`${arma?.capsulas ?? armed?.ammunitionCount} cápsulas`} />}
                 {armed?.province && <Field label="Provincia" value={armed.province} />}
               </div>
               <div className="space-y-2">
@@ -1202,7 +1202,7 @@ function printAgentFicha(
           ${cell("Calibre", weaponCaliber)}
           ${cell("Categoría", arma?.categoria)}
           ${cell("No. Licencia", arma?.noLicencia || armed?.licenseNumber)}
-          ${armed?.ammunitionCount != null ? cell("Munición", `${armed.ammunitionCount} cápsulas`) : ""}
+          ${(arma?.capsulas ?? armed?.ammunitionCount) != null ? cell("Munición", `${arma?.capsulas ?? armed?.ammunitionCount} cápsulas`) : ""}
           ${cell("Cliente / Puesto", [c.nombre, p.puesto].filter(Boolean).join(" · "))}
           ${armed?.province ? cell("Provincia", armed.province) : ""}
         </div>

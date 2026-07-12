@@ -1326,6 +1326,7 @@ export interface GeneralWeaponDetail {
   noLicencia: string | null;
   estatus: string | null;
   propietario: string | null;
+  capsulas?: number | null;
 }
 
 export interface GeneralExpedientePuesto {
