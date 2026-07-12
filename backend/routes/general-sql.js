@@ -523,6 +523,20 @@ async function readWeapons() {
       vence: cleanStr(pick(r, 'Vence')),
       nota: cleanStr(pick(r, 'Nota')),
       propietario: cleanStr(pick(r, 'Propietario')),
+      // Cantidad de cápsulas / munición asignada al arma (columna de Armamento
+      // en gSafeOne). Se prueban varios nombres posibles de columna.
+      capsulas: (() => {
+        const v = pick(
+          r,
+          'Capsulas', 'Capsula', 'Municiones', 'Municion', 'Balas',
+          'Cantidad', 'CantidadMuniciones', 'CantidadCapsulas',
+          'CantMuniciones', 'CantMunicion', 'NoCapsulas', 'NoMuniciones',
+          'Existencia', 'Cartuchos'
+        );
+        if (v == null || v === '' || v === 'NULL') return null;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : null;
+      })(),
     };
   });
 }
