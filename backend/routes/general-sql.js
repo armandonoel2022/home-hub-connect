@@ -711,6 +711,7 @@ router.get('/expediente', auth, guard, async (req, res) => {
               noLicencia: arma.noLicencia,
               estatus: arma.estatus,
               propietario: arma.propietario,
+              capsulas: arma.capsulas ?? null,
             }
           : null,
         novedad: r.NovedadOID != null,
