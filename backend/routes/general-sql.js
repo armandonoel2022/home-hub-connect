@@ -593,6 +593,7 @@ async function weaponsMap() {
         noLicencia: w.noLicencia,
         estatus: w.estatus,
         propietario: w.propietario,
+        capsulas: w.capsulas,
       });
     }
   } catch (_) { /* Armamento puede no existir; se ignora */ }
