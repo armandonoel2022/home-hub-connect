@@ -981,7 +981,7 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
                 <Field label="Calibre" value={calibreArma} />
                 <Field label="Categoría" value={arma?.categoria} />
                 <Field label="No. Licencia" value={arma?.noLicencia} />
-                {armed?.ammunitionCount != null && <Field label="Munición" value={`${armed.ammunitionCount} cápsulas`} />}
+                {(arma?.capsulas ?? armed?.ammunitionCount) != null && <Field label="Munición" value={`${arma?.capsulas ?? armed?.ammunitionCount} cápsulas`} />}
                 {armed?.province && <Field label="Provincia" value={armed.province} />}
               </div>
               <div className="space-y-2">
