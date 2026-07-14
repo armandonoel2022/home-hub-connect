@@ -147,6 +147,12 @@ export const usersApi = {
   reactivate: (id: string) =>
     apiFetch<IntranetUser>(`/users/${id}/reactivate`, { method: "POST" }),
   getBirthdaysToday: () => apiFetch<IntranetUser[]>("/users/birthdays/today"),
+  getBirthdayPhotoOverrides: () => apiFetch<Record<string, { photoUrl: string; fullName?: string; updatedAt?: string }>>("/users/birthday-photo-overrides"),
+  updateBrandonBirthdayPhoto: (photoDataUrl: string, fileName?: string) =>
+    apiFetch<{ photoUrl: string; fullName?: string; updatedAt?: string }>("/users/birthday-photo-overrides/brandon", {
+      method: "PUT",
+      body: JSON.stringify({ photoDataUrl, fileName }),
+    }),
 };
 
 // ─── Tickets API ───
