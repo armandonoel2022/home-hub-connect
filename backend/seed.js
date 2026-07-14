@@ -131,7 +131,7 @@ async function seed() {
     {
       id: 'USR-120', fullName: 'Brandon Díaz', email: 'monitoreo@safeone.com.do',
       department: 'Tecnología y Monitoreo', position: 'Operador de Monitoreo',
-      birthday: '07-14', hireDate: '2025-07-28', photoUrl: '', allowedDepartments: ['Tecnología y Monitoreo'],
+      birthday: '07-14', hireDate: '2025-07-28', photoUrl: '/__l5e/assets-v1/d6352b5b-4879-4cd2-b55a-430530305b2a/brandon-diaz-perez.jpg', allowedDepartments: ['Tecnología y Monitoreo'],
       isAdmin: false, reportsTo: 'USR-002', extension: '207', shift: 'Turno día', team: 'Sede Central',
       passwordHash: defaultHash, employeeStatus: 'Activo',
     },
