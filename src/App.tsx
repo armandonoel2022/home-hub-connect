@@ -148,7 +148,7 @@ function ProtectedRoutes() {
     return u;
   });
   const baseBirthday = (user && timeReached) ? [...fromUsersFixed, ...fromEmployees] : [];
-  const birthdayKey = baseBirthday.map((u) => u.id).join("|");
+  const birthdayKey = baseBirthday.map((u) => `${u.id}:${u.photoUrl || ""}`).join("|");
 
   // Enriquecer con fotos provenientes de las carpetas locales (FOTOS y dist/fotos_empleados)
   React.useEffect(() => {
