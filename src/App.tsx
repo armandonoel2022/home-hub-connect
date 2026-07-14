@@ -109,24 +109,43 @@ function ProtectedRoutes() {
   const timeReached = minutesNow >= minutesTarget;
 
   const fromUsers = (activeUsers || []).filter((u) => u.birthday === todayMMDD);
+
+  // Excepción: para "Brandon", siempre usar la foto cargada en Gestión de Usuarios
+  const normalizeName = (s: string) =>
+    (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  const brandonUser = (activeUsers || []).find((u) =>
+    normalizeName(u.fullName).startsWith("brandon diaz")
+  );
+
   const fromEmployees = (employees || [])
     .filter((e: any) => e.status === "Activo" && e.birthDate && e.birthDate.slice(5, 10) === todayMMDD)
     .filter((e: any) => !fromUsers.find((u) => u.fullName.toLowerCase() === String(e.fullName).toLowerCase()))
-    .map((e: any) => ({
-      id: `EMP-${e.employeeCode}`,
-      employeeCode: e.employeeCode,
-      fullName: e.fullName,
-      cedula: e.cedula || e.tss || "",
-      email: e.email || "",
-      department: e.department,
-      position: e.position,
-      birthday: todayMMDD,
-      photoUrl: e.photoUrl || e.photo || "",
-      allowedDepartments: [],
-      isAdmin: false,
-      extension: "",
-    }));
-  const baseBirthday = (user && timeReached) ? [...fromUsers, ...fromEmployees] : [];
+    .map((e: any) => {
+      const isBrandon = normalizeName(e.fullName).startsWith("brandon diaz");
+      const overridePhoto = isBrandon && brandonUser?.photoUrl ? brandonUser.photoUrl : "";
+      return {
+        id: `EMP-${e.employeeCode}`,
+        employeeCode: e.employeeCode,
+        fullName: e.fullName,
+        cedula: e.cedula || e.tss || "",
+        email: e.email || "",
+        department: e.department,
+        position: e.position,
+        birthday: todayMMDD,
+        photoUrl: overridePhoto || e.photoUrl || e.photo || "",
+        allowedDepartments: [],
+        isAdmin: false,
+        extension: "",
+      };
+    });
+  // Excepción Brandon: si aparece por fromUsers, forzamos su foto de Gestión de Usuarios
+  const fromUsersFixed = fromUsers.map((u) => {
+    if (normalizeName(u.fullName).startsWith("brandon diaz") && brandonUser?.photoUrl) {
+      return { ...u, photoUrl: brandonUser.photoUrl };
+    }
+    return u;
+  });
+  const baseBirthday = (user && timeReached) ? [...fromUsersFixed, ...fromEmployees] : [];
   const birthdayKey = baseBirthday.map((u) => u.id).join("|");
 
   // Enriquecer con fotos provenientes de las carpetas locales (FOTOS y dist/fotos_empleados)
