@@ -1,14 +1,34 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const { readData, writeData, generateId } = require('../config/database');
+const { saveFile } = require('../config/fileStorage');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
 const FILE = 'users.json';
+const BIRTHDAY_OVERRIDES_FILE = 'birthday-photo-overrides.json';
+const BIRTHDAY_PHOTO_ADMIN = 'anoel@safeone.com.do';
 
 function mapUser(u) {
   const { PasswordHash, passwordHash, ...safe } = u;
   return safe;
+}
+
+function normalizeName(value = '') {
+  return String(value).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+}
+
+function canManageBirthdayPhoto(req) {
+  return String(req.user?.email || '').toLowerCase() === BIRTHDAY_PHOTO_ADMIN;
+}
+
+function readBirthdayOverrides() {
+  const data = readData(BIRTHDAY_OVERRIDES_FILE);
+  return data && typeof data === 'object' && !Array.isArray(data) ? data : {};
+}
+
+function findBrandonUser(users) {
+  return users.find(u => normalizeName(u.fullName).startsWith('brandon diaz'));
 }
 
 // GET /api/users
@@ -24,6 +44,42 @@ router.get('/birthdays/today', auth, (req, res) => {
   const users = readData(FILE);
   const bdays = users.filter(u => u.birthday === mmdd && u.employeeStatus !== 'Inactivo');
   res.json(bdays.map(mapUser));
+});
+
+// GET /api/users/birthday-photo-overrides — read fixed birthday-overlay photos
+router.get('/birthday-photo-overrides', auth, (req, res) => {
+  res.json(readBirthdayOverrides());
+});
+
+// PUT /api/users/birthday-photo-overrides/brandon — Armando-only fixed photo for Brandon's birthday overlay
+router.put('/birthday-photo-overrides/brandon', auth, (req, res) => {
+  if (!canManageBirthdayPhoto(req)) return res.status(403).json({ message: 'No autorizado' });
+
+  const { photoDataUrl, fileName = 'brandon-cumpleanos.jpg' } = req.body || {};
+  if (!photoDataUrl || typeof photoDataUrl !== 'string' || !photoDataUrl.startsWith('data:image/')) {
+    return res.status(400).json({ message: 'Foto inválida' });
+  }
+
+  const ext = photoDataUrl.startsWith('data:image/png') ? 'png' : 'jpg';
+  const safeBase = String(fileName).replace(/\.[^.]+$/, '').replace(/[^a-z0-9_-]+/gi, '-').slice(0, 50) || 'brandon-cumpleanos';
+  const storedName = `${safeBase}-${Date.now()}.${ext}`;
+  saveFile('birthdays', storedName, photoDataUrl);
+
+  const users = readData(FILE);
+  const brandon = findBrandonUser(users);
+  const url = `/uploads/birthdays/${storedName}`;
+  const overrides = readBirthdayOverrides();
+  overrides.brandon = {
+    userId: brandon?.id || 'USR-120',
+    fullName: brandon?.fullName || 'Brandon Díaz',
+    photoUrl: url,
+    updatedAt: new Date().toISOString(),
+    updatedBy: req.user.id,
+    updatedByEmail: req.user.email,
+  };
+  writeData(BIRTHDAY_OVERRIDES_FILE, overrides);
+
+  res.json(overrides.brandon);
 });
 
 // GET /api/users/:id

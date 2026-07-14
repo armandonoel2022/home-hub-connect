@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { X, PartyPopper, Cake, Download, Send } from "lucide-react";
+import { X, PartyPopper, Cake, Download, Send, ImagePlus, Loader2 } from "lucide-react";
 import html2canvas from "html2canvas";
 import { sendBrowserNotification } from "@/lib/windowsNotifications";
 import { getFileUrl } from "@/lib/api";
@@ -16,6 +16,8 @@ interface BirthdayOverlayProps {
   isTest?: boolean;
   onDismissTest?: () => void;
   onSendCongrats?: (user: IntranetUser) => void;
+  canManageBirthdayPhoto?: boolean;
+  onBirthdayPhotoChange?: (user: IntranetUser, photoDataUrl: string, fileName: string) => Promise<void> | void;
 }
 
 const DISMISS_KEY_PREFIX = "safeone_bday_dismissed_";
@@ -55,12 +57,43 @@ function cleanOldKeys() {
   }
 }
 
-const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest, onSendCongrats }: BirthdayOverlayProps) => {
+function normalizeName(value: string) {
+  return (value || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+}
+
+function compressImage(file: File, maxSize = 720): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("No se pudo leer la imagen"));
+    reader.onload = (ev) => {
+      img.onerror = () => reject(new Error("No se pudo cargar la imagen"));
+      img.onload = () => {
+        const scale = Math.min(maxSize / img.width, maxSize / img.height, 1);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return reject(new Error("No se pudo procesar la imagen"));
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.92));
+      };
+      img.src = ev.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest, onSendCongrats, canManageBirthdayPhoto, onBirthdayPhotoChange }: BirthdayOverlayProps) => {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [downloading, setDownloading] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [sent, setSent] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const notificationSentRef = useRef(false);
 
   // En modo test mostramos todos (uno solo o lista pasada por el caller).
@@ -104,6 +137,11 @@ const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest, onSendCongrats 
   const visibleList = isTest && !isTestGroup ? birthdayUsers : [queue[currentIdx]].filter(Boolean);
   const groupMode = isTestGroup; // muestra lista completa en una sola tarjeta
   const person = !groupMode ? visibleList[0] : null;
+  const editableBirthdayUser = canManageBirthdayPhoto
+    ? (person && normalizeName(person.fullName).startsWith("brandon diaz")
+        ? person
+        : birthdayUsers.find((u) => normalizeName(u.fullName).startsWith("brandon diaz")))
+    : null;
 
   const handleDismiss = () => {
     if (isTest) {
@@ -158,6 +196,25 @@ const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest, onSendCongrats 
     }
   }, [person, groupMode]);
 
+  const handleBirthdayPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !editableBirthdayUser || !onBirthdayPhotoChange) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      alert("Solo se permiten imágenes JPG, PNG o WEBP");
+      return;
+    }
+    setUploadingPhoto(true);
+    try {
+      const dataUrl = await compressImage(file);
+      await onBirthdayPhotoChange(editableBirthdayUser, dataUrl, file.name);
+    } catch {
+      alert("No se pudo fijar la foto de cumpleaños");
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   const showing = isTest ? birthdayUsers.length > 0 : queue.length > 0;
   if (!showing) return null;
 
@@ -185,6 +242,19 @@ const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest, onSendCongrats 
 
       <div className="relative bg-card rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
         <div className="absolute top-3 right-3 flex items-center gap-1 z-10">
+          {editableBirthdayUser && onBirthdayPhotoChange && (
+            <>
+              <input ref={photoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleBirthdayPhotoUpload} />
+              <button
+                onClick={() => photoInputRef.current?.click()}
+                disabled={uploadingPhoto}
+                className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                title="Fijar foto de cumpleaños"
+              >
+                {uploadingPhoto ? <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" /> : <ImagePlus className="h-4 w-4 text-muted-foreground" />}
+              </button>
+            </>
+          )}
           <button onClick={handleDownload} disabled={downloading} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="Descargar imagen">
             <Download className={`h-4 w-4 text-muted-foreground ${downloading ? "animate-pulse" : ""}`} />
           </button>

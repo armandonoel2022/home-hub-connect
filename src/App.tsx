@@ -87,6 +87,7 @@ function ProtectedRoutes() {
   const [employees, setEmployees] = React.useState<any[]>([]);
   const [now, setNow] = React.useState(() => new Date());
   const [enrichedBirthday, setEnrichedBirthday] = React.useState<any[]>([]);
+  const [birthdayPhotoOverrides, setBirthdayPhotoOverrides] = React.useState<Record<string, { photoUrl: string; fullName?: string; updatedAt?: string }>>({});
 
   React.useEffect(() => {
     import("@/lib/api").then(({ employeesApi }) => {
@@ -116,13 +117,14 @@ function ProtectedRoutes() {
   const brandonUser = (activeUsers || []).find((u) =>
     normalizeName(u.fullName).startsWith("brandon diaz")
   );
+  const brandonBirthdayOverride = birthdayPhotoOverrides.brandon?.photoUrl || "";
 
   const fromEmployees = (employees || [])
     .filter((e: any) => e.status === "Activo" && e.birthDate && e.birthDate.slice(5, 10) === todayMMDD)
     .filter((e: any) => !fromUsers.find((u) => u.fullName.toLowerCase() === String(e.fullName).toLowerCase()))
     .map((e: any) => {
       const isBrandon = normalizeName(e.fullName).startsWith("brandon diaz");
-      const overridePhoto = isBrandon && brandonUser?.photoUrl ? brandonUser.photoUrl : "";
+      const overridePhoto = isBrandon ? (brandonBirthdayOverride || brandonUser?.photoUrl || "") : "";
       return {
         id: `EMP-${e.employeeCode}`,
         employeeCode: e.employeeCode,
@@ -140,13 +142,13 @@ function ProtectedRoutes() {
     });
   // Excepción Brandon: si aparece por fromUsers, forzamos su foto de Gestión de Usuarios
   const fromUsersFixed = fromUsers.map((u) => {
-    if (normalizeName(u.fullName).startsWith("brandon diaz") && brandonUser?.photoUrl) {
-      return { ...u, photoUrl: brandonUser.photoUrl };
+    if (normalizeName(u.fullName).startsWith("brandon diaz") && (brandonBirthdayOverride || brandonUser?.photoUrl)) {
+      return { ...u, photoUrl: brandonBirthdayOverride || brandonUser?.photoUrl || u.photoUrl };
     }
     return u;
   });
   const baseBirthday = (user && timeReached) ? [...fromUsersFixed, ...fromEmployees] : [];
-  const birthdayKey = baseBirthday.map((u) => u.id).join("|");
+  const birthdayKey = baseBirthday.map((u) => `${u.id}:${u.photoUrl || ""}`).join("|");
 
   // Enriquecer con fotos provenientes de las carpetas locales (FOTOS y dist/fotos_empleados)
   React.useEffect(() => {
@@ -168,6 +170,28 @@ function ProtectedRoutes() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [birthdayKey]);
 
+  React.useEffect(() => {
+    if (!user) return;
+    try {
+      const local = localStorage.getItem("safeone_birthday_photo_overrides");
+      if (local) setBirthdayPhotoOverrides(JSON.parse(local));
+    } catch {}
+
+    let cancelled = false;
+    import("@/lib/api").then(({ isApiConfigured, usersApi }) => {
+      if (!isApiConfigured()) return;
+      usersApi.getBirthdayPhotoOverrides()
+        .then((overrides) => {
+          if (!cancelled) {
+            setBirthdayPhotoOverrides(overrides || {});
+            localStorage.setItem("safeone_birthday_photo_overrides", JSON.stringify(overrides || {}));
+          }
+        })
+        .catch(() => {});
+    });
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -184,11 +208,32 @@ function ProtectedRoutes() {
   }
 
   const birthdayUsers = enrichedBirthday.length ? enrichedBirthday : baseBirthday;
+  const canManageBirthdayPhoto = (user.email || "").toLowerCase() === "anoel@safeone.com.do";
 
   return (
     <>
       <BirthdayOverlay
         birthdayUsers={birthdayUsers}
+        canManageBirthdayPhoto={canManageBirthdayPhoto}
+        onBirthdayPhotoChange={canManageBirthdayPhoto ? async (_bdayUser, photoDataUrl, fileName) => {
+          const applyLocal = (photoUrl: string, updatedAt = new Date().toISOString()) => {
+            const next = {
+              ...birthdayPhotoOverrides,
+              brandon: { fullName: "Brandon Díaz", photoUrl, updatedAt },
+            };
+            setBirthdayPhotoOverrides(next);
+            localStorage.setItem("safeone_birthday_photo_overrides", JSON.stringify(next));
+            setEnrichedBirthday((prev) => prev.map((u) => normalizeName(u.fullName).startsWith("brandon diaz") ? { ...u, photoUrl } : u));
+          };
+
+          const { isApiConfigured, usersApi } = await import("@/lib/api");
+          if (isApiConfigured()) {
+            const saved = await usersApi.updateBrandonBirthdayPhoto(photoDataUrl, fileName);
+            applyLocal(saved.photoUrl, saved.updatedAt);
+          } else {
+            applyLocal(photoDataUrl);
+          }
+        } : undefined}
         onSendCongrats={(bdayUser) => {
           if (chatCtx) {
             chatCtx.startIndividualChat(bdayUser.id);
