@@ -476,10 +476,14 @@ const SurveysPage = () => {
                     </div>
                     <h3 className="font-heading font-bold text-card-foreground">{s.title}</h3>
                     <p className="text-sm text-muted-foreground mt-1">{s.description}</p>
-                    <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground flex-wrap">
                       <span>{s.createdBy} · {s.createdAt}</span>
                       <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {s.responses.length} respuestas</span>
                       <span>{s.questions.length} preguntas</span>
+                      {(s.startDate || s.endDate) && (
+                        <span className="flex items-center gap-1"><CalendarClock className="h-3 w-3" /> {s.startDate || "?"} → {s.endDate || "?"}</span>
+                      )}
+                      {s.enforced && <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-semibold">Overlay forzoso</span>}
                     </div>
                   </div>
                   <div className="flex gap-2 shrink-0">
@@ -488,11 +492,17 @@ const SurveysPage = () => {
                         <BarChart3 className="h-4 w-4" />
                       </button>
                     )}
+                    {canManage && (
+                      <button onClick={() => setShowVigencia(s)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-card-foreground transition-colors" title="Editar vigencia y overlay">
+                        <CalendarClock className="h-4 w-4" />
+                      </button>
+                    )}
                     {isHRManager && (
                       <button onClick={() => setShowVisibility(s)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-card-foreground transition-colors" title="Gestionar visibilidad">
                         <Lock className="h-4 w-4" />
                       </button>
                     )}
+
                     {/* Delete - only canManage */}
                     {canManage && (
                       <button onClick={() => { setShowDeleteConfirm(s); setDeleteReason(""); }} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-destructive transition-colors" title="Eliminar encuesta">
