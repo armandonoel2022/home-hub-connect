@@ -48,6 +48,12 @@ interface Survey {
   status: "activa" | "cerrada";
   responses: SurveyResponse[];
   resultsVisibleTo: string[];
+  startDate?: string;
+  endDate?: string;
+  reappearMinutes?: number;
+  enforced?: boolean;
+  isPublic?: boolean;
+  showAsOverlay?: boolean;
   // Soft delete
   deleted: boolean;
   deletedBy?: string;
