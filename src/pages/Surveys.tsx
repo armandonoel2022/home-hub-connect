@@ -90,18 +90,78 @@ const INITIAL_SURVEYS: Survey[] = [
 const SurveysPage = () => {
   const { user, allUsers } = useAuth();
   const [surveys, setSurveys] = useState<Survey[]>(INITIAL_SURVEYS);
+  const [loadingRemote, setLoadingRemote] = useState(false);
   const [deletionLog, setDeletionLog] = useState<DeleteRecord[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [showResults, setShowResults] = useState<Survey | null>(null);
   const [showRespond, setShowRespond] = useState<Survey | null>(null);
   const [showVisibility, setShowVisibility] = useState<Survey | null>(null);
+  const [showVigencia, setShowVigencia] = useState<Survey | null>(null);
+  const [vigenciaForm, setVigenciaForm] = useState({ startDate: "", endDate: "", reappearMinutes: 240, enforced: false, status: "activa" as Survey["status"] });
   const [showDelegation, setShowDelegation] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<Survey | null>(null);
   const [showDeletionLog, setShowDeletionLog] = useState(false);
   const [deleteReason, setDeleteReason] = useState("");
   const [answers, setAnswers] = useState<Record<string, string | number>>({});
+  const [textFilter, setTextFilter] = useState("");
   // Delegated users who can create/delete (managed by HR Manager)
   const [delegatedUsers, setDelegatedUsers] = useState<string[]>([]); // user IDs
+
+  // Cargar encuestas reales del backend (Clima 2026 y otras persistidas)
+  const refresh = async () => {
+    if (!isApiConfigured()) return;
+    setLoadingRemote(true);
+    try {
+      const remote = await surveysApi.getAll();
+      setSurveys((prev) => {
+        const map = new Map<string, Survey>();
+        prev.filter((s) => s.id.startsWith("SRV-")).forEach((s) => map.set(s.id, s));
+        remote.forEach((r: any) => {
+          map.set(r.id, {
+            id: r.id,
+            title: r.title,
+            description: r.description || "",
+            questions: r.questions || [],
+            createdBy: r.createdBy || "",
+            createdAt: r.createdAt || "",
+            targetType: r.targetType || "todos",
+            targetDept: r.targetDept,
+            status: r.status || "activa",
+            responses: r.responses || [],
+            resultsVisibleTo: r.resultsVisibleTo || [],
+            startDate: r.startDate,
+            endDate: r.endDate,
+            reappearMinutes: r.reappearMinutes,
+            enforced: r.enforced,
+            isPublic: r.isPublic,
+            showAsOverlay: r.showAsOverlay,
+            deleted: !!r.deleted,
+            deletedBy: r.deletedBy,
+            deletedAt: r.deletedAt,
+            deleteReason: r.deleteReason,
+          });
+        });
+        return Array.from(map.values());
+      });
+    } catch { /* silent */ }
+    finally { setLoadingRemote(false); }
+  };
+
+  useEffect(() => { refresh(); }, []);
+
+  // Sincronizar el modal de vigencia si cambia la encuesta seleccionada
+  useEffect(() => {
+    if (showVigencia) {
+      setVigenciaForm({
+        startDate: showVigencia.startDate || "",
+        endDate: showVigencia.endDate || "",
+        reappearMinutes: showVigencia.reappearMinutes ?? 240,
+        enforced: !!showVigencia.enforced,
+        status: showVigencia.status,
+      });
+    }
+  }, [showVigencia]);
+
 
   const [form, setForm] = useState({
     title: "",
