@@ -294,8 +294,98 @@ const SurveysPage = () => {
     return [];
   };
 
+  // Latest snapshot of the survey being viewed (para que "respuestas" se actualice al refrescar)
+  const currentResults = showResults ? (surveys.find((s) => s.id === showResults.id) || showResults) : null;
+
+  // Participation
+  const totalActiveUsers = allUsers.filter((u: any) => u.status !== "inactivo" && u.active !== false).length || allUsers.length;
+
+  const handleSaveVigencia = async () => {
+    if (!showVigencia) return;
+    const patch: any = {
+      startDate: vigenciaForm.startDate || null,
+      endDate: vigenciaForm.endDate || null,
+      reappearMinutes: Number(vigenciaForm.reappearMinutes) || 240,
+      enforced: vigenciaForm.enforced,
+      status: vigenciaForm.status,
+    };
+    // Optimista local
+    setSurveys((prev) => prev.map((s) => s.id === showVigencia.id ? { ...s, ...patch } : s));
+    setShowVigencia(null);
+    // Persistir remoto si aplica (backend-owned)
+    if (isApiConfigured() && !showVigencia.id.startsWith("SRV-")) {
+      try { await surveysApi.update(showVigencia.id, patch); await refresh(); } catch { /* silent */ }
+    }
+  };
+
+  const buildSummary = (s: Survey) => {
+    const total = s.responses.length;
+    const rows: any[] = [];
+    s.questions.forEach((q, i) => {
+      if (q.type === "text") return;
+      const data = getResultsData(s, q.id);
+      data.forEach((d) => {
+        rows.push({
+          "#": i + 1,
+          Pregunta: q.text,
+          Opción: d.name,
+          Respuestas: d.value,
+          "%": total ? ((d.value / total) * 100).toFixed(1) + "%" : "0%",
+        });
+      });
+    });
+    return rows;
+  };
+
+  const exportExcel = (s: Survey) => {
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(buildSummary(s)), "Resumen");
+    const detalle = s.responses.map((r) => {
+      const row: any = { Usuario: r.userName, Departamento: r.department, Fecha: r.submittedAt };
+      s.questions.forEach((q, i) => { row[`P${i + 1}. ${q.text}`] = r.answers[q.id] ?? ""; });
+      return row;
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detalle), "Respuestas");
+    XLSX.writeFile(wb, `${s.title.replace(/[^\w]+/g, "_")}.xlsx`);
+  };
+
+  const exportPdf = (s: Survey) => {
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+    doc.setFillColor(20, 20, 30); doc.rect(0, 0, pageW, 60, "F");
+    doc.setTextColor(255, 200, 0); doc.setFontSize(10); doc.text("SAFEONE SECURITY COMPANY", 40, 25);
+    doc.setTextColor(255, 255, 255); doc.setFontSize(16); doc.text(s.title, 40, 48);
+    doc.setTextColor(0, 0, 0); doc.setFontSize(10);
+    let y = 90;
+    doc.text(`Descripción: ${s.description || "—"}`, 40, y); y += 14;
+    doc.text(`Vigencia: ${s.startDate || "—"} → ${s.endDate || "—"}`, 40, y); y += 14;
+    doc.text(`Respuestas totales: ${s.responses.length}   Participación: ${totalActiveUsers ? Math.round((s.responses.length / totalActiveUsers) * 100) : 0}%`, 40, y); y += 20;
+    autoTable(doc, {
+      startY: y,
+      head: [["#", "Pregunta", "Opción", "Respuestas", "%"]],
+      body: buildSummary(s).map((r) => [r["#"], r.Pregunta, r.Opción, r.Respuestas, r["%"]]),
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [255, 193, 7], textColor: 20 },
+    });
+    // Comentarios abiertos
+    s.questions.filter((q) => q.type === "text").forEach((q, i) => {
+      doc.addPage();
+      doc.setFontSize(13); doc.text(`${i + 1}. ${q.text}`, 40, 50);
+      autoTable(doc, {
+        startY: 70,
+        head: [["Departamento", "Respuesta"]],
+        body: s.responses.filter((r) => r.answers[q.id]).map((r) => [r.department || "—", String(r.answers[q.id])]),
+        styles: { fontSize: 9, cellWidth: "wrap" },
+        columnStyles: { 1: { cellWidth: 380 } },
+        headStyles: { fillColor: [255, 193, 7], textColor: 20 },
+      });
+    });
+    doc.save(`${s.title.replace(/[^\w]+/g, "_")}.pdf`);
+  };
+
   const hrUsers = allUsers.filter((u) => u.department === "Recursos Humanos" && u.id !== user?.id);
   const deletedCount = surveys.filter((s) => s.deleted).length;
+
 
   return (
     <AppLayout>
