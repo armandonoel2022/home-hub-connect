@@ -1041,6 +1041,8 @@ export interface SurveyApi {
   showAsOverlay?: boolean;
   startDate?: string;
   endDate?: string;
+  reappearMinutes?: number;
+  enforced?: boolean;
   createdBy?: string;
   createdAt?: string;
   responses?: any[];
