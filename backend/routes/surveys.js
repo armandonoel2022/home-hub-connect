@@ -64,12 +64,24 @@ function ensureSeed() {
     writeData(FILE, [SEED_SURVEY]);
     return [SEED_SURVEY];
   }
-  if (!list.find((s) => s.id === SEED_ID)) {
+  const existing = list.find((s) => s.id === SEED_ID);
+  if (!existing) {
     list.unshift(SEED_SURVEY);
     writeData(FILE, list);
+    return list;
   }
+  // Backfill nuevos campos sin sobreescribir respuestas
+  let changed = false;
+  ['startDate', 'endDate', 'reappearMinutes', 'enforced', 'isPublic', 'showAsOverlay', 'status'].forEach((k) => {
+    if (existing[k] === undefined || existing[k] === null || (k === 'endDate' && existing[k] === '2026-07-07')) {
+      existing[k] = SEED_SURVEY[k];
+      changed = true;
+    }
+  });
+  if (changed) writeData(FILE, list);
   return list;
 }
+
 
 // Quita datos sensibles antes de exponer al público
 function publicView(s) {
