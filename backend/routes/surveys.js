@@ -83,14 +83,23 @@ function publicView(s) {
     showAsOverlay: s.showAsOverlay,
     startDate: s.startDate,
     endDate: s.endDate,
+    reappearMinutes: s.reappearMinutes,
+    enforced: s.enforced,
   };
+}
+
+function isWithinWindow(s) {
+  const today = new Date().toISOString().slice(0, 10);
+  if (s.startDate && today < s.startDate) return false;
+  if (s.endDate && today > s.endDate) return false;
+  return true;
 }
 
 // ─── PÚBLICO: encuestas activas con overlay (para recordatorio) ───
 router.get('/public/active', (req, res) => {
   const list = ensureSeed();
   const active = list
-    .filter((s) => !s.deleted && s.status === 'activa' && s.isPublic && s.showAsOverlay)
+    .filter((s) => !s.deleted && s.status === 'activa' && s.isPublic && s.showAsOverlay && isWithinWindow(s))
     .map(publicView);
   res.json(active);
 });
