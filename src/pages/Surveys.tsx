@@ -714,45 +714,110 @@ const SurveysPage = () => {
         )}
 
         {/* Results Modal */}
-        {showResults && canSeeResults(showResults) && (
+        {currentResults && showResults && canSeeResults(currentResults) && (() => {
+          const s = currentResults;
+          const total = s.responses.length;
+          const participation = totalActiveUsers ? Math.round((total / totalActiveUsers) * 100) : 0;
+          const lastAt = s.responses.map((r) => r.submittedAt).sort().slice(-1)[0] || "—";
+          return (
           <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-            <div className="bg-card rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="bg-card rounded-xl w-full max-w-3xl max-h-[92vh] overflow-y-auto shadow-2xl">
               <div className="flex items-center justify-between p-5 border-b border-border">
                 <div>
-                  <h2 className="font-heading font-bold text-lg text-card-foreground">Resultados: {showResults.title}</h2>
+                  <h2 className="font-heading font-bold text-lg text-card-foreground">Resultados: {s.title}</h2>
                   <p className="text-xs text-muted-foreground flex items-center gap-2">
-                    {showResults.responses.length} respuestas
+                    {total} respuestas
                     <span className="flex items-center gap-1 text-amber-600"><Lock className="h-3 w-3" /> Solo visible para personal autorizado</span>
                   </p>
                 </div>
-                <button onClick={() => setShowResults(null)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => exportExcel(s)} className="text-xs px-3 py-1.5 rounded-lg border border-border hover:bg-muted flex items-center gap-1 text-card-foreground">
+                    <FileSpreadsheet className="h-3.5 w-3.5" /> Excel
+                  </button>
+                  <button onClick={() => exportPdf(s)} className="text-xs px-3 py-1.5 rounded-lg border border-border hover:bg-muted flex items-center gap-1 text-card-foreground">
+                    <FileText className="h-3.5 w-3.5" /> PDF
+                  </button>
+                  <button onClick={refresh} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground" title="Actualizar">
+                    <RefreshCw className={`h-4 w-4 ${loadingRemote ? "animate-spin" : ""}`} />
+                  </button>
+                  <button onClick={() => setShowResults(null)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
+                </div>
               </div>
+
+              {/* KPIs */}
+              <div className="grid grid-cols-3 gap-3 p-5 pb-0">
+                <div className="bg-muted rounded-lg p-3">
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Respuestas</p>
+                  <p className="text-2xl font-heading font-bold text-card-foreground">{total}</p>
+                </div>
+                <div className="bg-muted rounded-lg p-3">
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Participación</p>
+                  <p className="text-2xl font-heading font-bold text-card-foreground">{participation}%</p>
+                  <p className="text-[10px] text-muted-foreground">de {totalActiveUsers} usuarios</p>
+                </div>
+                <div className="bg-muted rounded-lg p-3">
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Última respuesta</p>
+                  <p className="text-lg font-heading font-bold text-card-foreground">{lastAt}</p>
+                </div>
+              </div>
+
               <div className="p-5 space-y-6">
-                {showResults.questions.map((q) => {
-                  const data = getResultsData(showResults, q.id);
+                {s.questions.map((q, qi) => {
+                  const data = getResultsData(s, q.id);
+                  const filteredText = q.type === "text"
+                    ? s.responses.filter((r) => r.answers[q.id] && String(r.answers[q.id]).toLowerCase().includes(textFilter.toLowerCase()))
+                    : [];
                   return (
                     <div key={q.id} className="bg-muted rounded-xl p-4">
-                      <h4 className="font-medium text-card-foreground mb-3">{q.text}</h4>
+                      <h4 className="font-medium text-card-foreground mb-3"><span className="text-gold font-bold mr-1">{qi + 1}.</span>{q.text}</h4>
                       {(q.type === "rating" || q.type === "multiple") && data.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={180}>
-                          <BarChart data={data}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                            <XAxis dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                            <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} allowDecimals={false} />
-                            <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--card-foreground))" }} />
-                            <Bar dataKey="value" name="Respuestas" radius={[4, 4, 0, 0]}>
-                              {data.map((_, i) => (<Cell key={i} fill={COLORS[i % COLORS.length]} />))}
-                            </Bar>
-                          </BarChart>
-                        </ResponsiveContainer>
+                        <>
+                          <ResponsiveContainer width="100%" height={180}>
+                            <BarChart data={data}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                              <XAxis dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                              <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} allowDecimals={false} />
+                              <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--card-foreground))" }} />
+                              <Bar dataKey="value" name="Respuestas" radius={[4, 4, 0, 0]}>
+                                {data.map((_, i) => (<Cell key={i} fill={COLORS[i % COLORS.length]} />))}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                          <table className="w-full text-xs mt-3">
+                            <thead className="text-muted-foreground">
+                              <tr className="border-b border-border">
+                                <th className="text-left py-1">Opción</th>
+                                <th className="text-right py-1">Conteo</th>
+                                <th className="text-right py-1">%</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {data.map((d) => (
+                                <tr key={d.name} className="border-b border-border/50">
+                                  <td className="py-1 text-card-foreground">{d.name}</td>
+                                  <td className="py-1 text-right text-card-foreground font-medium">{d.value}</td>
+                                  <td className="py-1 text-right text-muted-foreground">{total ? ((d.value / total) * 100).toFixed(1) : "0.0"}%</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </>
                       ) : q.type === "text" ? (
                         <div className="space-y-2">
-                          {showResults.responses.map((r) => r.answers[q.id] ? (
-                            <div key={r.userId} className="bg-card rounded-lg p-3 text-sm">
-                              <span className="text-xs text-muted-foreground">{r.userName} · {r.department}</span>
-                              <p className="text-card-foreground mt-1">{String(r.answers[q.id])}</p>
+                          <input
+                            type="text"
+                            placeholder="Filtrar comentarios..."
+                            value={textFilter}
+                            onChange={(e) => setTextFilter(e.target.value)}
+                            className="w-full mb-2 px-3 py-1.5 rounded-lg bg-background border border-border text-foreground text-xs outline-none"
+                          />
+                          {filteredText.length === 0 && <p className="text-xs text-muted-foreground">Sin respuestas de texto.</p>}
+                          {filteredText.map((r, i) => (
+                            <div key={`${r.userId}-${i}`} className="bg-card rounded-lg p-3 text-sm">
+                              <span className="text-xs text-muted-foreground">{r.userName || "Anónimo"} · {r.department || "—"}</span>
+                              <p className="text-card-foreground mt-1 whitespace-pre-line">{String(r.answers[q.id])}</p>
                             </div>
-                          ) : null)}
+                          ))}
                         </div>
                       ) : (
                         <p className="text-sm text-muted-foreground">Sin datos</p>
@@ -761,12 +826,70 @@ const SurveysPage = () => {
                   );
                 })}
               </div>
-              <div className="p-5 border-t border-border flex justify-end">
+              <div className="p-5 border-t border-border flex justify-end gap-2">
+                <button onClick={() => exportExcel(s)} className="text-sm px-4 py-2 rounded-lg border border-border hover:bg-muted flex items-center gap-2 text-card-foreground">
+                  <FileSpreadsheet className="h-4 w-4" /> Exportar Excel
+                </button>
+                <button onClick={() => exportPdf(s)} className="text-sm px-4 py-2 rounded-lg border border-border hover:bg-muted flex items-center gap-2 text-card-foreground">
+                  <FileText className="h-4 w-4" /> Exportar PDF
+                </button>
                 <button onClick={() => setShowResults(null)} className="btn-gold text-sm">Cerrar</button>
               </div>
             </div>
           </div>
+          );
+        })()}
+
+        {/* Vigencia / Overlay Modal */}
+        {showVigencia && canManage && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-card rounded-xl w-full max-w-md shadow-2xl">
+              <div className="flex items-center justify-between p-5 border-b border-border">
+                <div>
+                  <h2 className="font-heading font-bold text-lg text-card-foreground flex items-center gap-2"><CalendarClock className="h-5 w-5" /> Vigencia y overlay</h2>
+                  <p className="text-xs text-muted-foreground">{showVigencia.title}</p>
+                </div>
+                <button onClick={() => setShowVigencia(null)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
+              </div>
+              <div className="p-5 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-card-foreground block mb-1">Inicio</label>
+                    <input type="date" value={vigenciaForm.startDate} onChange={(e) => setVigenciaForm({ ...vigenciaForm, startDate: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground text-sm outline-none focus:ring-2 focus:ring-gold" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-card-foreground block mb-1">Fin</label>
+                    <input type="date" value={vigenciaForm.endDate} onChange={(e) => setVigenciaForm({ ...vigenciaForm, endDate: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground text-sm outline-none focus:ring-2 focus:ring-gold" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-card-foreground block mb-1">Frecuencia del recordatorio (minutos)</label>
+                  <input type="number" min={1} value={vigenciaForm.reappearMinutes} onChange={(e) => setVigenciaForm({ ...vigenciaForm, reappearMinutes: Number(e.target.value) })} className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground text-sm outline-none focus:ring-2 focus:ring-gold" />
+                  <p className="text-[11px] text-muted-foreground mt-1">Cada cuánto reaparece el overlay para quienes aún no responden (ej. 30 = cada 30 min).</p>
+                </div>
+                <label className="flex items-start gap-3 p-3 rounded-lg bg-muted cursor-pointer">
+                  <input type="checkbox" checked={vigenciaForm.enforced} onChange={(e) => setVigenciaForm({ ...vigenciaForm, enforced: e.target.checked })} className="mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-card-foreground">Overlay obligatorio</p>
+                    <p className="text-xs text-muted-foreground">El usuario no puede posponer; solo se cierra al completar.</p>
+                  </div>
+                </label>
+                <div>
+                  <label className="text-xs font-medium text-card-foreground block mb-1">Estado</label>
+                  <select value={vigenciaForm.status} onChange={(e) => setVigenciaForm({ ...vigenciaForm, status: e.target.value as Survey["status"] })} className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground text-sm outline-none focus:ring-2 focus:ring-gold">
+                    <option value="activa">Activa</option>
+                    <option value="cerrada">Cerrada</option>
+                  </select>
+                </div>
+              </div>
+              <div className="p-5 border-t border-border flex justify-end gap-2">
+                <button onClick={() => setShowVigencia(null)} className="px-4 py-2 rounded-lg text-sm text-muted-foreground hover:bg-muted">Cancelar</button>
+                <button onClick={handleSaveVigencia} className="btn-gold text-sm">Guardar</button>
+              </div>
+            </div>
+          </div>
         )}
+
 
         {/* Visibility Management Modal */}
         {showVisibility && isHRManager && (
