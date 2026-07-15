@@ -404,6 +404,9 @@ const SurveysPage = () => {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <button onClick={refresh} disabled={loadingRemote} className="p-2.5 rounded-lg border border-border text-muted-foreground hover:text-card-foreground hover:bg-muted transition-colors" title="Actualizar respuestas">
+                  <RefreshCw className={`h-4 w-4 ${loadingRemote ? "animate-spin" : ""}`} />
+                </button>
                 {/* Delegation management - Only HR Manager */}
                 {isHRManager && (
                   <button onClick={() => setShowDelegation(true)} className="p-2.5 rounded-lg border border-border text-muted-foreground hover:text-card-foreground hover:bg-muted transition-colors" title="Gestionar delegados">
@@ -425,6 +428,7 @@ const SurveysPage = () => {
                   </button>
                 )}
               </div>
+
             </div>
           </div>
         </div>
