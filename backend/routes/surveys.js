@@ -28,11 +28,13 @@ const SEED_SURVEY = {
   createdBy: 'Recursos Humanos',
   createdAt: '2026-07-07',
   startDate: '2026-07-07',
-  endDate: '2026-07-07',
+  endDate: '2026-07-31',
   targetType: 'todos',
   status: 'activa',
   isPublic: true,
   showAsOverlay: true,
+  reappearMinutes: 30,
+  enforced: true,
   questions: [
     { id: 'q1', text: 'A que departamento perteneces', type: 'multiple', options: ['Gerencia Comercial', 'Recursos Humanos', 'Seguridad Electronica', 'Tecnologia y Monitoreo', 'Administracion y Finanzas', 'Operaciones Administrativo'] },
     { id: 'q2', text: 'Me siento comodo trabajando en mi equipo', type: 'multiple', options: SI_NO_AV },
@@ -62,12 +64,24 @@ function ensureSeed() {
     writeData(FILE, [SEED_SURVEY]);
     return [SEED_SURVEY];
   }
-  if (!list.find((s) => s.id === SEED_ID)) {
+  const existing = list.find((s) => s.id === SEED_ID);
+  if (!existing) {
     list.unshift(SEED_SURVEY);
     writeData(FILE, list);
+    return list;
   }
+  // Backfill nuevos campos sin sobreescribir respuestas
+  let changed = false;
+  ['startDate', 'endDate', 'reappearMinutes', 'enforced', 'isPublic', 'showAsOverlay', 'status'].forEach((k) => {
+    if (existing[k] === undefined || existing[k] === null || (k === 'endDate' && existing[k] === '2026-07-07')) {
+      existing[k] = SEED_SURVEY[k];
+      changed = true;
+    }
+  });
+  if (changed) writeData(FILE, list);
   return list;
 }
+
 
 // Quita datos sensibles antes de exponer al público
 function publicView(s) {
@@ -81,14 +95,23 @@ function publicView(s) {
     showAsOverlay: s.showAsOverlay,
     startDate: s.startDate,
     endDate: s.endDate,
+    reappearMinutes: s.reappearMinutes,
+    enforced: s.enforced,
   };
+}
+
+function isWithinWindow(s) {
+  const today = new Date().toISOString().slice(0, 10);
+  if (s.startDate && today < s.startDate) return false;
+  if (s.endDate && today > s.endDate) return false;
+  return true;
 }
 
 // ─── PÚBLICO: encuestas activas con overlay (para recordatorio) ───
 router.get('/public/active', (req, res) => {
   const list = ensureSeed();
   const active = list
-    .filter((s) => !s.deleted && s.status === 'activa' && s.isPublic && s.showAsOverlay)
+    .filter((s) => !s.deleted && s.status === 'activa' && s.isPublic && s.showAsOverlay && isWithinWindow(s))
     .map(publicView);
   res.json(active);
 });

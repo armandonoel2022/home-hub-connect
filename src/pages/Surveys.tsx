@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { DEPARTMENTS } from "@/lib/types";
-import { ClipboardList, Plus, X, BarChart3, Eye, Send, Check, Users, Lock, EyeOff, Trash2, UserCog, Archive, ShieldCheck } from "lucide-react";
+import { surveysApi, isApiConfigured } from "@/lib/api";
+import { ClipboardList, Plus, X, BarChart3, Eye, Send, Check, Users, Lock, EyeOff, Trash2, UserCog, Archive, ShieldCheck, CalendarClock, FileSpreadsheet, FileText, RefreshCw } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const COLORS = ["hsl(42,100%,50%)", "hsl(200,70%,50%)", "hsl(160,60%,40%)", "hsl(0,60%,50%)", "hsl(280,50%,50%)"];
 
@@ -44,6 +48,12 @@ interface Survey {
   status: "activa" | "cerrada";
   responses: SurveyResponse[];
   resultsVisibleTo: string[];
+  startDate?: string;
+  endDate?: string;
+  reappearMinutes?: number;
+  enforced?: boolean;
+  isPublic?: boolean;
+  showAsOverlay?: boolean;
   // Soft delete
   deleted: boolean;
   deletedBy?: string;
@@ -80,18 +90,78 @@ const INITIAL_SURVEYS: Survey[] = [
 const SurveysPage = () => {
   const { user, allUsers } = useAuth();
   const [surveys, setSurveys] = useState<Survey[]>(INITIAL_SURVEYS);
+  const [loadingRemote, setLoadingRemote] = useState(false);
   const [deletionLog, setDeletionLog] = useState<DeleteRecord[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [showResults, setShowResults] = useState<Survey | null>(null);
   const [showRespond, setShowRespond] = useState<Survey | null>(null);
   const [showVisibility, setShowVisibility] = useState<Survey | null>(null);
+  const [showVigencia, setShowVigencia] = useState<Survey | null>(null);
+  const [vigenciaForm, setVigenciaForm] = useState({ startDate: "", endDate: "", reappearMinutes: 240, enforced: false, status: "activa" as Survey["status"] });
   const [showDelegation, setShowDelegation] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<Survey | null>(null);
   const [showDeletionLog, setShowDeletionLog] = useState(false);
   const [deleteReason, setDeleteReason] = useState("");
   const [answers, setAnswers] = useState<Record<string, string | number>>({});
+  const [textFilter, setTextFilter] = useState("");
   // Delegated users who can create/delete (managed by HR Manager)
   const [delegatedUsers, setDelegatedUsers] = useState<string[]>([]); // user IDs
+
+  // Cargar encuestas reales del backend (Clima 2026 y otras persistidas)
+  const refresh = async () => {
+    if (!isApiConfigured()) return;
+    setLoadingRemote(true);
+    try {
+      const remote = await surveysApi.getAll();
+      setSurveys((prev) => {
+        const map = new Map<string, Survey>();
+        prev.filter((s) => s.id.startsWith("SRV-")).forEach((s) => map.set(s.id, s));
+        remote.forEach((r: any) => {
+          map.set(r.id, {
+            id: r.id,
+            title: r.title,
+            description: r.description || "",
+            questions: r.questions || [],
+            createdBy: r.createdBy || "",
+            createdAt: r.createdAt || "",
+            targetType: r.targetType || "todos",
+            targetDept: r.targetDept,
+            status: r.status || "activa",
+            responses: r.responses || [],
+            resultsVisibleTo: r.resultsVisibleTo || [],
+            startDate: r.startDate,
+            endDate: r.endDate,
+            reappearMinutes: r.reappearMinutes,
+            enforced: r.enforced,
+            isPublic: r.isPublic,
+            showAsOverlay: r.showAsOverlay,
+            deleted: !!r.deleted,
+            deletedBy: r.deletedBy,
+            deletedAt: r.deletedAt,
+            deleteReason: r.deleteReason,
+          });
+        });
+        return Array.from(map.values());
+      });
+    } catch { /* silent */ }
+    finally { setLoadingRemote(false); }
+  };
+
+  useEffect(() => { refresh(); }, []);
+
+  // Sincronizar el modal de vigencia si cambia la encuesta seleccionada
+  useEffect(() => {
+    if (showVigencia) {
+      setVigenciaForm({
+        startDate: showVigencia.startDate || "",
+        endDate: showVigencia.endDate || "",
+        reappearMinutes: showVigencia.reappearMinutes ?? 240,
+        enforced: !!showVigencia.enforced,
+        status: showVigencia.status,
+      });
+    }
+  }, [showVigencia]);
+
 
   const [form, setForm] = useState({
     title: "",
@@ -224,8 +294,98 @@ const SurveysPage = () => {
     return [];
   };
 
+  // Latest snapshot of the survey being viewed (para que "respuestas" se actualice al refrescar)
+  const currentResults = showResults ? (surveys.find((s) => s.id === showResults.id) || showResults) : null;
+
+  // Participation
+  const totalActiveUsers = allUsers.filter((u: any) => u.status !== "inactivo" && u.active !== false).length || allUsers.length;
+
+  const handleSaveVigencia = async () => {
+    if (!showVigencia) return;
+    const patch: any = {
+      startDate: vigenciaForm.startDate || null,
+      endDate: vigenciaForm.endDate || null,
+      reappearMinutes: Number(vigenciaForm.reappearMinutes) || 240,
+      enforced: vigenciaForm.enforced,
+      status: vigenciaForm.status,
+    };
+    // Optimista local
+    setSurveys((prev) => prev.map((s) => s.id === showVigencia.id ? { ...s, ...patch } : s));
+    setShowVigencia(null);
+    // Persistir remoto si aplica (backend-owned)
+    if (isApiConfigured() && !showVigencia.id.startsWith("SRV-")) {
+      try { await surveysApi.update(showVigencia.id, patch); await refresh(); } catch { /* silent */ }
+    }
+  };
+
+  const buildSummary = (s: Survey) => {
+    const total = s.responses.length;
+    const rows: any[] = [];
+    s.questions.forEach((q, i) => {
+      if (q.type === "text") return;
+      const data = getResultsData(s, q.id);
+      data.forEach((d) => {
+        rows.push({
+          "#": i + 1,
+          Pregunta: q.text,
+          Opción: d.name,
+          Respuestas: d.value,
+          "%": total ? ((d.value / total) * 100).toFixed(1) + "%" : "0%",
+        });
+      });
+    });
+    return rows;
+  };
+
+  const exportExcel = (s: Survey) => {
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(buildSummary(s)), "Resumen");
+    const detalle = s.responses.map((r) => {
+      const row: any = { Usuario: r.userName, Departamento: r.department, Fecha: r.submittedAt };
+      s.questions.forEach((q, i) => { row[`P${i + 1}. ${q.text}`] = r.answers[q.id] ?? ""; });
+      return row;
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detalle), "Respuestas");
+    XLSX.writeFile(wb, `${s.title.replace(/[^\w]+/g, "_")}.xlsx`);
+  };
+
+  const exportPdf = (s: Survey) => {
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+    doc.setFillColor(20, 20, 30); doc.rect(0, 0, pageW, 60, "F");
+    doc.setTextColor(255, 200, 0); doc.setFontSize(10); doc.text("SAFEONE SECURITY COMPANY", 40, 25);
+    doc.setTextColor(255, 255, 255); doc.setFontSize(16); doc.text(s.title, 40, 48);
+    doc.setTextColor(0, 0, 0); doc.setFontSize(10);
+    let y = 90;
+    doc.text(`Descripción: ${s.description || "—"}`, 40, y); y += 14;
+    doc.text(`Vigencia: ${s.startDate || "—"} → ${s.endDate || "—"}`, 40, y); y += 14;
+    doc.text(`Respuestas totales: ${s.responses.length}   Participación: ${totalActiveUsers ? Math.round((s.responses.length / totalActiveUsers) * 100) : 0}%`, 40, y); y += 20;
+    autoTable(doc, {
+      startY: y,
+      head: [["#", "Pregunta", "Opción", "Respuestas", "%"]],
+      body: buildSummary(s).map((r) => [r["#"], r.Pregunta, r.Opción, r.Respuestas, r["%"]]),
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [255, 193, 7], textColor: 20 },
+    });
+    // Comentarios abiertos
+    s.questions.filter((q) => q.type === "text").forEach((q, i) => {
+      doc.addPage();
+      doc.setFontSize(13); doc.text(`${i + 1}. ${q.text}`, 40, 50);
+      autoTable(doc, {
+        startY: 70,
+        head: [["Departamento", "Respuesta"]],
+        body: s.responses.filter((r) => r.answers[q.id]).map((r) => [r.department || "—", String(r.answers[q.id])]),
+        styles: { fontSize: 9, cellWidth: "wrap" },
+        columnStyles: { 1: { cellWidth: 380 } },
+        headStyles: { fillColor: [255, 193, 7], textColor: 20 },
+      });
+    });
+    doc.save(`${s.title.replace(/[^\w]+/g, "_")}.pdf`);
+  };
+
   const hrUsers = allUsers.filter((u) => u.department === "Recursos Humanos" && u.id !== user?.id);
   const deletedCount = surveys.filter((s) => s.deleted).length;
+
 
   return (
     <AppLayout>
@@ -244,6 +404,9 @@ const SurveysPage = () => {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <button onClick={refresh} disabled={loadingRemote} className="p-2.5 rounded-lg border border-border text-muted-foreground hover:text-card-foreground hover:bg-muted transition-colors" title="Actualizar respuestas">
+                  <RefreshCw className={`h-4 w-4 ${loadingRemote ? "animate-spin" : ""}`} />
+                </button>
                 {/* Delegation management - Only HR Manager */}
                 {isHRManager && (
                   <button onClick={() => setShowDelegation(true)} className="p-2.5 rounded-lg border border-border text-muted-foreground hover:text-card-foreground hover:bg-muted transition-colors" title="Gestionar delegados">
@@ -265,6 +428,7 @@ const SurveysPage = () => {
                   </button>
                 )}
               </div>
+
             </div>
           </div>
         </div>
@@ -312,10 +476,14 @@ const SurveysPage = () => {
                     </div>
                     <h3 className="font-heading font-bold text-card-foreground">{s.title}</h3>
                     <p className="text-sm text-muted-foreground mt-1">{s.description}</p>
-                    <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground flex-wrap">
                       <span>{s.createdBy} · {s.createdAt}</span>
                       <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {s.responses.length} respuestas</span>
                       <span>{s.questions.length} preguntas</span>
+                      {(s.startDate || s.endDate) && (
+                        <span className="flex items-center gap-1"><CalendarClock className="h-3 w-3" /> {s.startDate || "?"} → {s.endDate || "?"}</span>
+                      )}
+                      {s.enforced && <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-semibold">Overlay forzoso</span>}
                     </div>
                   </div>
                   <div className="flex gap-2 shrink-0">
@@ -324,11 +492,17 @@ const SurveysPage = () => {
                         <BarChart3 className="h-4 w-4" />
                       </button>
                     )}
+                    {canManage && (
+                      <button onClick={() => setShowVigencia(s)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-card-foreground transition-colors" title="Editar vigencia y overlay">
+                        <CalendarClock className="h-4 w-4" />
+                      </button>
+                    )}
                     {isHRManager && (
                       <button onClick={() => setShowVisibility(s)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-card-foreground transition-colors" title="Gestionar visibilidad">
                         <Lock className="h-4 w-4" />
                       </button>
                     )}
+
                     {/* Delete - only canManage */}
                     {canManage && (
                       <button onClick={() => { setShowDeleteConfirm(s); setDeleteReason(""); }} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-destructive transition-colors" title="Eliminar encuesta">
@@ -540,45 +714,110 @@ const SurveysPage = () => {
         )}
 
         {/* Results Modal */}
-        {showResults && canSeeResults(showResults) && (
+        {currentResults && showResults && canSeeResults(currentResults) && (() => {
+          const s = currentResults;
+          const total = s.responses.length;
+          const participation = totalActiveUsers ? Math.round((total / totalActiveUsers) * 100) : 0;
+          const lastAt = s.responses.map((r) => r.submittedAt).sort().slice(-1)[0] || "—";
+          return (
           <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-            <div className="bg-card rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="bg-card rounded-xl w-full max-w-3xl max-h-[92vh] overflow-y-auto shadow-2xl">
               <div className="flex items-center justify-between p-5 border-b border-border">
                 <div>
-                  <h2 className="font-heading font-bold text-lg text-card-foreground">Resultados: {showResults.title}</h2>
+                  <h2 className="font-heading font-bold text-lg text-card-foreground">Resultados: {s.title}</h2>
                   <p className="text-xs text-muted-foreground flex items-center gap-2">
-                    {showResults.responses.length} respuestas
+                    {total} respuestas
                     <span className="flex items-center gap-1 text-amber-600"><Lock className="h-3 w-3" /> Solo visible para personal autorizado</span>
                   </p>
                 </div>
-                <button onClick={() => setShowResults(null)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => exportExcel(s)} className="text-xs px-3 py-1.5 rounded-lg border border-border hover:bg-muted flex items-center gap-1 text-card-foreground">
+                    <FileSpreadsheet className="h-3.5 w-3.5" /> Excel
+                  </button>
+                  <button onClick={() => exportPdf(s)} className="text-xs px-3 py-1.5 rounded-lg border border-border hover:bg-muted flex items-center gap-1 text-card-foreground">
+                    <FileText className="h-3.5 w-3.5" /> PDF
+                  </button>
+                  <button onClick={refresh} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground" title="Actualizar">
+                    <RefreshCw className={`h-4 w-4 ${loadingRemote ? "animate-spin" : ""}`} />
+                  </button>
+                  <button onClick={() => setShowResults(null)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
+                </div>
               </div>
+
+              {/* KPIs */}
+              <div className="grid grid-cols-3 gap-3 p-5 pb-0">
+                <div className="bg-muted rounded-lg p-3">
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Respuestas</p>
+                  <p className="text-2xl font-heading font-bold text-card-foreground">{total}</p>
+                </div>
+                <div className="bg-muted rounded-lg p-3">
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Participación</p>
+                  <p className="text-2xl font-heading font-bold text-card-foreground">{participation}%</p>
+                  <p className="text-[10px] text-muted-foreground">de {totalActiveUsers} usuarios</p>
+                </div>
+                <div className="bg-muted rounded-lg p-3">
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Última respuesta</p>
+                  <p className="text-lg font-heading font-bold text-card-foreground">{lastAt}</p>
+                </div>
+              </div>
+
               <div className="p-5 space-y-6">
-                {showResults.questions.map((q) => {
-                  const data = getResultsData(showResults, q.id);
+                {s.questions.map((q, qi) => {
+                  const data = getResultsData(s, q.id);
+                  const filteredText = q.type === "text"
+                    ? s.responses.filter((r) => r.answers[q.id] && String(r.answers[q.id]).toLowerCase().includes(textFilter.toLowerCase()))
+                    : [];
                   return (
                     <div key={q.id} className="bg-muted rounded-xl p-4">
-                      <h4 className="font-medium text-card-foreground mb-3">{q.text}</h4>
+                      <h4 className="font-medium text-card-foreground mb-3"><span className="text-gold font-bold mr-1">{qi + 1}.</span>{q.text}</h4>
                       {(q.type === "rating" || q.type === "multiple") && data.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={180}>
-                          <BarChart data={data}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                            <XAxis dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                            <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} allowDecimals={false} />
-                            <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--card-foreground))" }} />
-                            <Bar dataKey="value" name="Respuestas" radius={[4, 4, 0, 0]}>
-                              {data.map((_, i) => (<Cell key={i} fill={COLORS[i % COLORS.length]} />))}
-                            </Bar>
-                          </BarChart>
-                        </ResponsiveContainer>
+                        <>
+                          <ResponsiveContainer width="100%" height={180}>
+                            <BarChart data={data}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                              <XAxis dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                              <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} allowDecimals={false} />
+                              <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--card-foreground))" }} />
+                              <Bar dataKey="value" name="Respuestas" radius={[4, 4, 0, 0]}>
+                                {data.map((_, i) => (<Cell key={i} fill={COLORS[i % COLORS.length]} />))}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                          <table className="w-full text-xs mt-3">
+                            <thead className="text-muted-foreground">
+                              <tr className="border-b border-border">
+                                <th className="text-left py-1">Opción</th>
+                                <th className="text-right py-1">Conteo</th>
+                                <th className="text-right py-1">%</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {data.map((d) => (
+                                <tr key={d.name} className="border-b border-border/50">
+                                  <td className="py-1 text-card-foreground">{d.name}</td>
+                                  <td className="py-1 text-right text-card-foreground font-medium">{d.value}</td>
+                                  <td className="py-1 text-right text-muted-foreground">{total ? ((d.value / total) * 100).toFixed(1) : "0.0"}%</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </>
                       ) : q.type === "text" ? (
                         <div className="space-y-2">
-                          {showResults.responses.map((r) => r.answers[q.id] ? (
-                            <div key={r.userId} className="bg-card rounded-lg p-3 text-sm">
-                              <span className="text-xs text-muted-foreground">{r.userName} · {r.department}</span>
-                              <p className="text-card-foreground mt-1">{String(r.answers[q.id])}</p>
+                          <input
+                            type="text"
+                            placeholder="Filtrar comentarios..."
+                            value={textFilter}
+                            onChange={(e) => setTextFilter(e.target.value)}
+                            className="w-full mb-2 px-3 py-1.5 rounded-lg bg-background border border-border text-foreground text-xs outline-none"
+                          />
+                          {filteredText.length === 0 && <p className="text-xs text-muted-foreground">Sin respuestas de texto.</p>}
+                          {filteredText.map((r, i) => (
+                            <div key={`${r.userId}-${i}`} className="bg-card rounded-lg p-3 text-sm">
+                              <span className="text-xs text-muted-foreground">{r.userName || "Anónimo"} · {r.department || "—"}</span>
+                              <p className="text-card-foreground mt-1 whitespace-pre-line">{String(r.answers[q.id])}</p>
                             </div>
-                          ) : null)}
+                          ))}
                         </div>
                       ) : (
                         <p className="text-sm text-muted-foreground">Sin datos</p>
@@ -587,12 +826,70 @@ const SurveysPage = () => {
                   );
                 })}
               </div>
-              <div className="p-5 border-t border-border flex justify-end">
+              <div className="p-5 border-t border-border flex justify-end gap-2">
+                <button onClick={() => exportExcel(s)} className="text-sm px-4 py-2 rounded-lg border border-border hover:bg-muted flex items-center gap-2 text-card-foreground">
+                  <FileSpreadsheet className="h-4 w-4" /> Exportar Excel
+                </button>
+                <button onClick={() => exportPdf(s)} className="text-sm px-4 py-2 rounded-lg border border-border hover:bg-muted flex items-center gap-2 text-card-foreground">
+                  <FileText className="h-4 w-4" /> Exportar PDF
+                </button>
                 <button onClick={() => setShowResults(null)} className="btn-gold text-sm">Cerrar</button>
               </div>
             </div>
           </div>
+          );
+        })()}
+
+        {/* Vigencia / Overlay Modal */}
+        {showVigencia && canManage && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-card rounded-xl w-full max-w-md shadow-2xl">
+              <div className="flex items-center justify-between p-5 border-b border-border">
+                <div>
+                  <h2 className="font-heading font-bold text-lg text-card-foreground flex items-center gap-2"><CalendarClock className="h-5 w-5" /> Vigencia y overlay</h2>
+                  <p className="text-xs text-muted-foreground">{showVigencia.title}</p>
+                </div>
+                <button onClick={() => setShowVigencia(null)} className="p-1 hover:bg-muted rounded-lg"><X className="h-5 w-5 text-muted-foreground" /></button>
+              </div>
+              <div className="p-5 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-card-foreground block mb-1">Inicio</label>
+                    <input type="date" value={vigenciaForm.startDate} onChange={(e) => setVigenciaForm({ ...vigenciaForm, startDate: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground text-sm outline-none focus:ring-2 focus:ring-gold" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-card-foreground block mb-1">Fin</label>
+                    <input type="date" value={vigenciaForm.endDate} onChange={(e) => setVigenciaForm({ ...vigenciaForm, endDate: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground text-sm outline-none focus:ring-2 focus:ring-gold" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-card-foreground block mb-1">Frecuencia del recordatorio (minutos)</label>
+                  <input type="number" min={1} value={vigenciaForm.reappearMinutes} onChange={(e) => setVigenciaForm({ ...vigenciaForm, reappearMinutes: Number(e.target.value) })} className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground text-sm outline-none focus:ring-2 focus:ring-gold" />
+                  <p className="text-[11px] text-muted-foreground mt-1">Cada cuánto reaparece el overlay para quienes aún no responden (ej. 30 = cada 30 min).</p>
+                </div>
+                <label className="flex items-start gap-3 p-3 rounded-lg bg-muted cursor-pointer">
+                  <input type="checkbox" checked={vigenciaForm.enforced} onChange={(e) => setVigenciaForm({ ...vigenciaForm, enforced: e.target.checked })} className="mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-card-foreground">Overlay obligatorio</p>
+                    <p className="text-xs text-muted-foreground">El usuario no puede posponer; solo se cierra al completar.</p>
+                  </div>
+                </label>
+                <div>
+                  <label className="text-xs font-medium text-card-foreground block mb-1">Estado</label>
+                  <select value={vigenciaForm.status} onChange={(e) => setVigenciaForm({ ...vigenciaForm, status: e.target.value as Survey["status"] })} className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground text-sm outline-none focus:ring-2 focus:ring-gold">
+                    <option value="activa">Activa</option>
+                    <option value="cerrada">Cerrada</option>
+                  </select>
+                </div>
+              </div>
+              <div className="p-5 border-t border-border flex justify-end gap-2">
+                <button onClick={() => setShowVigencia(null)} className="px-4 py-2 rounded-lg text-sm text-muted-foreground hover:bg-muted">Cancelar</button>
+                <button onClick={handleSaveVigencia} className="btn-gold text-sm">Guardar</button>
+              </div>
+            </div>
+          </div>
         )}
+
 
         {/* Visibility Management Modal */}
         {showVisibility && isHRManager && (
