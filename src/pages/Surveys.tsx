@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { DEPARTMENTS } from "@/lib/types";
-import { ClipboardList, Plus, X, BarChart3, Eye, Send, Check, Users, Lock, EyeOff, Trash2, UserCog, Archive, ShieldCheck } from "lucide-react";
+import { surveysApi, isApiConfigured } from "@/lib/api";
+import { ClipboardList, Plus, X, BarChart3, Eye, Send, Check, Users, Lock, EyeOff, Trash2, UserCog, Archive, ShieldCheck, CalendarClock, FileSpreadsheet, FileText, RefreshCw } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const COLORS = ["hsl(42,100%,50%)", "hsl(200,70%,50%)", "hsl(160,60%,40%)", "hsl(0,60%,50%)", "hsl(280,50%,50%)"];
 
