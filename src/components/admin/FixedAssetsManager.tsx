@@ -13,6 +13,8 @@ import {
   BarChart3, Filter, Download, ChevronDown, KeyRound,
 } from "lucide-react";
 import KeysManager from "./KeysManager";
+import FixedAssetsSqlCompare from "./FixedAssetsSqlCompare";
+import { Database } from "lucide-react";
 import {
   type FixedAsset, type AssetTypeCode,
   ASSET_TYPES, ESTADOS, CONDICIONES, UBICACIONES, DEPARTAMENTOS,
@@ -41,7 +43,7 @@ export default function FixedAssetsManager({ onBack }: Props) {
   const { toast } = useToast();
   const [assets, setAssets] = useState<FixedAsset[]>([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<"dashboard" | "list" | "detail" | "form" | "label" | "keys">("dashboard");
+  const [view, setView] = useState<"dashboard" | "list" | "detail" | "form" | "label" | "keys" | "sqlCompare">("dashboard");
   const [selectedAsset, setSelectedAsset] = useState<FixedAsset | null>(null);
   const [editingAsset, setEditingAsset] = useState<Partial<FixedAsset> | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -201,6 +203,11 @@ export default function FixedAssetsManager({ onBack }: Props) {
   if (view === "keys") {
     return <KeysManager onBack={() => setView("dashboard")} />;
   }
+
+  if (view === "sqlCompare") {
+    return <FixedAssetsSqlCompare onBack={() => setView("dashboard")} intranetAssets={assets} />;
+  }
+
 
   // ══════════════════════════════════════════
   //  LABEL VIEW
@@ -596,6 +603,9 @@ export default function FixedAssetsManager({ onBack }: Props) {
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" onClick={() => setView("list")} className="gap-2">
             <Search className="h-4 w-4" /> Ver Inventario
+          </Button>
+          <Button variant="outline" onClick={() => setView("sqlCompare")} className="gap-2">
+            <Database className="h-4 w-4" /> Comparar con SafeOne
           </Button>
           <Button onClick={() => { setEditingAsset({}); setView("form"); }} className="gap-2">
             <Plus className="h-4 w-4" /> Nuevo Activo
