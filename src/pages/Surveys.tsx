@@ -337,15 +337,50 @@ const SurveysPage = () => {
     return rows;
   };
 
+  const buildByDepartment = (s: Survey) => {
+    // Resumen anónimo: por pregunta cerrada, conteos por departamento
+    const rows: any[] = [];
+    const depts = Array.from(new Set(s.responses.map((r) => r.department || "Sin depto"))).sort();
+    s.questions.forEach((q, i) => {
+      if (q.type === "text") return;
+      const options = q.type === "multiple" && q.options ? q.options : ["1","2","3","4","5"];
+      depts.forEach((dept) => {
+        const deptResponses = s.responses.filter((r) => (r.department || "Sin depto") === dept);
+        const total = deptResponses.length;
+        options.forEach((opt) => {
+          const count = deptResponses.filter((r) => String(r.answers[q.id]) === String(opt)).length;
+          rows.push({
+            "#": i + 1,
+            Pregunta: q.text,
+            Departamento: dept,
+            Opción: opt,
+            Respuestas: count,
+            "%": total ? ((count / total) * 100).toFixed(1) + "%" : "0%",
+          });
+        });
+      });
+    });
+    return rows;
+  };
+
   const exportExcel = (s: Survey) => {
+    // 100% anónimo — no se incluyen nombres ni IDs de usuario
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(buildSummary(s)), "Resumen");
-    const detalle = s.responses.map((r) => {
-      const row: any = { Usuario: r.userName, Departamento: r.department, Fecha: r.submittedAt };
-      s.questions.forEach((q, i) => { row[`P${i + 1}. ${q.text}`] = r.answers[q.id] ?? ""; });
-      return row;
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(buildByDepartment(s)), "Por Departamento");
+    const comentarios: any[] = [];
+    s.questions.filter((q) => q.type === "text").forEach((q, i) => {
+      s.responses.filter((r) => r.answers[q.id]).forEach((r) => {
+        comentarios.push({
+          Pregunta: `P${i + 1}. ${q.text}`,
+          Departamento: r.department || "Sin depto",
+          Comentario: String(r.answers[q.id]),
+        });
+      });
     });
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detalle), "Respuestas");
+    if (comentarios.length) {
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(comentarios), "Comentarios");
+    }
     XLSX.writeFile(wb, `${s.title.replace(/[^\w]+/g, "_")}.xlsx`);
   };
 
@@ -727,7 +762,7 @@ const SurveysPage = () => {
                   <h2 className="font-heading font-bold text-lg text-card-foreground">Resultados: {s.title}</h2>
                   <p className="text-xs text-muted-foreground flex items-center gap-2">
                     {total} respuestas
-                    <span className="flex items-center gap-1 text-amber-600"><Lock className="h-3 w-3" /> Solo visible para personal autorizado</span>
+                    <span className="flex items-center gap-1 text-amber-600"><Lock className="h-3 w-3" /> 100% anónimo · Resultados agregados por departamento</span>
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -812,12 +847,27 @@ const SurveysPage = () => {
                             className="w-full mb-2 px-3 py-1.5 rounded-lg bg-background border border-border text-foreground text-xs outline-none"
                           />
                           {filteredText.length === 0 && <p className="text-xs text-muted-foreground">Sin respuestas de texto.</p>}
-                          {filteredText.map((r, i) => (
-                            <div key={`${r.userId}-${i}`} className="bg-card rounded-lg p-3 text-sm">
-                              <span className="text-xs text-muted-foreground">{r.userName || "Anónimo"} · {r.department || "—"}</span>
-                              <p className="text-card-foreground mt-1 whitespace-pre-line">{String(r.answers[q.id])}</p>
-                            </div>
-                          ))}
+                          {(() => {
+                            const grouped: Record<string, string[]> = {};
+                            filteredText.forEach((r) => {
+                              const d = r.department || "Sin departamento";
+                              if (!grouped[d]) grouped[d] = [];
+                              grouped[d].push(String(r.answers[q.id]));
+                            });
+                            return Object.keys(grouped).sort().map((dept) => (
+                              <div key={dept} className="bg-card rounded-lg p-3">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-xs font-semibold text-gold uppercase tracking-wider">{dept}</span>
+                                  <span className="text-[10px] text-muted-foreground">{grouped[dept].length} respuesta{grouped[dept].length !== 1 ? "s" : ""}</span>
+                                </div>
+                                <ul className="space-y-2">
+                                  {grouped[dept].map((txt, i) => (
+                                    <li key={i} className="text-sm text-card-foreground border-l-2 border-border pl-3 whitespace-pre-line">{txt}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ));
+                          })()}
                         </div>
                       ) : (
                         <p className="text-sm text-muted-foreground">Sin datos</p>
