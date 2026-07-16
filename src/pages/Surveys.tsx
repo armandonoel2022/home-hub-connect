@@ -337,15 +337,50 @@ const SurveysPage = () => {
     return rows;
   };
 
+  const buildByDepartment = (s: Survey) => {
+    // Resumen anónimo: por pregunta cerrada, conteos por departamento
+    const rows: any[] = [];
+    const depts = Array.from(new Set(s.responses.map((r) => r.department || "Sin depto"))).sort();
+    s.questions.forEach((q, i) => {
+      if (q.type === "text") return;
+      const options = q.type === "multiple" && q.options ? q.options : ["1","2","3","4","5"];
+      depts.forEach((dept) => {
+        const deptResponses = s.responses.filter((r) => (r.department || "Sin depto") === dept);
+        const total = deptResponses.length;
+        options.forEach((opt) => {
+          const count = deptResponses.filter((r) => String(r.answers[q.id]) === String(opt)).length;
+          rows.push({
+            "#": i + 1,
+            Pregunta: q.text,
+            Departamento: dept,
+            Opción: opt,
+            Respuestas: count,
+            "%": total ? ((count / total) * 100).toFixed(1) + "%" : "0%",
+          });
+        });
+      });
+    });
+    return rows;
+  };
+
   const exportExcel = (s: Survey) => {
+    // 100% anónimo — no se incluyen nombres ni IDs de usuario
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(buildSummary(s)), "Resumen");
-    const detalle = s.responses.map((r) => {
-      const row: any = { Usuario: r.userName, Departamento: r.department, Fecha: r.submittedAt };
-      s.questions.forEach((q, i) => { row[`P${i + 1}. ${q.text}`] = r.answers[q.id] ?? ""; });
-      return row;
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(buildByDepartment(s)), "Por Departamento");
+    const comentarios: any[] = [];
+    s.questions.filter((q) => q.type === "text").forEach((q, i) => {
+      s.responses.filter((r) => r.answers[q.id]).forEach((r) => {
+        comentarios.push({
+          Pregunta: `P${i + 1}. ${q.text}`,
+          Departamento: r.department || "Sin depto",
+          Comentario: String(r.answers[q.id]),
+        });
+      });
     });
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detalle), "Respuestas");
+    if (comentarios.length) {
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(comentarios), "Comentarios");
+    }
     XLSX.writeFile(wb, `${s.title.replace(/[^\w]+/g, "_")}.xlsx`);
   };
 
