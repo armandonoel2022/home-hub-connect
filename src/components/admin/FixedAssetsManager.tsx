@@ -13,6 +13,8 @@ import {
   BarChart3, Filter, Download, ChevronDown, KeyRound,
 } from "lucide-react";
 import KeysManager from "./KeysManager";
+import FixedAssetsSqlCompare from "./FixedAssetsSqlCompare";
+import { Database } from "lucide-react";
 import {
   type FixedAsset, type AssetTypeCode,
   ASSET_TYPES, ESTADOS, CONDICIONES, UBICACIONES, DEPARTAMENTOS,
