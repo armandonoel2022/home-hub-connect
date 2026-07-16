@@ -604,6 +604,9 @@ export default function FixedAssetsManager({ onBack }: Props) {
           <Button variant="outline" onClick={() => setView("list")} className="gap-2">
             <Search className="h-4 w-4" /> Ver Inventario
           </Button>
+          <Button variant="outline" onClick={() => setView("sqlCompare")} className="gap-2">
+            <Database className="h-4 w-4" /> Comparar con SafeOne
+          </Button>
           <Button onClick={() => { setEditingAsset({}); setView("form"); }} className="gap-2">
             <Plus className="h-4 w-4" /> Nuevo Activo
           </Button>
