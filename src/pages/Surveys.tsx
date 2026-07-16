@@ -847,12 +847,27 @@ const SurveysPage = () => {
                             className="w-full mb-2 px-3 py-1.5 rounded-lg bg-background border border-border text-foreground text-xs outline-none"
                           />
                           {filteredText.length === 0 && <p className="text-xs text-muted-foreground">Sin respuestas de texto.</p>}
-                          {filteredText.map((r, i) => (
-                            <div key={`${r.userId}-${i}`} className="bg-card rounded-lg p-3 text-sm">
-                              <span className="text-xs text-muted-foreground">{r.userName || "Anónimo"} · {r.department || "—"}</span>
-                              <p className="text-card-foreground mt-1 whitespace-pre-line">{String(r.answers[q.id])}</p>
-                            </div>
-                          ))}
+                          {(() => {
+                            const grouped: Record<string, string[]> = {};
+                            filteredText.forEach((r) => {
+                              const d = r.department || "Sin departamento";
+                              if (!grouped[d]) grouped[d] = [];
+                              grouped[d].push(String(r.answers[q.id]));
+                            });
+                            return Object.keys(grouped).sort().map((dept) => (
+                              <div key={dept} className="bg-card rounded-lg p-3">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-xs font-semibold text-gold uppercase tracking-wider">{dept}</span>
+                                  <span className="text-[10px] text-muted-foreground">{grouped[dept].length} respuesta{grouped[dept].length !== 1 ? "s" : ""}</span>
+                                </div>
+                                <ul className="space-y-2">
+                                  {grouped[dept].map((txt, i) => (
+                                    <li key={i} className="text-sm text-card-foreground border-l-2 border-border pl-3 whitespace-pre-line">{txt}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ));
+                          })()}
                         </div>
                       ) : (
                         <p className="text-sm text-muted-foreground">Sin datos</p>
