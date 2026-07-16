@@ -41,7 +41,7 @@ export default function FixedAssetsManager({ onBack }: Props) {
   const { toast } = useToast();
   const [assets, setAssets] = useState<FixedAsset[]>([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<"dashboard" | "list" | "detail" | "form" | "label" | "keys">("dashboard");
+  const [view, setView] = useState<"dashboard" | "list" | "detail" | "form" | "label" | "keys" | "sqlCompare">("dashboard");
   const [selectedAsset, setSelectedAsset] = useState<FixedAsset | null>(null);
   const [editingAsset, setEditingAsset] = useState<Partial<FixedAsset> | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
