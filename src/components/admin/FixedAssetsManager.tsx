@@ -204,6 +204,11 @@ export default function FixedAssetsManager({ onBack }: Props) {
     return <KeysManager onBack={() => setView("dashboard")} />;
   }
 
+  if (view === "sqlCompare") {
+    return <FixedAssetsSqlCompare onBack={() => setView("dashboard")} intranetAssets={assets} />;
+  }
+  }
+
   // ══════════════════════════════════════════
   //  LABEL VIEW
   // ══════════════════════════════════════════
