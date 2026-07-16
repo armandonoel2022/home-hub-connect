@@ -762,7 +762,7 @@ const SurveysPage = () => {
                   <h2 className="font-heading font-bold text-lg text-card-foreground">Resultados: {s.title}</h2>
                   <p className="text-xs text-muted-foreground flex items-center gap-2">
                     {total} respuestas
-                    <span className="flex items-center gap-1 text-amber-600"><Lock className="h-3 w-3" /> Solo visible para personal autorizado</span>
+                    <span className="flex items-center gap-1 text-amber-600"><Lock className="h-3 w-3" /> 100% anónimo · Resultados agregados por departamento</span>
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
