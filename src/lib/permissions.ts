@@ -40,6 +40,7 @@ export type ModuleKey =
   | "wiki"
   | "surveys"
   | "vacations"
+  | "reception"
   | "minorPurchases"
   | "clientTracking"
   | "userManagement"
@@ -185,6 +186,14 @@ export function canView(module: ModuleKey, user: IntranetUser | null | undefined
     // puede solicitar sus propias vacaciones. Líderes/RRHH/admin gestionan y aprueban.
     case "vacations":
       return !!user;
+
+    // Recepción — admins + super + usuarios designados (departamento Recepción/Administración)
+    case "reception":
+      return (
+        isAdmin(user) ||
+        isITSuper(user) ||
+        inDept(user, "Recepción", "Recepcion", "Administración", "Administracion", "Recursos Humanos")
+      );
 
 
     // Constancias RRHH (Auditoría) — SOLO super
