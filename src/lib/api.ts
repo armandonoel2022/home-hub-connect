@@ -1536,6 +1536,61 @@ export const vacationsApi = {
     apiFetch<{ success: boolean }>(`/vacations/requests/${encodeURIComponent(id)}`, { method: "DELETE" }),
 };
 
+// ─── Recepción / Visitantes ───
+export type VisitorCategory =
+  | "cliente_corporativo"
+  | "cliente_residencial"
+  | "solicitante_empleo"
+  | "familiar_amigo"
+  | "ex_empleado"
+  | "proveedor"
+  | "otro";
+
+export interface Visitor {
+  id: string;
+  cedula: string;
+  fullName: string;
+  category: VisitorCategory;
+  host?: string;
+  purpose?: string;
+  notes?: string;
+  photoUrl?: string;
+  checkInAt: string;
+  checkOutAt: string | null;
+  createdBy?: string;
+  updatedAt?: string;
+}
+
+export interface VisitorStats {
+  total: number;
+  currentlyIn: number;
+  byCategory: Record<VisitorCategory, number>;
+  byDay: Record<string, number>;
+  categories: VisitorCategory[];
+}
+
+export const visitorsApi = {
+  list: (params?: { from?: string; to?: string; status?: "in" | "out" | "all"; category?: string }) => {
+    const q = new URLSearchParams(params as any).toString();
+    return apiFetch<Visitor[]>(`/visitors${q ? `?${q}` : ""}`);
+  },
+  create: (body: Partial<Visitor>) =>
+    apiFetch<Visitor>("/visitors", { method: "POST", body: JSON.stringify(body) }),
+  checkout: (id: string) =>
+    apiFetch<Visitor>(`/visitors/${encodeURIComponent(id)}/checkout`, { method: "POST" }),
+  update: (id: string, body: Partial<Visitor>) =>
+    apiFetch<Visitor>(`/visitors/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(body) }),
+  remove: (id: string) =>
+    apiFetch<{ success: boolean }>(`/visitors/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  stats: (from?: string, to?: string) => {
+    const q = new URLSearchParams();
+    if (from) q.set("from", from);
+    if (to) q.set("to", to);
+    const s = q.toString();
+    return apiFetch<VisitorStats>(`/visitors/stats/summary${s ? `?${s}` : ""}`);
+  },
+};
+
 export default apiFetch;
 
 

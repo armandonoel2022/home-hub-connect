@@ -35,6 +35,7 @@ import {
   BrainCircuit,
   FolderTree,
   Lock,
+  UserPlus,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -79,6 +80,7 @@ const navItems: NavItem[] = [
   { title: "Encuestas", url: "/encuestas", icon: ClipboardList, module: "surveys" },
   { title: "Gastos Menores", url: "/gastos-menores", icon: Wallet, module: "minorPurchases" },
   { title: "Seguimiento Clientes Monitoreo", url: "/seguimiento-clientes", icon: Radar, module: "clientTracking" },
+  { title: "Recepción", url: "/recepcion", icon: UserPlus, module: "reception" },
 ];
 
 const adminItems: NavItem[] = [
