@@ -495,7 +495,7 @@ const DepartmentGrid = () => {
             : null;
           const isLeaderOrAdmin = user?.isAdmin || (user?.isDepartmentLeader && user?.department === dept.name);
           return (
-            <div key={dept.name} className="card-department group border-2 relative" style={{ borderColor: "hsl(220 15% 30%)" }} id={`dept-${dept.name.toLowerCase().replace(/\s+/g, "-")}`}>
+            <div key={dept.name} className="card-department group border-2 relative overflow-hidden" style={{ borderColor: "hsl(220 15% 30%)" }} id={`dept-${dept.name.toLowerCase().replace(/\s+/g, "-")}`}>
               <div className="px-5 py-4 flex items-center gap-4 relative" style={{ background: "hsl(220 15% 30%)" }}>
                 <div className="p-2.5 rounded-xl bg-white/20">
                   <Icon className="h-5 w-5 text-white" />
@@ -522,6 +522,7 @@ const DepartmentGrid = () => {
                   </h3>
                   <p className="text-white/75 text-sm mt-0.5 truncate">{dept.description}</p>
                 </div>
+                <ChevronDown className="h-4 w-4 text-white/60 group-hover:text-gold group-hover:rotate-180 transition-all duration-300 shrink-0" />
               </div>
               <div className="p-6">
                 {/* Sub-módulos del departamento (expandible al click en el título) */}
