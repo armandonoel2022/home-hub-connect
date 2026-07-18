@@ -43,9 +43,12 @@ const LoginPage = () => {
       <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "var(--gradient-dark)" }}>
         <ChangePasswordModal
           isForced={true}
-          onChangePassword={(newPw) => {
-            changePassword(newPw);
-            navigate("/", { replace: true });
+          onChangePassword={async (newPw) => {
+            const res = await changePassword(newPw);
+            if (res.ok) {
+              navigate("/", { replace: true });
+            }
+            return res;
           }}
         />
       </div>
