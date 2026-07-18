@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
 import type { IntranetUser, OffboardingReason } from "@/lib/types";
 import { DEPARTMENTS } from "@/lib/types";
 import { isApiConfigured, authApi, usersApi } from "@/lib/api";
