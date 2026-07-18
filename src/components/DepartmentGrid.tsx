@@ -495,7 +495,7 @@ const DepartmentGrid = () => {
             : null;
           const isLeaderOrAdmin = user?.isAdmin || (user?.isDepartmentLeader && user?.department === dept.name);
           return (
-            <div key={dept.name} className="card-department group border-2 relative" style={{ borderColor: "hsl(220 15% 30%)" }} id={`dept-${dept.name.toLowerCase().replace(/\s+/g, "-")}`}>
+            <div key={dept.name} className="card-department group border-2 relative overflow-hidden" style={{ borderColor: "hsl(220 15% 30%)" }} id={`dept-${dept.name.toLowerCase().replace(/\s+/g, "-")}`}>
               <div className="px-5 py-4 flex items-center gap-4 relative" style={{ background: "hsl(220 15% 30%)" }}>
                 <div className="p-2.5 rounded-xl bg-white/20">
                   <Icon className="h-5 w-5 text-white" />
@@ -522,8 +522,9 @@ const DepartmentGrid = () => {
                   </h3>
                   <p className="text-white/75 text-sm mt-0.5 truncate">{dept.description}</p>
                 </div>
+                <ChevronDown className="h-4 w-4 text-white/60 group-hover:text-gold group-hover:rotate-180 transition-all duration-300 shrink-0" />
               </div>
-              <div className="p-6">
+              <div className="px-5 pt-4 pb-5">
                 {/* Sub-módulos del departamento (expandible al click en el título) */}
                 {DEPT_MULTI_ROUTES[dept.name] && showDeptMenu === dept.name && (
                   <div className="mb-4 grid grid-cols-1 gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
@@ -568,18 +569,36 @@ const DepartmentGrid = () => {
                   </div>
                 )}
 
-                <div></div>
-
-                {/* Hint compacto visible cuando el card está colapsado */}
-                <div className="mt-3 flex items-center justify-center gap-1.5 text-[10px] font-medium text-muted-foreground opacity-100 group-hover:opacity-0 transition-opacity duration-200 pointer-events-none">
-                  <ChevronDown className="h-3 w-3" />
-                  Pasa el mouse para ver opciones
+                {/* Meta pills — siempre visibles, elegantes */}
+                <div className="flex items-center flex-wrap gap-1.5">
+                  {leaderMember && (
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full bg-muted/60 text-card-foreground border border-border/60">
+                      <User className="h-3 w-3 text-gold" />
+                      {leaderMember.fullName.split(" ").slice(0, 2).join(" ")}
+                    </span>
+                  )}
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full bg-muted/60 text-muted-foreground border border-border/60">
+                    <Users className="h-3 w-3" />
+                    {teamMembers.length + (leaderMember ? 1 : 0)}
+                  </span>
+                  {totalFiles(dept.name) > 0 && (
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full bg-muted/60 text-muted-foreground border border-border/60">
+                      <FolderOpen className="h-3 w-3" />
+                      {totalFiles(dept.name)}
+                    </span>
+                  )}
+                  {exEmployees.length > 0 && (
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full bg-destructive/10 text-destructive border border-destructive/20">
+                      <UserX className="h-3 w-3" />
+                      {exEmployees.length}
+                    </span>
+                  )}
                 </div>
 
                 {/* Action buttons — colapsados por defecto, se expanden al pasar el mouse */}
                 <div className="grid grid-rows-[0fr] group-hover:grid-rows-[1fr] focus-within:grid-rows-[1fr] transition-[grid-template-rows] duration-300 ease-in-out">
                   <div className="overflow-hidden">
-                    <div className="flex flex-col gap-2 pt-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">
+                    <div className="flex flex-col gap-2 pt-3 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">
                   <button
                     onClick={() => setShowLeader(dept)}
                     className="flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-lg bg-muted hover:bg-border transition-colors text-card-foreground"
