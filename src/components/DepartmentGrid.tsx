@@ -570,8 +570,16 @@ const DepartmentGrid = () => {
 
                 <div></div>
 
-                {/* Action buttons */}
-                <div className="mt-4 flex flex-col gap-2">
+                {/* Hint compacto visible cuando el card está colapsado */}
+                <div className="mt-3 flex items-center justify-center gap-1.5 text-[10px] font-medium text-muted-foreground opacity-100 group-hover:opacity-0 transition-opacity duration-200 pointer-events-none">
+                  <ChevronDown className="h-3 w-3" />
+                  Pasa el mouse para ver opciones
+                </div>
+
+                {/* Action buttons — colapsados por defecto, se expanden al pasar el mouse */}
+                <div className="grid grid-rows-[0fr] group-hover:grid-rows-[1fr] focus-within:grid-rows-[1fr] transition-[grid-template-rows] duration-300 ease-in-out">
+                  <div className="overflow-hidden">
+                    <div className="flex flex-col gap-2 pt-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">
                   <button
                     onClick={() => setShowLeader(dept)}
                     className="flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-lg bg-muted hover:bg-border transition-colors text-card-foreground"
