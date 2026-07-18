@@ -694,23 +694,62 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const activeUsers = allUsers.filter((u) => u.employeeStatus !== "Inactivo");
   const inactiveUsers = allUsers.filter((u) => u.employeeStatus === "Inactivo");
 
-  const changePassword = (newPassword: string) => {
-    if (!user) return;
-    const hash = simpleHash(newPassword);
-    const updates: Partial<IntranetUser> = {
-      passwordHash: hash,
-      mustChangePassword: false,
-      lastPasswordChange: new Date().toISOString(),
-    };
-    // Update in allUsers
-    setAllUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, ...updates } : u)));
-    const updatedUser = { ...user, ...updates };
-    setUser(updatedUser);
-    localStorage.setItem("safeone_user", JSON.stringify(updatedUser));
+  const changePassword = async (
+    newPassword: string,
+    currentPassword?: string
+  ): Promise<{ ok: boolean; message?: string }> => {
+    if (!user) return { ok: false, message: "Sesión no válida" };
+    if (newPassword.length < 8) return { ok: false, message: "Debe tener al menos 8 caracteres" };
+    if (newPassword.trim().toLowerCase() === "safeone") {
+      return { ok: false, message: "No puedes reutilizar la contraseña por defecto" };
+    }
+    const current = currentPassword || pendingLoginPasswordRef.current || "";
+
+    if (apiMode) {
+      // Persistir en el backend — esta es la fuente de verdad.
+      try {
+        await authApi.changePassword(current, newPassword);
+      } catch (err: any) {
+        return { ok: false, message: err?.message || "No se pudo cambiar la contraseña" };
+      }
+      // Refrescar lista de usuarios para reflejar mustChangePassword=false
+      try {
+        const users = await usersApi.getAll();
+        setAllUsers(users);
+      } catch {}
+      const updatedUser = { ...user, mustChangePassword: false, lastPasswordChange: new Date().toISOString() };
+      setUser(updatedUser);
+      localStorage.setItem("safeone_user", JSON.stringify(updatedUser));
+    } else {
+      const hash = simpleHash(newPassword);
+      const updates: Partial<IntranetUser> = {
+        passwordHash: hash,
+        mustChangePassword: false,
+        lastPasswordChange: new Date().toISOString(),
+      };
+      setAllUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, ...updates } : u)));
+      const updatedUser = { ...user, ...updates };
+      setUser(updatedUser);
+      localStorage.setItem("safeone_user", JSON.stringify(updatedUser));
+    }
+
+    pendingLoginPasswordRef.current = "";
     setMustChangePassword(false);
+    return { ok: true };
   };
 
-  const resetUserPassword = (userId: string) => {
+  const resetUserPassword = async (userId: string) => {
+    if (apiMode) {
+      try {
+        // Restablece la contraseña a "safeone" y fuerza cambio en el próximo login.
+        await authApi.adminResetPassword(userId, "safeone1");
+        const users = await usersApi.getAll();
+        setAllUsers(users);
+        return;
+      } catch (err) {
+        console.error("Error resetting password:", err);
+      }
+    }
     const updates: Partial<IntranetUser> = {
       passwordHash: undefined,
       mustChangePassword: true,
