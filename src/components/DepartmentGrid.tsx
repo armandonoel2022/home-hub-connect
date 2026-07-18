@@ -636,6 +636,8 @@ const DepartmentGrid = () => {
                       </span>
                     </button>
                   )}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Expandable team section */}
