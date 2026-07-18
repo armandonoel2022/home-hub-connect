@@ -29,7 +29,7 @@ interface AuthContextType {
   offboardUser: (id: string, reason: OffboardingReason, notes: string) => void;
   reactivateUser: (id: string) => void;
   mustChangePassword: boolean;
-  changePassword: (newPassword: string) => void;
+  changePassword: (newPassword: string, currentPassword?: string) => Promise<{ ok: boolean; message?: string }>;
   resetUserPassword: (userId: string) => void;
   createForgotPasswordTicket: (email: string, fullName: string) => void;
 }
