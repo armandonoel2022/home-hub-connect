@@ -81,6 +81,9 @@ router.post('/change-password', auth, async (req, res) => {
   if (!newPassword || newPassword.length < 8) {
     return res.status(400).json({ message: 'La nueva contraseña debe tener al menos 8 caracteres' });
   }
+  if (String(newPassword).trim().toLowerCase() === 'safeone') {
+    return res.status(400).json({ message: 'No puedes reutilizar la contraseña por defecto "safeone"' });
+  }
 
   const users = readData(USERS_FILE);
   const idx = users.findIndex(u => u.id === req.user.id);

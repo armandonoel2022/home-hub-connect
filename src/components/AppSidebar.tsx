@@ -311,9 +311,10 @@ const AppSidebar = () => {
       {showChangePassword && (
         <ChangePasswordModal
           isForced={false}
-          onChangePassword={(newPw) => {
-            changePassword(newPw);
-            setShowChangePassword(false);
+          onChangePassword={async (newPw, current) => {
+            const res = await changePassword(newPw, current);
+            if (res.ok) setShowChangePassword(false);
+            return res;
           }}
           onClose={() => setShowChangePassword(false)}
         />
