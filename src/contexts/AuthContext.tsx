@@ -523,6 +523,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem("safeone_token", result.token);
         localStorage.setItem("safeone_user", JSON.stringify(result.user));
         setUser(result.user);
+        // Recordar la contraseña actual sólo mientras deba cambiarla
+        pendingLoginPasswordRef.current = password;
+        setMustChangePassword(!!result.mustChangePassword);
         // Refresh users list
         try {
           const users = await usersApi.getAll();
