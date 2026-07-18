@@ -127,10 +127,11 @@ const ChangePasswordModal = ({ isForced, onChangePassword, onClose }: ChangePass
 
           <button
             type="submit"
-            className="btn-gold w-full flex items-center justify-center gap-2 text-sm"
+            disabled={saving}
+            className="btn-gold w-full flex items-center justify-center gap-2 text-sm disabled:opacity-60"
           >
             <Lock className="h-4 w-4" />
-            Cambiar Contraseña
+            {saving ? "Guardando..." : "Cambiar Contraseña"}
           </button>
         </form>
       </div>
