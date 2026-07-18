@@ -3,7 +3,7 @@ import { Lock, X, AlertTriangle } from "lucide-react";
 
 interface ChangePasswordModalProps {
   isForced: boolean;
-  onChangePassword: (newPassword: string) => void;
+  onChangePassword: (newPassword: string) => void | Promise<{ ok: boolean; message?: string } | void>;
   onClose?: () => void;
 }
 
@@ -11,8 +11,9 @@ const ChangePasswordModal = ({ isForced, onChangePassword, onClose }: ChangePass
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -29,7 +30,17 @@ const ChangePasswordModal = ({ isForced, onChangePassword, onClose }: ChangePass
       return;
     }
 
-    onChangePassword(newPassword);
+    setSaving(true);
+    try {
+      const res = await onChangePassword(newPassword);
+      if (res && typeof res === "object" && "ok" in res && !res.ok) {
+        setError(res.message || "No se pudo cambiar la contraseña");
+      }
+    } catch (err: any) {
+      setError(err?.message || "No se pudo cambiar la contraseña");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
