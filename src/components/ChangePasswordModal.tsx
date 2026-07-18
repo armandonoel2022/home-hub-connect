@@ -31,9 +31,14 @@ const ChangePasswordModal = ({ isForced, onChangePassword, onClose }: ChangePass
       return;
     }
 
+    if (!isForced && !currentPassword) {
+      setError("Ingresa tu contraseña actual");
+      return;
+    }
+
     setSaving(true);
     try {
-      const res = await onChangePassword(newPassword);
+      const res = await onChangePassword(newPassword, currentPassword);
       if (res && typeof res === "object" && "ok" in res && !res.ok) {
         setError(res.message || "No se pudo cambiar la contraseña");
       }
