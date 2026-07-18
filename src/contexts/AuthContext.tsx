@@ -566,6 +566,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(found);
     localStorage.setItem("safeone_user", JSON.stringify(found));
     localStorage.setItem("safeone_token", "mock-token-" + found.id);
+    pendingLoginPasswordRef.current = password;
 
     // Check if must change password: default password or flagged
     const isDefaultPassword = !found.passwordHash || password.trim().toLowerCase() === "safeone";
