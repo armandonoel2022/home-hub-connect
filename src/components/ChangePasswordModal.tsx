@@ -3,11 +3,12 @@ import { Lock, X, AlertTriangle } from "lucide-react";
 
 interface ChangePasswordModalProps {
   isForced: boolean;
-  onChangePassword: (newPassword: string) => void | Promise<{ ok: boolean; message?: string } | void>;
+  onChangePassword: (newPassword: string, currentPassword?: string) => void | Promise<{ ok: boolean; message?: string } | void>;
   onClose?: () => void;
 }
 
 const ChangePasswordModal = ({ isForced, onChangePassword, onClose }: ChangePasswordModalProps) => {
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
