@@ -212,7 +212,9 @@ const VacationProvisioning = () => {
     setDraftPeriods([]);
     setNotes("");
     setRange(undefined);
+    setEditWorkDays(emp.workDays || [1, 2, 3, 4, 5]);
   };
+
 
   // Self-service: open editor for the logged-in user.
   const requestForMyself = async () => {
