@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   vacationsApi,
+  holidaysApi,
   type VacationDept,
   type VacationEmployee,
   type VacationPolicy,
@@ -20,6 +21,7 @@ import {
   type VacationPeriod,
   type VacationRequest,
   type OnVacationResult,
+  type Holiday,
 } from "@/lib/api";
 import {
   Palmtree,
@@ -38,6 +40,8 @@ import {
   UserCircle2,
   CalendarDays,
   FileText,
+  CalendarX,
+  Settings2,
 } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
@@ -58,12 +62,21 @@ const slugify = (str: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 
-const businessDays = (from: Date, to: Date): number => {
+// Cuenta días laborables entre dos fechas considerando los días laborables
+// del colaborador y excluyendo feriados (RD).
+const countWorkDays = (
+  from: Date,
+  to: Date,
+  workDays: Set<number>,
+  holidays: Set<string>,
+): number => {
   let count = 0;
   const d = new Date(from);
   while (d <= to) {
-    const day = d.getDay();
-    if (day !== 0 && day !== 6) count++;
+    if (workDays.has(d.getDay())) {
+      const iso = d.toISOString().slice(0, 10);
+      if (!holidays.has(iso)) count++;
+    }
     d.setDate(d.getDate() + 1);
   }
   return count;
@@ -71,6 +84,9 @@ const businessDays = (from: Date, to: Date): number => {
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 const fmt = (s: string) => new Date(s + "T00:00:00").toLocaleDateString("es-DO", { day: "2-digit", month: "short", year: "numeric" });
+
+const DAY_LABELS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
 
 const STATUS_STYLE: Record<string, string> = {
   pendiente: "bg-amber-500/15 text-amber-600",
