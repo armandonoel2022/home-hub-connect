@@ -254,7 +254,7 @@ const VacationProvisioning = () => {
       return;
     }
     if (!editEmp) return;
-    const days = businessDays(range.from, range.to);
+    const days = countWorkDays(range.from, range.to, workDaySet, holidaySet);
     // Restricción: no exceder los días a los que tiene derecho.
     if (days > remainingDays) {
       toast({
