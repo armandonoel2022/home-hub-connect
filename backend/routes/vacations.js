@@ -306,6 +306,8 @@ router.get('/roster/:deptId', auth, async (req, res) => {
       diasEstimados: dias == null,
       diasAprobados,
       diasPendientes,
+      workDays: workDaysForEmployee(store, e),
+      workDaysCustom: !!(store.employeeConfig && store.employeeConfig[e.codigo] && store.employeeConfig[e.codigo].workDays),
       requests,
     };
   });
@@ -319,6 +321,24 @@ router.get('/roster/:deptId', auth, async (req, res) => {
     leaderName: dept.leaderName,
     employees: emps,
   });
+});
+
+// Actualizar los días laborables de un empleado (admin o líder del departamento).
+router.put('/employee-config/:codigo', auth, (req, res) => {
+  const store = loadStore();
+  const codigo = String(req.params.codigo);
+  const { workDays, actorName } = req.body || {};
+  if (!Array.isArray(workDays)) {
+    return res.status(400).json({ message: 'workDays debe ser un arreglo de números (0=Dom..6=Sáb).' });
+  }
+  const cleaned = Array.from(new Set(workDays.map((n) => Number(n)).filter((n) => Number.isInteger(n) && n >= 0 && n <= 6))).sort();
+  store.employeeConfig[codigo] = {
+    workDays: cleaned,
+    updatedAt: new Date().toISOString(),
+    updatedBy: actorName || (req.user && req.user.email) || 'sistema',
+  };
+  writeData(FILE, store);
+  res.json(store.employeeConfig[codigo]);
 });
 
 // Todas las solicitudes (con filtros opcionales ?status=&codigo=)
