@@ -151,13 +151,35 @@ const VacationProvisioning = () => {
   const [draftPeriods, setDraftPeriods] = useState<VacationPeriod[]>([]);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [editWorkDays, setEditWorkDays] = useState<number[]>([]);
+
+  // Feriados (RD)
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [holidaysOpen, setHolidaysOpen] = useState(false);
+  const [newHolidayDate, setNewHolidayDate] = useState("");
+  const [newHolidayName, setNewHolidayName] = useState("");
+  const [holidayYear, setHolidayYear] = useState<number>(new Date().getFullYear());
+
+  const holidaySet = useMemo(() => new Set(holidays.map((h) => h.date)), [holidays]);
+  const workDaySet = useMemo(() => new Set(editWorkDays), [editWorkDays]);
 
   const canManageDept = (deptId: string) =>
     isAdmin || (isLeader && slugify(user?.department || "") === deptId);
 
+  const loadHolidays = async (year: number) => {
+    try {
+      const [cur, next] = await Promise.all([
+        holidaysApi.list(year),
+        holidaysApi.list(year + 1).catch(() => ({ items: [] as Holiday[] } as any)),
+      ]);
+      setHolidays([...(cur.items || []), ...(next.items || [])]);
+    } catch { /* silencioso */ }
+  };
+
   useEffect(() => {
     vacationsApi.departments().then(setDepartments).catch(() => {});
     vacationsApi.policy().then(setPolicy).catch(() => {});
+    loadHolidays(new Date().getFullYear());
   }, []);
 
   useEffect(() => {
@@ -165,6 +187,7 @@ const VacationProvisioning = () => {
       vacationsApi.onVacation(onVacDate, onVacDate).then(setOnVac).catch(() => {});
     }
   }, [tab, onVacDate]);
+
 
   const openDept = async (dept: VacationDept) => {
     setSelectedDept(dept.id);
