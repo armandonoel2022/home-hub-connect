@@ -872,7 +872,114 @@ const VacationProvisioning = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Feriados RD */}
+      <Dialog open={holidaysOpen} onOpenChange={setHolidaysOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><CalendarX className="h-5 w-5" /> Feriados oficiales de República Dominicana</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-xs text-muted-foreground">Los feriados nunca se descuentan del saldo de vacaciones. Los administradores y RRHH pueden agregar feriados locales que la fuente oficial no incluya, o eliminar días que no deban aplicar.</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="text-sm text-foreground">Año:</label>
+              <Input
+                type="number"
+                value={holidayYear}
+                onChange={(e) => setHolidayYear(Number(e.target.value) || new Date().getFullYear())}
+                className="w-28"
+              />
+              <Button variant="outline" size="sm" onClick={() => loadHolidays(holidayYear)}>Recargar</Button>
+              {isAdmin && (
+                <Button
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      await holidaysApi.refresh(holidayYear);
+                      await loadHolidays(holidayYear);
+                      toast({ title: "Feriados sincronizados", description: "Se consultó el calendario oficial." });
+                    } catch {
+                      toast({ title: "Sin conexión", description: "No se pudo consultar el calendario oficial.", variant: "destructive" });
+                    }
+                  }}
+                >
+                  Sincronizar con oficial
+                </Button>
+              )}
+            </div>
+
+            {isAdmin && (
+              <div className="flex flex-wrap gap-2 items-end border-t border-border pt-3">
+                <div className="flex-1 min-w-[140px]">
+                  <label className="text-[11px] text-muted-foreground">Fecha</label>
+                  <Input type="date" value={newHolidayDate} onChange={(e) => setNewHolidayDate(e.target.value)} />
+                </div>
+                <div className="flex-[2] min-w-[160px]">
+                  <label className="text-[11px] text-muted-foreground">Nombre del feriado</label>
+                  <Input value={newHolidayName} onChange={(e) => setNewHolidayName(e.target.value)} placeholder="Ej. Día Nacional del Vigilante" />
+                </div>
+                <Button
+                  onClick={async () => {
+                    if (!newHolidayDate || !newHolidayName.trim()) {
+                      toast({ title: "Datos incompletos", description: "Ingresa fecha y nombre.", variant: "destructive" });
+                      return;
+                    }
+                    try {
+                      await holidaysApi.addManual(newHolidayDate, newHolidayName.trim());
+                      setNewHolidayDate(""); setNewHolidayName("");
+                      await loadHolidays(holidayYear);
+                      toast({ title: "Feriado agregado" });
+                    } catch {
+                      toast({ title: "Error", description: "No se pudo agregar.", variant: "destructive" });
+                    }
+                  }}
+                  className="gap-1.5"
+                >
+                  <Plus className="h-4 w-4" /> Agregar
+                </Button>
+              </div>
+            )}
+
+            <div className="space-y-1 max-h-[45vh] overflow-y-auto">
+              {holidays
+                .filter((h) => h.date.startsWith(String(holidayYear)))
+                .sort((a, b) => a.date.localeCompare(b.date))
+                .map((h) => (
+                  <div key={h.date} className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm">
+                    <div>
+                      <p className="font-medium text-foreground">{h.name}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {fmt(h.date)} · {h.origen === "manual" ? "Local (manual)" : "Oficial"}
+                      </p>
+                    </div>
+                    {isAdmin && (
+                      <button
+                        className="text-destructive hover:opacity-70"
+                        title="Quitar feriado"
+                        onClick={async () => {
+                          try {
+                            await holidaysApi.remove(h.date);
+                            await loadHolidays(holidayYear);
+                            toast({ title: "Feriado eliminado" });
+                          } catch {
+                            toast({ title: "Error", description: "No se pudo eliminar.", variant: "destructive" });
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              {holidays.filter((h) => h.date.startsWith(String(holidayYear))).length === 0 && (
+                <p className="text-sm text-muted-foreground italic">Sin feriados registrados para {holidayYear}.</p>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
+
 
   );
 };
