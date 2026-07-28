@@ -711,18 +711,87 @@ const VacationProvisioning = () => {
                 </div>
               )}
 
+              {/* Días laborables del colaborador */}
+              <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <Settings2 className="h-4 w-4 text-muted-foreground" />
+                    <p className="text-sm font-semibold text-foreground">Días laborables</p>
+                    {editEmp.workDaysCustom && <Badge variant="outline" className="text-[10px]">Personalizado</Badge>}
+                  </div>
+                  {canApprove && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          await vacationsApi.saveEmployeeConfig(editEmp.codigo, {
+                            workDays: editWorkDays,
+                            actorName: user?.fullName || user?.email,
+                          });
+                          toast({ title: "Días laborables actualizados" });
+                          await reloadRoster();
+                        } catch {
+                          toast({ title: "Error", description: "No se pudo guardar.", variant: "destructive" });
+                        }
+                      }}
+                    >
+                      Guardar
+                    </Button>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Se cuentan solo los días marcados. Los feriados nunca cuentan como días de vacaciones.
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {DAY_LABELS.map((label, idx) => {
+                    const active = editWorkDays.includes(idx);
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        disabled={!canApprove}
+                        onClick={() =>
+                          setEditWorkDays((prev) =>
+                            prev.includes(idx) ? prev.filter((n) => n !== idx) : [...prev, idx].sort(),
+                          )
+                        }
+                        className={`px-3 py-1 rounded-md text-xs font-medium border transition-colors ${
+                          active
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-background text-muted-foreground border-border hover:bg-muted"
+                        } ${!canApprove ? "opacity-70 cursor-not-allowed" : ""}`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Nueva solicitud */}
               <div className="space-y-3 border-t border-border pt-4">
                 <p className="text-sm font-semibold text-foreground">Nueva solicitud</p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <div className="rounded-lg border border-border p-2">
-                    <Calendar mode="range" selected={range} onSelect={setRange} numberOfMonths={1} className="pointer-events-auto" />
+                    <Calendar
+                      mode="range"
+                      selected={range}
+                      onSelect={setRange}
+                      numberOfMonths={1}
+                      className="pointer-events-auto"
+                      modifiers={{ holiday: holidays.map((h) => new Date(h.date + "T00:00:00")) }}
+                      modifiersClassNames={{ holiday: "bg-red-500/15 text-red-600 font-semibold" }}
+                    />
                   </div>
                   <div className="flex-1 space-y-3">
                     <Button onClick={addPeriod} className="w-full gap-2" variant="secondary">
                       <Plus className="h-4 w-4" /> Agregar período seleccionado
                     </Button>
-                    <p className="text-[11px] text-muted-foreground">Se cuentan solo días hábiles (lun–vie).</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Días laborables activos: {editWorkDays.map((d) => DAY_LABELS[d]).join(", ") || "—"}. Los feriados (marcados en rojo) se descuentan automáticamente.
+                    </p>
+
                     <div className="space-y-2">
                       {draftPeriods.length === 0 && <p className="text-sm text-muted-foreground">Sin períodos agregados.</p>}
                       {draftPeriods.map((p, i) => (
