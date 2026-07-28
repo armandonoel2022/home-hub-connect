@@ -42,12 +42,33 @@ function slugify(str) {
 function loadStore() {
   let store = readData(FILE);
   if (!store || Array.isArray(store) || typeof store !== 'object') {
-    store = { policy: DEFAULT_POLICY, requests: [] };
+    store = { policy: DEFAULT_POLICY, requests: [], employeeConfig: {} };
     writeData(FILE, store);
   }
   if (!store.policy) store.policy = DEFAULT_POLICY;
   if (!Array.isArray(store.requests)) store.requests = [];
+  if (!store.employeeConfig || typeof store.employeeConfig !== 'object') store.employeeConfig = {};
   return store;
+}
+
+// Departamentos considerados "operativos" (trabajan también sábado/domingo).
+// El resto se considera administrativo (L-V por defecto).
+const OPERATIONAL_DEPT_RX = /(monitore|operad|vigil|superviso|superintend|escolt|guardi|safeone|macrotech|galer|juancito|asoc|interior)/i;
+
+// 0 = domingo, 1 = lunes ... 6 = sábado
+function defaultWorkDaysForDept(deptName) {
+  if (OPERATIONAL_DEPT_RX.test(String(deptName || ''))) {
+    return [0, 1, 2, 3, 4, 5, 6];
+  }
+  return [1, 2, 3, 4, 5];
+}
+
+function workDaysForEmployee(store, emp) {
+  const cfg = store.employeeConfig && store.employeeConfig[String(emp.codigo)];
+  if (cfg && Array.isArray(cfg.workDays) && cfg.workDays.length) {
+    return cfg.workDays.map((n) => Number(n)).filter((n) => n >= 0 && n <= 6);
+  }
+  return defaultWorkDaysForDept(emp.department);
 }
 
 // Lista base de empleados desde el registro (employees.json) o el seed.
