@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   vacationsApi,
+  holidaysApi,
   type VacationDept,
   type VacationEmployee,
   type VacationPolicy,
@@ -20,6 +21,7 @@ import {
   type VacationPeriod,
   type VacationRequest,
   type OnVacationResult,
+  type Holiday,
 } from "@/lib/api";
 import {
   Palmtree,
@@ -38,6 +40,8 @@ import {
   UserCircle2,
   CalendarDays,
   FileText,
+  CalendarX,
+  Settings2,
 } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
@@ -58,12 +62,21 @@ const slugify = (str: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 
-const businessDays = (from: Date, to: Date): number => {
+// Cuenta días laborables entre dos fechas considerando los días laborables
+// del colaborador y excluyendo feriados (RD).
+const countWorkDays = (
+  from: Date,
+  to: Date,
+  workDays: Set<number>,
+  holidays: Set<string>,
+): number => {
   let count = 0;
   const d = new Date(from);
   while (d <= to) {
-    const day = d.getDay();
-    if (day !== 0 && day !== 6) count++;
+    if (workDays.has(d.getDay())) {
+      const iso = d.toISOString().slice(0, 10);
+      if (!holidays.has(iso)) count++;
+    }
     d.setDate(d.getDate() + 1);
   }
   return count;
@@ -71,6 +84,9 @@ const businessDays = (from: Date, to: Date): number => {
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 const fmt = (s: string) => new Date(s + "T00:00:00").toLocaleDateString("es-DO", { day: "2-digit", month: "short", year: "numeric" });
+
+const DAY_LABELS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
 
 const STATUS_STYLE: Record<string, string> = {
   pendiente: "bg-amber-500/15 text-amber-600",
@@ -135,13 +151,35 @@ const VacationProvisioning = () => {
   const [draftPeriods, setDraftPeriods] = useState<VacationPeriod[]>([]);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [editWorkDays, setEditWorkDays] = useState<number[]>([]);
+
+  // Feriados (RD)
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [holidaysOpen, setHolidaysOpen] = useState(false);
+  const [newHolidayDate, setNewHolidayDate] = useState("");
+  const [newHolidayName, setNewHolidayName] = useState("");
+  const [holidayYear, setHolidayYear] = useState<number>(new Date().getFullYear());
+
+  const holidaySet = useMemo(() => new Set(holidays.map((h) => h.date)), [holidays]);
+  const workDaySet = useMemo(() => new Set(editWorkDays), [editWorkDays]);
 
   const canManageDept = (deptId: string) =>
     isAdmin || (isLeader && slugify(user?.department || "") === deptId);
 
+  const loadHolidays = async (year: number) => {
+    try {
+      const [cur, next] = await Promise.all([
+        holidaysApi.list(year),
+        holidaysApi.list(year + 1).catch(() => ({ items: [] as Holiday[] } as any)),
+      ]);
+      setHolidays([...(cur.items || []), ...(next.items || [])]);
+    } catch { /* silencioso */ }
+  };
+
   useEffect(() => {
     vacationsApi.departments().then(setDepartments).catch(() => {});
     vacationsApi.policy().then(setPolicy).catch(() => {});
+    loadHolidays(new Date().getFullYear());
   }, []);
 
   useEffect(() => {
@@ -149,6 +187,7 @@ const VacationProvisioning = () => {
       vacationsApi.onVacation(onVacDate, onVacDate).then(setOnVac).catch(() => {});
     }
   }, [tab, onVacDate]);
+
 
   const openDept = async (dept: VacationDept) => {
     setSelectedDept(dept.id);
@@ -173,7 +212,9 @@ const VacationProvisioning = () => {
     setDraftPeriods([]);
     setNotes("");
     setRange(undefined);
+    setEditWorkDays(emp.workDays || [1, 2, 3, 4, 5]);
   };
+
 
   // Self-service: open editor for the logged-in user.
   const requestForMyself = async () => {
@@ -213,7 +254,7 @@ const VacationProvisioning = () => {
       return;
     }
     if (!editEmp) return;
-    const days = businessDays(range.from, range.to);
+    const days = countWorkDays(range.from, range.to, workDaySet, holidaySet);
     // Restricción: no exceder los días a los que tiene derecho.
     if (days > remainingDays) {
       toast({
@@ -343,7 +384,10 @@ const VacationProvisioning = () => {
           <p className="text-xs text-muted-foreground">SafeOne exige que el personal disfrute sus vacaciones. Máximo dos períodos salvo aprobación de la Gerencia Comercial.</p>
         </div>
       </div>
-      <Button variant="outline" onClick={() => setPolicyOpen(true)} className="gap-2 shrink-0"><FileText className="h-4 w-4" /> Ver política</Button>
+      <div className="flex gap-2 shrink-0 flex-wrap">
+        <Button variant="outline" onClick={() => setPolicyOpen(true)} className="gap-2"><FileText className="h-4 w-4" /> Ver política</Button>
+        <Button variant="outline" onClick={() => setHolidaysOpen(true)} className="gap-2"><CalendarX className="h-4 w-4" /> Feriados ({holidays.length})</Button>
+      </div>
     </Card>
   );
 
@@ -670,18 +714,87 @@ const VacationProvisioning = () => {
                 </div>
               )}
 
+              {/* Días laborables del colaborador */}
+              <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <Settings2 className="h-4 w-4 text-muted-foreground" />
+                    <p className="text-sm font-semibold text-foreground">Días laborables</p>
+                    {editEmp.workDaysCustom && <Badge variant="outline" className="text-[10px]">Personalizado</Badge>}
+                  </div>
+                  {canApprove && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          await vacationsApi.saveEmployeeConfig(editEmp.codigo, {
+                            workDays: editWorkDays,
+                            actorName: user?.fullName || user?.email,
+                          });
+                          toast({ title: "Días laborables actualizados" });
+                          await reloadRoster();
+                        } catch {
+                          toast({ title: "Error", description: "No se pudo guardar.", variant: "destructive" });
+                        }
+                      }}
+                    >
+                      Guardar
+                    </Button>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Se cuentan solo los días marcados. Los feriados nunca cuentan como días de vacaciones.
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {DAY_LABELS.map((label, idx) => {
+                    const active = editWorkDays.includes(idx);
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        disabled={!canApprove}
+                        onClick={() =>
+                          setEditWorkDays((prev) =>
+                            prev.includes(idx) ? prev.filter((n) => n !== idx) : [...prev, idx].sort(),
+                          )
+                        }
+                        className={`px-3 py-1 rounded-md text-xs font-medium border transition-colors ${
+                          active
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-background text-muted-foreground border-border hover:bg-muted"
+                        } ${!canApprove ? "opacity-70 cursor-not-allowed" : ""}`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Nueva solicitud */}
               <div className="space-y-3 border-t border-border pt-4">
                 <p className="text-sm font-semibold text-foreground">Nueva solicitud</p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <div className="rounded-lg border border-border p-2">
-                    <Calendar mode="range" selected={range} onSelect={setRange} numberOfMonths={1} className="pointer-events-auto" />
+                    <Calendar
+                      mode="range"
+                      selected={range}
+                      onSelect={setRange}
+                      numberOfMonths={1}
+                      className="pointer-events-auto"
+                      modifiers={{ holiday: holidays.map((h) => new Date(h.date + "T00:00:00")) }}
+                      modifiersClassNames={{ holiday: "bg-red-500/15 text-red-600 font-semibold" }}
+                    />
                   </div>
                   <div className="flex-1 space-y-3">
                     <Button onClick={addPeriod} className="w-full gap-2" variant="secondary">
                       <Plus className="h-4 w-4" /> Agregar período seleccionado
                     </Button>
-                    <p className="text-[11px] text-muted-foreground">Se cuentan solo días hábiles (lun–vie).</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Días laborables activos: {editWorkDays.map((d) => DAY_LABELS[d]).join(", ") || "—"}. Los feriados (marcados en rojo) se descuentan automáticamente.
+                    </p>
+
                     <div className="space-y-2">
                       {draftPeriods.length === 0 && <p className="text-sm text-muted-foreground">Sin períodos agregados.</p>}
                       {draftPeriods.map((p, i) => (
@@ -759,7 +872,114 @@ const VacationProvisioning = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Feriados RD */}
+      <Dialog open={holidaysOpen} onOpenChange={setHolidaysOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><CalendarX className="h-5 w-5" /> Feriados oficiales de República Dominicana</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-xs text-muted-foreground">Los feriados nunca se descuentan del saldo de vacaciones. Los administradores y RRHH pueden agregar feriados locales que la fuente oficial no incluya, o eliminar días que no deban aplicar.</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="text-sm text-foreground">Año:</label>
+              <Input
+                type="number"
+                value={holidayYear}
+                onChange={(e) => setHolidayYear(Number(e.target.value) || new Date().getFullYear())}
+                className="w-28"
+              />
+              <Button variant="outline" size="sm" onClick={() => loadHolidays(holidayYear)}>Recargar</Button>
+              {isAdmin && (
+                <Button
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      await holidaysApi.refresh(holidayYear);
+                      await loadHolidays(holidayYear);
+                      toast({ title: "Feriados sincronizados", description: "Se consultó el calendario oficial." });
+                    } catch {
+                      toast({ title: "Sin conexión", description: "No se pudo consultar el calendario oficial.", variant: "destructive" });
+                    }
+                  }}
+                >
+                  Sincronizar con oficial
+                </Button>
+              )}
+            </div>
+
+            {isAdmin && (
+              <div className="flex flex-wrap gap-2 items-end border-t border-border pt-3">
+                <div className="flex-1 min-w-[140px]">
+                  <label className="text-[11px] text-muted-foreground">Fecha</label>
+                  <Input type="date" value={newHolidayDate} onChange={(e) => setNewHolidayDate(e.target.value)} />
+                </div>
+                <div className="flex-[2] min-w-[160px]">
+                  <label className="text-[11px] text-muted-foreground">Nombre del feriado</label>
+                  <Input value={newHolidayName} onChange={(e) => setNewHolidayName(e.target.value)} placeholder="Ej. Día Nacional del Vigilante" />
+                </div>
+                <Button
+                  onClick={async () => {
+                    if (!newHolidayDate || !newHolidayName.trim()) {
+                      toast({ title: "Datos incompletos", description: "Ingresa fecha y nombre.", variant: "destructive" });
+                      return;
+                    }
+                    try {
+                      await holidaysApi.addManual(newHolidayDate, newHolidayName.trim());
+                      setNewHolidayDate(""); setNewHolidayName("");
+                      await loadHolidays(holidayYear);
+                      toast({ title: "Feriado agregado" });
+                    } catch {
+                      toast({ title: "Error", description: "No se pudo agregar.", variant: "destructive" });
+                    }
+                  }}
+                  className="gap-1.5"
+                >
+                  <Plus className="h-4 w-4" /> Agregar
+                </Button>
+              </div>
+            )}
+
+            <div className="space-y-1 max-h-[45vh] overflow-y-auto">
+              {holidays
+                .filter((h) => h.date.startsWith(String(holidayYear)))
+                .sort((a, b) => a.date.localeCompare(b.date))
+                .map((h) => (
+                  <div key={h.date} className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm">
+                    <div>
+                      <p className="font-medium text-foreground">{h.name}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {fmt(h.date)} · {h.origen === "manual" ? "Local (manual)" : "Oficial"}
+                      </p>
+                    </div>
+                    {isAdmin && (
+                      <button
+                        className="text-destructive hover:opacity-70"
+                        title="Quitar feriado"
+                        onClick={async () => {
+                          try {
+                            await holidaysApi.remove(h.date);
+                            await loadHolidays(holidayYear);
+                            toast({ title: "Feriado eliminado" });
+                          } catch {
+                            toast({ title: "Error", description: "No se pudo eliminar.", variant: "destructive" });
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              {holidays.filter((h) => h.date.startsWith(String(holidayYear))).length === 0 && (
+                <p className="text-sm text-muted-foreground italic">Sin feriados registrados para {holidayYear}.</p>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
+
 
   );
 };

@@ -42,12 +42,33 @@ function slugify(str) {
 function loadStore() {
   let store = readData(FILE);
   if (!store || Array.isArray(store) || typeof store !== 'object') {
-    store = { policy: DEFAULT_POLICY, requests: [] };
+    store = { policy: DEFAULT_POLICY, requests: [], employeeConfig: {} };
     writeData(FILE, store);
   }
   if (!store.policy) store.policy = DEFAULT_POLICY;
   if (!Array.isArray(store.requests)) store.requests = [];
+  if (!store.employeeConfig || typeof store.employeeConfig !== 'object') store.employeeConfig = {};
   return store;
+}
+
+// Departamentos considerados "operativos" (trabajan también sábado/domingo).
+// El resto se considera administrativo (L-V por defecto).
+const OPERATIONAL_DEPT_RX = /(monitore|operad|vigil|superviso|superintend|escolt|guardi|safeone|macrotech|galer|juancito|asoc|interior)/i;
+
+// 0 = domingo, 1 = lunes ... 6 = sábado
+function defaultWorkDaysForDept(deptName) {
+  if (OPERATIONAL_DEPT_RX.test(String(deptName || ''))) {
+    return [0, 1, 2, 3, 4, 5, 6];
+  }
+  return [1, 2, 3, 4, 5];
+}
+
+function workDaysForEmployee(store, emp) {
+  const cfg = store.employeeConfig && store.employeeConfig[String(emp.codigo)];
+  if (cfg && Array.isArray(cfg.workDays) && cfg.workDays.length) {
+    return cfg.workDays.map((n) => Number(n)).filter((n) => n >= 0 && n <= 6);
+  }
+  return defaultWorkDaysForDept(emp.department);
 }
 
 // Lista base de empleados desde el registro (employees.json) o el seed.
@@ -285,6 +306,8 @@ router.get('/roster/:deptId', auth, async (req, res) => {
       diasEstimados: dias == null,
       diasAprobados,
       diasPendientes,
+      workDays: workDaysForEmployee(store, e),
+      workDaysCustom: !!(store.employeeConfig && store.employeeConfig[e.codigo] && store.employeeConfig[e.codigo].workDays),
       requests,
     };
   });
@@ -298,6 +321,24 @@ router.get('/roster/:deptId', auth, async (req, res) => {
     leaderName: dept.leaderName,
     employees: emps,
   });
+});
+
+// Actualizar los días laborables de un empleado (admin o líder del departamento).
+router.put('/employee-config/:codigo', auth, (req, res) => {
+  const store = loadStore();
+  const codigo = String(req.params.codigo);
+  const { workDays, actorName } = req.body || {};
+  if (!Array.isArray(workDays)) {
+    return res.status(400).json({ message: 'workDays debe ser un arreglo de números (0=Dom..6=Sáb).' });
+  }
+  const cleaned = Array.from(new Set(workDays.map((n) => Number(n)).filter((n) => Number.isInteger(n) && n >= 0 && n <= 6))).sort();
+  store.employeeConfig[codigo] = {
+    workDays: cleaned,
+    updatedAt: new Date().toISOString(),
+    updatedBy: actorName || (req.user && req.user.email) || 'sistema',
+  };
+  writeData(FILE, store);
+  res.json(store.employeeConfig[codigo]);
 });
 
 // Todas las solicitudes (con filtros opcionales ?status=&codigo=)

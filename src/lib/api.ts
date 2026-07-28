@@ -1498,6 +1498,8 @@ export interface VacationEmployee {
   antiguedadAnios: number | null; tiempoServicio?: VacationServiceTime | null;
   diasDerecho: number; diasEstimados: boolean;
   diasAprobados: number; diasPendientes: number;
+  workDays?: number[];          // 0=Dom..6=Sáb — días que cuentan como laborables
+  workDaysCustom?: boolean;     // true si fue configurado manualmente
   requests: VacationRequest[];
 }
 export interface VacationRoster {
@@ -1513,6 +1515,11 @@ export const vacationsApi = {
   savePolicy: (body: VacationPolicy) =>
     apiFetch<VacationPolicy>("/vacations/policy", { method: "PUT", body: JSON.stringify(body) }),
   roster: (deptId: string) => apiFetch<VacationRoster>(`/vacations/roster/${encodeURIComponent(deptId)}`),
+  saveEmployeeConfig: (codigo: string, body: { workDays: number[]; actorName?: string }) =>
+    apiFetch<{ workDays: number[]; updatedAt: string; updatedBy: string }>(
+      `/vacations/employee-config/${encodeURIComponent(codigo)}`,
+      { method: "PUT", body: JSON.stringify(body) },
+    ),
   requests: (params?: { status?: string; codigo?: string }) => {
     const q = new URLSearchParams(params as Record<string, string>).toString();
     return apiFetch<VacationRequest[]>(`/vacations/requests${q ? `?${q}` : ""}`);
