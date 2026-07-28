@@ -384,7 +384,10 @@ const VacationProvisioning = () => {
           <p className="text-xs text-muted-foreground">SafeOne exige que el personal disfrute sus vacaciones. Máximo dos períodos salvo aprobación de la Gerencia Comercial.</p>
         </div>
       </div>
-      <Button variant="outline" onClick={() => setPolicyOpen(true)} className="gap-2 shrink-0"><FileText className="h-4 w-4" /> Ver política</Button>
+      <div className="flex gap-2 shrink-0 flex-wrap">
+        <Button variant="outline" onClick={() => setPolicyOpen(true)} className="gap-2"><FileText className="h-4 w-4" /> Ver política</Button>
+        <Button variant="outline" onClick={() => setHolidaysOpen(true)} className="gap-2"><CalendarX className="h-4 w-4" /> Feriados ({holidays.length})</Button>
+      </div>
     </Card>
   );
 
