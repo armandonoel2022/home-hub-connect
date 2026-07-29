@@ -489,7 +489,12 @@ const DepartmentGrid = () => {
                 m.reportsTo !== leaderMember.key
             )
             .sort((a, b) => a.fullName.localeCompare(b.fullName));
-          const exEmployees = inactiveUsers.filter((u) => u.department === dept.name);
+          const exEmployees = inactiveUsers.filter((u) => {
+            if (u.department !== dept.name) return false;
+            // Excepción: Jefferson Constanza nunca reportó a Chrisnel Fabián en Administración
+            if (dept.name === "Administración" && /jefferson/i.test(u.fullName || "")) return false;
+            return true;
+          });
           const reportsToUser = leaderMember?.reportsTo
             ? activeMembers.find((m) => m.key === leaderMember.reportsTo) || null
             : null;
