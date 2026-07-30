@@ -106,4 +106,27 @@ async function status() {
   }
 }
 
-module.exports = { isConfigured, authMode, getPool, query, status };
+/**
+ * Escritura CONTROLADA: solo UPDATE sobre dbo.ActivoFijo con WHERE OID = @oid.
+ * Prohibido DELETE, DROP, TRUNCATE, INSERT, MERGE, ALTER y multi-sentencia.
+ */
+async function updateOnly(text, params = {}) {
+  const t = String(text || '').trim();
+  if (/;/.test(t.replace(/;\s*$/, ''))) throw new Error('No se permiten múltiples sentencias.');
+  if (!/^update\s+dbo\.ActivoFijo\s+set\b/i.test(t)) {
+    throw new Error('Solo se permite UPDATE sobre dbo.ActivoFijo.');
+  }
+  if (!/\bwhere\s+OID\s*=\s*@oid\b/i.test(t)) {
+    throw new Error('El UPDATE debe filtrar por OID.');
+  }
+  if (/\b(delete|drop|truncate|insert|merge|alter|exec|execute|create|grant)\b/i.test(t)) {
+    throw new Error('Sentencia no permitida.');
+  }
+  const p = await getPool();
+  const req = p.request();
+  Object.entries(params).forEach(([k, v]) => req.input(k, v));
+  const result = await req.query(t);
+  return result.rowsAffected?.[0] || 0;
+}
+
+module.exports = { isConfigured, authMode, getPool, query, status, updateOnly };
