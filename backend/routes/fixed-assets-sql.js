@@ -11,8 +11,11 @@
 const express = require('express');
 const auth = require('../middleware/auth');
 const sql = require('../config/sqlServerSafeOne');
+const { readData, writeData, generateId } = require('../config/database');
 
 const router = express.Router();
+const BACKUP_FILE = 'fixed-assets-backups.json';
+
 
 function canAccess(user) {
   if (!user) return false;
