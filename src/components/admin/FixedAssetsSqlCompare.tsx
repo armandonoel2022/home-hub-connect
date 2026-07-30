@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Database, RefreshCw, CheckCircle2, AlertCircle, Search, Download } from "lucide-react";
-import { fixedAssetsSqlApi, type FixedAssetsCompareResponse, isApiConfigured } from "@/lib/api";
+import { ArrowLeft, Database, RefreshCw, CheckCircle2, AlertCircle, Search, Download, Pencil } from "lucide-react";
+import { fixedAssetsSqlApi, type FixedAssetsCompareResponse, type SafeOneActivoFijoRow, isApiConfigured } from "@/lib/api";
+import FixedAssetsSqlEditDialog from "./FixedAssetsSqlEditDialog";
 import { type FixedAsset } from "@/lib/fixedAssetsData";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -28,6 +29,7 @@ export default function FixedAssetsSqlCompare({ onBack, intranetAssets }: Props)
   const [data, setData] = useState<FixedAssetsCompareResponse | null>(null);
   const [conn, setConn] = useState<{ connected: boolean; message: string; host?: string | null; database?: string | null } | null>(null);
   const [search, setSearch] = useState("");
+  const [editRow, setEditRow] = useState<SafeOneActivoFijoRow | null>(null);
 
   const testConnection = async () => {
     try {
@@ -223,7 +225,7 @@ export default function FixedAssetsSqlCompare({ onBack, intranetAssets }: Props)
               <div className="border rounded-lg overflow-auto max-h-[60vh]">
                 <table className="w-full text-sm">
                   <thead className="bg-muted sticky top-0">
-                    <tr><Th>SQL OID</Th><Th>Serial</Th><Th>SQL Descripción</Th><Th>Intranet ID</Th><Th>Intranet Descripción</Th></tr>
+                    <tr><Th>SQL OID</Th><Th>Serial</Th><Th>SQL Descripción</Th><Th>Intranet ID</Th><Th>Intranet Descripción</Th><Th></Th></tr>
                   </thead>
                   <tbody>
                     {data.matched.filter(m =>
@@ -236,6 +238,11 @@ export default function FixedAssetsSqlCompare({ onBack, intranetAssets }: Props)
                         <Td>{m.sql.Descripcion}</Td>
                         <Td className="font-mono">{m.intranet.id}</Td>
                         <Td>{m.intranet.descripcion}</Td>
+                        <Td className="text-right">
+                          <Button size="sm" variant="ghost" onClick={() => setEditRow(m.sql)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </Td>
                       </tr>
                     ))}
                   </tbody>
