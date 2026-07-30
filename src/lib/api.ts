@@ -1225,13 +1225,46 @@ export interface FixedAssetsCompareResponse {
   onlyInIntranet: any[];
 }
 
+export interface FixedAssetsBackupMeta {
+  id: string;
+  createdAt: string;
+  createdBy: string;
+  note?: string;
+  count: number;
+  totalCosto: number;
+}
+
+export interface FixedAssetsAnalytics {
+  generatedAt: string;
+  resumen: Record<string, any> | null;
+  calidad: Record<string, any> | null;
+  suplidores: any[];
+  categorias: any[];
+  departamentos: any[];
+  antiguedad: any[];
+  sinSerial: any[];
+  serialesDuplicados: any[];
+  sinEncargado: any[];
+  movimientos: any[];
+  depreciacion: any[];
+  errors: Record<string, string>;
+}
+
 export const fixedAssetsSqlApi = {
   status: () => apiFetch<{ configured: boolean; connected: boolean; message: string; host: string | null; database: string | null }>("/fixed-assets-sql/status"),
   list: (includeRetired = false) =>
     apiFetch<{ count: number; rows: SafeOneActivoFijoRow[] }>(`/fixed-assets-sql/activo-fijo?includeRetired=${includeRetired}`),
   compare: (intranet: any[]) =>
     apiFetch<FixedAssetsCompareResponse>("/fixed-assets-sql/compare", { method: "POST", body: JSON.stringify({ intranet }) }),
+  analytics: () => apiFetch<FixedAssetsAnalytics>("/fixed-assets-sql/analytics"),
+  schema: () => apiFetch<{ tables: { Tabla: string; Columnas: number }[] }>("/fixed-assets-sql/schema"),
+  listBackups: () => apiFetch<FixedAssetsBackupMeta[]>("/fixed-assets-sql/backups"),
+  createBackup: (assets: any[], note?: string) =>
+    apiFetch<FixedAssetsBackupMeta>("/fixed-assets-sql/backups", { method: "POST", body: JSON.stringify({ assets, note }) }),
+  getBackup: (id: string) => apiFetch<FixedAssetsBackupMeta & { assets: any[] }>(`/fixed-assets-sql/backups/${id}`),
+  deleteBackup: (id: string) => apiFetch<void>(`/fixed-assets-sql/backups/${id}`, { method: "DELETE" }),
 };
+
 
 
 // Cliente leído desde gSafeOne (tabla Cliente + ClienteServicio.Descripcion)
