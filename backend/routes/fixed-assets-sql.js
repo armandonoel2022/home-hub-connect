@@ -347,5 +347,110 @@ router.get('/schema', auth, guard, async (req, res) => {
   res.json({ tables: r.rows });
 });
 
+/* ───────────── CRUD CONTROLADO: solo UPDATE (sin borrar, sin crear) ───────────── */
+
+const AUDIT_FILE = 'fixed-assets-sql-audit.json';
+
+// Campos editables desde la intranet. NO se exponen OID, GCRecord, Retirado,
+// depreciaciones ni montos históricos para no comprometer la contabilidad.
+const EDITABLE = {
+  Descripcion: 'string',
+  Serial: 'string',
+  Modelo: 'string',
+  CodigoBarra: 'string',
+  Ubicacion: 'string',
+  Departamento: 'string',
+  Encargado: 'string',
+  Comentario: 'string',
+  Documento: 'string',
+};
+
+function canWrite(user) {
+  if (!user) return false;
+  if (user.isAdmin) return true;
+  const dept = String(user.department || '').toLowerCase();
+  return /tecnolog|administraci|gerencia/.test(dept);
+}
+function writeGuard(req, res, next) {
+  if (!canWrite(req.user)) return res.status(403).json({ message: 'No autorizado para modificar Activo Fijo' });
+  next();
+}
+
+// Historial de cambios (auditoría permanente, nunca se borra)
+router.get('/audit', auth, guard, (req, res) => {
+  let items = readData(AUDIT_FILE);
+  if (req.query.oid) items = items.filter((a) => String(a.oid) === String(req.query.oid));
+  res.json(items.slice(0, 500));
+});
+
+router.put('/activo-fijo/:oid', auth, guard, writeGuard, async (req, res) => {
+  const oid = Number(req.params.oid);
+  if (!Number.isFinite(oid) || oid <= 0) return res.status(400).json({ message: 'OID inválido' });
+
+  const changes = {};
+  for (const key of Object.keys(EDITABLE)) {
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, key)) {
+      const v = req.body[key];
+      changes[key] = v === '' || v == null ? null : String(v).slice(0, 400);
+    }
+  }
+  if (!Object.keys(changes).length) return res.status(400).json({ message: 'No hay campos editables en la solicitud' });
+
+  try {
+    const before = await sql.query(
+      `SELECT OID, Descripcion, Serial, Modelo, CodigoBarra, Ubicacion, Departamento, Encargado, Comentario, Documento
+       FROM dbo.ActivoFijo WHERE OID = @oid AND GCRecord IS NULL`,
+      { oid }
+    );
+    if (!before.length) return res.status(404).json({ message: 'Activo no encontrado en SafeOne' });
+    const prev = before[0];
+
+    // Solo campos realmente distintos
+    const diff = {};
+    for (const [k, v] of Object.entries(changes)) {
+      const old = prev[k] == null ? null : String(prev[k]);
+      const nu = v == null ? null : String(v);
+      if (old !== nu) diff[k] = { from: prev[k] ?? null, to: v };
+    }
+    if (!Object.keys(diff).length) return res.json({ updated: 0, message: 'Sin cambios', row: prev });
+
+    const setSql = Object.keys(diff).map((k) => `${k} = @${k}`).join(', ');
+    const params = { oid };
+    Object.keys(diff).forEach((k) => { params[k] = changes[k]; });
+
+    const affected = await sql.updateOnly(
+      `UPDATE dbo.ActivoFijo SET ${setSql} WHERE OID = @oid`,
+      params
+    );
+
+    const after = await sql.query(
+      `SELECT OID, Descripcion, Serial, Modelo, CodigoBarra, Ubicacion, Departamento, Encargado, Comentario, Documento
+       FROM dbo.ActivoFijo WHERE OID = @oid`,
+      { oid }
+    );
+
+    const audit = readData(AUDIT_FILE);
+    audit.unshift({
+      id: generateId('AFA', audit),
+      oid,
+      at: new Date().toISOString(),
+      by: req.user?.name || req.user?.email || 'desconocido',
+      email: req.user?.email || null,
+      descripcion: prev.Descripcion || null,
+      changes: diff,
+    });
+    writeData(AUDIT_FILE, audit.slice(0, 5000));
+
+    res.json({ updated: affected, row: after[0] || prev, changes: diff });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+// Bloqueo explícito: nunca se permite eliminar desde la intranet
+router.delete('/activo-fijo/:oid', auth, (req, res) =>
+  res.status(405).json({ message: 'Eliminar activos fijos está deshabilitado por política de datos.' })
+);
+
 module.exports = router;
 
