@@ -165,7 +165,7 @@ export default function FixedAssetsSqlCompare({ onBack, intranetAssets }: Props)
               <div className="border rounded-lg overflow-auto max-h-[60vh]">
                 <table className="w-full text-sm">
                   <thead className="bg-muted sticky top-0">
-                    <tr><Th>OID</Th><Th>Descripción</Th><Th>Serial</Th><Th>Código</Th><Th>Modelo</Th><Th>Ubicación</Th><Th>Encargado</Th><Th>F. Adq.</Th><Th className="text-right">Costo</Th></tr>
+                    <tr><Th>OID</Th><Th>Descripción</Th><Th>Serial</Th><Th>Código</Th><Th>Modelo</Th><Th>Ubicación</Th><Th>Encargado</Th><Th>F. Adq.</Th><Th className="text-right">Costo</Th><Th></Th></tr>
                   </thead>
                   <tbody>
                     {filterSql(data.onlyInSql).map(r => (
@@ -174,11 +174,17 @@ export default function FixedAssetsSqlCompare({ onBack, intranetAssets }: Props)
                         <Td className="font-mono">{r.CodigoBarra}</Td><Td>{r.Modelo}</Td>
                         <Td>{r.Ubicacion}</Td><Td>{r.Encargado}</Td>
                         <Td>{fmtDate(r.FechaAdq)}</Td><Td className="text-right">{fmtMoney(r.CostoAdq as number)}</Td>
+                        <Td className="text-right">
+                          <Button size="sm" variant="ghost" onClick={() => setEditRow(r)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </Td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+
             </TabsContent>
 
             <TabsContent value="onlyInIntranet" className="space-y-2">
