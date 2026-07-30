@@ -252,7 +252,21 @@ export default function FixedAssetsSqlCompare({ onBack, intranetAssets }: Props)
           </Tabs>
         </>
       )}
+
+      <FixedAssetsSqlEditDialog
+        row={editRow}
+        open={!!editRow}
+        onOpenChange={(v) => !v && setEditRow(null)}
+        onSaved={(updated) => {
+          setData(prev => prev && ({
+            ...prev,
+            onlyInSql: prev.onlyInSql.map(r => (r.OID === updated.OID ? { ...r, ...updated } : r)),
+            matched: prev.matched.map(m => (m.sql.OID === updated.OID ? { ...m, sql: { ...m.sql, ...updated } } : m)),
+          }));
+        }}
+      />
     </div>
+
   );
 }
 
