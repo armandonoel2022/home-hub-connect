@@ -1263,7 +1263,41 @@ export const fixedAssetsSqlApi = {
     apiFetch<FixedAssetsBackupMeta>("/fixed-assets-sql/backups", { method: "POST", body: JSON.stringify({ assets, note }) }),
   getBackup: (id: string) => apiFetch<FixedAssetsBackupMeta & { assets: any[] }>(`/fixed-assets-sql/backups/${id}`),
   deleteBackup: (id: string) => apiFetch<void>(`/fixed-assets-sql/backups/${id}`, { method: "DELETE" }),
+  updateActivoFijo: (oid: number, changes: Partial<Record<SafeOneEditableField, string | null>>) =>
+    apiFetch<{ updated: number; row: SafeOneActivoFijoRow; changes?: Record<string, { from: any; to: any }>; message?: string }>(
+      `/fixed-assets-sql/activo-fijo/${oid}`,
+      { method: "PUT", body: JSON.stringify(changes) }
+    ),
+  audit: (oid?: number) =>
+    apiFetch<SafeOneAssetAuditEntry[]>(`/fixed-assets-sql/audit${oid ? `?oid=${oid}` : ""}`),
 };
+
+export type SafeOneEditableField =
+  | "Descripcion" | "Serial" | "Modelo" | "CodigoBarra"
+  | "Ubicacion" | "Departamento" | "Encargado" | "Comentario" | "Documento";
+
+export const SAFEONE_EDITABLE_FIELDS: { key: SafeOneEditableField; label: string }[] = [
+  { key: "Descripcion", label: "Descripción" },
+  { key: "Serial", label: "Serial" },
+  { key: "Modelo", label: "Modelo" },
+  { key: "CodigoBarra", label: "Código de barra" },
+  { key: "Ubicacion", label: "Ubicación" },
+  { key: "Departamento", label: "Departamento" },
+  { key: "Encargado", label: "Encargado" },
+  { key: "Documento", label: "Documento" },
+  { key: "Comentario", label: "Comentario" },
+];
+
+export interface SafeOneAssetAuditEntry {
+  id: string;
+  oid: number;
+  at: string;
+  by: string;
+  email?: string | null;
+  descripcion?: string | null;
+  changes: Record<string, { from: any; to: any }>;
+}
+
 
 
 
