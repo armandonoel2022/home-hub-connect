@@ -562,6 +562,8 @@ export default function FixedAssetsManager({ onBack }: Props) {
           </Button>
         </div>
 
+      <SourceBanner origen={origen} count={assets.length} localOnly={localOnly.length} message={sourceMsg} onReload={() => reload()} onCompare={() => setView("sqlCompare")} />
+
         {/* Filters */}
         <div className="flex flex-wrap gap-2 mb-4">
           <div className="relative flex-1 min-w-[200px]">
@@ -687,6 +689,9 @@ export default function FixedAssetsManager({ onBack }: Props) {
         </div>
       </div>
 
+      <SourceBanner origen={origen} count={assets.length} localOnly={localOnly.length} message={sourceMsg} onReload={() => reload()} onCompare={() => setView("sqlCompare")} />
+
+
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         <StatCard label="Total Activos" value={stats.total} color="hsl(220 70% 50%)" onClick={() => { setFilterType("all"); setFilterEstado("all"); setFilterCondicion("all"); setFilterUbicacion("all"); setSearchTerm(""); setView("list"); }} />
@@ -796,6 +801,41 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
     <div>
       <label className="text-xs font-medium text-muted-foreground mb-1 block">{label}</label>
       {children}
+    </div>
+  );
+}
+
+function SourceBanner({
+  origen, count, localOnly, message, onReload, onCompare,
+}: {
+  origen: "sql" | "local"; count: number; localOnly: number; message?: string;
+  onReload: () => void; onCompare: () => void;
+}) {
+  const sql = origen === "sql";
+  return (
+    <div className={cn(
+      "mb-4 flex flex-wrap items-center gap-3 rounded-lg border p-3 text-sm",
+      sql ? "border-emerald-500/40 bg-emerald-500/10" : "border-amber-500/40 bg-amber-500/10"
+    )}>
+      <Database className={cn("h-4 w-4", sql ? "text-emerald-600" : "text-amber-600")} />
+      <span>
+        {sql ? (
+          <>Origen: <b>Base de datos SafeOne</b> · {count.toLocaleString()} activos vigentes (GCRecord nulo y no retirados)</>
+        ) : (
+          <>Sin conexión a SafeOne — mostrando el respaldo local. {message}</>
+        )}
+      </span>
+      {sql && localOnly > 0 && (
+        <Badge variant="outline" className="border-amber-500 text-amber-700">
+          {localOnly} registrados solo en la intranet
+        </Badge>
+      )}
+      <div className="ml-auto flex gap-2">
+        {sql && (
+          <Button size="sm" variant="ghost" onClick={onCompare}>Comparar / grabar pendientes</Button>
+        )}
+        <Button size="sm" variant="outline" onClick={onReload}>Recargar</Button>
+      </div>
     </div>
   );
 }
