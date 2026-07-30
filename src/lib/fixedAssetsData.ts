@@ -46,6 +46,9 @@ export interface FixedAsset {
   asignadoA: string;
   vidaUtilAnios?: number;
   notas?: string;
+  /** OID en [SafeOne].[dbo].[ActivoFijo] cuando el activo viene de la base */
+  sqlOid?: number;
+  origen?: "sql" | "intranet";
 }
 
 const STORAGE_KEY = "safeone_fixed_assets";

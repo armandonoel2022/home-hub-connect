@@ -45,8 +45,14 @@ router.get('/activo-fijo', auth, guard, async (req, res) => {
         af.CostoAdq, af.Depreciacion, af.DepreciacionInicial,
         af.DeprAnoAnt, af.DeprAnoAct,
         af.Categoria, af.Tipo, af.Suplidor,
+        c.Descripcion AS CategoriaNombre,
+        t.Descripcion AS TipoNombre,
+        s.Nombre      AS SuplidorNombre,
         af.Transito, af.Retirado, af.GCRecord
       FROM dbo.ActivoFijo af
+      LEFT JOIN dbo.AFCategoria c ON af.Categoria = c.OID
+      LEFT JOIN dbo.AFTipo t      ON af.Tipo = t.OID
+      LEFT JOIN dbo.Suplidor s    ON af.Suplidor = s.OID
       WHERE (af.GCRecord IS NULL)
         ${includeRetired ? '' : 'AND (af.Retirado IS NULL OR af.Retirado = 0)'}
       ORDER BY af.OID DESC

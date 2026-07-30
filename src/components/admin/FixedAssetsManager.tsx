@@ -22,6 +22,8 @@ import {
   ASSET_TYPES, ESTADOS, CONDICIONES, UBICACIONES, DEPARTAMENTOS,
   loadFixedAssets, saveFixedAssets, generateAssetId, getAssetTypeLabel,
 } from "@/lib/fixedAssetsData";
+import { loadInventory, saveOverlay } from "@/lib/fixedAssetsSource";
+import { fixedAssetsSqlApi, type SafeOneEditableField } from "@/lib/api";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -44,6 +46,10 @@ interface Props {
 export default function FixedAssetsManager({ onBack }: Props) {
   const { toast } = useToast();
   const [assets, setAssets] = useState<FixedAsset[]>([]);
+  const [localAssets, setLocalAssets] = useState<FixedAsset[]>([]);
+  const [localOnly, setLocalOnly] = useState<FixedAsset[]>([]);
+  const [origen, setOrigen] = useState<"sql" | "local">("sql");
+  const [sourceMsg, setSourceMsg] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"dashboard" | "list" | "detail" | "form" | "label" | "keys" | "sqlCompare" | "sqlAnalytics" | "backup">("dashboard");
   const [selectedAsset, setSelectedAsset] = useState<FixedAsset | null>(null);
@@ -56,13 +62,25 @@ export default function FixedAssetsManager({ onBack }: Props) {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    loadFixedAssets().then(data => { setAssets(data); setLoading(false); });
-  }, []);
+  const reload = async (silent = false) => {
+    if (!silent) setLoading(true);
+    const [json, inv] = await Promise.all([loadFixedAssets(), loadInventory()]);
+    setLocalAssets(json);
+    setAssets(inv.assets);
+    setLocalOnly(inv.localOnly);
+    setOrigen(inv.origen);
+    setSourceMsg(inv.message);
+    setLoading(false);
+  };
 
+  useEffect(() => { reload(); }, []);
+
+  // Guarda SOLO en el JSON local (activos registrados directamente en la intranet)
   const save = (updated: FixedAsset[]) => {
+    const locals = updated.filter(a => a.origen !== "sql");
+    setLocalAssets(locals);
+    saveFixedAssets(locals);
     setAssets(updated);
-    saveFixedAssets(updated);
   };
 
   // ── Stats ──
@@ -105,9 +123,40 @@ export default function FixedAssetsManager({ onBack }: Props) {
   }, [assets, filterType, filterEstado, filterCondicion, filterUbicacion, searchTerm]);
 
   // ── CRUD handlers ──
-  const handleSaveAsset = () => {
+  const handleSaveAsset = async () => {
     if (!editingAsset?.tipo || !editingAsset?.descripcion) {
       toast({ title: "⚠️ Tipo y descripción son requeridos", variant: "destructive" });
+      return;
+    }
+
+    // Activo proveniente de la base de datos: se escribe en SafeOne (solo UPDATE)
+    if (editingAsset.sqlOid) {
+      const payload: Partial<Record<SafeOneEditableField, string | null>> = {
+        Descripcion: editingAsset.descripcion || null,
+        Serial: editingAsset.serial || null,
+        Modelo: editingAsset.modelo || null,
+        CodigoBarra: editingAsset.codigoOriginal || null,
+        Ubicacion: editingAsset.ubicacion || null,
+        Departamento: editingAsset.departamento || null,
+        Encargado: editingAsset.asignadoA || null,
+        Comentario: editingAsset.notas || null,
+      };
+      try {
+        await fixedAssetsSqlApi.updateActivoFijo(editingAsset.sqlOid, payload);
+        saveOverlay(editingAsset.sqlOid, {
+          tipo: editingAsset.tipo as AssetTypeCode,
+          estado: editingAsset.estado,
+          condicion: editingAsset.condicion,
+          vidaUtilAnios: editingAsset.vidaUtilAnios,
+          notas: editingAsset.notas,
+        });
+        toast({ title: `✅ Actualizado en SafeOne (OID ${editingAsset.sqlOid})` });
+        await reload(true);
+        setEditingAsset(null);
+        setView("list");
+      } catch (e: any) {
+        toast({ title: "No se pudo actualizar en SafeOne", description: e.message, variant: "destructive" });
+      }
       return;
     }
     const isNew = !editingAsset.id || !assets.find(a => a.id === editingAsset.id);
@@ -147,6 +196,12 @@ export default function FixedAssetsManager({ onBack }: Props) {
   };
 
   const handleDelete = (id: string) => {
+    const target = assets.find(a => a.id === id);
+    if (target?.origen === "sql") {
+      toast({ title: "Eliminación deshabilitada", description: "Los activos de la base SafeOne no pueden eliminarse desde la intranet.", variant: "destructive" });
+      setDeleteConfirm(null);
+      return;
+    }
     save(assets.filter(a => a.id !== id));
     setDeleteConfirm(null);
     setSelectedAsset(null);
@@ -207,7 +262,7 @@ export default function FixedAssetsManager({ onBack }: Props) {
   }
 
   if (view === "sqlCompare") {
-    return <FixedAssetsSqlCompare onBack={() => setView("dashboard")} intranetAssets={assets} />;
+    return <FixedAssetsSqlCompare onBack={() => setView("dashboard")} intranetAssets={localAssets} />;
   }
 
   if (view === "sqlAnalytics") {
@@ -215,7 +270,7 @@ export default function FixedAssetsManager({ onBack }: Props) {
   }
 
   if (view === "backup") {
-    return <FixedAssetsBackup onBack={() => setView("dashboard")} assets={assets} />;
+    return <FixedAssetsBackup onBack={() => setView("dashboard")} assets={localAssets.length ? localAssets : assets} />;
   }
 
 
@@ -327,9 +382,11 @@ export default function FixedAssetsManager({ onBack }: Props) {
             <Button variant="outline" size="sm" onClick={() => { setEditingAsset(a); setView("form"); }} className="gap-1">
               <Edit2 className="h-3.5 w-3.5" /> Editar
             </Button>
-            <Button variant="destructive" size="sm" onClick={() => setDeleteConfirm(a.id)} className="gap-1">
-              <Trash2 className="h-3.5 w-3.5" /> Eliminar
-            </Button>
+            {a.origen !== "sql" && (
+              <Button variant="destructive" size="sm" onClick={() => setDeleteConfirm(a.id)} className="gap-1">
+                <Trash2 className="h-3.5 w-3.5" /> Eliminar
+              </Button>
+            )}
           </div>
         </div>
 
@@ -337,6 +394,7 @@ export default function FixedAssetsManager({ onBack }: Props) {
           <div className="border rounded-xl p-4 bg-card space-y-3">
             <h3 className="font-semibold text-sm text-primary">Información General</h3>
             <InfoRow label="Código" value={a.id} />
+            <InfoRow label="Origen" value={a.origen === "sql" ? `Base de datos SafeOne · OID ${a.sqlOid}` : "Registrado en la intranet"} />
             <InfoRow label="Tipo" value={getAssetTypeLabel(a.tipo)} />
             <InfoRow label="Descripción" value={a.descripcion} />
             <InfoRow label="Marca" value={a.marca} />
@@ -504,6 +562,8 @@ export default function FixedAssetsManager({ onBack }: Props) {
           </Button>
         </div>
 
+      <SourceBanner origen={origen} count={assets.length} localOnly={localOnly.length} message={sourceMsg} onReload={() => reload()} onCompare={() => setView("sqlCompare")} />
+
         {/* Filters */}
         <div className="flex flex-wrap gap-2 mb-4">
           <div className="relative flex-1 min-w-[200px]">
@@ -629,6 +689,9 @@ export default function FixedAssetsManager({ onBack }: Props) {
         </div>
       </div>
 
+      <SourceBanner origen={origen} count={assets.length} localOnly={localOnly.length} message={sourceMsg} onReload={() => reload()} onCompare={() => setView("sqlCompare")} />
+
+
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         <StatCard label="Total Activos" value={stats.total} color="hsl(220 70% 50%)" onClick={() => { setFilterType("all"); setFilterEstado("all"); setFilterCondicion("all"); setFilterUbicacion("all"); setSearchTerm(""); setView("list"); }} />
@@ -738,6 +801,41 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
     <div>
       <label className="text-xs font-medium text-muted-foreground mb-1 block">{label}</label>
       {children}
+    </div>
+  );
+}
+
+function SourceBanner({
+  origen, count, localOnly, message, onReload, onCompare,
+}: {
+  origen: "sql" | "local"; count: number; localOnly: number; message?: string;
+  onReload: () => void; onCompare: () => void;
+}) {
+  const sql = origen === "sql";
+  return (
+    <div className={cn(
+      "mb-4 flex flex-wrap items-center gap-3 rounded-lg border p-3 text-sm",
+      sql ? "border-emerald-500/40 bg-emerald-500/10" : "border-amber-500/40 bg-amber-500/10"
+    )}>
+      <Database className={cn("h-4 w-4", sql ? "text-emerald-600" : "text-amber-600")} />
+      <span>
+        {sql ? (
+          <>Origen: <b>Base de datos SafeOne</b> · {count.toLocaleString()} activos vigentes (GCRecord nulo y no retirados)</>
+        ) : (
+          <>Sin conexión a SafeOne — mostrando el respaldo local. {message}</>
+        )}
+      </span>
+      {sql && localOnly > 0 && (
+        <Badge variant="outline" className="border-amber-500 text-amber-700">
+          {localOnly} registrados solo en la intranet
+        </Badge>
+      )}
+      <div className="ml-auto flex gap-2">
+        {sql && (
+          <Button size="sm" variant="ghost" onClick={onCompare}>Comparar / grabar pendientes</Button>
+        )}
+        <Button size="sm" variant="outline" onClick={onReload}>Recargar</Button>
+      </div>
     </div>
   );
 }
