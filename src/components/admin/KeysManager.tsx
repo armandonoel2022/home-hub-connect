@@ -95,6 +95,9 @@ export default function KeysManager({ onBack }: Props) {
   const [assets, setAssets] = useState<FixedAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [viewMode, setViewMode] = useState<"cabinet" | "table">("cabinet");
+  const canEdit = user?.isAdmin === true || user?.isDepartmentLeader === true;
+
   const [filterEstado, setFilterEstado] = useState<string>("all");
   const [filterUbic, setFilterUbic] = useState<string>("all");
   const [showOnlyVencidas, setShowOnlyVencidas] = useState(false);
