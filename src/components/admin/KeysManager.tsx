@@ -8,8 +8,10 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Plus, KeyRound, Search, Edit2, Trash2, History as HistoryIcon,
   ShieldCheck, UserCheck, Copy as CopyIcon, AlertTriangle, Link2, Eye,
-  FileText, Printer, X,
+  FileText, Printer, X, LayoutGrid, Table as TableIcon,
 } from "lucide-react";
+import KeyCabinet from "@/components/keys/KeyCabinet";
+
 
 // Mapa de colores identificadores (etiqueta visual SafeOne)
 const COLOR_MAP: Record<string, { bg: string; ring: string; text: string }> = {
@@ -93,6 +95,9 @@ export default function KeysManager({ onBack }: Props) {
   const [assets, setAssets] = useState<FixedAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [viewMode, setViewMode] = useState<"cabinet" | "table">("cabinet");
+  const canEdit = user?.isAdmin === true || user?.isDepartmentLeader === true;
+
   const [filterEstado, setFilterEstado] = useState<string>("all");
   const [filterUbic, setFilterUbic] = useState<string>("all");
   const [showOnlyVencidas, setShowOnlyVencidas] = useState(false);
@@ -413,10 +418,48 @@ export default function KeysManager({ onBack }: Props) {
         </Button>
       </div>
 
-      <p className="text-xs text-muted-foreground mb-2">{filtered.length} llaves</p>
+      <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
+        <p className="text-xs text-muted-foreground">{filtered.length} llaves</p>
+        <div className="inline-flex rounded-lg border bg-card p-0.5">
+          <Button
+            size="sm"
+            variant={viewMode === "cabinet" ? "default" : "ghost"}
+            className="h-7 gap-1.5"
+            onClick={() => setViewMode("cabinet")}
+          >
+            <LayoutGrid className="h-3.5 w-3.5" /> Vista Gabinete
+          </Button>
+          <Button
+            size="sm"
+            variant={viewMode === "table" ? "default" : "ghost"}
+            className="h-7 gap-1.5"
+            onClick={() => setViewMode("table")}
+          >
+            <TableIcon className="h-3.5 w-3.5" /> Vista Tabla
+          </Button>
+        </div>
+      </div>
+
+      {viewMode === "cabinet" && (
+        <KeyCabinet
+          keys={filtered}
+          onSelect={setDetailOf}
+          editMode={canEdit}
+          onUpdate={async (id, patch) => {
+            try {
+              await updateKey(id, patch);
+              await refresh();
+            } catch {
+              toast({ title: "No se pudo guardar el cambio", variant: "destructive" });
+            }
+          }}
+        />
+      )}
 
       {/* Tabla */}
+      {viewMode === "table" && (
       <div className="border rounded-xl bg-card overflow-hidden">
+
         <div className="overflow-auto max-h-[520px]">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 sticky top-0">
@@ -512,6 +555,8 @@ export default function KeysManager({ onBack }: Props) {
           </table>
         </div>
       </div>
+      )}
+
 
       {/* ── Form Dialog ── */}
       <Dialog open={!!form} onOpenChange={() => setForm(null)}>
