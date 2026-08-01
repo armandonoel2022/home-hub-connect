@@ -8,8 +8,10 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Plus, KeyRound, Search, Edit2, Trash2, History as HistoryIcon,
   ShieldCheck, UserCheck, Copy as CopyIcon, AlertTriangle, Link2, Eye,
-  FileText, Printer, X,
+  FileText, Printer, X, LayoutGrid, Table as TableIcon,
 } from "lucide-react";
+import KeyCabinet from "@/components/keys/KeyCabinet";
+
 
 // Mapa de colores identificadores (etiqueta visual SafeOne)
 const COLOR_MAP: Record<string, { bg: string; ring: string; text: string }> = {
