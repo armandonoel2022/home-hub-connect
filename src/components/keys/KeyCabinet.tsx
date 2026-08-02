@@ -159,7 +159,10 @@ function KeyCabinetBase({ keys, onSelect, editMode = false, onUpdate }: KeyCabin
       <div className="rounded-2xl border bg-gradient-to-b from-muted/60 to-background p-4 md:p-8 overflow-auto">
         <motion.div
           className="mx-auto flex min-w-[720px] max-w-5xl items-stretch justify-center gap-1"
-          style={{ perspective: 2200 }}
+          style={{ perspective, transformStyle: "preserve-3d" }}
+          variants={cabinetVariants}
+          initial="hidden"
+          animate="visible"
         >
           <CabinetDoor
             side="left"
@@ -170,7 +173,7 @@ function KeyCabinetBase({ keys, onSelect, editMode = false, onUpdate }: KeyCabin
             onSelect={handleSelect}
           />
           {/* bisagra central */}
-          <div className="w-2 shrink-0 rounded-full bg-gradient-to-b from-slate-300 via-slate-500 to-slate-300" aria-hidden="true" />
+          <div className="w-2.5 shrink-0 rounded-full bg-gradient-to-r from-slate-400 via-slate-200 to-slate-500 shadow-inner" aria-hidden="true" />
           <CabinetDoor
             side="right"
             open={open}
@@ -182,6 +185,27 @@ function KeyCabinetBase({ keys, onSelect, editMode = false, onUpdate }: KeyCabin
           />
         </motion.div>
       </div>
+
+      {/* Registro de movimientos */}
+      <div className="rounded-xl border bg-card">
+        <div className="border-b px-4 py-2 text-sm font-semibold">Registro de movimientos</div>
+        {movements.length === 0 ? (
+          <p className="px-4 py-3 text-sm text-muted-foreground">Sin movimientos registrados.</p>
+        ) : (
+          <ul className="divide-y">
+            {movements.map((m) => (
+              <li key={m.id} className="flex flex-wrap items-center gap-2 px-4 py-2 text-sm">
+                <span className="font-mono text-xs text-muted-foreground">{m.fecha.slice(0, 16).replace("T", " ")}</span>
+                <Badge variant="outline" className="capitalize">{m.accion}</Badge>
+                <span className="font-medium">{m.keyCode}</span>
+                <span className="text-muted-foreground">{m.persona}</span>
+                {m.motivo && <span className="text-xs text-muted-foreground">· {m.motivo}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
 
       {/* Modo edición */}
       {editMode && editing && (
