@@ -9,6 +9,7 @@ import {
 import { DoorOpen, DoorClosed, Search, KeyRound } from "lucide-react";
 import type { KeyRecord } from "@/lib/keysData";
 import CabinetDoor from "./CabinetDoor";
+import { cabinetVariants, perspective } from "./animations";
 import { cabinetLayout, leftRailYs, rightRailYs } from "./cabinetLayout";
 import {
   COLOR_TOKENS, ESTADO_TO_CABINET, normalizeColor,
@@ -125,6 +126,14 @@ function KeyCabinetBase({ keys, onSelect, editMode = false, onUpdate }: KeyCabin
     },
     [editMode, onSelect],
   );
+
+  /** Registro de movimientos consolidado desde el historial de cada llave. */
+  const movements = useMemo(() => {
+    const rows = keys.flatMap((k) =>
+      (k.historial || []).map((h) => ({ ...h, keyCode: k.code || k.id })),
+    );
+    return rows.sort((a, b) => (a.fecha < b.fecha ? 1 : -1)).slice(0, 12);
+  }, [keys]);
 
   const leftItems = useMemo(() => views.filter((v) => v.slot.door === "left"), [views]);
   const rightItems = useMemo(() => views.filter((v) => v.slot.door === "right"), [views]);
