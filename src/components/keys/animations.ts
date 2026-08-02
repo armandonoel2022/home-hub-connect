@@ -4,8 +4,10 @@ export const springSoft: Transition = { type: "spring", stiffness: 120, damping:
 export const springSnappy: Transition = { type: "spring", stiffness: 300, damping: 22 };
 
 export const doorVariants: Variants = {
-  closed: (dir: number) => ({ rotateY: 0 * dir, transition: springSoft }),
-  open: (dir: number) => ({ rotateY: -105 * dir, transition: springSoft }),
+  /** Cerrado = gabinete entreabierto (paneles ligeramente girados, sin ver las llaves). */
+  closed: (dir: number) => ({ rotateY: -32 * dir, scale: 0.97, transition: springSoft }),
+  /** Abierto = paneles de frente, llaves colgadas visibles. */
+  open: () => ({ rotateY: 0, scale: 1, transition: springSoft }),
 };
 
 export const boardVariants: Variants = {
