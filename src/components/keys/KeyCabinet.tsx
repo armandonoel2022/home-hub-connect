@@ -9,6 +9,7 @@ import {
 import { DoorOpen, DoorClosed, Search, KeyRound } from "lucide-react";
 import type { KeyRecord } from "@/lib/keysData";
 import CabinetDoor from "./CabinetDoor";
+import { cabinetVariants, perspective } from "./animations";
 import { cabinetLayout, leftRailYs, rightRailYs } from "./cabinetLayout";
 import {
   COLOR_TOKENS, ESTADO_TO_CABINET, normalizeColor,
@@ -37,10 +38,21 @@ const COLOR_TO_ES: Record<CabinetKeyColor, string> = {
 function slotCodeOf(k: KeyRecord): string | null {
   const m = `${k.code || ""} ${k.id || ""}`.match(/(\d{1,3})\s*$|(\d{3})/);
   const raw = m ? (m[1] ?? m[2]) : null;
-  if (!raw) return null;
+  if (raw === null) return null;
   const n = Number(raw);
-  if (!Number.isFinite(n) || n < 1 || n > 40) return null;
+  if (!Number.isFinite(n) || n < 0 || n > 41) return null;
   return String(n).padStart(3, "0");
+}
+
+/**
+ * Una llave está "fuera" del gabinete (gancho vacío + etiqueta Prestada) solo
+ * cuando no queda ninguna copia física en la caja o está extraviada/retirada.
+ * El estado "asignada" con copia en caja sigue colgando del gancho.
+ */
+function isOut(k: KeyRecord): boolean {
+  if (k.estado === "extraviada" || k.estado === "retirada") return true;
+  if (typeof k.cantidadEnCaja === "number") return k.cantidadEnCaja <= 0;
+  return false;
 }
 
 function KeyCabinetBase({ keys, onSelect, editMode = false, onUpdate }: KeyCabinetProps) {
@@ -73,6 +85,7 @@ function KeyCabinetBase({ keys, onSelect, editMode = false, onUpdate }: KeyCabin
         return {
           slot,
           record,
+          out: record ? isOut(record) : false,
           state: record ? ESTADO_TO_CABINET[record.estado] : "available",
           color: normalizeColor(record?.colorIdentificador),
           label: record?.descripcion || record?.perteneceA || "",
@@ -114,6 +127,14 @@ function KeyCabinetBase({ keys, onSelect, editMode = false, onUpdate }: KeyCabin
     [editMode, onSelect],
   );
 
+  /** Registro de movimientos consolidado desde el historial de cada llave. */
+  const movements = useMemo(() => {
+    const rows = keys.flatMap((k) =>
+      (k.historial || []).map((h) => ({ ...h, keyCode: k.code || k.id })),
+    );
+    return rows.sort((a, b) => (a.fecha < b.fecha ? 1 : -1)).slice(0, 12);
+  }, [keys]);
+
   const leftItems = useMemo(() => views.filter((v) => v.slot.door === "left"), [views]);
   const rightItems = useMemo(() => views.filter((v) => v.slot.door === "right"), [views]);
 
@@ -147,7 +168,10 @@ function KeyCabinetBase({ keys, onSelect, editMode = false, onUpdate }: KeyCabin
       <div className="rounded-2xl border bg-gradient-to-b from-muted/60 to-background p-4 md:p-8 overflow-auto">
         <motion.div
           className="mx-auto flex min-w-[720px] max-w-5xl items-stretch justify-center gap-1"
-          style={{ perspective: 2200 }}
+          style={{ perspective, transformStyle: "preserve-3d" }}
+          variants={cabinetVariants}
+          initial="hidden"
+          animate="visible"
         >
           <CabinetDoor
             side="left"
@@ -158,7 +182,7 @@ function KeyCabinetBase({ keys, onSelect, editMode = false, onUpdate }: KeyCabin
             onSelect={handleSelect}
           />
           {/* bisagra central */}
-          <div className="w-2 shrink-0 rounded-full bg-gradient-to-b from-slate-300 via-slate-500 to-slate-300" aria-hidden="true" />
+          <div className="w-2.5 shrink-0 rounded-full bg-gradient-to-r from-slate-400 via-slate-200 to-slate-500 shadow-inner" aria-hidden="true" />
           <CabinetDoor
             side="right"
             open={open}
@@ -170,6 +194,27 @@ function KeyCabinetBase({ keys, onSelect, editMode = false, onUpdate }: KeyCabin
           />
         </motion.div>
       </div>
+
+      {/* Registro de movimientos */}
+      <div className="rounded-xl border bg-card">
+        <div className="border-b px-4 py-2 text-sm font-semibold">Registro de movimientos</div>
+        {movements.length === 0 ? (
+          <p className="px-4 py-3 text-sm text-muted-foreground">Sin movimientos registrados.</p>
+        ) : (
+          <ul className="divide-y">
+            {movements.map((m) => (
+              <li key={m.id} className="flex flex-wrap items-center gap-2 px-4 py-2 text-sm">
+                <span className="font-mono text-xs text-muted-foreground">{m.fecha.slice(0, 16).replace("T", " ")}</span>
+                <Badge variant="outline" className="capitalize">{m.accion}</Badge>
+                <span className="font-medium">{m.keyCode}</span>
+                <span className="text-muted-foreground">{m.persona}</span>
+                {m.motivo && <span className="text-xs text-muted-foreground">· {m.motivo}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
 
       {/* Modo edición */}
       {editMode && editing && (

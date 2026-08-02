@@ -16,6 +16,13 @@ interface CabinetDoorProps {
   showLock?: boolean;
 }
 
+const SCREWS: Array<[number, number]> = [
+  [24, 24],
+  [DOOR_WIDTH - 24, 24],
+  [24, DOOR_HEIGHT - 24],
+  [DOOR_WIDTH - 24, DOOR_HEIGHT - 24],
+];
+
 function CabinetDoorBase({ side, open, items, railYs, highlightedCode, onSelect, showLock }: CabinetDoorProps) {
   const dir = side === "left" ? 1 : -1;
 
@@ -33,77 +40,112 @@ function CabinetDoorBase({ side, open, items, railYs, highlightedCode, onSelect,
     >
       <svg
         viewBox={`0 0 ${DOOR_WIDTH} ${DOOR_HEIGHT}`}
+        preserveAspectRatio="xMidYMid meet"
         className="w-full h-auto drop-shadow-2xl"
         role="group"
         aria-label={`Puerta ${side === "left" ? "izquierda" : "derecha"} del gabinete de llaves`}
       >
         <defs>
           <linearGradient id={`panel-${side}`} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#c9ced4" />
-            <stop offset="45%" stopColor="#b3b9c0" />
-            <stop offset="100%" stopColor="#98a0a8" />
+            <stop offset="0%" stopColor="#d3d8dd" />
+            <stop offset="45%" stopColor="#bfc5cb" />
+            <stop offset="100%" stopColor="#9aa2aa" />
           </linearGradient>
           <linearGradient id="metalGrad" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#d7dbe0" />
+            <stop offset="0%" stopColor="#e2e6ea" />
             <stop offset="50%" stopColor="#9ea5ac" />
-            <stop offset="100%" stopColor="#c6ccd2" />
+            <stop offset="100%" stopColor="#cbd1d7" />
           </linearGradient>
           <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#e6eaee" />
-            <stop offset="100%" stopColor="#8b9299" />
+            <stop offset="0%" stopColor="#eef1f4" />
+            <stop offset="100%" stopColor="#818890" />
           </linearGradient>
           <linearGradient id="hookGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#cfd4d9" />
-            <stop offset="100%" stopColor="#878e95" />
+            <stop offset="0%" stopColor="#d6dade" />
+            <stop offset="100%" stopColor="#828990" />
           </linearGradient>
           <linearGradient id="hookGoldGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#f5d67a" />
             <stop offset="100%" stopColor="#b98b23" />
           </linearGradient>
+          <linearGradient id="fobGloss" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.55" />
+            <stop offset="45%" stopColor="#ffffff" stopOpacity="0.05" />
+            <stop offset="100%" stopColor="#000000" stopOpacity="0.12" />
+          </linearGradient>
           <linearGradient id={`rail-${side}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#aab1b8" />
+            <stop offset="0%" stopColor="#b3bac1" />
             <stop offset="50%" stopColor="#7f868d" />
-            <stop offset="100%" stopColor="#a4abb2" />
+            <stop offset="100%" stopColor="#aab1b8" />
+          </linearGradient>
+          <linearGradient id={`sheen-${side}`} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.22" />
+            <stop offset="35%" stopColor="#ffffff" stopOpacity="0.02" />
+            <stop offset="100%" stopColor="#000000" stopOpacity="0.10" />
           </linearGradient>
         </defs>
 
-        {/* marco exterior */}
-        <rect x={2} y={2} width={DOOR_WIDTH - 4} height={DOOR_HEIGHT - 4} rx={18} fill={`url(#panel-${side})`} stroke="#7d848b" strokeWidth={3} />
-        {/* interior hundido */}
-        <rect x={22} y={22} width={DOOR_WIDTH - 44} height={DOOR_HEIGHT - 44} rx={12} fill="#aeb5bc" stroke="#8b9299" strokeWidth={1.5} />
-        <rect x={22} y={22} width={DOOR_WIDTH - 44} height={26} rx={12} fill="#ffffff" opacity={0.12} />
+        {/* marco exterior metálico */}
+        <rect x={2} y={2} width={DOOR_WIDTH - 4} height={DOOR_HEIGHT - 4} rx={16} fill={`url(#panel-${side})`} stroke="#767d84" strokeWidth={3} />
+        <rect x={2} y={2} width={DOOR_WIDTH - 4} height={DOOR_HEIGHT - 4} rx={16} fill={`url(#sheen-${side})`} />
 
-        {/* rieles */}
-        {railYs.map((y) => (
-          <g key={y}>
-            <rect x={30} y={y - 44} width={DOOR_WIDTH - 60} height={16} rx={5} fill={`url(#rail-${side})`} />
-            <rect x={30} y={y - 44} width={DOOR_WIDTH - 60} height={4} rx={2} fill="#ffffff" opacity={0.25} />
+        {/* interior hundido, fondo blanco */}
+        <rect x={26} y={26} width={DOOR_WIDTH - 52} height={DOOR_HEIGHT - 52} rx={10} fill="#f6f7f8" stroke="#8b9299" strokeWidth={1.6} />
+        <rect x={26} y={26} width={DOOR_WIDTH - 52} height={12} fill="#000000" opacity={0.06} />
+
+        {/* tornillos en las esquinas */}
+        {SCREWS.map(([cx, cy]) => (
+          <g key={`${cx}-${cy}`}>
+            <circle cx={cx} cy={cy} r={5} fill="url(#metalGrad)" stroke="#6f767d" strokeWidth={0.8} />
+            <path d={`M${cx - 2.6} ${cy} L${cx + 2.6} ${cy}`} stroke="#6f767d" strokeWidth={1.1} />
           </g>
         ))}
 
-        {/* cerradura (solo puerta con cierre) */}
+        {/* rieles porta-ganchos */}
+        {railYs.map((y) => (
+          <g key={y}>
+            <rect x={34} y={y - 46} width={DOOR_WIDTH - 68} height={17} rx={4} fill={`url(#rail-${side})`} />
+            <rect x={34} y={y - 46} width={DOOR_WIDTH - 68} height={4} rx={2} fill="#ffffff" opacity={0.3} />
+            <rect x={34} y={y - 30} width={DOOR_WIDTH - 68} height={3} fill="#000000" opacity={0.12} />
+          </g>
+        ))}
+
+        {/* cerradura */}
         {showLock && (
-          <g transform={`translate(${DOOR_WIDTH - 58}, ${DOOR_HEIGHT / 2})`}>
-            <circle r={16} fill="url(#metalGrad)" stroke="#767d84" strokeWidth={2} />
-            <circle r={6} fill="#5d646b" />
-            <rect x={-1.4} y={-4} width={2.8} height={9} rx={1} fill="#cdd2d7" />
+          <g transform={`translate(${DOOR_WIDTH - 14}, ${DOOR_HEIGHT / 2})`}>
+            <circle r={13} fill="url(#metalGrad)" stroke="#6f767d" strokeWidth={2} />
+            <circle r={5} fill="#5d646b" />
+            <rect x={-1.2} y={-3.4} width={2.4} height={8} rx={1} fill="#cdd2d7" />
           </g>
         )}
 
-        {/* ganchos siempre visibles */}
+        {/* ganchos siempre visibles (aunque no exista la llave) */}
         {items.map((it) => (
-          <KeyHook key={`hook-${it.slot.code}`} x={it.slot.x} y={it.slot.y} code={it.slot.code} highlighted={highlightedCode === it.slot.code} />
+          <KeyHook
+            key={`hook-${it.slot.code}`}
+            x={it.slot.x}
+            y={it.slot.y}
+            code={it.slot.code}
+            highlighted={highlightedCode === it.slot.code}
+            empty={!it.record || it.out}
+            loan={
+              it.record && it.out
+                ? { responsable: it.record.responsable || "—", hora: it.record.fechaEntrega || "" }
+                : null
+            }
+          />
         ))}
 
-        {/* llaves */}
+        {/* llaves colgadas */}
         <motion.g variants={boardVariants} initial="hidden" animate={open ? "visible" : "hidden"}>
           {open &&
             items
-              .filter((it) => it.record !== null)
-              .map((it) => (
+              .filter((it) => it.record && !it.out)
+              .map((it, i) => (
                 <KeyItem
                   key={`key-${it.slot.code}`}
                   item={it}
+                  index={i}
                   highlighted={highlightedCode === it.slot.code}
                   onSelect={onSelect}
                 />
