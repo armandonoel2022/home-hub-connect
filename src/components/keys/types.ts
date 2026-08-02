@@ -22,6 +22,8 @@ export interface CabinetKeyView {
   slot: CabinetSlot;
   record: KeyRecord | null;
   state: CabinetKeyState;
+  /** true = la llave no está físicamente en el gabinete (prestada/extraviada). */
+  out: boolean;
   color: CabinetKeyColor;
   label: string;
 }
