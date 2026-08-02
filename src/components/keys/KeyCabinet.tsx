@@ -3,17 +3,19 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DoorOpen, DoorClosed, Search, KeyRound } from "lucide-react";
 import type { KeyRecord } from "@/lib/keysData";
 import CabinetDoor from "./CabinetDoor";
 import { cabinetVariants, perspective } from "./animations";
 import { cabinetLayout, leftRailYs, rightRailYs } from "./cabinetLayout";
 import {
-  COLOR_TOKENS, ESTADO_TO_CABINET, normalizeColor,
-  type CabinetCounters, type CabinetKeyColor, type CabinetKeyView,
+  COLOR_TOKENS,
+  ESTADO_TO_CABINET,
+  normalizeColor,
+  type CabinetCounters,
+  type CabinetKeyColor,
+  type CabinetKeyView,
 } from "./types";
 
 export interface KeyCabinetProps {
@@ -25,21 +27,38 @@ export interface KeyCabinetProps {
 }
 
 const COLOR_LABELS: Record<CabinetKeyColor, string> = {
-  yellow: "Amarillo", red: "Rojo", green: "Verde", blue: "Azul", black: "Negro",
-  white: "Blanco", gray: "Gris", orange: "Naranja", purple: "Morado", transparent: "Transparente",
+  yellow: "Amarillo",
+  red: "Rojo",
+  green: "Verde",
+  blue: "Azul",
+  black: "Negro",
+  white: "Blanco",
+  gray: "Gris",
+  orange: "Naranja",
+  purple: "Morado",
+  transparent: "Transparente",
 };
 
 const COLOR_TO_ES: Record<CabinetKeyColor, string> = {
-  yellow: "Amarillo", red: "Rojo", green: "Verde", blue: "Azul", black: "Negro",
-  white: "Blanco", gray: "Gris", orange: "Naranja", purple: "Morado", transparent: "",
+  yellow: "Amarillo",
+  red: "Rojo",
+  green: "Verde",
+  blue: "Azul",
+  black: "Negro",
+  white: "Blanco",
+  gray: "Gris",
+  orange: "Naranja",
+  purple: "Morado",
+  transparent: "",
 };
 
 /** Extrae el código de posición ("001"…"040") desde el código/id de la llave. */
 function slotCodeOf(k: KeyRecord): string | null {
-  const m = `${k.code || ""} ${k.id || ""}`.match(/(\d{1,3})\s*$|(\d{3})/);
-  const raw = m ? (m[1] ?? m[2]) : null;
-  if (raw === null) return null;
-  const n = Number(raw);
+  // Busca un número de 3 dígitos en el código o id
+  const text = `${k.code || ""} ${k.id || ""}`;
+  const m = text.match(/(\d{3})/);
+  if (!m) return null;
+  const n = Number(m[1]);
   if (!Number.isFinite(n) || n < 0 || n > 41) return null;
   return String(n).padStart(3, "0");
 }
@@ -50,8 +69,14 @@ function slotCodeOf(k: KeyRecord): string | null {
  * El estado "asignada" con copia en caja sigue colgando del gancho.
  */
 function isOut(k: KeyRecord): boolean {
-  if (k.estado === "extraviada" || k.estado === "retirada") return true;
-  if (typeof k.cantidadEnCaja === "number") return k.cantidadEnCaja <= 0;
+  // Si está prestada, extraviada o retirada → está fuera del gabinete
+  if (k.estado === "prestada" || k.estado === "extraviada" || k.estado === "retirada") {
+    return true;
+  }
+  // Si no tiene copias en caja, también está fuera
+  if (typeof k.cantidadEnCaja === "number") {
+    return k.cantidadEnCaja <= 0;
+  }
   return false;
 }
 
@@ -97,7 +122,10 @@ function KeyCabinetBase({ keys, onSelect, editMode = false, onUpdate }: KeyCabin
   const counters = useMemo<CabinetCounters>(() => {
     const c: CabinetCounters = { available: 0, assigned: 0, maintenance: 0, lost: 0, empty: 0 };
     views.forEach((v) => {
-      if (!v.record) { c.empty++; return; }
+      if (!v.record) {
+        c.empty++;
+        return;
+      }
       c[v.state]++;
     });
     return c;
@@ -129,9 +157,7 @@ function KeyCabinetBase({ keys, onSelect, editMode = false, onUpdate }: KeyCabin
 
   /** Registro de movimientos consolidado desde el historial de cada llave. */
   const movements = useMemo(() => {
-    const rows = keys.flatMap((k) =>
-      (k.historial || []).map((h) => ({ ...h, keyCode: k.code || k.id })),
-    );
+    const rows = keys.flatMap((k) => (k.historial || []).map((h) => ({ ...h, keyCode: k.code || k.id })));
     return rows.sort((a, b) => (a.fecha < b.fecha ? 1 : -1)).slice(0, 12);
   }, [keys]);
 
@@ -157,7 +183,9 @@ function KeyCabinetBase({ keys, onSelect, editMode = false, onUpdate }: KeyCabin
           />
         </div>
         <div className="flex flex-wrap gap-1.5">
-          <Badge variant="outline" className="gap-1"><KeyRound className="h-3 w-3" /> {counters.available} disponibles</Badge>
+          <Badge variant="outline" className="gap-1">
+            <KeyRound className="h-3 w-3" /> {counters.available} disponibles
+          </Badge>
           <Badge variant="secondary">{counters.assigned} prestadas</Badge>
           <Badge variant="outline">{counters.maintenance} mantenimiento</Badge>
           <Badge variant="destructive">{counters.lost} extraviadas</Badge>
@@ -182,7 +210,10 @@ function KeyCabinetBase({ keys, onSelect, editMode = false, onUpdate }: KeyCabin
             onSelect={handleSelect}
           />
           {/* bisagra central */}
-          <div className="w-2.5 shrink-0 rounded-full bg-gradient-to-r from-slate-400 via-slate-200 to-slate-500 shadow-inner" aria-hidden="true" />
+          <div
+            className="w-2.5 shrink-0 rounded-full bg-gradient-to-r from-slate-400 via-slate-200 to-slate-500 shadow-inner"
+            aria-hidden="true"
+          />
           <CabinetDoor
             side="right"
             open={open}
@@ -204,8 +235,12 @@ function KeyCabinetBase({ keys, onSelect, editMode = false, onUpdate }: KeyCabin
           <ul className="divide-y">
             {movements.map((m) => (
               <li key={m.id} className="flex flex-wrap items-center gap-2 px-4 py-2 text-sm">
-                <span className="font-mono text-xs text-muted-foreground">{m.fecha.slice(0, 16).replace("T", " ")}</span>
-                <Badge variant="outline" className="capitalize">{m.accion}</Badge>
+                <span className="font-mono text-xs text-muted-foreground">
+                  {m.fecha.slice(0, 16).replace("T", " ")}
+                </span>
+                <Badge variant="outline" className="capitalize">
+                  {m.accion}
+                </Badge>
                 <span className="font-medium">{m.keyCode}</span>
                 <span className="text-muted-foreground">{m.persona}</span>
                 {m.motivo && <span className="text-xs text-muted-foreground">· {m.motivo}</span>}
@@ -215,15 +250,18 @@ function KeyCabinetBase({ keys, onSelect, editMode = false, onUpdate }: KeyCabin
         )}
       </div>
 
-
       {/* Modo edición */}
       {editMode && editing && (
         <div className="rounded-xl border bg-card p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h4 className="font-semibold text-sm">Editar {editing.code}</h4>
             <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => onSelect(editing)}>Abrir detalle</Button>
-              <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>Cerrar</Button>
+              <Button size="sm" variant="outline" onClick={() => onSelect(editing)}>
+                Abrir detalle
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>
+                Cerrar
+              </Button>
             </div>
           </div>
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
@@ -237,7 +275,9 @@ function KeyCabinetBase({ keys, onSelect, editMode = false, onUpdate }: KeyCabin
                   onUpdate?.(editing.id, patch);
                 }}
               >
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   {(Object.keys(COLOR_LABELS) as CabinetKeyColor[]).map((c) => (
                     <SelectItem key={c} value={c}>
