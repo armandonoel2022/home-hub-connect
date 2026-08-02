@@ -80,7 +80,7 @@ export const hoverKey = {
   y: -5,
   scale: 1.09,
   rotate: [0, -4, 3, -1.5, 0],
-  transition: { rotate: { duration: 0.7, ease: "easeInOut" }, default: springSnappy },
+  transition: { rotate: { duration: 0.7, ease: "easeInOut" as const }, default: springSnappy },
 };
 
 /** Tap: presión corta y elástica. */
