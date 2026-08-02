@@ -37,10 +37,21 @@ const COLOR_TO_ES: Record<CabinetKeyColor, string> = {
 function slotCodeOf(k: KeyRecord): string | null {
   const m = `${k.code || ""} ${k.id || ""}`.match(/(\d{1,3})\s*$|(\d{3})/);
   const raw = m ? (m[1] ?? m[2]) : null;
-  if (!raw) return null;
+  if (raw === null) return null;
   const n = Number(raw);
-  if (!Number.isFinite(n) || n < 1 || n > 40) return null;
+  if (!Number.isFinite(n) || n < 0 || n > 41) return null;
   return String(n).padStart(3, "0");
+}
+
+/**
+ * Una llave está "fuera" del gabinete (gancho vacío + etiqueta Prestada) solo
+ * cuando no queda ninguna copia física en la caja o está extraviada/retirada.
+ * El estado "asignada" con copia en caja sigue colgando del gancho.
+ */
+function isOut(k: KeyRecord): boolean {
+  if (k.estado === "extraviada" || k.estado === "retirada") return true;
+  if (typeof k.cantidadEnCaja === "number") return k.cantidadEnCaja <= 0;
+  return false;
 }
 
 function KeyCabinetBase({ keys, onSelect, editMode = false, onUpdate }: KeyCabinetProps) {
@@ -73,6 +84,7 @@ function KeyCabinetBase({ keys, onSelect, editMode = false, onUpdate }: KeyCabin
         return {
           slot,
           record,
+          out: record ? isOut(record) : false,
           state: record ? ESTADO_TO_CABINET[record.estado] : "available",
           color: normalizeColor(record?.colorIdentificador),
           label: record?.descripcion || record?.perteneceA || "",
