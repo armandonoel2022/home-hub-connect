@@ -33,7 +33,8 @@ function KeyBase({ item, highlighted, index, onSelect }: KeyProps) {
   const title = `${slot.code} · ${record?.descripcion || record?.code || ""}`;
 
   return (
-    <motion.g variants={keyVariants} transform={`translate(${slot.x}, ${slot.y})`} style={{ transformOrigin: "center top" }}>
+    <g transform={`translate(${slot.x}, ${slot.y})`}>
+    <motion.g variants={keyVariants} style={{ transformOrigin: "center top" }}>
       {highlighted && (
         <motion.circle
           cx={0}
