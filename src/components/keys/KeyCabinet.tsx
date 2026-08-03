@@ -149,11 +149,12 @@ function KeyCabinetBase({ keys, onSelect, editMode = false, onUpdate }: KeyCabin
   const handleSelect = useCallback(
     (view: CabinetKeyView) => {
       if (!view.record) return;
+      onSelect(view.record);
       if (editMode) setEditing(view.record);
-      else onSelect(view.record);
     },
     [editMode, onSelect],
   );
+
 
   /** Registro de movimientos consolidado desde el historial de cada llave. */
   const movements = useMemo(() => {
