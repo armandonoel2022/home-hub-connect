@@ -51,7 +51,7 @@ export interface CabinetCounters {
 export const ESTADO_TO_CABINET: Record<KeyEstado, CabinetKeyState> = {
   disponible: "available",
   asignada: "assigned",
-  prestada: "assigned", // ← NUEVO: las llaves prestadas se muestran como fuera del gabinete
+  
   retirada: "maintenance",
   extraviada: "lost",
 };
