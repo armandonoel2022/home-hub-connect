@@ -961,6 +961,11 @@ function KeyDetailDialog({
   const vigente = isRevisionVigente(k);
   const colors = parseColors(k.colorIdentificador);
   const hist = k.historial || [];
+  const isLoaned = !!k.responsable?.trim() && k.estado === "asignada";
+  const holder = people.find(
+    p => p.id === k.responsableId || p.fullName.toLowerCase() === (k.responsable || "").trim().toLowerCase(),
+  );
+
 
   const printDetail = () => {
     const today = new Date().toLocaleString("es-DO");
