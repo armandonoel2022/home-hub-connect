@@ -112,6 +112,20 @@ export default function KeysManager({ onBack }: Props) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [reviewIntercept, setReviewIntercept] = useState<KeyRecord | null>(null);
 
+  const { data: vehicles = [] } = useVehicles();
+  const { allUsers } = useAuth();
+  const people = useMemo(
+    () => (allUsers || []).map(u => ({
+      id: u.id,
+      fullName: u.fullName,
+      email: u.email,
+      department: u.department,
+      position: u.position,
+      photoUrl: (u as { photoUrl?: string }).photoUrl || "",
+    })),
+    [allUsers],
+  );
+
   useEffect(() => {
     Promise.all([loadKeys(), loadFixedAssets()]).then(([k, a]) => {
       setKeys(k); setAssets(a); setLoading(false);
@@ -121,6 +135,73 @@ export default function KeysManager({ onBack }: Props) {
   const refresh = async () => setKeys(await loadKeys());
 
   const kpis = useMemo(() => computeKPIs(keys), [keys]);
+
+  // ── Movimientos rápidos desde la ficha de la llave ──
+  const handleLoan = async (k: KeyRecord, persona: string, personaId: string, motivo: string) => {
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      await updateKey(k.id, {
+        estado: "asignada",
+        responsable: persona,
+        responsableId: personaId,
+        fechaEntrega: today,
+        cantidadEnCaja: Math.max(0, (k.cantidadEnCaja ?? 1) - 1),
+        cantidadAsignadas: (k.cantidadAsignadas ?? 0) + 1,
+      });
+      await addHistory(k.id, {
+        fecha: new Date().toISOString(),
+        accion: "entrega",
+        persona,
+        motivo,
+        registradoPor: user?.fullName || user?.email,
+      });
+      const list = await loadKeys();
+      setKeys(list);
+      setDetailOf(list.find(x => x.id === k.id) || null);
+      toast({ title: `🔑 Llave prestada a ${persona}` });
+    } catch (e: any) {
+      toast({ title: "Error al prestar", description: e?.message, variant: "destructive" });
+    }
+  };
+
+  const handleReturn = async (k: KeyRecord, motivo: string) => {
+    try {
+      await updateKey(k.id, {
+        estado: "disponible",
+        responsable: "",
+        responsableId: "",
+        fechaEntrega: "",
+        cantidadEnCaja: (k.cantidadEnCaja ?? 0) + 1,
+        cantidadAsignadas: Math.max(0, (k.cantidadAsignadas ?? 1) - 1),
+      });
+      await addHistory(k.id, {
+        fecha: new Date().toISOString(),
+        accion: "devolucion",
+        persona: k.responsable || "—",
+        motivo,
+        registradoPor: user?.fullName || user?.email,
+      });
+      const list = await loadKeys();
+      setKeys(list);
+      setDetailOf(list.find(x => x.id === k.id) || null);
+      toast({ title: "✅ Llave devuelta al gabinete" });
+    } catch (e: any) {
+      toast({ title: "Error al devolver", description: e?.message, variant: "destructive" });
+    }
+  };
+
+  const handleLink = async (k: KeyRecord, linkedAssetId: string, linkedAssetType: "asset" | "vehicle" | "") => {
+    try {
+      await updateKey(k.id, { linkedAssetId, linkedAssetType });
+      const list = await loadKeys();
+      setKeys(list);
+      setDetailOf(list.find(x => x.id === k.id) || null);
+      toast({ title: linkedAssetId ? "🔗 Vinculación actualizada" : "Vinculación eliminada" });
+    } catch (e: any) {
+      toast({ title: "Error al vincular", description: e?.message, variant: "destructive" });
+    }
+  };
+
 
   const filtered = useMemo(() => {
     let list = [...keys];
