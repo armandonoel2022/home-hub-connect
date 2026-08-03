@@ -51,7 +51,7 @@ export interface CabinetCounters {
 export const ESTADO_TO_CABINET: Record<KeyEstado, CabinetKeyState> = {
   disponible: "available",
   asignada: "assigned",
-  prestada: "assigned", // ← NUEVO: las llaves prestadas se muestran como fuera del gabinete
+  
   retirada: "maintenance",
   extraviada: "lost",
 };
@@ -155,7 +155,7 @@ export function isKeyAvailable(record: KeyRecord | null): boolean {
  */
 export function isKeyBorrowed(record: KeyRecord | null): boolean {
   if (!record) return false;
-  return record.estado === "prestada" || record.estado === "asignada";
+  return record.estado === "asignada";
 }
 
 /**
@@ -165,7 +165,6 @@ export function isKeyBorrowed(record: KeyRecord | null): boolean {
 export function isKeyOut(record: KeyRecord | null): boolean {
   if (!record) return true; // Si no hay registro, el gancho está vacío
   return (
-    record.estado === "prestada" ||
     record.estado === "extraviada" ||
     record.estado === "retirada" ||
     (typeof record.cantidadEnCaja === "number" && record.cantidadEnCaja <= 0)

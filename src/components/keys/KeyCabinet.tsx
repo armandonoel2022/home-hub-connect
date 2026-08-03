@@ -70,7 +70,7 @@ function slotCodeOf(k: KeyRecord): string | null {
  */
 function isOut(k: KeyRecord): boolean {
   // Si está prestada, extraviada o retirada → está fuera del gabinete
-  if (k.estado === "prestada" || k.estado === "extraviada" || k.estado === "retirada") {
+  if (k.estado === "extraviada" || k.estado === "retirada") {
     return true;
   }
   // Si no tiene copias en caja, también está fuera
