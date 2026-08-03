@@ -949,10 +949,13 @@ function KeyDetailDialog({
   onReturn: (k: KeyRecord, motivo: string) => void | Promise<void>;
   onLink: (k: KeyRecord, linkedAssetId: string, linkedAssetType: "asset" | "vehicle" | "") => void | Promise<void>;
 }) {
+  const [loanPerson, setLoanPerson] = useState("");
+  const [loanMotivo, setLoanMotivo] = useState("");
 
   if (!keyRecord) {
     return <Dialog open={false} onOpenChange={onClose}><DialogContent /></Dialog>;
   }
+
   const k = keyRecord;
   const est = ESTADOS_LLAVE.find(e => e.value === k.estado);
   const vigente = isRevisionVigente(k);
