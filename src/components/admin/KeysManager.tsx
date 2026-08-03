@@ -1075,6 +1075,115 @@ function KeyDetailDialog({
           <DetailRow label="Cantidad asignadas" value={String(k.cantidadAsignadas ?? 0)} />
         </div>
 
+        {/* ── Registro de movimiento ── */}
+        <div className="mt-4 rounded-xl border bg-muted/20 p-3 space-y-3">
+          <p className="text-sm font-semibold flex items-center gap-2">
+            <HistoryIcon className="h-4 w-4 text-primary" /> Registro de movimiento
+          </p>
+          {isLoaned ? (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                Prestada a <strong className="text-foreground">{k.responsable}</strong>
+                {k.fechaEntrega ? ` desde el ${k.fechaEntrega}` : ""}.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Input
+                  className="flex-1 min-w-[200px]"
+                  placeholder="Motivo / observación de la devolución"
+                  value={loanMotivo}
+                  onChange={e => setLoanMotivo(e.target.value)}
+                />
+                <Button
+                  className="gap-2"
+                  onClick={() => { onReturn(k, loanMotivo); setLoanMotivo(""); }}
+                >
+                  <UserCheck className="h-4 w-4" /> Registrar devolución
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2">
+              <Select value={loanPerson} onValueChange={setLoanPerson}>
+                <SelectTrigger><SelectValue placeholder="Prestar a…" /></SelectTrigger>
+                <SelectContent>
+                  {people.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.fullName} · {p.department}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input placeholder="Motivo del préstamo" value={loanMotivo} onChange={e => setLoanMotivo(e.target.value)} />
+              <Button
+                className="gap-2"
+                disabled={!loanPerson}
+                onClick={() => {
+                  const p = people.find(x => x.id === loanPerson);
+                  if (!p) return;
+                  onLoan(k, p.fullName, p.id, loanMotivo);
+                  setLoanPerson(""); setLoanMotivo("");
+                }}
+              >
+                <KeyRound className="h-4 w-4" /> Prestar llave
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* ── Ficha del portador (perfil 360°) ── */}
+        {isLoaned && (
+          <div className="mt-3 rounded-xl border bg-card p-3">
+            <p className="text-sm font-semibold mb-2 flex items-center gap-2">
+              <UserCheck className="h-4 w-4 text-primary" /> Ficha del portador
+            </p>
+            <div className="flex items-center gap-3">
+              <Avatar className="h-14 w-14">
+                {holder?.photoUrl && <AvatarImage src={holder.photoUrl} alt={`Foto de ${holder.fullName}`} />}
+                <AvatarFallback>{(k.responsable || "?").slice(0, 2).toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <div className="min-w-0">
+                <p className="font-semibold truncate">{holder?.fullName || k.responsable}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {holder ? `${holder.position} · ${holder.department}` : "Portador externo al directorio"}
+                </p>
+                {holder?.email && <p className="text-xs text-muted-foreground truncate">{holder.email}</p>}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Vinculación a activo fijo o vehículo ── */}
+        <div className="mt-3 rounded-xl border bg-card p-3 space-y-2">
+          <p className="text-sm font-semibold flex items-center gap-2">
+            <Link2 className="h-4 w-4 text-primary" /> Vinculación
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <Select
+              value={k.linkedAssetType === "asset" ? k.linkedAssetId : "__none__"}
+              onValueChange={v => onLink(k, v === "__none__" ? "" : v, v === "__none__" ? "" : "asset")}
+            >
+              <SelectTrigger><SelectValue placeholder="Activo fijo" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">— Sin activo fijo —</SelectItem>
+                {assets.slice(0, 300).map(a => (
+                  <SelectItem key={a.id} value={a.id}>{a.id} · {a.descripcion.slice(0, 40)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={k.linkedAssetType === "vehicle" ? k.linkedAssetId : "__none__"}
+              onValueChange={v => onLink(k, v === "__none__" ? "" : v, v === "__none__" ? "" : "vehicle")}
+            >
+              <SelectTrigger><SelectValue placeholder="Vehículo de flotilla" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">— Sin vehículo —</SelectItem>
+                {vehicles.map(v => (
+                  <SelectItem key={v.id} value={v.plate}>{v.plate} · {v.brand} {v.model}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+
         {k.notas && (
           <div className="mt-3 border rounded-md p-3 bg-muted/30 text-sm">
             <p className="text-xs font-medium text-muted-foreground mb-1">Notas</p>
