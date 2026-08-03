@@ -923,14 +923,33 @@ function KpiCard({ title, icon, value, total, pct, tone, active, onClick }: {
   );
 }
 
+interface KeyPerson {
+  id: string;
+  fullName: string;
+  email: string;
+  department: string;
+  position: string;
+  photoUrl: string;
+}
+
 // ── Detalle de Llave (reporte clicable, expandible e imprimible) ──
-function KeyDetailDialog({ keyRecord, linkedLabel, onClose, onEdit, onAddHistory }: {
+function KeyDetailDialog({
+  keyRecord, linkedLabel, assets, vehicles, people,
+  onClose, onEdit, onAddHistory, onLoan, onReturn, onLink,
+}: {
   keyRecord: KeyRecord | null;
   linkedLabel: string;
+  assets: FixedAsset[];
+  vehicles: Vehicle[];
+  people: KeyPerson[];
   onClose: () => void;
   onEdit: () => void;
   onAddHistory: () => void;
+  onLoan: (k: KeyRecord, persona: string, personaId: string, motivo: string) => void | Promise<void>;
+  onReturn: (k: KeyRecord, motivo: string) => void | Promise<void>;
+  onLink: (k: KeyRecord, linkedAssetId: string, linkedAssetType: "asset" | "vehicle" | "") => void | Promise<void>;
 }) {
+
   if (!keyRecord) {
     return <Dialog open={false} onOpenChange={onClose}><DialogContent /></Dialog>;
   }
