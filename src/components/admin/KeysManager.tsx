@@ -76,6 +76,10 @@ import {
   loadFixedAssets, UBICACIONES, DEPARTAMENTOS, type FixedAsset,
 } from "@/lib/fixedAssetsData";
 import { useAuth } from "@/contexts/AuthContext";
+import { useVehicles } from "@/hooks/useApiHooks";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import type { Vehicle } from "@/lib/types";
+
 
 interface Props {
   onBack: () => void;
