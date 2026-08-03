@@ -165,7 +165,6 @@ export function isKeyBorrowed(record: KeyRecord | null): boolean {
 export function isKeyOut(record: KeyRecord | null): boolean {
   if (!record) return true; // Si no hay registro, el gancho está vacío
   return (
-    record.estado === "prestada" ||
     record.estado === "extraviada" ||
     record.estado === "retirada" ||
     (typeof record.cantidadEnCaja === "number" && record.cantidadEnCaja <= 0)
