@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DoorOpen, DoorClosed, Search, KeyRound } from "lucide-react";
 import type { KeyRecord } from "@/lib/keysData";
 import CabinetDoor from "./CabinetDoor";
+import CabinetClosed from "./CabinetClosed";
+
 import { cabinetVariants, perspective } from "./animations";
 import { cabinetLayout, leftRailYs, rightRailYs } from "./cabinetLayout";
 import {
