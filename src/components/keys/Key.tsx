@@ -103,6 +103,7 @@ function KeyBase({ item, highlighted, index, onSelect }: KeyProps) {
         </g>
       </motion.g>
     </motion.g>
+    </g>
   );
 }
 
