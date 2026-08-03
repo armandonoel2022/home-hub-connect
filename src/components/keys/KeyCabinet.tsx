@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DoorOpen, DoorClosed, Search, KeyRound } from "lucide-react";
 import type { KeyRecord } from "@/lib/keysData";
 import CabinetDoor from "./CabinetDoor";
+import CabinetClosed from "./CabinetClosed";
+
 import { cabinetVariants, perspective } from "./animations";
 import { cabinetLayout, leftRailYs, rightRailYs } from "./cabinetLayout";
 import {
@@ -149,11 +151,12 @@ function KeyCabinetBase({ keys, onSelect, editMode = false, onUpdate }: KeyCabin
   const handleSelect = useCallback(
     (view: CabinetKeyView) => {
       if (!view.record) return;
+      onSelect(view.record);
       if (editMode) setEditing(view.record);
-      else onSelect(view.record);
     },
     [editMode, onSelect],
   );
+
 
   /** Registro de movimientos consolidado desde el historial de cada llave. */
   const movements = useMemo(() => {
@@ -194,37 +197,42 @@ function KeyCabinetBase({ keys, onSelect, editMode = false, onUpdate }: KeyCabin
 
       {/* Gabinete */}
       <div className="rounded-2xl border bg-gradient-to-b from-muted/60 to-background p-4 md:p-8 overflow-auto">
-        <motion.div
-          className="mx-auto flex min-w-[720px] max-w-5xl items-stretch justify-center gap-1"
-          style={{ perspective, transformStyle: "preserve-3d" }}
-          variants={cabinetVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          <CabinetDoor
-            side="left"
-            open={open}
-            items={leftItems}
-            railYs={leftRailYs}
-            highlightedCode={highlightedCode}
-            onSelect={handleSelect}
-          />
-          {/* bisagra central */}
-          <div
-            className="w-2.5 shrink-0 rounded-full bg-gradient-to-r from-slate-400 via-slate-200 to-slate-500 shadow-inner"
-            aria-hidden="true"
-          />
-          <CabinetDoor
-            side="right"
-            open={open}
-            items={rightItems}
-            railYs={rightRailYs}
-            highlightedCode={highlightedCode}
-            onSelect={handleSelect}
-            showLock
-          />
-        </motion.div>
+        {!open ? (
+          <CabinetClosed total={keys.length} onOpen={() => setOpen(true)} />
+        ) : (
+          <motion.div
+            className="mx-auto flex min-w-[720px] max-w-5xl items-stretch justify-center gap-1"
+            style={{ perspective, transformStyle: "preserve-3d" }}
+            variants={cabinetVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            <CabinetDoor
+              side="left"
+              open={open}
+              items={leftItems}
+              railYs={leftRailYs}
+              highlightedCode={highlightedCode}
+              onSelect={handleSelect}
+            />
+            {/* bisagra central */}
+            <div
+              className="w-2.5 shrink-0 rounded-full bg-gradient-to-r from-slate-400 via-slate-200 to-slate-500 shadow-inner"
+              aria-hidden="true"
+            />
+            <CabinetDoor
+              side="right"
+              open={open}
+              items={rightItems}
+              railYs={rightRailYs}
+              highlightedCode={highlightedCode}
+              onSelect={handleSelect}
+              showLock
+            />
+          </motion.div>
+        )}
       </div>
+
 
       {/* Registro de movimientos */}
       <div className="rounded-xl border bg-card">

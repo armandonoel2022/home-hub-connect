@@ -76,6 +76,10 @@ import {
   loadFixedAssets, UBICACIONES, DEPARTAMENTOS, type FixedAsset,
 } from "@/lib/fixedAssetsData";
 import { useAuth } from "@/contexts/AuthContext";
+import { useVehicles } from "@/hooks/useApiHooks";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import type { Vehicle } from "@/lib/types";
+
 
 interface Props {
   onBack: () => void;
@@ -112,6 +116,20 @@ export default function KeysManager({ onBack }: Props) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [reviewIntercept, setReviewIntercept] = useState<KeyRecord | null>(null);
 
+  const { data: vehicles = [] } = useVehicles();
+  const { allUsers } = useAuth();
+  const people = useMemo(
+    () => (allUsers || []).map(u => ({
+      id: u.id,
+      fullName: u.fullName,
+      email: u.email,
+      department: u.department,
+      position: u.position,
+      photoUrl: (u as { photoUrl?: string }).photoUrl || "",
+    })),
+    [allUsers],
+  );
+
   useEffect(() => {
     Promise.all([loadKeys(), loadFixedAssets()]).then(([k, a]) => {
       setKeys(k); setAssets(a); setLoading(false);
@@ -121,6 +139,73 @@ export default function KeysManager({ onBack }: Props) {
   const refresh = async () => setKeys(await loadKeys());
 
   const kpis = useMemo(() => computeKPIs(keys), [keys]);
+
+  // ── Movimientos rápidos desde la ficha de la llave ──
+  const handleLoan = async (k: KeyRecord, persona: string, personaId: string, motivo: string) => {
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      await updateKey(k.id, {
+        estado: "asignada",
+        responsable: persona,
+        responsableId: personaId,
+        fechaEntrega: today,
+        cantidadEnCaja: Math.max(0, (k.cantidadEnCaja ?? 1) - 1),
+        cantidadAsignadas: (k.cantidadAsignadas ?? 0) + 1,
+      });
+      await addHistory(k.id, {
+        fecha: new Date().toISOString(),
+        accion: "entrega",
+        persona,
+        motivo,
+        registradoPor: user?.fullName || user?.email,
+      });
+      const list = await loadKeys();
+      setKeys(list);
+      setDetailOf(list.find(x => x.id === k.id) || null);
+      toast({ title: `🔑 Llave prestada a ${persona}` });
+    } catch (e: any) {
+      toast({ title: "Error al prestar", description: e?.message, variant: "destructive" });
+    }
+  };
+
+  const handleReturn = async (k: KeyRecord, motivo: string) => {
+    try {
+      await updateKey(k.id, {
+        estado: "disponible",
+        responsable: "",
+        responsableId: "",
+        fechaEntrega: "",
+        cantidadEnCaja: (k.cantidadEnCaja ?? 0) + 1,
+        cantidadAsignadas: Math.max(0, (k.cantidadAsignadas ?? 1) - 1),
+      });
+      await addHistory(k.id, {
+        fecha: new Date().toISOString(),
+        accion: "devolucion",
+        persona: k.responsable || "—",
+        motivo,
+        registradoPor: user?.fullName || user?.email,
+      });
+      const list = await loadKeys();
+      setKeys(list);
+      setDetailOf(list.find(x => x.id === k.id) || null);
+      toast({ title: "✅ Llave devuelta al gabinete" });
+    } catch (e: any) {
+      toast({ title: "Error al devolver", description: e?.message, variant: "destructive" });
+    }
+  };
+
+  const handleLink = async (k: KeyRecord, linkedAssetId: string, linkedAssetType: "asset" | "vehicle" | "") => {
+    try {
+      await updateKey(k.id, { linkedAssetId, linkedAssetType });
+      const list = await loadKeys();
+      setKeys(list);
+      setDetailOf(list.find(x => x.id === k.id) || null);
+      toast({ title: linkedAssetId ? "🔗 Vinculación actualizada" : "Vinculación eliminada" });
+    } catch (e: any) {
+      toast({ title: "Error al vincular", description: e?.message, variant: "destructive" });
+    }
+  };
+
 
   const filtered = useMemo(() => {
     let list = [...keys];
@@ -732,10 +817,17 @@ export default function KeysManager({ onBack }: Props) {
       <KeyDetailDialog
         keyRecord={detailOf}
         linkedLabel={detailOf ? linkedLabel(detailOf) : ""}
+        assets={assets}
+        vehicles={vehicles}
+        people={people}
         onClose={() => setDetailOf(null)}
         onEdit={() => { if (detailOf) { setForm(detailOf); setDetailOf(null); } }}
         onAddHistory={() => { if (detailOf) { setHistoryOf(detailOf); setDetailOf(null); } }}
+        onLoan={handleLoan}
+        onReturn={handleReturn}
+        onLink={handleLink}
       />
+
 
       {/* ── Delete confirm ── */}
       <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
@@ -831,22 +923,49 @@ function KpiCard({ title, icon, value, total, pct, tone, active, onClick }: {
   );
 }
 
+interface KeyPerson {
+  id: string;
+  fullName: string;
+  email: string;
+  department: string;
+  position: string;
+  photoUrl: string;
+}
+
 // ── Detalle de Llave (reporte clicable, expandible e imprimible) ──
-function KeyDetailDialog({ keyRecord, linkedLabel, onClose, onEdit, onAddHistory }: {
+function KeyDetailDialog({
+  keyRecord, linkedLabel, assets, vehicles, people,
+  onClose, onEdit, onAddHistory, onLoan, onReturn, onLink,
+}: {
   keyRecord: KeyRecord | null;
   linkedLabel: string;
+  assets: FixedAsset[];
+  vehicles: Vehicle[];
+  people: KeyPerson[];
   onClose: () => void;
   onEdit: () => void;
   onAddHistory: () => void;
+  onLoan: (k: KeyRecord, persona: string, personaId: string, motivo: string) => void | Promise<void>;
+  onReturn: (k: KeyRecord, motivo: string) => void | Promise<void>;
+  onLink: (k: KeyRecord, linkedAssetId: string, linkedAssetType: "asset" | "vehicle" | "") => void | Promise<void>;
 }) {
+  const [loanPerson, setLoanPerson] = useState("");
+  const [loanMotivo, setLoanMotivo] = useState("");
+
   if (!keyRecord) {
     return <Dialog open={false} onOpenChange={onClose}><DialogContent /></Dialog>;
   }
+
   const k = keyRecord;
   const est = ESTADOS_LLAVE.find(e => e.value === k.estado);
   const vigente = isRevisionVigente(k);
   const colors = parseColors(k.colorIdentificador);
   const hist = k.historial || [];
+  const isLoaned = !!k.responsable?.trim() && k.estado === "asignada";
+  const holder = people.find(
+    p => p.id === k.responsableId || p.fullName.toLowerCase() === (k.responsable || "").trim().toLowerCase(),
+  );
+
 
   const printDetail = () => {
     const today = new Date().toLocaleString("es-DO");
@@ -960,6 +1079,115 @@ function KeyDetailDialog({ keyRecord, linkedLabel, onClose, onEdit, onAddHistory
           <DetailRow label="Cantidad en caja" value={String(k.cantidadEnCaja ?? 0)} />
           <DetailRow label="Cantidad asignadas" value={String(k.cantidadAsignadas ?? 0)} />
         </div>
+
+        {/* ── Registro de movimiento ── */}
+        <div className="mt-4 rounded-xl border bg-muted/20 p-3 space-y-3">
+          <p className="text-sm font-semibold flex items-center gap-2">
+            <HistoryIcon className="h-4 w-4 text-primary" /> Registro de movimiento
+          </p>
+          {isLoaned ? (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                Prestada a <strong className="text-foreground">{k.responsable}</strong>
+                {k.fechaEntrega ? ` desde el ${k.fechaEntrega}` : ""}.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Input
+                  className="flex-1 min-w-[200px]"
+                  placeholder="Motivo / observación de la devolución"
+                  value={loanMotivo}
+                  onChange={e => setLoanMotivo(e.target.value)}
+                />
+                <Button
+                  className="gap-2"
+                  onClick={() => { onReturn(k, loanMotivo); setLoanMotivo(""); }}
+                >
+                  <UserCheck className="h-4 w-4" /> Registrar devolución
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2">
+              <Select value={loanPerson} onValueChange={setLoanPerson}>
+                <SelectTrigger><SelectValue placeholder="Prestar a…" /></SelectTrigger>
+                <SelectContent>
+                  {people.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.fullName} · {p.department}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input placeholder="Motivo del préstamo" value={loanMotivo} onChange={e => setLoanMotivo(e.target.value)} />
+              <Button
+                className="gap-2"
+                disabled={!loanPerson}
+                onClick={() => {
+                  const p = people.find(x => x.id === loanPerson);
+                  if (!p) return;
+                  onLoan(k, p.fullName, p.id, loanMotivo);
+                  setLoanPerson(""); setLoanMotivo("");
+                }}
+              >
+                <KeyRound className="h-4 w-4" /> Prestar llave
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* ── Ficha del portador (perfil 360°) ── */}
+        {isLoaned && (
+          <div className="mt-3 rounded-xl border bg-card p-3">
+            <p className="text-sm font-semibold mb-2 flex items-center gap-2">
+              <UserCheck className="h-4 w-4 text-primary" /> Ficha del portador
+            </p>
+            <div className="flex items-center gap-3">
+              <Avatar className="h-14 w-14">
+                {holder?.photoUrl && <AvatarImage src={holder.photoUrl} alt={`Foto de ${holder.fullName}`} />}
+                <AvatarFallback>{(k.responsable || "?").slice(0, 2).toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <div className="min-w-0">
+                <p className="font-semibold truncate">{holder?.fullName || k.responsable}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {holder ? `${holder.position} · ${holder.department}` : "Portador externo al directorio"}
+                </p>
+                {holder?.email && <p className="text-xs text-muted-foreground truncate">{holder.email}</p>}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Vinculación a activo fijo o vehículo ── */}
+        <div className="mt-3 rounded-xl border bg-card p-3 space-y-2">
+          <p className="text-sm font-semibold flex items-center gap-2">
+            <Link2 className="h-4 w-4 text-primary" /> Vinculación
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <Select
+              value={k.linkedAssetType === "asset" ? k.linkedAssetId : "__none__"}
+              onValueChange={v => onLink(k, v === "__none__" ? "" : v, v === "__none__" ? "" : "asset")}
+            >
+              <SelectTrigger><SelectValue placeholder="Activo fijo" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">— Sin activo fijo —</SelectItem>
+                {assets.slice(0, 300).map(a => (
+                  <SelectItem key={a.id} value={a.id}>{a.id} · {a.descripcion.slice(0, 40)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={k.linkedAssetType === "vehicle" ? k.linkedAssetId : "__none__"}
+              onValueChange={v => onLink(k, v === "__none__" ? "" : v, v === "__none__" ? "" : "vehicle")}
+            >
+              <SelectTrigger><SelectValue placeholder="Vehículo de flotilla" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">— Sin vehículo —</SelectItem>
+                {vehicles.map(v => (
+                  <SelectItem key={v.id} value={v.plate}>{v.plate} · {v.brand} {v.model}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
 
         {k.notas && (
           <div className="mt-3 border rounded-md p-3 bg-muted/30 text-sm">
