@@ -195,37 +195,42 @@ function KeyCabinetBase({ keys, onSelect, editMode = false, onUpdate }: KeyCabin
 
       {/* Gabinete */}
       <div className="rounded-2xl border bg-gradient-to-b from-muted/60 to-background p-4 md:p-8 overflow-auto">
-        <motion.div
-          className="mx-auto flex min-w-[720px] max-w-5xl items-stretch justify-center gap-1"
-          style={{ perspective, transformStyle: "preserve-3d" }}
-          variants={cabinetVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          <CabinetDoor
-            side="left"
-            open={open}
-            items={leftItems}
-            railYs={leftRailYs}
-            highlightedCode={highlightedCode}
-            onSelect={handleSelect}
-          />
-          {/* bisagra central */}
-          <div
-            className="w-2.5 shrink-0 rounded-full bg-gradient-to-r from-slate-400 via-slate-200 to-slate-500 shadow-inner"
-            aria-hidden="true"
-          />
-          <CabinetDoor
-            side="right"
-            open={open}
-            items={rightItems}
-            railYs={rightRailYs}
-            highlightedCode={highlightedCode}
-            onSelect={handleSelect}
-            showLock
-          />
-        </motion.div>
+        {!open ? (
+          <CabinetClosed total={keys.length} onOpen={() => setOpen(true)} />
+        ) : (
+          <motion.div
+            className="mx-auto flex min-w-[720px] max-w-5xl items-stretch justify-center gap-1"
+            style={{ perspective, transformStyle: "preserve-3d" }}
+            variants={cabinetVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            <CabinetDoor
+              side="left"
+              open={open}
+              items={leftItems}
+              railYs={leftRailYs}
+              highlightedCode={highlightedCode}
+              onSelect={handleSelect}
+            />
+            {/* bisagra central */}
+            <div
+              className="w-2.5 shrink-0 rounded-full bg-gradient-to-r from-slate-400 via-slate-200 to-slate-500 shadow-inner"
+              aria-hidden="true"
+            />
+            <CabinetDoor
+              side="right"
+              open={open}
+              items={rightItems}
+              railYs={rightRailYs}
+              highlightedCode={highlightedCode}
+              onSelect={handleSelect}
+              showLock
+            />
+          </motion.div>
+        )}
       </div>
+
 
       {/* Registro de movimientos */}
       <div className="rounded-xl border bg-card">
