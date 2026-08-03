@@ -155,7 +155,7 @@ export function isKeyAvailable(record: KeyRecord | null): boolean {
  */
 export function isKeyBorrowed(record: KeyRecord | null): boolean {
   if (!record) return false;
-  return record.estado === "prestada" || record.estado === "asignada";
+  return record.estado === "asignada";
 }
 
 /**
