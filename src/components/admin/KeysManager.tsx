@@ -732,10 +732,17 @@ export default function KeysManager({ onBack }: Props) {
       <KeyDetailDialog
         keyRecord={detailOf}
         linkedLabel={detailOf ? linkedLabel(detailOf) : ""}
+        assets={assets}
+        vehicles={vehicles}
+        people={people}
         onClose={() => setDetailOf(null)}
         onEdit={() => { if (detailOf) { setForm(detailOf); setDetailOf(null); } }}
         onAddHistory={() => { if (detailOf) { setHistoryOf(detailOf); setDetailOf(null); } }}
+        onLoan={handleLoan}
+        onReturn={handleReturn}
+        onLink={handleLink}
       />
+
 
       {/* ── Delete confirm ── */}
       <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
