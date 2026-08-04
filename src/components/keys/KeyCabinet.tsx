@@ -182,39 +182,49 @@ function KeyCabinetBase({ keys, onSelect, editMode = false, onUpdate }: KeyCabin
 
   return (
     <div className="space-y-4">
-      {/* Barra de control */}
-      <div className="flex flex-wrap items-center gap-2">
-        <Button onClick={() => setOpen((o) => !o)} variant={open ? "default" : "outline"} className="gap-2">
-          {open ? <DoorOpen className="h-4 w-4" /> : <DoorClosed className="h-4 w-4" />}
-          {open ? "Cerrar gabinete" : "Abrir gabinete"}
-        </Button>
-        <div className="relative flex-1 min-w-[220px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            className="pl-10"
-            placeholder="Resaltar llave en el gabinete..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            aria-label="Buscar y resaltar llave en el gabinete"
-          />
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          <Badge variant="outline" className="gap-1">
-            <KeyRound className="h-3 w-3" /> {counters.available} disponibles
-          </Badge>
-          <Badge variant="secondary">{counters.assigned} prestadas</Badge>
-          <Badge variant="outline">{counters.maintenance} mantenimiento</Badge>
-          <Badge variant="destructive">{counters.lost} extraviadas</Badge>
-        </div>
-      </div>
+      {/* Barra de control (aparece después de la apertura del gabinete) */}
+      <AnimatePresence>
+        {revealed && (
+          <motion.div
+            className="flex flex-wrap items-center gap-2"
+            initial={{ opacity: 0, y: -18 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <Button onClick={() => setOpen((o) => !o)} variant={open ? "default" : "outline"} className="gap-2">
+              {open ? <DoorOpen className="h-4 w-4" /> : <DoorClosed className="h-4 w-4" />}
+              {open ? "Cerrar gabinete" : "Abrir gabinete"}
+            </Button>
+            <div className="relative flex-1 min-w-[220px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                className="pl-10"
+                placeholder="Resaltar llave en el gabinete..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                aria-label="Buscar y resaltar llave en el gabinete"
+              />
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              <Badge variant="outline" className="gap-1">
+                <KeyRound className="h-3 w-3" /> {counters.available} disponibles
+              </Badge>
+              <Badge variant="secondary">{counters.assigned} prestadas</Badge>
+              <Badge variant="outline">{counters.maintenance} mantenimiento</Badge>
+              <Badge variant="destructive">{counters.lost} extraviadas</Badge>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Gabinete */}
-      <div className="rounded-2xl border bg-gradient-to-b from-muted/60 to-background p-4 md:p-8 overflow-auto">
+      {/* Gabinete: protagonista visual */}
+      <div className="rounded-2xl border bg-gradient-to-b from-muted/70 via-muted/30 to-background p-4 md:p-10 overflow-auto shadow-inner">
         {!open ? (
           <CabinetClosed total={keys.length} onOpen={() => setOpen(true)} />
         ) : (
           <motion.div
-            className="mx-auto flex min-w-[720px] max-w-5xl items-stretch justify-center gap-1"
+            className="mx-auto flex min-w-[720px] w-[90%] max-w-[1600px] items-stretch justify-center gap-1"
             style={{ perspective, transformStyle: "preserve-3d" }}
             variants={cabinetVariants}
             initial="hidden"
@@ -230,7 +240,7 @@ function KeyCabinetBase({ keys, onSelect, editMode = false, onUpdate }: KeyCabin
             />
             {/* bisagra central */}
             <div
-              className="w-2.5 shrink-0 rounded-full bg-gradient-to-r from-slate-400 via-slate-200 to-slate-500 shadow-inner"
+              className="w-3 shrink-0 rounded-full bg-gradient-to-r from-slate-500 via-slate-200 to-slate-500 shadow-inner"
               aria-hidden="true"
             />
             <CabinetDoor
@@ -245,6 +255,7 @@ function KeyCabinetBase({ keys, onSelect, editMode = false, onUpdate }: KeyCabin
           </motion.div>
         )}
       </div>
+
 
 
       {/* Registro de movimientos */}
