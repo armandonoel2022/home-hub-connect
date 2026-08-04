@@ -259,7 +259,14 @@ function KeyCabinetBase({ keys, onSelect, editMode = false, onUpdate }: KeyCabin
 
 
       {/* Registro de movimientos */}
-      <div className="rounded-xl border bg-card">
+      <motion.div
+        className="rounded-xl border bg-card"
+        initial={{ opacity: 0, y: -12 }}
+        animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: -12 }}
+        transition={{ duration: 0.5, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
+        style={{ pointerEvents: revealed ? "auto" : "none" }}
+      >
+
         <div className="border-b px-4 py-2 text-sm font-semibold">Registro de movimientos</div>
         {movements.length === 0 ? (
           <p className="px-4 py-3 text-sm text-muted-foreground">Sin movimientos registrados.</p>
