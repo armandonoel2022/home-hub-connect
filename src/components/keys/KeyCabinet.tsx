@@ -287,7 +287,8 @@ function KeyCabinetBase({ keys, onSelect, editMode = false, onUpdate }: KeyCabin
             ))}
           </ul>
         )}
-      </div>
+      </motion.div>
+
 
       {/* Modo edición */}
       {editMode && editing && (
