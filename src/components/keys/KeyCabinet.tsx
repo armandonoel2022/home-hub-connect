@@ -1,5 +1,6 @@
-import { memo, useCallback, useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -83,9 +84,21 @@ function isOut(k: KeyRecord): boolean {
 }
 
 function KeyCabinetBase({ keys, onSelect, editMode = false, onUpdate }: KeyCabinetProps) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
+  const [revealed, setRevealed] = useState(false);
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<KeyRecord | null>(null);
+
+  /** Secuencia de presentación: gabinete cerrado → apertura → controles. */
+  useEffect(() => {
+    const t1 = window.setTimeout(() => setOpen(true), 650);
+    const t2 = window.setTimeout(() => setRevealed(true), 2400);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, []);
+
 
   const bySlot = useMemo(() => {
     const map = new Map<string, KeyRecord>();
