@@ -581,7 +581,19 @@ const VacationProvisioning = () => {
     </div>
   );
 
-  const canApprove = editEmp && selectedDept ? canManageDept(selectedDept) : (isAdmin || isLeader);
+  // Jerarquía: nadie aprueba sus propias vacaciones y los líderes de área
+  // requieren la aprobación de su superior (ver bloques de departamento).
+  const editSelf = !!editEmp && isSamePerson(
+    { name: editEmp.nombre, code: editEmp.codigo },
+    { name: user?.fullName, code: user?.employeeCode },
+  );
+  const editApprover = editEmp ? getDirectApprover(editEmp.nombre) : null;
+  const baseCanManage = editEmp && selectedDept ? canManageDept(selectedDept) : (isAdmin || isLeader);
+  const canApprove =
+    !editSelf &&
+    (editApprover
+      ? isApproverFor(user?.fullName, editEmp?.nombre)
+      : baseCanManage);
 
   return (
     <AppLayout>
