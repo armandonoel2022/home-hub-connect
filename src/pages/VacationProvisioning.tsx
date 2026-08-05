@@ -23,6 +23,7 @@ import {
   type OnVacationResult,
   type Holiday,
 } from "@/lib/api";
+import { getDirectApprover, isApproverFor, isSamePerson } from "@/lib/vacationHierarchy";
 import {
   Palmtree,
   ArrowLeft,
@@ -581,7 +582,19 @@ const VacationProvisioning = () => {
     </div>
   );
 
-  const canApprove = editEmp && selectedDept ? canManageDept(selectedDept) : (isAdmin || isLeader);
+  // Jerarquía: nadie aprueba sus propias vacaciones y los líderes de área
+  // requieren la aprobación de su superior (ver bloques de departamento).
+  const editSelf = !!editEmp && isSamePerson(
+    { name: editEmp.nombre, code: editEmp.codigo },
+    { name: user?.fullName, code: user?.employeeCode },
+  );
+  const editApprover = editEmp ? getDirectApprover(editEmp.nombre) : null;
+  const baseCanManage = editEmp && selectedDept ? canManageDept(selectedDept) : (isAdmin || isLeader);
+  const canApprove =
+    !editSelf &&
+    (editApprover
+      ? isApproverFor(user?.fullName, editEmp?.nombre)
+      : baseCanManage);
 
   return (
     <AppLayout>
@@ -650,6 +663,19 @@ const VacationProvisioning = () => {
                 </div>
               )}
 
+
+              {(editApprover || editSelf) && (
+                <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+                  <ShieldCheck className="h-4 w-4 mt-0.5 text-gold shrink-0" />
+                  <span>
+                    {editApprover ? (
+                      <>Estas vacaciones deben ser aprobadas por su superior inmediato: <strong className="text-foreground">{editApprover.label}</strong>.</>
+                    ) : (
+                      <>No puedes aprobar tus propias vacaciones; la solicitud será revisada por tu superior.</>
+                    )}
+                  </span>
+                </div>
+              )}
 
               {/* Solicitudes existentes */}
               {editEmp.requests.length > 0 && (
