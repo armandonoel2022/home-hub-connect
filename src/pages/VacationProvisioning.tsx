@@ -664,6 +664,19 @@ const VacationProvisioning = () => {
               )}
 
 
+              {(editApprover || editSelf) && (
+                <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+                  <ShieldCheck className="h-4 w-4 mt-0.5 text-gold shrink-0" />
+                  <span>
+                    {editApprover ? (
+                      <>Estas vacaciones deben ser aprobadas por su superior inmediato: <strong className="text-foreground">{editApprover.label}</strong>.</>
+                    ) : (
+                      <>No puedes aprobar tus propias vacaciones; la solicitud será revisada por tu superior.</>
+                    )}
+                  </span>
+                </div>
+              )}
+
               {/* Solicitudes existentes */}
               {editEmp.requests.length > 0 && (
                 <div className="space-y-2">
