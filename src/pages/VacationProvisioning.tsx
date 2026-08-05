@@ -23,6 +23,7 @@ import {
   type OnVacationResult,
   type Holiday,
 } from "@/lib/api";
+import { getDirectApprover, isApproverFor, isSamePerson } from "@/lib/vacationHierarchy";
 import {
   Palmtree,
   ArrowLeft,
