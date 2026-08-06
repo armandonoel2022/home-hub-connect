@@ -340,6 +340,52 @@ router.get('/analytics', auth, guard, async (req, res) => {
   }
 });
 
+/* ─────────── DETALLE por año / categoría / departamento / suplidor ─────────── */
+const esc = (s) => String(s == null ? '' : s).replace(/'/g, "''");
+
+router.get('/detalle', auth, guard, async (req, res) => {
+  const where = [`a.GCRecord IS NULL`];
+  const includeRetired = String(req.query.includeRetired || '').toLowerCase() === 'true';
+  if (!includeRetired) where.push(`ISNULL(a.Retirado,0) = 0`);
+
+  const anio = parseInt(req.query.anio, 10);
+  if (Number.isFinite(anio)) where.push(`YEAR(a.FechaAdq) = ${anio}`);
+  const mes = parseInt(req.query.mes, 10);
+  if (Number.isFinite(mes)) where.push(`MONTH(a.FechaAdq) = ${mes}`);
+  if (req.query.categoria) where.push(`c.Descripcion = '${esc(req.query.categoria)}'`);
+  if (req.query.tipo) where.push(`t.Descripcion = '${esc(req.query.tipo)}'`);
+  if (req.query.departamento) {
+    const d = esc(req.query.departamento);
+    where.push(d === 'SIN ASIGNAR'
+      ? `(a.Departamento IS NULL OR LTRIM(RTRIM(a.Departamento)) = '')`
+      : `LTRIM(RTRIM(a.Departamento)) = '${d}'`);
+  }
+  if (req.query.suplidor) where.push(`s.Nombre = '${esc(req.query.suplidor)}'`);
+  if (req.query.soloConCosto === 'true') where.push(`a.CostoAdq > 0`);
+
+  const r = await safeQuery(`
+    SELECT
+      a.OID, a.Descripcion, a.Serial, a.Modelo, a.CodigoBarra,
+      c.Descripcion AS Categoria, t.Descripcion AS Tipo, s.Nombre AS Suplidor,
+      a.Departamento, a.Ubicacion, a.Encargado,
+      a.FechaAdq, a.FechaInicio, a.FechaRet, a.Documento,
+      a.CostoAdq, a.Depreciacion, a.DepreciacionInicial, a.DeprAnoAnt, a.DeprAnoAct,
+      (ISNULL(a.CostoAdq,0) - ISNULL(a.Depreciacion,0)) AS ValorEnLibros,
+      CASE WHEN ISNULL(a.Retirado,0) = 1 THEN 'Retirado' ELSE 'Activo' END AS Estado,
+      a.Comentario
+    FROM dbo.ActivoFijo a
+    LEFT JOIN dbo.AFCategoria c ON a.Categoria = c.OID
+    LEFT JOIN dbo.AFTipo t      ON a.Tipo = t.OID
+    LEFT JOIN dbo.Suplidor s    ON a.Suplidor = s.OID
+    WHERE ${where.join(' AND ')}
+    ORDER BY a.FechaAdq DESC, a.CostoAdq DESC
+  `);
+  if (!r.ok) return res.status(500).json({ message: r.error });
+  const total = r.rows.reduce((s, x) => s + Number(x.CostoAdq || 0), 0);
+  res.json({ count: r.rows.length, total, rows: r.rows });
+});
+
+
 // Esquema disponible (para saber qué tablas relacionadas existen realmente)
 router.get('/schema', auth, guard, async (req, res) => {
   const r = await safeQuery(`
