@@ -90,6 +90,7 @@ export default function FixedAssetsSqlAnalytics({ onBack }: Props) {
   const { toast } = useToast();
   const [data, setData] = useState<FixedAssetsAnalytics | null>(null);
   const [loading, setLoading] = useState(false);
+  const [drill, setDrill] = useState<{ title: string; params: Record<string, any> } | null>(null);
 
   const load = async () => {
     if (!isApiConfigured()) {
@@ -230,7 +231,13 @@ export default function FixedAssetsSqlAnalytics({ onBack }: Props) {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-              <ExportableTable title="Detalle de suplidores" rows={data.suplidores} file="suplidores.csv" />
+              <ExportableTable
+                title="Detalle de suplidores"
+                hint="Haz clic en una fila para ver los artículos comprados a ese suplidor."
+                rows={data.suplidores}
+                file="suplidores.csv"
+                onRowClick={(r) => setDrill({ title: `Suplidor: ${r.Suplidor}`, params: { suplidor: r.Suplidor, soloConCosto: "true" } })}
+              />
             </TabsContent>
 
             <TabsContent value="categorias" className="space-y-4">
@@ -246,7 +253,13 @@ export default function FixedAssetsSqlAnalytics({ onBack }: Props) {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <ExportableTable title="Categoría / Tipo" rows={data.categorias} file="categorias.csv" />
+              <ExportableTable
+                title="Categoría / Tipo"
+                hint="Haz clic en una fila para ver los activos que componen ese monto."
+                rows={data.categorias}
+                file="categorias.csv"
+                onRowClick={(r) => setDrill({ title: `${r.Categoria} — ${r.Tipo ?? ""}`, params: { categoria: r.Categoria, tipo: r.Tipo, soloConCosto: "true" } })}
+              />
             </TabsContent>
 
             <TabsContent value="departamentos" className="space-y-4">
@@ -262,7 +275,13 @@ export default function FixedAssetsSqlAnalytics({ onBack }: Props) {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-              <ExportableTable title="Departamento / Ubicación" rows={data.departamentos} file="departamentos.csv" />
+              <ExportableTable
+                title="Departamento / Ubicación"
+                hint="Haz clic en una fila para ver el detalle de sus activos."
+                rows={data.departamentos}
+                file="departamentos.csv"
+                onRowClick={(r) => setDrill({ title: `Departamento: ${r.Departamento}`, params: { departamento: r.Departamento, soloConCosto: "true" } })}
+              />
             </TabsContent>
 
             <TabsContent value="antiguedad" className="space-y-4">
@@ -271,16 +290,29 @@ export default function FixedAssetsSqlAnalytics({ onBack }: Props) {
                   <TrendingUp className="h-4 w-4" /> Inversión por año de adquisición
                 </h3>
                 <ResponsiveContainer width="100%" height={320}>
-                  <LineChart data={antiguedadChart}>
+                  <LineChart
+                    data={antiguedadChart}
+                    onClick={(e: any) => {
+                      const anio = e?.activeLabel;
+                      if (anio) setDrill({ title: `Detalle de adquisiciones ${anio}`, params: { anio, soloConCosto: "true" } });
+                    }}
+                    style={{ cursor: "pointer" }}
+                  >
                     <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                     <XAxis dataKey="anio" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}K`} />
                     <Tooltip formatter={(v: any, k: any) => (k === "valor" ? money(v) : v)} />
-                    <Line type="monotone" dataKey="valor" stroke={COLORS[2]} strokeWidth={2} dot />
+                    <Line type="monotone" dataKey="valor" stroke={COLORS[2]} strokeWidth={2} dot activeDot={{ r: 7 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-              <ExportableTable title="Antigüedad del inventario" rows={data.antiguedad} file="antiguedad.csv" />
+              <ExportableTable
+                title="Antigüedad del inventario"
+                hint="Haz clic en un año (o en un punto del gráfico) para ver el detalle artículo por artículo."
+                rows={data.antiguedad}
+                file="antiguedad.csv"
+                onRowClick={(r) => setDrill({ title: `Detalle de adquisiciones ${r.AnioAdquisicion}`, params: { anio: r.AnioAdquisicion, soloConCosto: "true" } })}
+              />
             </TabsContent>
 
             <TabsContent value="anomalias" className="space-y-4">
@@ -299,7 +331,66 @@ export default function FixedAssetsSqlAnalytics({ onBack }: Props) {
           </Tabs>
         </>
       )}
+
+      <DrillDownDialog drill={drill} onClose={() => setDrill(null)} />
     </div>
+  );
+}
+
+function DrillDownDialog({ drill, onClose }: { drill: { title: string; params: Record<string, any> } | null; onClose: () => void }) {
+  const { toast } = useToast();
+  const [rows, setRows] = useState<any[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [q, setQ] = useState("");
+
+  useEffect(() => {
+    if (!drill) return;
+    setQ("");
+    setLoading(true);
+    fixedAssetsSqlApi
+      .detalle(drill.params)
+      .then((res) => { setRows(res.rows || []); setTotal(res.total || 0); })
+      .catch((e: any) => toast({ title: "Error al leer el detalle", description: e.message, variant: "destructive" }))
+      .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drill]);
+
+  const filtered = useMemo(() => {
+    const t = q.trim().toLowerCase();
+    if (!t) return rows;
+    return rows.filter((r) => Object.values(r).some((v) => String(v ?? "").toLowerCase().includes(t)));
+  }, [rows, q]);
+
+  const filteredTotal = useMemo(
+    () => filtered.reduce((s, r) => s + Number(r.CostoAdq || 0), 0),
+    [filtered]
+  );
+
+  return (
+    <Dialog open={!!drill} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-[95vw] sm:max-w-6xl">
+        <DialogHeader>
+          <DialogTitle>{drill?.title}</DialogTitle>
+        </DialogHeader>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Input placeholder="Buscar en el detalle..." value={q} onChange={(e) => setQ(e.target.value)} className="max-w-xs" />
+          <Badge variant="secondary">{filtered.length} artículos</Badge>
+          <Badge>{money(filteredTotal)}</Badge>
+          {filtered.length !== rows.length && <span className="text-xs text-muted-foreground">de {money(total)} total</span>}
+          <Button variant="outline" size="sm" className="gap-2 ml-auto" disabled={!filtered.length} onClick={() => downloadCsv("detalle-activo-fijo.csv", filtered)}>
+            <Download className="h-4 w-4" /> CSV
+          </Button>
+        </div>
+
+        {loading ? (
+          <p className="p-8 text-center text-sm text-muted-foreground">Cargando detalle desde SafeOne...</p>
+        ) : (
+          <DataTable rows={filtered} max={1000} />
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
