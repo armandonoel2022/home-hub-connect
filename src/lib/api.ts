@@ -1183,7 +1183,58 @@ export const generalSqlApi = {
     apiFetch<GeneralExpediente>(`/general-sql/expediente${fecha ? `?fecha=${encodeURIComponent(fecha)}` : ""}`),
   schemaKeys: () => apiFetch<Array<{ tabla: string; tipo: string; columna: string; restriccion: string }>>("/general-sql/schema-keys"),
   clients: () => apiFetch<GeneralClient[]>("/general-sql/clients"),
+  clientServices: (oid: number | string) =>
+    apiFetch<GeneralClientService[]>(`/general-sql/clients/${encodeURIComponent(String(oid))}/servicios`),
+  clientContacts: (oid: number | string) =>
+    apiFetch<GeneralClientContact[]>(`/general-sql/clients/${encodeURIComponent(String(oid))}/contactos`),
 };
+
+// ─── Registro Mercantil (capa JSON local sobre clientes de gSafeOne) ───
+export interface GeneralClientService {
+  oid: number;
+  articulo: number | null;
+  descripcion: string | null;
+  cantidad: number | null;
+  precio: number | null;
+  fechaInicio: string | null;
+  fechaFin: string | null;
+}
+export interface GeneralClientContact {
+  oid: number;
+  tipo: string;
+  valor: string;
+}
+export interface MercantileRecord {
+  registroMercantil: string;
+  camaraComercio: string;
+  emision: string;
+  vence: string;
+  nota?: string;
+  activo?: boolean;
+  updatedAt?: string;
+  updatedBy?: string | null;
+}
+export type MercantileStore = Record<string, MercantileRecord>;
+
+export const mercantileRegistryApi = {
+  all: () => apiFetch<MercantileStore>("/mercantile-registry"),
+  save: (clienteId: string | number, body: Partial<MercantileRecord>) =>
+    apiFetch<MercantileRecord>(`/mercantile-registry/${encodeURIComponent(String(clienteId))}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+  deactivate: (clienteId: string | number, reason: string) =>
+    apiFetch<MercantileRecord>(`/mercantile-registry/${encodeURIComponent(String(clienteId))}`, {
+      method: "DELETE",
+      body: JSON.stringify({ reason }),
+    }),
+  bulk: (items: Array<Partial<MercantileRecord> & { clienteId: string }>, validClientIds: string[]) =>
+    apiFetch<{ total: number; exitos: number; errores: number; detalle: Array<{ fila: number; clienteId: string; ok: boolean; error?: string }>; store: MercantileStore }>(
+      "/mercantile-registry/bulk",
+      { method: "POST", body: JSON.stringify({ items, validClientIds }) }
+    ),
+};
+
 
 // ─── Activo Fijo — base [SafeOne] (SQL Server, solo lectura) ───
 export interface SafeOneActivoFijoRow {
