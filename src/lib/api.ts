@@ -1268,6 +1268,11 @@ export const fixedAssetsSqlApi = {
       `/fixed-assets-sql/activo-fijo/${oid}`,
       { method: "PUT", body: JSON.stringify(changes) }
     ),
+  detalle: (params: Record<string, string | number | boolean | undefined>) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== "") qs.set(k, String(v)); });
+    return apiFetch<{ count: number; total: number; rows: any[] }>(`/fixed-assets-sql/detalle?${qs.toString()}`);
+  },
   audit: (oid?: number) =>
     apiFetch<SafeOneAssetAuditEntry[]>(`/fixed-assets-sql/audit${oid ? `?oid=${oid}` : ""}`),
 };
