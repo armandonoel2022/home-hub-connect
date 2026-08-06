@@ -10,6 +10,8 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
   PieChart, Pie, Cell, Legend, LineChart, Line,
 } from "recharts";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { fixedAssetsSqlApi, isApiConfigured, type FixedAssetsAnalytics } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
@@ -51,7 +53,7 @@ function Kpi({ label, value, hint, tone = "default" }: { label: string; value: s
   );
 }
 
-function DataTable({ rows, max = 100 }: { rows: any[]; max?: number }) {
+function DataTable({ rows, max = 100, onRowClick }: { rows: any[]; max?: number; onRowClick?: (r: any) => void }) {
   if (!rows?.length) return <p className="p-6 text-sm text-muted-foreground text-center">Sin registros.</p>;
   const cols = Object.keys(rows[0]);
   return (
@@ -62,7 +64,11 @@ function DataTable({ rows, max = 100 }: { rows: any[]; max?: number }) {
         </thead>
         <tbody>
           {rows.slice(0, max).map((r, i) => (
-            <tr key={i} className="border-t hover:bg-muted/30">
+            <tr
+              key={i}
+              className={`border-t hover:bg-muted/30 ${onRowClick ? "cursor-pointer" : ""}`}
+              onClick={onRowClick ? () => onRowClick(r) : undefined}
+            >
               {cols.map(c => (
                 <td key={c} className="px-3 py-2 whitespace-nowrap">
                   {/Costo|Valor|Total|Monto|Promedio|Invertido/i.test(c)
@@ -297,11 +303,14 @@ export default function FixedAssetsSqlAnalytics({ onBack }: Props) {
   );
 }
 
-function ExportableTable({ title, rows, file, error }: { title: string; rows: any[]; file: string; error?: string }) {
+function ExportableTable({ title, rows, file, error, onRowClick, hint }: { title: string; rows: any[]; file: string; error?: string; onRowClick?: (r: any) => void; hint?: string }) {
   return (
     <div className="border rounded-xl bg-card overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b gap-2">
-        <h3 className="font-semibold text-sm">{title}</h3>
+        <div>
+          <h3 className="font-semibold text-sm">{title}</h3>
+          {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+        </div>
         <Button variant="outline" size="sm" className="gap-2" disabled={!rows?.length} onClick={() => downloadCsv(file, rows)}>
           <Download className="h-4 w-4" /> CSV
         </Button>
@@ -311,7 +320,7 @@ function ExportableTable({ title, rows, file, error }: { title: string; rows: an
           No disponible en el esquema actual: {error}
         </p>
       ) : (
-        <DataTable rows={rows || []} />
+        <DataTable rows={rows || []} onRowClick={onRowClick} />
       )}
     </div>
   );
