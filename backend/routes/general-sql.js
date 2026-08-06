@@ -393,6 +393,52 @@ router.get('/clients', auth, guard, async (req, res) => {
   } catch (e) { res.status(502).json({ message: e.message }); }
 });
 
+// ─── Servicios contratados de un cliente (ClienteServicio) ───
+router.get('/clients/:oid/servicios', auth, guard, async (req, res) => {
+  try {
+    const oid = Number(req.params.oid);
+    if (!Number.isFinite(oid)) return res.status(400).json({ message: 'OID inválido' });
+    const rows = await sql.query(
+      `SELECT cs.[OID], cs.[Articulo], cs.[Descripcion], cs.[Cantidad], cs.[Precio],
+              cs.[FechaInicio], cs.[FechaFin]
+       FROM [ClienteServicio] cs
+       WHERE cs.[Cliente] = @oid AND cs.[GCRecord] IS NULL
+       ORDER BY cs.[FechaInicio] DESC`,
+      { oid }
+    );
+    res.json(rows.map(r => ({
+      oid: r.OID,
+      articulo: r.Articulo ?? null,
+      descripcion: (r.Descripcion || '').trim() || null,
+      cantidad: r.Cantidad ?? null,
+      precio: r.Precio != null ? Number(r.Precio) : null,
+      fechaInicio: r.FechaInicio || null,
+      fechaFin: r.FechaFin || null,
+    })));
+  } catch (e) { res.status(502).json({ message: e.message }); }
+});
+
+// ─── Contactos adicionales de un cliente (ClienteContacto) ───
+router.get('/clients/:oid/contactos', auth, guard, async (req, res) => {
+  try {
+    const oid = Number(req.params.oid);
+    if (!Number.isFinite(oid)) return res.status(400).json({ message: 'OID inválido' });
+    const rows = await sql.query(
+      `SELECT cc.[OID], cc.[Tipo], cc.[Valor]
+       FROM [ClienteContacto] cc
+       WHERE cc.[Cliente] = @oid AND cc.[GCRecord] IS NULL
+       ORDER BY CASE
+         WHEN cc.[Tipo] = 'Principal' THEN 1
+         WHEN cc.[Tipo] = 'Email' THEN 2
+         WHEN cc.[Tipo] = 'Telefono' THEN 3
+         WHEN cc.[Tipo] = 'Celular' THEN 4
+         WHEN cc.[Tipo] = 'WhatsApp' THEN 5
+         ELSE 6 END`,
+      { oid }
+    );
+    res.json(rows.map(r => ({ oid: r.OID, tipo: (r.Tipo || '').trim(), valor: (r.Valor || '').trim() })));
+  } catch (e) { res.status(502).json({ message: e.message }); }
+});
 
 
 // ─── Préstamos (tabla Prestamo) ───
