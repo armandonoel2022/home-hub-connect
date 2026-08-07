@@ -81,6 +81,7 @@ const departmentsMeta: DepartmentMeta[] = [
 const DEPT_ROUTES: Record<string, string> = {
   "Administración": "/admin/hub",
   "Contabilidad": "/gastos-menores",
+  "Servicio al Cliente": "/servicio-al-cliente/registro-mercantil",
 };
 
 // Departamentos que requieren pertenecer al área (o ser admin) para acceder al enlace del header.
@@ -102,6 +103,10 @@ const DEPT_MULTI_ROUTES: Record<string, { label: string; route: string; icon: an
     { label: "Tecnología", route: "/tickets", icon: Settings },
     { label: "Monitoreo", route: "/monitoreo", icon: Monitor },
     { label: "Seguimiento Clientes", route: "/seguimiento-clientes", icon: Users },
+  ],
+  "Servicio al Cliente": [
+    { label: "Registro Mercantil", route: "/servicio-al-cliente/registro-mercantil", icon: Building2 },
+    { label: "Expediente de Asociados", route: "/servicio-al-cliente/registro-mercantil", icon: FileText },
   ],
   "Operaciones": [
     { label: "Personal Armado", route: "/operaciones", icon: Shield },

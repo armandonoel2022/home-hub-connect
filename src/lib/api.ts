@@ -1211,9 +1211,12 @@ export interface MercantileRecord {
   vence: string;
   nota?: string;
   activo?: boolean;
+  /** Expediente de Asociado de Negocio (formularios F-ADM, documentos, OFAC, etc.) */
+  expediente?: any;
   updatedAt?: string;
   updatedBy?: string | null;
 }
+
 export type MercantileStore = Record<string, MercantileRecord>;
 
 export const mercantileRegistryApi = {

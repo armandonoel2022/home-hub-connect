@@ -78,7 +78,7 @@ export async function loadStore(): Promise<MercantileStore> {
 }
 
 export function validarRegistro(rec: Partial<MercantileRecord>): string | null {
-  if (!rec.registroMercantil?.trim()) return "El número de Registro Mercantil es obligatorio.";
+  if (!rec.registroMercantil?.trim() && !rec.expediente) return "El número de Registro Mercantil es obligatorio.";
   const re = /^\d{4}-\d{2}-\d{2}$/;
   if (rec.emision && !re.test(rec.emision)) return "Fecha de emisión inválida (YYYY-MM-DD).";
   if (rec.vence && !re.test(rec.vence)) return "Fecha de vencimiento inválida (YYYY-MM-DD).";
@@ -98,6 +98,7 @@ export async function saveRegistro(clienteId: string | number, rec: Partial<Merc
     activo: rec.activo === false ? false : true,
     updatedAt: new Date().toISOString(),
   };
+  if (rec.expediente) clean.expediente = rec.expediente;
   if (isApiConfigured()) {
     try {
       const saved = await mercantileRegistryApi.save(clienteId, clean);

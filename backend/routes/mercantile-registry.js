@@ -59,11 +59,12 @@ function sanitize(body) {
     nota: String(body.nota || '').trim(),
     activo: body.activo === false ? false : true,
   };
+  if (body.expediente && typeof body.expediente === 'object') out.expediente = body.expediente;
   return out;
 }
 
 function validate(rec) {
-  if (!rec.registroMercantil) return 'El número de Registro Mercantil es obligatorio.';
+  if (!rec.registroMercantil && !rec.expediente) return 'El número de Registro Mercantil es obligatorio.';
   const dateRe = /^\d{4}-\d{2}-\d{2}$/;
   if (rec.emision && !dateRe.test(rec.emision)) return 'Fecha de emisión inválida (YYYY-MM-DD).';
   if (rec.vence && !dateRe.test(rec.vence)) return 'Fecha de vencimiento inválida (YYYY-MM-DD).';
