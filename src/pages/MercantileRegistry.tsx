@@ -28,6 +28,8 @@ import {
   calcularEstado, ESTADOS, loadStore, saveRegistro, desactivarRegistro,
   validarRegistro, parseCsv, importarMasivo, type EstadoRegistro, type BulkResult,
 } from "@/lib/mercantileRegistry";
+import BusinessPartnerDossier from "@/components/clients/BusinessPartnerDossier";
+import { normalizeDossier, calcularProgreso, type PartnerDossier } from "@/lib/businessPartnerForms";
 import {
   Building2, Search, Upload, Eye, RefreshCw, ChevronLeft, ChevronRight,
   FileSpreadsheet, Save, Ban, Phone, Mail, MapPin, User, Home,
@@ -116,6 +118,7 @@ export default function MercantileRegistry() {
     emision: r.rec?.emision || "—",
     vence: r.rec?.vence || "—",
     estado: r.estado.estado,
+    expediente: `${calcularProgreso(normalizeDossier((r.rec as any)?.expediente)).porcentaje}%`,
   }));
 
   return (
@@ -161,6 +164,7 @@ export default function MercantileRegistry() {
                   { header: "Emisión", key: "emision" },
                   { header: "Vence", key: "vence" },
                   { header: "Estado", key: "estado" },
+                  { header: "Expediente", key: "expediente" },
                 ]}
                 data={exportData}
               />
@@ -226,16 +230,17 @@ export default function MercantileRegistry() {
                       <th className="py-2 pr-3">Cédula</th>
                       <th className="py-2 pr-3">Registro Mercantil</th>
                       <th className="py-2 pr-3">Vence</th>
+                      <th className="py-2 pr-3">Expediente</th>
                       <th className="py-2 pr-3">Estado</th>
                       <th className="py-2 pr-3 text-right">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading && (
-                      <tr><td colSpan={9} className="py-8 text-center text-muted-foreground">Cargando clientes…</td></tr>
+                      <tr><td colSpan={10} className="py-8 text-center text-muted-foreground">Cargando clientes…</td></tr>
                     )}
                     {!loading && pageRows.length === 0 && (
-                      <tr><td colSpan={9} className="py-8 text-center text-muted-foreground">Sin clientes que coincidan.</td></tr>
+                      <tr><td colSpan={10} className="py-8 text-center text-muted-foreground">Sin clientes que coincidan.</td></tr>
                     )}
                     {pageRows.map((r, i) => (
                       <tr
@@ -250,6 +255,16 @@ export default function MercantileRegistry() {
                         <td className="py-2 pr-3">{r.cliente.cedula || "—"}</td>
                         <td className="py-2 pr-3">{r.rec?.registroMercantil || "—"}</td>
                         <td className="py-2 pr-3">{r.rec?.vence || "—"}</td>
+                        <td className="py-2 pr-3">
+                          <div className="flex items-center gap-2">
+                            <div className="h-1.5 w-16 rounded-full bg-muted overflow-hidden">
+                              <div className="h-full bg-primary" style={{ width: `${calcularProgreso(normalizeDossier((r.rec as any)?.expediente)).porcentaje}%` }} />
+                            </div>
+                            <span className="text-[11px] text-muted-foreground">
+                              {calcularProgreso(normalizeDossier((r.rec as any)?.expediente)).porcentaje}%
+                            </span>
+                          </div>
+                        </td>
                         <td className="py-2 pr-3">
                           <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium ${r.estado.className}`}>
                             <span className={`h-1.5 w-1.5 rounded-full ${r.estado.dot}`} />
@@ -318,6 +333,7 @@ function Client360Dialog({
   onSaved: (clienteId: number, rec: MercantileRecord) => void;
 }) {
   const [form, setForm] = useState<MercantileRecord>({ registroMercantil: "", camaraComercio: "", emision: "", vence: "", nota: "", activo: true });
+  const [dossier, setDossier] = useState<PartnerDossier>(normalizeDossier(null));
   const [services, setServices] = useState<GeneralClientService[]>([]);
   const [contacts, setContacts] = useState<GeneralClientContact[]>([]);
   const [busy, setBusy] = useState(false);
@@ -332,6 +348,7 @@ function Client360Dialog({
       nota: record?.nota || "",
       activo: record?.activo !== false,
     });
+    setDossier(normalizeDossier((record as any)?.expediente));
     setServices([]); setContacts([]);
     if (isApiConfigured()) {
       generalSqlApi.clientServices(client.oid).then(setServices).catch(() => setServices([]));
@@ -347,7 +364,10 @@ function Client360Dialog({
     if (err) { toast({ title: "Datos inválidos", description: err, variant: "destructive" }); return; }
     setBusy(true);
     try {
-      const saved = await saveRegistro(client!.oid, form);
+      const saved = await saveRegistro(client!.oid, {
+        ...form,
+        expediente: { ...dossier, updatedAt: new Date().toISOString() },
+      } as any);
       onSaved(client!.oid, saved);
       toast({ title: "Registro mercantil guardado", description: client!.nombre });
       onClose();
@@ -451,7 +471,18 @@ function Client360Dialog({
             )}
           </section>
 
-          {/* 3. Servicios */}
+          {/* 3. Expediente de Asociado de Negocio */}
+          <BusinessPartnerDossier dossier={dossier} canEdit={canEdit} onChange={setDossier} />
+
+          {canEdit && (
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" onClick={handleSave} disabled={busy}>
+                <Save className="h-4 w-4 mr-2" /> Guardar expediente
+              </Button>
+            </div>
+          )}
+
+          {/* 4. Servicios */}
           <section className="rounded-xl border border-border p-4">
             <h3 className="font-heading font-semibold text-sm mb-3">Servicios contratados</h3>
             {services.length === 0 ? (
