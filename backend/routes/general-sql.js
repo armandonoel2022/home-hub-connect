@@ -333,6 +333,142 @@ router.get('/employees', auth, guard, async (req, res) => {
   } catch (e) { res.status(502).json({ message: e.message }); }
 });
 
+// ─── Empleados ACTIVOS en GENERAL (Empleado.Estatus = 0, no eliminados) ───
+// Fuente viva para la pantalla "Empleados activos" del directorio de RRHH.
+router.get('/employees-active', auth, guard, async (req, res) => {
+  try {
+    const rows = await sql.query(
+      `SELECT * FROM Empleado WHERE Estatus = 0 AND GCRecord IS NULL`
+    );
+    const puestos = await catalogMap(['Puesto', 'Cargo', 'Posicion']);
+    const depts = await catalogMap(['Departamento', 'Depto']);
+    const nacionalidades = await catalogMap(['Nacionalidad', 'Pais']);
+    const niveles = await catalogMap(['NivelEducativo', 'NivelAcademico']);
+
+    const mapped = rows.map((r) => {
+      const nombre = cleanStr(r.NombreCompleto) ||
+        [r.Nombre1, r.Nombre2, r.Apellido1, r.Apellido2].map(cleanStr).filter(Boolean).join(' ');
+      const puestoRaw = r.Puesto;
+      const deptRaw = r.Departamento;
+      const numOr = (v) => (v == null || v === '' ? null : Number(v));
+      return {
+        oid: r.OID,
+        codigo: cleanStr(r.Codigo),
+        nombre1: cleanStr(r.Nombre1),
+        nombre2: cleanStr(r.Nombre2),
+        apellido1: cleanStr(r.Apellido1),
+        apellido2: cleanStr(r.Apellido2),
+        nombreCompleto: nombre,
+        cedula: cleanStr(r.Cedula),
+        fechaNacimiento: r.FechaNacimiento || null,
+        edad: computeAge(r.FechaNacimiento),
+        sexo: r.Sexo === 1 || r.Sexo === '1' ? 'Masculino' : (r.Sexo === 0 || r.Sexo === '0' ? 'Femenino' : null),
+        nacionalidad: typeof r.Nacionalidad === 'number'
+          ? (nacionalidades.get(Number(r.Nacionalidad)) || null)
+          : cleanStr(r.Nacionalidad),
+        nivelEducativo: niveles.get(numOr(r.NivelEducativo)) || null,
+        puesto: typeof puestoRaw === 'number' ? (puestos.get(Number(puestoRaw)) || null) : cleanStr(puestoRaw),
+        departamento: typeof deptRaw === 'number' ? (depts.get(Number(deptRaw)) || null) : cleanStr(deptRaw),
+        fechaIngreso: r.FechaIngreso || null,
+        salario: Number(r.Salario) || 0,
+        estatus: 'Activo',
+      };
+    }).sort((a, b) => String(a.nombreCompleto).localeCompare(String(b.nombreCompleto), 'es'));
+
+    res.json({ count: mapped.length, items: mapped });
+  } catch (e) { res.status(502).json({ message: e.message }); }
+});
+
+// ─── Comprobantes de pago: último pago por empleado activo (PIVOT) ───
+const PAYSLIP_INCOME = [
+  'Salario', 'Horas Normales', 'Horas Extras', 'Horas Nocturnas', 'Horas Disponibles',
+  'Horas Vacaciones', 'Horas por Novedad', 'Novedades Digitadas', 'Horas Extras Digitado',
+  'Horas Nocturnas Digitada', 'Incentivo', 'Almuerzo Digitado', 'Dias Feriados Digitado',
+];
+const PAYSLIP_DEDUCTIONS = ['AFP', 'SFS', 'ISR', 'Comida', 'Prestamo', 'Avance Efectivo', 'Percapita', 'Uniforme'];
+
+router.get('/payslips', auth, guard, async (req, res) => {
+  const brackets = (arr) => arr.map((c) => `[${c}]`).join(', ');
+  const sumOf = (arr) => arr.map((c) => `ISNULL([${c}], 0)`).join(' + ');
+  const text = `
+WITH UltimoPagoPorEmpleado AS (
+  SELECT pd.Empleado, MAX(p.Fecha) AS UltimaFechaPago, MAX(p.OID) AS UltimoPagoOID
+  FROM PagoD pd
+  INNER JOIN PagoConcepto pc ON pd.PagoConcepto = pc.OID
+  INNER JOIN Pago p ON pc.Pago = p.OID
+  WHERE pd.Calculado > 0 AND p.GCRecord IS NULL
+  GROUP BY pd.Empleado
+),
+DatosPago AS (
+  SELECT e.NombreCompleto AS Empleado, e.Codigo, e.Cedula, e.Puesto,
+         c.Descripcion AS Concepto,
+         IIF(c.Tipo = 1, pd.Calculado, -pd.Calculado) AS Monto,
+         p.Fecha AS FechaPago, p.Periodo, p.Mes, p.Ano, p.Nomina
+  FROM Empleado e
+  LEFT JOIN UltimoPagoPorEmpleado uppe ON e.OID = uppe.Empleado
+  LEFT JOIN PagoD pd ON pd.Empleado = e.OID AND pd.Pago = uppe.UltimoPagoOID
+  LEFT JOIN PagoConcepto pc ON pd.PagoConcepto = pc.OID
+  LEFT JOIN Pago p ON pc.Pago = p.OID
+  LEFT JOIN Concepto c ON pc.Concepto = c.OID
+  WHERE e.Estatus = 0 AND e.GCRecord IS NULL AND pd.Calculado > 0
+)
+SELECT Empleado, Codigo, Cedula, Puesto, FechaPago, Periodo, Mes, Ano, Nomina,
+  ${PAYSLIP_INCOME.map((c) => `ISNULL([${c}], 0) AS [${c}]`).join(',\n  ')},
+  ${PAYSLIP_DEDUCTIONS.map((c) => `ISNULL([${c}], 0) AS [${c}]`).join(',\n  ')},
+  ${sumOf(PAYSLIP_INCOME)} AS TotalDevengado,
+  ${sumOf(PAYSLIP_DEDUCTIONS)} AS TotalDeducciones,
+  (${sumOf(PAYSLIP_INCOME)}) - (${sumOf(PAYSLIP_DEDUCTIONS)}) AS NetoARecibir
+FROM DatosPago
+PIVOT (SUM(Monto) FOR Concepto IN (${brackets([...PAYSLIP_INCOME, ...PAYSLIP_DEDUCTIONS])})) AS PivotTable
+ORDER BY Empleado`;
+
+  try {
+    const rows = await sql.query(text);
+    const puestos = await catalogMap(['Puesto', 'Cargo', 'Posicion']);
+    const num = (v) => Math.round((Number(v) || 0) * 100) / 100;
+    const items = rows.map((r) => {
+      const ingresos = {}; const deducciones = {};
+      PAYSLIP_INCOME.forEach((c) => { ingresos[c] = num(r[c]); });
+      // Las deducciones vienen negativas (IIF Tipo=0 → -Calculado): mostrar en positivo.
+      PAYSLIP_DEDUCTIONS.forEach((c) => { deducciones[c] = Math.abs(num(r[c])); });
+      const totalDeducciones = Math.abs(num(r.TotalDeducciones));
+      const totalDevengado = num(r.TotalDevengado);
+      return {
+        empleado: cleanStr(r.Empleado),
+        codigo: cleanStr(r.Codigo),
+        cedula: cleanStr(r.Cedula),
+        puesto: typeof r.Puesto === 'number' ? (puestos.get(Number(r.Puesto)) || null) : cleanStr(r.Puesto),
+        fechaPago: r.FechaPago || null,
+        periodo: r.Periodo ?? null,
+        mes: r.Mes ?? null,
+        ano: r.Ano ?? null,
+        nomina: r.Nomina ?? null,
+        ingresos, deducciones,
+        totalDevengado,
+        totalDeducciones,
+        neto: Math.round((totalDevengado - totalDeducciones) * 100) / 100,
+      };
+    });
+    const totals = items.reduce((a, i) => ({
+      devengado: a.devengado + i.totalDevengado,
+      deducciones: a.deducciones + i.totalDeducciones,
+      neto: a.neto + i.neto,
+    }), { devengado: 0, deducciones: 0, neto: 0 });
+    res.json({
+      count: items.length,
+      conceptos: { ingresos: PAYSLIP_INCOME, deducciones: PAYSLIP_DEDUCTIONS },
+      totals: {
+        devengado: round2(totals.devengado),
+        deducciones: round2(totals.deducciones),
+        neto: round2(totals.neto),
+      },
+      items,
+    });
+  } catch (e) { res.status(502).json({ message: e.message }); }
+});
+
+
+
 // ─── Clientes (tabla Cliente + último servicio en ClienteServicio) ───
 // Alimenta el selector de "Cliente CxC" en Seguimiento Clientes Monitoreo para
 // no tener que reingresar los datos a mano. La descripción del servicio activo
