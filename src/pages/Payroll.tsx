@@ -18,8 +18,10 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import {
   ArrowLeft, AlertTriangle, CheckCircle2, UserX, Calculator, Mail,
-  Download, Search, Save, ShieldCheck, ShieldOff, Briefcase, FileUp, Ghost,
+  Download, Search, Save, ShieldCheck, ShieldOff, Briefcase, FileUp, Ghost, Receipt,
 } from "lucide-react";
+import PayslipsSql from "@/components/hr/PayslipsSql";
+
 import { employeesApi, isApiConfigured, tasksApi, payrollExtrasApi, type Employee, type PayrollExtra } from "@/lib/api";
 import { calcDeductions, fmtRD } from "@/lib/payrollCalc";
 import { generatePayslipPDF } from "@/lib/payslipPdf";
