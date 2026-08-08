@@ -264,10 +264,18 @@ const EmployeeDirectory = () => {
                 {stats.total} empleados registrados · {stats.active} activos · {stats.depts} departamentos
               </p>
             </div>
-            <Button onClick={() => navigate("/rrhh/nomina")} className="bg-gold text-black hover:bg-gold/90">
-              <Briefcase className="h-4 w-4 mr-2" /> Nómina y Cumplimiento TSS
-            </Button>
+            <div className="flex gap-2 flex-wrap">
+              <Button variant="outline" onClick={() => setShowActiveSql(true)}>
+                <Database className="h-4 w-4 mr-2" /> Empleados activos (GENERAL)
+              </Button>
+              <Button onClick={() => navigate("/rrhh/nomina")} className="bg-gold text-black hover:bg-gold/90">
+                <Briefcase className="h-4 w-4 mr-2" /> Nómina y Cumplimiento TSS
+              </Button>
+            </div>
           </div>
+
+          <ActiveEmployeesSql open={showActiveSql} onOpenChange={setShowActiveSql} />
+
 
           {/* Stats cards */}
           <div className="grid gap-4 md:grid-cols-3 mb-6">
