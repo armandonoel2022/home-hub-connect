@@ -1183,6 +1183,10 @@ export const generalSqlApi = {
     apiFetch<GeneralExpediente>(`/general-sql/expediente${fecha ? `?fecha=${encodeURIComponent(fecha)}` : ""}`),
   schemaKeys: () => apiFetch<Array<{ tabla: string; tipo: string; columna: string; restriccion: string }>>("/general-sql/schema-keys"),
   clients: () => apiFetch<GeneralClient[]>("/general-sql/clients"),
+  employeesActive: () =>
+    apiFetch<{ count: number; items: GeneralActiveEmployee[] }>("/general-sql/employees-active"),
+  payslips: () => apiFetch<GeneralPayslipsResponse>("/general-sql/payslips"),
+
   clientServices: (oid: number | string) =>
     apiFetch<GeneralClientService[]>(`/general-sql/clients/${encodeURIComponent(String(oid))}/servicios`),
   clientContacts: (oid: number | string) =>
