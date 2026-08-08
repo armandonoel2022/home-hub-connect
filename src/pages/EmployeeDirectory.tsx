@@ -17,8 +17,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import {
   ArrowLeft, Users, Search, Plus, Pencil, Trash2, Save, X,
-  Building2, Briefcase, Download, Shield,
+  Building2, Briefcase, Download, Shield, Database,
 } from "lucide-react";
+import ActiveEmployeesSql from "@/components/hr/ActiveEmployeesSql";
+
 import { useArmedPersonnel, useEquipment, usePhones } from "@/hooks/useApiHooks";
 import type { ArmedPersonnel, UniformAssignment, FlashlightItem } from "@/lib/types";
 import { uniformAssignmentsApi, flashlightsApi } from "@/lib/api";
@@ -51,6 +53,8 @@ const EmployeeDirectory = () => {
   const [creating, setCreating] = useState(false);
   const [formData, setFormData] = useState<Partial<Employee>>({});
   const [viewing, setViewing] = useState<Employee | null>(null);
+  const [showActiveSql, setShowActiveSql] = useState(false);
+
   const { data: armedPersonnel } = useArmedPersonnel();
   const { data: equipment, update: updateEquipment } = useEquipment();
   const { data: phones, update: updatePhone } = usePhones();
@@ -264,10 +268,18 @@ const EmployeeDirectory = () => {
                 {stats.total} empleados registrados · {stats.active} activos · {stats.depts} departamentos
               </p>
             </div>
-            <Button onClick={() => navigate("/rrhh/nomina")} className="bg-gold text-black hover:bg-gold/90">
-              <Briefcase className="h-4 w-4 mr-2" /> Nómina y Cumplimiento TSS
-            </Button>
+            <div className="flex gap-2 flex-wrap">
+              <Button variant="outline" onClick={() => setShowActiveSql(true)}>
+                <Database className="h-4 w-4 mr-2" /> Empleados activos (GENERAL)
+              </Button>
+              <Button onClick={() => navigate("/rrhh/nomina")} className="bg-gold text-black hover:bg-gold/90">
+                <Briefcase className="h-4 w-4 mr-2" /> Nómina y Cumplimiento TSS
+              </Button>
+            </div>
           </div>
+
+          <ActiveEmployeesSql open={showActiveSql} onOpenChange={setShowActiveSql} />
+
 
           {/* Stats cards */}
           <div className="grid gap-4 md:grid-cols-3 mb-6">

@@ -18,8 +18,10 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import {
   ArrowLeft, AlertTriangle, CheckCircle2, UserX, Calculator, Mail,
-  Download, Search, Save, ShieldCheck, ShieldOff, Briefcase, FileUp, Ghost,
+  Download, Search, Save, ShieldCheck, ShieldOff, Briefcase, FileUp, Ghost, Receipt,
 } from "lucide-react";
+import PayslipsSql from "@/components/hr/PayslipsSql";
+
 import { employeesApi, isApiConfigured, tasksApi, payrollExtrasApi, type Employee, type PayrollExtra } from "@/lib/api";
 import { calcDeductions, fmtRD } from "@/lib/payrollCalc";
 import { generatePayslipPDF } from "@/lib/payslipPdf";
@@ -143,6 +145,8 @@ export default function Payroll() {
   }>(null);
   const [validating, setValidating] = useState(false);
   const [showValidation, setShowValidation] = useState(false);
+  const [showPayslipsSql, setShowPayslipsSql] = useState(false);
+
 
   // ─── Load ───
   const loadEmployees = async () => {
@@ -607,11 +611,17 @@ export default function Payroll() {
                 <ShieldCheck className="w-4 h-4 mr-2" /> Ver validación ({validation.period})
               </Button>
             )}
+            <Button variant="outline" onClick={() => setShowPayslipsSql(true)}>
+              <Receipt className="w-4 h-4 mr-2" /> Comprobantes de pago (GENERAL)
+            </Button>
             <Button variant="outline" onClick={exportExcel}>
               <Download className="w-4 h-4 mr-2" /> Exportar Excel
             </Button>
           </div>
         </div>
+
+        <PayslipsSql open={showPayslipsSql} onOpenChange={setShowPayslipsSql} />
+
 
         {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
