@@ -609,11 +609,17 @@ export default function Payroll() {
                 <ShieldCheck className="w-4 h-4 mr-2" /> Ver validación ({validation.period})
               </Button>
             )}
+            <Button variant="outline" onClick={() => setShowPayslipsSql(true)}>
+              <Receipt className="w-4 h-4 mr-2" /> Comprobantes de pago (GENERAL)
+            </Button>
             <Button variant="outline" onClick={exportExcel}>
               <Download className="w-4 h-4 mr-2" /> Exportar Excel
             </Button>
           </div>
         </div>
+
+        <PayslipsSql open={showPayslipsSql} onOpenChange={setShowPayslipsSql} />
+
 
         {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
