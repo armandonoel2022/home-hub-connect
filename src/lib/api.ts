@@ -1157,7 +1157,50 @@ export interface PayrollHistoryEntry {
   pagoOID: number | string; ano?: number; mes?: number; fecha?: string;
   tipoPago?: number | null; monto: number; lineas: number;
 }
+export interface GeneralActiveEmployee {
+  oid: number;
+  codigo: string | null;
+  nombre1: string | null;
+  nombre2: string | null;
+  apellido1: string | null;
+  apellido2: string | null;
+  nombreCompleto: string;
+  cedula: string | null;
+  fechaNacimiento: string | null;
+  edad: number | null;
+  sexo: string | null;
+  nacionalidad: string | null;
+  nivelEducativo: string | null;
+  puesto: string | null;
+  departamento: string | null;
+  fechaIngreso: string | null;
+  salario: number;
+  estatus: string;
+}
+export interface GeneralPayslip {
+  empleado: string | null;
+  codigo: string | null;
+  cedula: string | null;
+  puesto: string | null;
+  fechaPago: string | null;
+  periodo: number | null;
+  mes: number | null;
+  ano: number | null;
+  nomina: number | null;
+  ingresos: Record<string, number>;
+  deducciones: Record<string, number>;
+  totalDevengado: number;
+  totalDeducciones: number;
+  neto: number;
+}
+export interface GeneralPayslipsResponse {
+  count: number;
+  conceptos: { ingresos: string[]; deducciones: string[] };
+  totals: { devengado: number; deducciones: number; neto: number };
+  items: GeneralPayslip[];
+}
 export const generalSqlApi = {
+
   status: () => apiFetch<GeneralSqlStatus>("/general-sql/status"),
   tables: () => apiFetch<Array<{ schema: string; name: string }>>("/general-sql/tables"),
   columns: (table: string) =>
