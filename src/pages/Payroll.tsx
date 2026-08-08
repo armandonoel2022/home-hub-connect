@@ -143,6 +143,8 @@ export default function Payroll() {
   }>(null);
   const [validating, setValidating] = useState(false);
   const [showValidation, setShowValidation] = useState(false);
+  const [showPayslipsSql, setShowPayslipsSql] = useState(false);
+
 
   // ─── Load ───
   const loadEmployees = async () => {
