@@ -53,6 +53,8 @@ const EmployeeDirectory = () => {
   const [creating, setCreating] = useState(false);
   const [formData, setFormData] = useState<Partial<Employee>>({});
   const [viewing, setViewing] = useState<Employee | null>(null);
+  const [showActiveSql, setShowActiveSql] = useState(false);
+
   const { data: armedPersonnel } = useArmedPersonnel();
   const { data: equipment, update: updateEquipment } = useEquipment();
   const { data: phones, update: updatePhone } = usePhones();
