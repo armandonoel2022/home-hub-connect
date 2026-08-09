@@ -488,6 +488,149 @@ ORDER BY Empleado`;
   } catch (e) { res.status(502).json({ message: e.message }); }
 });
 
+// ─── Historial de nómina: períodos disponibles (Query 5) ───
+router.get('/payroll-periods', auth, guard, async (req, res) => {
+  try {
+    const rows = await sql.query(`
+SELECT DISTINCT p.Ano, p.Mes, p.Periodo, MAX(p.Fecha) AS Fecha, MIN(p.OID) AS PagoOID
+FROM Pago p
+INNER JOIN PagoConcepto pc ON pc.Pago = p.OID
+INNER JOIN PagoD pd ON pd.PagoConcepto = pc.OID
+INNER JOIN Empleado e ON pd.Empleado = e.OID
+WHERE e.Estatus = 0 AND e.GCRecord IS NULL AND p.GCRecord IS NULL AND pd.Calculado > 0
+GROUP BY p.Ano, p.Mes, p.Periodo
+ORDER BY p.Ano DESC, p.Mes DESC, p.Periodo DESC`);
+    res.json(rows.map((r) => ({
+      ano: Number(r.Ano), mes: Number(r.Mes), periodo: Number(r.Periodo),
+      fecha: r.Fecha || null, pagoOid: Number(r.PagoOID),
+      descripcion: `Q${r.Periodo} ${String(r.Mes).padStart(2, '0')}/${r.Ano}`,
+    })));
+  } catch (e) { res.status(502).json({ message: e.message }); }
+});
+
+const safeCode = (v) => String(v || '').replace(/[^A-Za-z0-9._-]/g, '').slice(0, 20);
+
+// ─── Historial de pagos de un empleado (Query 1) ───
+router.get('/employee-payments', auth, guard, async (req, res) => {
+  const codigo = safeCode(req.query.codigo);
+  if (!codigo) return res.status(400).json({ message: 'codigo requerido' });
+  try {
+    const rows = await sql.query(`
+SELECT p.OID AS PagoOID, p.Fecha, p.Periodo, p.Mes, p.Ano, p.Nomina,
+  SUM(IIF(c.Tipo = 1, pd.Calculado, 0)) AS TotalDevengado,
+  SUM(IIF(c.Tipo = 0, pd.Calculado, 0)) AS TotalDeducciones,
+  SUM(IIF(c.Tipo = 1, pd.Calculado, -pd.Calculado)) AS Neto,
+  COUNT(DISTINCT pd.OID) AS Conceptos
+FROM PagoD pd
+INNER JOIN PagoConcepto pc ON pd.PagoConcepto = pc.OID
+INNER JOIN Pago p ON pc.Pago = p.OID
+INNER JOIN Concepto c ON pc.Concepto = c.OID
+INNER JOIN Empleado e ON pd.Empleado = e.OID
+WHERE e.Codigo = '${codigo}' AND p.GCRecord IS NULL AND pd.Calculado > 0
+GROUP BY p.OID, p.Fecha, p.Periodo, p.Mes, p.Ano, p.Nomina
+ORDER BY p.Ano DESC, p.Mes DESC, p.Periodo DESC`);
+    res.json(rows.map((r) => ({
+      pagoOid: Number(r.PagoOID), fecha: r.Fecha || null,
+      periodo: r.Periodo ?? null, mes: r.Mes ?? null, ano: r.Ano ?? null, nomina: r.Nomina ?? null,
+      descripcion: r.Periodo === 1 ? 'Quincena 1 (1-15)' : 'Quincena 2 (16-fin)',
+      totalDevengado: round2(Number(r.TotalDevengado) || 0),
+      totalDeducciones: round2(Number(r.TotalDeducciones) || 0),
+      neto: round2(Number(r.Neto) || 0),
+      conceptos: Number(r.Conceptos) || 0,
+    })));
+  } catch (e) { res.status(502).json({ message: e.message }); }
+});
+
+// ─── Desglose de un pago específico (Query 2) ───
+router.get('/payment-detail', auth, guard, async (req, res) => {
+  const codigo = safeCode(req.query.codigo);
+  const pagoOid = Number.parseInt(String(req.query.pagoOid), 10);
+  if (!codigo || !Number.isFinite(pagoOid)) return res.status(400).json({ message: 'codigo y pagoOid requeridos' });
+  try {
+    const rows = await sql.query(`
+SELECT e.NombreCompleto AS Empleado, e.Codigo, e.Cedula, e.Puesto,
+  c.Descripcion AS Concepto, c.Tipo, pd.Valor, pd.Calculado, pd.Comentario,
+  p.Fecha, p.Periodo, p.Mes, p.Ano, p.Nomina
+FROM PagoD pd
+INNER JOIN PagoConcepto pc ON pd.PagoConcepto = pc.OID
+INNER JOIN Pago p ON pc.Pago = p.OID
+INNER JOIN Concepto c ON pc.Concepto = c.OID
+INNER JOIN Empleado e ON pd.Empleado = e.OID
+WHERE e.Codigo = '${codigo}' AND p.OID = ${pagoOid} AND p.GCRecord IS NULL AND pd.Calculado > 0
+ORDER BY c.Tipo DESC, c.Descripcion`);
+    const puestos = await catalogMap(['Puesto', 'Cargo', 'Posicion']);
+    const first = rows[0] || {};
+    const lineas = rows.map((r) => ({
+      concepto: cleanStr(r.Concepto),
+      tipo: Number(r.Tipo),
+      valor: Number(r.Valor) || 0,
+      calculado: round2(Number(r.Calculado) || 0),
+      monto: round2(Number(r.Tipo) === 1 ? Number(r.Calculado) || 0 : -(Number(r.Calculado) || 0)),
+      comentario: cleanStr(r.Comentario),
+    }));
+    const devengado = round2(lineas.filter(l => l.tipo === 1).reduce((a, l) => a + l.calculado, 0));
+    const deducciones = round2(lineas.filter(l => l.tipo !== 1).reduce((a, l) => a + l.calculado, 0));
+    res.json({
+      empleado: cleanStr(first.Empleado), codigo: cleanStr(first.Codigo), cedula: cleanStr(first.Cedula),
+      puesto: typeof first.Puesto === 'number' ? (puestos.get(Number(first.Puesto)) || null) : cleanStr(first.Puesto),
+      fecha: first.Fecha || null, periodo: first.Periodo ?? null, mes: first.Mes ?? null,
+      ano: first.Ano ?? null, nomina: first.Nomina ?? null,
+      lineas, totalDevengado: devengado, totalDeducciones: deducciones,
+      neto: round2(devengado - deducciones),
+    });
+  } catch (e) { res.status(502).json({ message: e.message }); }
+});
+
+// ─── Comparación entre dos pagos + anomalías (Query 3 y 4) ───
+router.get('/payment-compare', auth, guard, async (req, res) => {
+  const codigo = safeCode(req.query.codigo);
+  const a = Number.parseInt(String(req.query.pago1), 10);
+  const b = Number.parseInt(String(req.query.pago2), 10);
+  if (!codigo || !Number.isFinite(a) || !Number.isFinite(b)) {
+    return res.status(400).json({ message: 'codigo, pago1 y pago2 requeridos' });
+  }
+  const q = (oid) => `
+SELECT c.Descripcion AS Concepto, c.Tipo, pd.Calculado
+FROM PagoD pd
+INNER JOIN PagoConcepto pc ON pd.PagoConcepto = pc.OID
+INNER JOIN Pago p ON pc.Pago = p.OID
+INNER JOIN Concepto c ON pc.Concepto = c.OID
+INNER JOIN Empleado e ON pd.Empleado = e.OID
+WHERE e.Codigo = '${codigo}' AND p.OID = ${oid} AND p.GCRecord IS NULL AND pd.Calculado > 0`;
+  try {
+    const [rowsA, rowsB] = await Promise.all([sql.query(q(a)), sql.query(q(b))]);
+    const toMap = (rows) => {
+      const m = new Map();
+      rows.forEach((r) => {
+        const key = `${cleanStr(r.Concepto)}|${Number(r.Tipo)}`;
+        const monto = Number(r.Tipo) === 1 ? Number(r.Calculado) || 0 : -(Number(r.Calculado) || 0);
+        m.set(key, (m.get(key) || 0) + monto);
+      });
+      return m;
+    };
+    const ma = toMap(rowsA), mb = toMap(rowsB);
+    const keys = [...new Set([...ma.keys(), ...mb.keys()])];
+    const items = keys.map((k) => {
+      const [concepto, tipoStr] = k.split('|');
+      const actual = round2(ma.get(k) || 0);
+      const anterior = round2(mb.get(k) || 0);
+      const diferencia = round2(actual - anterior);
+      const variacion = anterior === 0 ? null : round2((diferencia / Math.abs(anterior)) * 100);
+      const anomalia = Math.abs(diferencia) > 1000 || (variacion !== null && Math.abs(variacion) > 10);
+      return { concepto, tipo: Number(tipoStr), actual, anterior, diferencia, variacion, anomalia };
+    }).sort((x, y) => Math.abs(y.diferencia) - Math.abs(x.diferencia));
+    res.json({
+      items,
+      totales: {
+        actual: round2(items.reduce((s, i) => s + i.actual, 0)),
+        anterior: round2(items.reduce((s, i) => s + i.anterior, 0)),
+      },
+      anomalias: items.filter(i => i.anomalia).length,
+    });
+  } catch (e) { res.status(502).json({ message: e.message }); }
+});
+
+
 
 
 // ─── Clientes (tabla Cliente + último servicio en ClienteServicio) ───
