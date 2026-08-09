@@ -1228,7 +1228,17 @@ export const generalSqlApi = {
   clients: () => apiFetch<GeneralClient[]>("/general-sql/clients"),
   employeesActive: () =>
     apiFetch<{ count: number; items: GeneralActiveEmployee[] }>("/general-sql/employees-active"),
-  payslips: () => apiFetch<GeneralPayslipsResponse>("/general-sql/payslips"),
+  payslips: (p?: { ano: number; mes: number; periodo: number }) =>
+    apiFetch<GeneralPayslipsResponse>(
+      `/general-sql/payslips${p ? `?ano=${p.ano}&mes=${p.mes}&periodo=${p.periodo}` : ""}`
+    ),
+  payrollPeriods: () => apiFetch<GeneralPayrollPeriod[]>("/general-sql/payroll-periods"),
+  employeePayments: (codigo: string) =>
+    apiFetch<GeneralEmployeePayment[]>(`/general-sql/employee-payments?codigo=${encodeURIComponent(codigo)}`),
+  paymentDetail: (codigo: string, pagoOid: number) =>
+    apiFetch<GeneralPaymentDetail>(`/general-sql/payment-detail?codigo=${encodeURIComponent(codigo)}&pagoOid=${pagoOid}`),
+  paymentCompare: (codigo: string, pago1: number, pago2: number) =>
+    apiFetch<GeneralPaymentCompare>(`/general-sql/payment-compare?codigo=${encodeURIComponent(codigo)}&pago1=${pago1}&pago2=${pago2}`),
 
   clientServices: (oid: number | string) =>
     apiFetch<GeneralClientService[]>(`/general-sql/clients/${encodeURIComponent(String(oid))}/servicios`),
