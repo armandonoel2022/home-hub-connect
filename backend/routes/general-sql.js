@@ -390,8 +390,25 @@ const PAYSLIP_DEDUCTIONS = ['AFP', 'SFS', 'ISR', 'Comida', 'Prestamo', 'Avance E
 router.get('/payslips', auth, guard, async (req, res) => {
   const brackets = (arr) => arr.map((c) => `[${c}]`).join(', ');
   const sumOf = (arr) => arr.map((c) => `ISNULL([${c}], 0)`).join(' + ');
-  const text = `
-WITH UltimoPagoPorEmpleado AS (
+  const int = (v) => (v == null || v === '' ? null : Number.parseInt(String(v), 10));
+  const ano = int(req.query.ano), mes = int(req.query.mes), periodo = int(req.query.periodo);
+  const usarPeriodo = Number.isFinite(ano) && Number.isFinite(mes) && Number.isFinite(periodo);
+
+  const fuente = usarPeriodo
+    ? `DatosPago AS (
+  SELECT e.NombreCompleto AS Empleado, e.Codigo, e.Cedula, e.Puesto,
+         c.Descripcion AS Concepto,
+         IIF(c.Tipo = 1, pd.Calculado, -pd.Calculado) AS Monto,
+         p.Fecha AS FechaPago, p.Periodo, p.Mes, p.Ano, p.Nomina
+  FROM Empleado e
+  INNER JOIN PagoD pd ON pd.Empleado = e.OID
+  INNER JOIN PagoConcepto pc ON pd.PagoConcepto = pc.OID
+  INNER JOIN Pago p ON pc.Pago = p.OID
+  INNER JOIN Concepto c ON pc.Concepto = c.OID
+  WHERE e.Estatus = 0 AND e.GCRecord IS NULL AND p.GCRecord IS NULL AND pd.Calculado > 0
+    AND p.Ano = ${ano} AND p.Mes = ${mes} AND p.Periodo = ${periodo}
+)`
+    : `UltimoPagoPorEmpleado AS (
   SELECT pd.Empleado, MAX(p.Fecha) AS UltimaFechaPago, MAX(p.OID) AS UltimoPagoOID
   FROM PagoD pd
   INNER JOIN PagoConcepto pc ON pd.PagoConcepto = pc.OID
@@ -411,7 +428,10 @@ DatosPago AS (
   LEFT JOIN Pago p ON pc.Pago = p.OID
   LEFT JOIN Concepto c ON pc.Concepto = c.OID
   WHERE e.Estatus = 0 AND e.GCRecord IS NULL AND pd.Calculado > 0
-)
+)`;
+
+  const text = `
+WITH ${fuente}
 SELECT Empleado, Codigo, Cedula, Puesto, FechaPago, Periodo, Mes, Ano, Nomina,
   ${PAYSLIP_INCOME.map((c) => `ISNULL([${c}], 0) AS [${c}]`).join(',\n  ')},
   ${PAYSLIP_DEDUCTIONS.map((c) => `ISNULL([${c}], 0) AS [${c}]`).join(',\n  ')},
@@ -421,6 +441,7 @@ SELECT Empleado, Codigo, Cedula, Puesto, FechaPago, Periodo, Mes, Ano, Nomina,
 FROM DatosPago
 PIVOT (SUM(Monto) FOR Concepto IN (${brackets([...PAYSLIP_INCOME, ...PAYSLIP_DEDUCTIONS])})) AS PivotTable
 ORDER BY Empleado`;
+
 
   try {
     const rows = await sql.query(text);
