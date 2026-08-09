@@ -1199,6 +1199,32 @@ export interface GeneralPayslipsResponse {
   totals: { devengado: number; deducciones: number; neto: number };
   items: GeneralPayslip[];
 }
+export interface GeneralPayrollPeriod {
+  ano: number; mes: number; periodo: number;
+  fecha: string | null; pagoOid: number; descripcion: string;
+}
+export interface GeneralEmployeePayment {
+  pagoOid: number; fecha: string | null; periodo: number | null; mes: number | null;
+  ano: number | null; nomina: number | null; descripcion: string;
+  totalDevengado: number; totalDeducciones: number; neto: number; conceptos: number;
+}
+export interface GeneralPaymentLine {
+  concepto: string | null; tipo: number; valor: number; calculado: number;
+  monto: number; comentario: string | null;
+}
+export interface GeneralPaymentDetail {
+  empleado: string | null; codigo: string | null; cedula: string | null; puesto: string | null;
+  fecha: string | null; periodo: number | null; mes: number | null; ano: number | null; nomina: number | null;
+  lineas: GeneralPaymentLine[]; totalDevengado: number; totalDeducciones: number; neto: number;
+}
+export interface GeneralPaymentCompare {
+  items: Array<{
+    concepto: string; tipo: number; actual: number; anterior: number;
+    diferencia: number; variacion: number | null; anomalia: boolean;
+  }>;
+  totales: { actual: number; anterior: number };
+  anomalias: number;
+}
 export const generalSqlApi = {
 
   status: () => apiFetch<GeneralSqlStatus>("/general-sql/status"),
