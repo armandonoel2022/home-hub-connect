@@ -4,7 +4,7 @@ import AppLayout from "@/components/AppLayout";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
-import { employeesApi, isApiConfigured, usersApi, getFileUrl, type Employee } from "@/lib/api";
+import { employeesApi, isApiConfigured, usersApi, getFileUrl, generalSqlApi, type Employee, type GeneralActiveEmployee } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,6 @@ import {
   ArrowLeft, Users, Search, Plus, Pencil, Trash2, Save, X,
   Building2, Briefcase, Download, Shield, Database,
 } from "lucide-react";
-import ActiveEmployeesSql from "@/components/hr/ActiveEmployeesSql";
 
 import { useArmedPersonnel, useEquipment, usePhones } from "@/hooks/useApiHooks";
 import type { ArmedPersonnel, UniformAssignment, FlashlightItem } from "@/lib/types";
@@ -53,7 +52,6 @@ const EmployeeDirectory = () => {
   const [creating, setCreating] = useState(false);
   const [formData, setFormData] = useState<Partial<Employee>>({});
   const [viewing, setViewing] = useState<Employee | null>(null);
-  const [showActiveSql, setShowActiveSql] = useState(false);
 
   const { data: armedPersonnel } = useArmedPersonnel();
   const { data: equipment, update: updateEquipment } = useEquipment();
@@ -143,7 +141,57 @@ const EmployeeDirectory = () => {
     }
   };
 
-  const loadEmployees = async () => {
+  /** Mapea un empleado activo de gSafeOne (GENERAL) al modelo del directorio. */
+  const fromGeneral = (g: GeneralActiveEmployee): Employee => {
+    const puesto = String(g.puesto || "");
+    const dept = String(g.departamento || "");
+    const isAdmin = /administrativ|gerencia|finanzas|recursos humanos|tecnolog|comercial|contab/i.test(dept);
+    const category = /supervisor/i.test(puesto)
+      ? "Supervisor"
+      : (/oficial de seguridad|vigilante|guardia|escolta/i.test(puesto) ? "Vigilante" : (isAdmin ? "Administrativo" : "Operativo"));
+    return {
+      employeeCode: String(g.codigo || g.oid),
+      fullName: g.nombreCompleto,
+      status: "Activo",
+      payrollType: category === "Administrativo" ? "Administrativo" : "Operaciones",
+      category,
+      department: dept || "—",
+      position: puesto,
+      bank: "",
+      salary: Number(g.salario) || 0,
+      hourlyRate: 0,
+      cedula: g.cedula || undefined,
+      hireDate: g.fechaIngreso || undefined,
+    } as unknown as Employee;
+  };
+
+  /** Completa fotos/correos desde la data local (JSON + usuarios intranet). */
+  const enrichWithLocal = async (base: Employee[]) => {
+    try {
+      const [local, users] = await Promise.all([
+        employeesApi.getAll().catch(() => [] as Employee[]),
+        isApiConfigured() ? usersApi.getAll().catch(() => [] as any[]) : Promise.resolve([] as any[]),
+      ]);
+      const byCode = new Map((local || []).map((e: Employee) => [String(e.employeeCode), e]));
+      const byName = new Map((local || []).map((e: Employee) => [normalize(e.fullName), e]));
+      const usersByName = new Map((users || []).map((u: any) => [normalize(u.fullName), u]));
+      return base.map((e) => {
+        const l = byCode.get(String(e.employeeCode)) || byName.get(normalize(e.fullName));
+        const u = usersByName.get(normalize(e.fullName));
+        return {
+          ...e,
+          photoUrl: (l as any)?.photoUrl || u?.photoUrl || (e as any).photoUrl,
+          email: (l as any)?.email || u?.email || (e as any).email,
+          birthday: (l as any)?.birthday || u?.birthday || (e as any).birthday,
+          bank: (l as any)?.bank || e.bank,
+        } as Employee;
+      });
+    } catch {
+      return base;
+    }
+  };
+
+  const loadEmployeesLocal = async () => {
     if (!isApiConfigured()) {
       await loadFromSeedFallback();
       setLoading(false);
@@ -163,6 +211,21 @@ const EmployeeDirectory = () => {
       await loadFromSeedFallback();
     } finally {
       setLoading(false);
+    }
+  };
+
+  /** Fuente principal: empleados activos de gSafeOne (GENERAL). */
+  const loadEmployees = async () => {
+    setLoading(true);
+    try {
+      const res = await generalSqlApi.employeesActive();
+      const items = res?.items || [];
+      if (items.length === 0) throw new Error("GENERAL sin resultados");
+      const mapped = items.map(fromGeneral);
+      setEmployees(await enrichWithLocal(mapped));
+      setLoading(false);
+    } catch {
+      await loadEmployeesLocal();
     }
   };
 
@@ -265,20 +328,16 @@ const EmployeeDirectory = () => {
                 Directorio de Empleados
               </h1>
               <p className="text-muted-foreground mt-1 text-sm">
-                {stats.total} empleados registrados · {stats.active} activos · {stats.depts} departamentos
+{stats.total} empleados activos en GENERAL (gSafeOne) · {stats.depts} departamentos
               </p>
             </div>
             <div className="flex gap-2 flex-wrap">
-              <Button variant="outline" onClick={() => setShowActiveSql(true)}>
-                <Database className="h-4 w-4 mr-2" /> Empleados activos (GENERAL)
-              </Button>
               <Button onClick={() => navigate("/rrhh/nomina")} className="bg-gold text-black hover:bg-gold/90">
                 <Briefcase className="h-4 w-4 mr-2" /> Nómina y Cumplimiento TSS
               </Button>
             </div>
           </div>
 
-          <ActiveEmployeesSql open={showActiveSql} onOpenChange={setShowActiveSql} />
 
 
           {/* Stats cards */}
