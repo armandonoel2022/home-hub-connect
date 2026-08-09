@@ -1199,6 +1199,32 @@ export interface GeneralPayslipsResponse {
   totals: { devengado: number; deducciones: number; neto: number };
   items: GeneralPayslip[];
 }
+export interface GeneralPayrollPeriod {
+  ano: number; mes: number; periodo: number;
+  fecha: string | null; pagoOid: number; descripcion: string;
+}
+export interface GeneralEmployeePayment {
+  pagoOid: number; fecha: string | null; periodo: number | null; mes: number | null;
+  ano: number | null; nomina: number | null; descripcion: string;
+  totalDevengado: number; totalDeducciones: number; neto: number; conceptos: number;
+}
+export interface GeneralPaymentLine {
+  concepto: string | null; tipo: number; valor: number; calculado: number;
+  monto: number; comentario: string | null;
+}
+export interface GeneralPaymentDetail {
+  empleado: string | null; codigo: string | null; cedula: string | null; puesto: string | null;
+  fecha: string | null; periodo: number | null; mes: number | null; ano: number | null; nomina: number | null;
+  lineas: GeneralPaymentLine[]; totalDevengado: number; totalDeducciones: number; neto: number;
+}
+export interface GeneralPaymentCompare {
+  items: Array<{
+    concepto: string; tipo: number; actual: number; anterior: number;
+    diferencia: number; variacion: number | null; anomalia: boolean;
+  }>;
+  totales: { actual: number; anterior: number };
+  anomalias: number;
+}
 export const generalSqlApi = {
 
   status: () => apiFetch<GeneralSqlStatus>("/general-sql/status"),
@@ -1228,7 +1254,17 @@ export const generalSqlApi = {
   clients: () => apiFetch<GeneralClient[]>("/general-sql/clients"),
   employeesActive: () =>
     apiFetch<{ count: number; items: GeneralActiveEmployee[] }>("/general-sql/employees-active"),
-  payslips: () => apiFetch<GeneralPayslipsResponse>("/general-sql/payslips"),
+  payslips: (p?: { ano: number; mes: number; periodo: number }) =>
+    apiFetch<GeneralPayslipsResponse>(
+      `/general-sql/payslips${p ? `?ano=${p.ano}&mes=${p.mes}&periodo=${p.periodo}` : ""}`
+    ),
+  payrollPeriods: () => apiFetch<GeneralPayrollPeriod[]>("/general-sql/payroll-periods"),
+  employeePayments: (codigo: string) =>
+    apiFetch<GeneralEmployeePayment[]>(`/general-sql/employee-payments?codigo=${encodeURIComponent(codigo)}`),
+  paymentDetail: (codigo: string, pagoOid: number) =>
+    apiFetch<GeneralPaymentDetail>(`/general-sql/payment-detail?codigo=${encodeURIComponent(codigo)}&pagoOid=${pagoOid}`),
+  paymentCompare: (codigo: string, pago1: number, pago2: number) =>
+    apiFetch<GeneralPaymentCompare>(`/general-sql/payment-compare?codigo=${encodeURIComponent(codigo)}&pago1=${pago1}&pago2=${pago2}`),
 
   clientServices: (oid: number | string) =>
     apiFetch<GeneralClientService[]>(`/general-sql/clients/${encodeURIComponent(String(oid))}/servicios`),
