@@ -30,6 +30,8 @@ export default function PayrollPayslipsPanel() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [detail, setDetail] = useState<GeneralPayslip | null>(null);
+  const [missingOnly, setMissingOnly] = useState(false);
+  const [activeEmployees, setActiveEmployees] = useState<GeneralActiveEmployee[]>([]);
 
   // Historial por empleado
   const [history, setHistory] = useState<GeneralEmployeePayment[]>([]);
