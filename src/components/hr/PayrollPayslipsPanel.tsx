@@ -7,6 +7,7 @@ import {
   type GeneralEmployeePayment,
   type GeneralPaymentDetail,
   type GeneralPaymentCompare,
+  type GeneralActiveEmployee,
 } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
