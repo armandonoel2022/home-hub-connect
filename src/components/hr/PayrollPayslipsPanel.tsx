@@ -165,6 +165,9 @@ export default function PayrollPayslipsPanel() {
               ))}
             </SelectContent>
           </Select>
+          <Button variant={missingOnly ? "default" : "outline"} size="sm" onClick={() => setMissingOnly(v => !v)}>
+            <UserX className="h-4 w-4 mr-2" /> Sin pago ({missing.length})
+          </Button>
           <Button variant="outline" size="sm" onClick={() => load()} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} /> Actualizar
           </Button>
