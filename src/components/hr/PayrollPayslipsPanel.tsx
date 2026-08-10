@@ -7,6 +7,7 @@ import {
   type GeneralEmployeePayment,
   type GeneralPaymentDetail,
   type GeneralPaymentCompare,
+  type GeneralActiveEmployee,
 } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Download, RefreshCw, Receipt, AlertTriangle, History, ArrowLeftRight } from "lucide-react";
+import { Search, Download, RefreshCw, Receipt, AlertTriangle, History, ArrowLeftRight, UserX } from "lucide-react";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP", maximumFractionDigits: 2 }).format(n || 0);
@@ -30,6 +31,8 @@ export default function PayrollPayslipsPanel() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [detail, setDetail] = useState<GeneralPayslip | null>(null);
+  const [missingOnly, setMissingOnly] = useState(false);
+  const [activeEmployees, setActiveEmployees] = useState<GeneralActiveEmployee[]>([]);
 
   // Historial por empleado
   const [history, setHistory] = useState<GeneralEmployeePayment[]>([]);
@@ -55,6 +58,7 @@ export default function PayrollPayslipsPanel() {
 
   useEffect(() => {
     generalSqlApi.payrollPeriods().then(setPeriods).catch(() => setPeriods([]));
+    generalSqlApi.employeesActive().then(r => setActiveEmployees(r.items || [])).catch(() => setActiveEmployees([]));
     load("last");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -73,6 +77,21 @@ export default function PayrollPayslipsPanel() {
     );
   }, [items, search]);
 
+  /** Empleados activos que NO tienen pago en el período consultado. */
+  const missing = useMemo(() => {
+    const paid = new Set(items.map(i => String(i.codigo || "").trim()).filter(Boolean));
+    return activeEmployees.filter(e => !paid.has(String(e.codigo || "").trim()));
+  }, [items, activeEmployees]);
+
+  const missingFiltered = useMemo(() => {
+    const s = search.trim().toLowerCase();
+    if (!s) return missing;
+    return missing.filter(e =>
+      [e.nombreCompleto, e.codigo, e.cedula, e.puesto, e.departamento]
+        .some(v => String(v || "").toLowerCase().includes(s))
+    );
+  }, [missing, search]);
+
   const openEmployee = async (row: GeneralPayslip) => {
     setDetail(row);
     setPayDetail(null); setCompare(null); setSelA(null); setSelB(null);
@@ -81,10 +100,14 @@ export default function PayrollPayslipsPanel() {
     try {
       const h = await generalSqlApi.employeePayments(row.codigo);
       setHistory(h);
-      if (h[0]) {
-        setSelA(h[0].pagoOid);
-        setSelB(h[1]?.pagoOid ?? null);
-        const d = await generalSqlApi.paymentDetail(row.codigo, h[0].pagoOid);
+      // Selecciona el pago que corresponde a la quincena elegida arriba (no siempre el último)
+      const match =
+        h.find(p => p.ano === row.ano && p.mes === row.mes && p.periodo === row.periodo) || h[0];
+      if (match) {
+        setSelA(match.pagoOid);
+        const idx = h.findIndex(p => p.pagoOid === match.pagoOid);
+        setSelB(h[idx + 1]?.pagoOid ?? h[1]?.pagoOid ?? null);
+        const d = await generalSqlApi.paymentDetail(row.codigo, match.pagoOid);
         setPayDetail(d);
       }
     } catch {
@@ -142,6 +165,9 @@ export default function PayrollPayslipsPanel() {
               ))}
             </SelectContent>
           </Select>
+          <Button variant={missingOnly ? "default" : "outline"} size="sm" onClick={() => setMissingOnly(v => !v)}>
+            <UserX className="h-4 w-4 mr-2" /> Sin pago ({missing.length})
+          </Button>
           <Button variant="outline" size="sm" onClick={() => load()} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} /> Actualizar
           </Button>
@@ -178,6 +204,39 @@ export default function PayrollPayslipsPanel() {
           </div>
         )}
 
+        {missingOnly ? (
+          <div className="overflow-auto max-h-[60vh] border rounded-md">
+            <div className="p-3 text-xs text-muted-foreground border-b">
+              Empleados activos en gSafeOne sin pago registrado en el período seleccionado. Pueden pertenecer al ciclo de
+              pago de los días 7 y 22, o tratarse de una omisión que debe verificarse.
+            </div>
+            <Table>
+              <TableHeader className="sticky top-0 bg-background z-10">
+                <TableRow>
+                  <TableHead className="min-w-[220px]">Empleado</TableHead>
+                  <TableHead>Código</TableHead>
+                  <TableHead>Cédula</TableHead>
+                  <TableHead>Puesto</TableHead>
+                  <TableHead>Departamento</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {missingFiltered.length === 0 && (
+                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Todos los empleados activos tienen pago en este período</TableCell></TableRow>
+                )}
+                {missingFiltered.map(e => (
+                  <TableRow key={e.oid}>
+                    <TableCell className="font-medium">{e.nombreCompleto}</TableCell>
+                    <TableCell className="font-mono text-xs">{e.codigo || "—"}</TableCell>
+                    <TableCell className="font-mono text-xs">{e.cedula || "—"}</TableCell>
+                    <TableCell>{e.puesto || "—"}</TableCell>
+                    <TableCell>{e.departamento || "—"}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        ) : (
         <div className="overflow-auto max-h-[60vh] border rounded-md">
           <Table>
             <TableHeader className="sticky top-0 bg-background z-10">
@@ -222,6 +281,7 @@ export default function PayrollPayslipsPanel() {
             </TableBody>
           </Table>
         </div>
+        )}
       </CardContent>
 
       {/* Detalle + historial del empleado */}
@@ -267,7 +327,7 @@ export default function PayrollPayslipsPanel() {
                           <TableCell className="text-right text-red-600">{fmt(h.totalDeducciones)}</TableCell>
                           <TableCell className="text-right font-semibold">{fmt(h.neto)}</TableCell>
                           <TableCell className="text-center whitespace-nowrap">
-                            <Button size="sm" variant={selA === h.pagoOid ? "default" : "outline"} className="h-6 px-2 mr-1" onClick={() => setSelA(h.pagoOid)}>A</Button>
+                            <Button size="sm" variant={selA === h.pagoOid ? "default" : "outline"} className="h-6 px-2 mr-1" onClick={() => loadPayDetail(h.pagoOid)}>A</Button>
                             <Button size="sm" variant={selB === h.pagoOid ? "default" : "outline"} className="h-6 px-2" onClick={() => setSelB(h.pagoOid)}>B</Button>
                           </TableCell>
                         </TableRow>
@@ -278,9 +338,39 @@ export default function PayrollPayslipsPanel() {
                     </TableBody>
                   </Table>
                 </div>
-                <Button size="sm" variant="outline" className="mt-2" disabled={!selA || !selB || selA === selB} onClick={runCompare}>
-                  <ArrowLeftRight className="h-4 w-4 mr-2" /> Comparar A vs B
-                </Button>
+
+                {/* Selección libre de cualquier par de quincenas */}
+                <div className="flex flex-wrap items-end gap-2 mt-2">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Quincena A</p>
+                    <Select value={selA ? String(selA) : ""} onValueChange={(v) => loadPayDetail(Number(v))}>
+                      <SelectTrigger className="w-[210px]"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                      <SelectContent>
+                        {history.map(h => (
+                          <SelectItem key={h.pagoOid} value={String(h.pagoOid)}>
+                            Q{h.periodo} {h.mes}/{h.ano} · {fmtDate(h.fecha)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Quincena B</p>
+                    <Select value={selB ? String(selB) : ""} onValueChange={(v) => setSelB(Number(v))}>
+                      <SelectTrigger className="w-[210px]"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                      <SelectContent>
+                        {history.map(h => (
+                          <SelectItem key={h.pagoOid} value={String(h.pagoOid)}>
+                            Q{h.periodo} {h.mes}/{h.ano} · {fmtDate(h.fecha)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button size="sm" variant="outline" disabled={!selA || !selB || selA === selB} onClick={runCompare}>
+                    <ArrowLeftRight className="h-4 w-4 mr-2" /> Comparar A vs B
+                  </Button>
+                </div>
               </div>
 
               {/* Comparación */}

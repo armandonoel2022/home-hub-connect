@@ -94,7 +94,7 @@ const DEPT_MULTI_ROUTES: Record<string, { label: string; route: string; icon: an
   "Recursos Humanos": [
     { label: "Solicitudes", route: "/rrhh/formularios", icon: FileText },
     { label: "Empleados", route: "/rrhh/empleados", icon: Users },
-    { label: "Nómina", route: "/rrhh/consolidado-nomina", icon: DollarSign },
+    { label: "Nómina", route: "/rrhh/nomina", icon: DollarSign },
     { label: "Beneficios", route: "/rrhh/beneficios", icon: Gift },
     { label: "Horas extras", route: "/rrhh/horas-extras", icon: Clock },
     { label: "Cumpleaños", route: "/rrhh/cumpleanos", icon: Cake },

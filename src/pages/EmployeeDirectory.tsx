@@ -331,11 +331,8 @@ const EmployeeDirectory = () => {
 {stats.total} empleados activos en GENERAL (gSafeOne) · {stats.depts} departamentos
               </p>
             </div>
-            <div className="flex gap-2 flex-wrap">
-              <Button onClick={() => navigate("/rrhh/nomina")} className="bg-gold text-black hover:bg-gold/90">
-                <Briefcase className="h-4 w-4 mr-2" /> Nómina y Cumplimiento TSS
-              </Button>
-            </div>
+            <div className="flex gap-2 flex-wrap" />
+
           </div>
 
 

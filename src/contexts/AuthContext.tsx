@@ -705,12 +705,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     const current = currentPassword || pendingLoginPasswordRef.current || "";
 
-    if (apiMode) {
+    // Sólo usamos el backend si la sesión fue autenticada realmente contra el servidor.
+    // Si el login cayó al modo local (token "mock-token-…"), el backend respondería 401
+    // ("no autorizado") y el usuario quedaría bloqueado sin poder cambiar su contraseña.
+    const token = localStorage.getItem("safeone_token") || "";
+    const serverSession = apiMode && !!token && !token.startsWith("mock-token");
+
+    if (serverSession) {
       // Persistir en el backend — esta es la fuente de verdad.
       try {
         await authApi.changePassword(current, newPassword);
       } catch (err: any) {
-        return { ok: false, message: err?.message || "No se pudo cambiar la contraseña" };
+        const msg = String(err?.message || "");
+        const unauthorized = /401|no autorizado|token/i.test(msg);
+        if (!unauthorized) {
+          return { ok: false, message: msg || "No se pudo cambiar la contraseña" };
+        }
+        // Sesión no válida en el servidor: continuamos con actualización local
+        console.warn("changePassword: sesión no válida en el servidor, aplicando cambio local");
       }
       // Refrescar lista de usuarios para reflejar mustChangePassword=false
       try {
