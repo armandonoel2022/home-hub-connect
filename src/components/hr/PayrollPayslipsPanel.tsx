@@ -271,7 +271,7 @@ export default function PayrollPayslipsPanel() {
                           <TableCell className="text-right text-red-600">{fmt(h.totalDeducciones)}</TableCell>
                           <TableCell className="text-right font-semibold">{fmt(h.neto)}</TableCell>
                           <TableCell className="text-center whitespace-nowrap">
-                            <Button size="sm" variant={selA === h.pagoOid ? "default" : "outline"} className="h-6 px-2 mr-1" onClick={() => setSelA(h.pagoOid)}>A</Button>
+                            <Button size="sm" variant={selA === h.pagoOid ? "default" : "outline"} className="h-6 px-2 mr-1" onClick={() => loadPayDetail(h.pagoOid)}>A</Button>
                             <Button size="sm" variant={selB === h.pagoOid ? "default" : "outline"} className="h-6 px-2" onClick={() => setSelB(h.pagoOid)}>B</Button>
                           </TableCell>
                         </TableRow>
@@ -282,9 +282,39 @@ export default function PayrollPayslipsPanel() {
                     </TableBody>
                   </Table>
                 </div>
-                <Button size="sm" variant="outline" className="mt-2" disabled={!selA || !selB || selA === selB} onClick={runCompare}>
-                  <ArrowLeftRight className="h-4 w-4 mr-2" /> Comparar A vs B
-                </Button>
+
+                {/* Selección libre de cualquier par de quincenas */}
+                <div className="flex flex-wrap items-end gap-2 mt-2">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Quincena A</p>
+                    <Select value={selA ? String(selA) : ""} onValueChange={(v) => loadPayDetail(Number(v))}>
+                      <SelectTrigger className="w-[210px]"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                      <SelectContent>
+                        {history.map(h => (
+                          <SelectItem key={h.pagoOid} value={String(h.pagoOid)}>
+                            Q{h.periodo} {h.mes}/{h.ano} · {fmtDate(h.fecha)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Quincena B</p>
+                    <Select value={selB ? String(selB) : ""} onValueChange={(v) => setSelB(Number(v))}>
+                      <SelectTrigger className="w-[210px]"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                      <SelectContent>
+                        {history.map(h => (
+                          <SelectItem key={h.pagoOid} value={String(h.pagoOid)}>
+                            Q{h.periodo} {h.mes}/{h.ano} · {fmtDate(h.fecha)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button size="sm" variant="outline" disabled={!selA || !selB || selA === selB} onClick={runCompare}>
+                    <ArrowLeftRight className="h-4 w-4 mr-2" /> Comparar A vs B
+                  </Button>
+                </div>
               </div>
 
               {/* Comparación */}
