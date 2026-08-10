@@ -58,6 +58,7 @@ export default function PayrollPayslipsPanel() {
 
   useEffect(() => {
     generalSqlApi.payrollPeriods().then(setPeriods).catch(() => setPeriods([]));
+    generalSqlApi.employeesActive().then(r => setActiveEmployees(r.items || [])).catch(() => setActiveEmployees([]));
     load("last");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -75,6 +76,21 @@ export default function PayrollPayslipsPanel() {
       [i.empleado, i.codigo, i.cedula, i.puesto].some(v => String(v || "").toLowerCase().includes(s))
     );
   }, [items, search]);
+
+  /** Empleados activos que NO tienen pago en el período consultado. */
+  const missing = useMemo(() => {
+    const paid = new Set(items.map(i => String(i.codigo || "").trim()).filter(Boolean));
+    return activeEmployees.filter(e => !paid.has(String(e.codigo || "").trim()));
+  }, [items, activeEmployees]);
+
+  const missingFiltered = useMemo(() => {
+    const s = search.trim().toLowerCase();
+    if (!s) return missing;
+    return missing.filter(e =>
+      [e.nombreCompleto, e.codigo, e.cedula, e.puesto, e.departamento]
+        .some(v => String(v || "").toLowerCase().includes(s))
+    );
+  }, [missing, search]);
 
   const openEmployee = async (row: GeneralPayslip) => {
     setDetail(row);
