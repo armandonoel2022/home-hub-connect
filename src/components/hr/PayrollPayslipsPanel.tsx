@@ -81,10 +81,14 @@ export default function PayrollPayslipsPanel() {
     try {
       const h = await generalSqlApi.employeePayments(row.codigo);
       setHistory(h);
-      if (h[0]) {
-        setSelA(h[0].pagoOid);
-        setSelB(h[1]?.pagoOid ?? null);
-        const d = await generalSqlApi.paymentDetail(row.codigo, h[0].pagoOid);
+      // Selecciona el pago que corresponde a la quincena elegida arriba (no siempre el último)
+      const match =
+        h.find(p => p.ano === row.ano && p.mes === row.mes && p.periodo === row.periodo) || h[0];
+      if (match) {
+        setSelA(match.pagoOid);
+        const idx = h.findIndex(p => p.pagoOid === match.pagoOid);
+        setSelB(h[idx + 1]?.pagoOid ?? h[1]?.pagoOid ?? null);
+        const d = await generalSqlApi.paymentDetail(row.codigo, match.pagoOid);
         setPayDetail(d);
       }
     } catch {
