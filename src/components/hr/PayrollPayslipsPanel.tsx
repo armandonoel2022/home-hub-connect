@@ -182,6 +182,39 @@ export default function PayrollPayslipsPanel() {
           </div>
         )}
 
+        {missingOnly ? (
+          <div className="overflow-auto max-h-[60vh] border rounded-md">
+            <div className="p-3 text-xs text-muted-foreground border-b">
+              Empleados activos en gSafeOne sin pago registrado en el período seleccionado. Pueden pertenecer al ciclo de
+              pago de los días 7 y 22, o tratarse de una omisión que debe verificarse.
+            </div>
+            <Table>
+              <TableHeader className="sticky top-0 bg-background z-10">
+                <TableRow>
+                  <TableHead className="min-w-[220px]">Empleado</TableHead>
+                  <TableHead>Código</TableHead>
+                  <TableHead>Cédula</TableHead>
+                  <TableHead>Puesto</TableHead>
+                  <TableHead>Departamento</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {missingFiltered.length === 0 && (
+                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Todos los empleados activos tienen pago en este período</TableCell></TableRow>
+                )}
+                {missingFiltered.map(e => (
+                  <TableRow key={e.oid}>
+                    <TableCell className="font-medium">{e.nombreCompleto}</TableCell>
+                    <TableCell className="font-mono text-xs">{e.codigo || "—"}</TableCell>
+                    <TableCell className="font-mono text-xs">{e.cedula || "—"}</TableCell>
+                    <TableCell>{e.puesto || "—"}</TableCell>
+                    <TableCell>{e.departamento || "—"}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        ) : (
         <div className="overflow-auto max-h-[60vh] border rounded-md">
           <Table>
             <TableHeader className="sticky top-0 bg-background z-10">
@@ -226,6 +259,7 @@ export default function PayrollPayslipsPanel() {
             </TableBody>
           </Table>
         </div>
+        )}
       </CardContent>
 
       {/* Detalle + historial del empleado */}
