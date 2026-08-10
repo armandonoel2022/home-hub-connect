@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Download, RefreshCw, Receipt, AlertTriangle, History, ArrowLeftRight } from "lucide-react";
+import { Search, Download, RefreshCw, Receipt, AlertTriangle, History, ArrowLeftRight, UserX } from "lucide-react";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP", maximumFractionDigits: 2 }).format(n || 0);
