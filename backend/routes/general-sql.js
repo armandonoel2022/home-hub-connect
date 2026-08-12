@@ -831,9 +831,31 @@ function computeAge(v) {
   return age >= 0 && age < 120 ? age : null;
 }
 
+// Columnas binarias de Armamento (fotos). NUNCA se leen en el listado: traer
+// varbinary(max) por cada arma inflaba la respuesta y hacía fallar/expirar la
+// carga del expediente en clientes con muchas armas (pantalla en blanco).
+const WEAPON_BLOB_COLS = {
+  licenciaFrente: 'FotoLicenciaFrente',
+  licenciaDorso: 'FotoLicenciaDorso',
+  arma1: 'FotoArma1',
+  arma2: 'FotoArma2',
+  arma3: 'FotoArma3',
+  arma4: 'FotoArma4',
+};
+
 // Lee todas las armas de Armamento con sus catálogos resueltos.
 async function readWeapons() {
-  const rows = await sql.query(`SELECT * FROM Armamento WHERE GCRecord IS NULL`);
+  // Solo columnas escalares + banderas de existencia de cada foto.
+  const colsMap = await tableColumnsMap('Armamento');
+  const blobNames = new Set(Object.values(WEAPON_BLOB_COLS).map((c) => c.toLowerCase()));
+  const scalarCols = [...colsMap.values()].filter((c) => !blobNames.has(String(c).toLowerCase()));
+  const selectList = scalarCols.length ? scalarCols.map((c) => `[${c}]`).join(', ') : '*';
+  const flagList = Object.entries(WEAPON_BLOB_COLS)
+    .filter(([, col]) => colsMap.has(col.toLowerCase()))
+    .map(([key, col]) => `CASE WHEN DATALENGTH([${col}]) > 0 THEN 1 ELSE 0 END AS [has_${key}]`);
+  const rows = await sql.query(
+    `SELECT ${selectList}${flagList.length ? ', ' + flagList.join(', ') : ''} FROM Armamento WHERE GCRecord IS NULL`
+  );
   const [marcaCat, tipoCat, calCat, catCat] = await Promise.all([
     catalogMap(['MarcaArma', 'Marca', 'Marcas']),
     catalogMap(['TipoArma', 'TipoArmamento', 'Tipo']),
