@@ -1156,6 +1156,11 @@ router.get('/expediente', auth, guard, async (req, res) => {
               estatus: arma.estatus,
               propietario: arma.propietario,
               capsulas: arma.capsulas ?? null,
+              vence: arma.vence ?? null,
+              permanente: !!arma.permanente,
+              fotoLicenciaFrenteDb: !!arma.fotoLicenciaFrenteDb,
+              fotoLicenciaDorsoDb: !!arma.fotoLicenciaDorsoDb,
+              fotosArmaDb: arma.fotosArmaDb || [],
             }
           : null,
         novedad: r.NovedadOID != null,
