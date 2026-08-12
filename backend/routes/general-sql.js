@@ -856,11 +856,12 @@ async function readWeapons() {
   const rows = await sql.query(
     `SELECT ${selectList}${flagList.length ? ', ' + flagList.join(', ') : ''} FROM Armamento WHERE GCRecord IS NULL`
   );
-  const [marcaCat, tipoCat, calCat, catCat] = await Promise.all([
+  const [marcaCat, tipoCat, calCat, catCat, catalogEstatus] = await Promise.all([
     catalogMap(['MarcaArma', 'Marca', 'Marcas']),
     catalogMap(['TipoArma', 'TipoArmamento', 'Tipo']),
     catalogMap(['Calibre', 'CalibreArma', 'Calibres']),
     catalogMap(['CategoriaArma', 'Categoria', 'Categorias']),
+    catalogMap(['EstatusArma', 'EstatusArmamento', 'Estatus']),
   ]);
   const pick = (r, ...names) => {
     for (const n of names) {
