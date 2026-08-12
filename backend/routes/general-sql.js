@@ -1033,6 +1033,11 @@ async function weaponsMap() {
         estatus: w.estatus,
         propietario: w.propietario,
         capsulas: w.capsulas,
+        vence: w.vence,
+        permanente: w.permanente,
+        fotoLicenciaFrenteDb: w.fotoLicenciaFrenteDb,
+        fotoLicenciaDorsoDb: w.fotoLicenciaDorsoDb,
+        fotosArmaDb: w.fotosArmaDb,
       });
     }
   } catch (_) { /* Armamento puede no existir; se ignora */ }
