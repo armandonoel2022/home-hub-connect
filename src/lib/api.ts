@@ -1593,6 +1593,12 @@ export interface GeneralWeaponDetail {
   estatus: string | null;
   propietario: string | null;
   capsulas?: number | null;
+  vence?: string | null;
+  permanente?: boolean;
+  /** Fotos de licencia/arma almacenadas en gSafeOne (se sirven bajo demanda) */
+  fotoLicenciaFrenteDb?: boolean;
+  fotoLicenciaDorsoDb?: boolean;
+  fotosArmaDb?: string[];
 }
 
 export interface GeneralExpedientePuesto {
