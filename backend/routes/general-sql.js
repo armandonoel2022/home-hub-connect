@@ -933,6 +933,60 @@ router.get('/weapons', auth, guard, async (req, res) => {
   } catch (e) { res.status(502).json({ message: e.message }); }
 });
 
+// ─── Imagen (licencia / arma) almacenada en gSafeOne ───
+// Las fotos viven como varbinary en Armamento; se sirven bajo demanda para no
+// cargar binarios en el listado. Acepta el token por query (?token=) porque un
+// <img> no puede enviar el header Authorization.
+const jwtLib = require('jsonwebtoken');
+function authImage(req, res, next) {
+  const header = req.headers.authorization;
+  const token = header && header.startsWith('Bearer ')
+    ? header.split(' ')[1]
+    : (req.query.token || null);
+  if (!token) return res.status(401).json({ message: 'Token requerido' });
+  try {
+    req.user = jwtLib.verify(String(token), process.env.JWT_SECRET);
+    next();
+  } catch (_) {
+    return res.status(401).json({ message: 'Token inválido o expirado' });
+  }
+}
+
+function sniffImageType(buf) {
+  if (!buf || buf.length < 4) return 'application/octet-stream';
+  if (buf[0] === 0xff && buf[1] === 0xd8) return 'image/jpeg';
+  if (buf[0] === 0x89 && buf[1] === 0x50) return 'image/png';
+  if (buf[0] === 0x47 && buf[1] === 0x49) return 'image/gif';
+  if (buf[0] === 0x42 && buf[1] === 0x4d) return 'image/bmp';
+  return 'image/jpeg';
+}
+
+router.get('/weapons/:oid/image/:kind', authImage, guard, async (req, res) => {
+  try {
+    const col = WEAPON_BLOB_COLS[req.params.kind];
+    if (!col) return res.status(400).json({ message: 'Tipo de imagen inválido' });
+    const oid = Number(req.params.oid);
+    if (!Number.isFinite(oid)) return res.status(400).json({ message: 'OID inválido' });
+    const cols = await tableColumnsMap('Armamento');
+    if (!cols.has(col.toLowerCase())) return res.status(404).json({ message: 'Columna no disponible' });
+    const rows = await sql.query(
+      `SELECT [${col}] AS Img FROM Armamento WHERE OID = @oid`, { oid }
+    );
+    let img = rows[0]?.Img;
+    if (!img) return res.status(404).json({ message: 'Sin imagen' });
+    if (!Buffer.isBuffer(img)) img = Buffer.from(img);
+    // XAF a veces guarda las imágenes con encabezado de serialización .NET;
+    // recortamos hasta la firma real del archivo si aparece más adelante.
+    const jpg = img.indexOf(Buffer.from([0xff, 0xd8, 0xff]));
+    const png = img.indexOf(Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+    const start = [jpg, png].filter((i) => i > 0).sort((a, b) => a - b)[0];
+    if (start && start < 512) img = img.subarray(start);
+    res.set('Content-Type', sniffImageType(img));
+    res.set('Cache-Control', 'private, max-age=3600');
+    res.send(img);
+  } catch (e) { res.status(502).json({ message: e.message }); }
+});
+
 // ─── Expediente de Clientes (vivo desde GENERAL) ───
 // Arma el 360° por cliente a partir del Reporte Diario, replicando la
 // estructura oficial del query de Operaciones:
