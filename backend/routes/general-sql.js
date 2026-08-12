@@ -873,25 +873,40 @@ async function readWeapons() {
     if (code == null) return null;
     return cat.get(Number(code)) || String(code);
   };
+  // Todo campo de texto se normaliza a string: si llega un número o una fecha
+  // desde SQL, el front lo renderiza directo y rompía la vista (pantalla en blanco).
+  const txt = (v) => {
+    const c = cleanStr(v);
+    if (c == null) return null;
+    if (c instanceof Date) return c.toISOString();
+    const s = String(c).trim();
+    return s === '' || s.toUpperCase() === 'NULL' ? null : s;
+  };
   return rows.map((r) => {
     const marcaCode = pick(r, 'Marca');
     const tipoCode = pick(r, 'Tipo');
     const calCode = pick(r, 'Calibre');
     const catCode = pick(r, 'Categoria');
+    const flag = (k) => Number(r[`has_${k}`]) === 1;
     return {
       oid: pick(r, 'OID'),
       codigo: pick(r, 'Codigo'),
-      serie: cleanStr(pick(r, 'Serie', 'NumeroSerie', 'NoSerie', 'Serial')),
-      marca: resolve(marcaCat, marcaCode),
-      tipo: resolve(tipoCat, tipoCode),
-      calibre: resolve(calCat, calCode),
-      categoria: resolve(catCat, catCode),
-      noLicencia: cleanStr(pick(r, 'NoLicencia', 'Licencia', 'NoRegistro', 'Registro')),
-      estatus: cleanStr(pick(r, 'Estatus')),
+      serie: txt(pick(r, 'Serie', 'NumeroSerie', 'NoSerie', 'Serial')),
+      marca: txt(resolve(marcaCat, marcaCode)),
+      tipo: txt(resolve(tipoCat, tipoCode)),
+      calibre: txt(resolve(calCat, calCode)),
+      categoria: txt(resolve(catCat, catCode)),
+      noLicencia: txt(pick(r, 'NoLicencia', 'Licencia', 'NoRegistro', 'Registro')),
+      estatus: txt(resolve(catalogEstatus, pick(r, 'Estatus'))),
       permanente: pick(r, 'Permanente') === 1 || pick(r, 'Permanente') === true,
-      vence: cleanStr(pick(r, 'Vence')),
-      nota: cleanStr(pick(r, 'Nota')),
-      propietario: cleanStr(pick(r, 'Propietario')),
+      vence: txt(pick(r, 'Vence')),
+      nota: txt(pick(r, 'Nota')),
+      propietario: txt(pick(r, 'Propietario')),
+      // Fotos de licencia y del arma guardadas en gSafeOne (varbinary). Se
+      // exponen como banderas; el binario se sirve bajo demanda por endpoint.
+      fotoLicenciaFrenteDb: flag('licenciaFrente'),
+      fotoLicenciaDorsoDb: flag('licenciaDorso'),
+      fotosArmaDb: ['arma1', 'arma2', 'arma3', 'arma4'].filter((k) => flag(k)),
       // Cantidad de cápsulas / munición asignada al arma (columna de Armamento
       // en gSafeOne). Se prueban varios nombres posibles de columna.
       capsulas: (() => {
