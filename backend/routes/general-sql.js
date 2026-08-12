@@ -24,7 +24,8 @@ function canAccess(user) {
   if (!user) return false;
   if (user.isAdmin) return true;
   const dept = String(user.department || '').toLowerCase();
-  return /recursos humanos|rrhh|tecnolog|gerencia/.test(dept);
+  // Operaciones también consulta el Expediente de Clientes (armas/puestos).
+  return /recursos humanos|rrhh|tecnolog|gerencia|operac/.test(dept);
 }
 
 function guard(req, res, next) {
@@ -830,14 +831,37 @@ function computeAge(v) {
   return age >= 0 && age < 120 ? age : null;
 }
 
+// Columnas binarias de Armamento (fotos). NUNCA se leen en el listado: traer
+// varbinary(max) por cada arma inflaba la respuesta y hacía fallar/expirar la
+// carga del expediente en clientes con muchas armas (pantalla en blanco).
+const WEAPON_BLOB_COLS = {
+  licenciaFrente: 'FotoLicenciaFrente',
+  licenciaDorso: 'FotoLicenciaDorso',
+  arma1: 'FotoArma1',
+  arma2: 'FotoArma2',
+  arma3: 'FotoArma3',
+  arma4: 'FotoArma4',
+};
+
 // Lee todas las armas de Armamento con sus catálogos resueltos.
 async function readWeapons() {
-  const rows = await sql.query(`SELECT * FROM Armamento WHERE GCRecord IS NULL`);
-  const [marcaCat, tipoCat, calCat, catCat] = await Promise.all([
+  // Solo columnas escalares + banderas de existencia de cada foto.
+  const colsMap = await tableColumnsMap('Armamento');
+  const blobNames = new Set(Object.values(WEAPON_BLOB_COLS).map((c) => c.toLowerCase()));
+  const scalarCols = [...colsMap.values()].filter((c) => !blobNames.has(String(c).toLowerCase()));
+  const selectList = scalarCols.length ? scalarCols.map((c) => `[${c}]`).join(', ') : '*';
+  const flagList = Object.entries(WEAPON_BLOB_COLS)
+    .filter(([, col]) => colsMap.has(col.toLowerCase()))
+    .map(([key, col]) => `CASE WHEN DATALENGTH([${col}]) > 0 THEN 1 ELSE 0 END AS [has_${key}]`);
+  const rows = await sql.query(
+    `SELECT ${selectList}${flagList.length ? ', ' + flagList.join(', ') : ''} FROM Armamento WHERE GCRecord IS NULL`
+  );
+  const [marcaCat, tipoCat, calCat, catCat, catalogEstatus] = await Promise.all([
     catalogMap(['MarcaArma', 'Marca', 'Marcas']),
     catalogMap(['TipoArma', 'TipoArmamento', 'Tipo']),
     catalogMap(['Calibre', 'CalibreArma', 'Calibres']),
     catalogMap(['CategoriaArma', 'Categoria', 'Categorias']),
+    catalogMap(['EstatusArma', 'EstatusArmamento', 'Estatus']),
   ]);
   const pick = (r, ...names) => {
     for (const n of names) {
@@ -850,25 +874,40 @@ async function readWeapons() {
     if (code == null) return null;
     return cat.get(Number(code)) || String(code);
   };
+  // Todo campo de texto se normaliza a string: si llega un número o una fecha
+  // desde SQL, el front lo renderiza directo y rompía la vista (pantalla en blanco).
+  const txt = (v) => {
+    const c = cleanStr(v);
+    if (c == null) return null;
+    if (c instanceof Date) return c.toISOString();
+    const s = String(c).trim();
+    return s === '' || s.toUpperCase() === 'NULL' ? null : s;
+  };
   return rows.map((r) => {
     const marcaCode = pick(r, 'Marca');
     const tipoCode = pick(r, 'Tipo');
     const calCode = pick(r, 'Calibre');
     const catCode = pick(r, 'Categoria');
+    const flag = (k) => Number(r[`has_${k}`]) === 1;
     return {
       oid: pick(r, 'OID'),
       codigo: pick(r, 'Codigo'),
-      serie: cleanStr(pick(r, 'Serie', 'NumeroSerie', 'NoSerie', 'Serial')),
-      marca: resolve(marcaCat, marcaCode),
-      tipo: resolve(tipoCat, tipoCode),
-      calibre: resolve(calCat, calCode),
-      categoria: resolve(catCat, catCode),
-      noLicencia: cleanStr(pick(r, 'NoLicencia', 'Licencia', 'NoRegistro', 'Registro')),
-      estatus: cleanStr(pick(r, 'Estatus')),
+      serie: txt(pick(r, 'Serie', 'NumeroSerie', 'NoSerie', 'Serial')),
+      marca: txt(resolve(marcaCat, marcaCode)),
+      tipo: txt(resolve(tipoCat, tipoCode)),
+      calibre: txt(resolve(calCat, calCode)),
+      categoria: txt(resolve(catCat, catCode)),
+      noLicencia: txt(pick(r, 'NoLicencia', 'Licencia', 'NoRegistro', 'Registro')),
+      estatus: txt(resolve(catalogEstatus, pick(r, 'Estatus'))),
       permanente: pick(r, 'Permanente') === 1 || pick(r, 'Permanente') === true,
-      vence: cleanStr(pick(r, 'Vence')),
-      nota: cleanStr(pick(r, 'Nota')),
-      propietario: cleanStr(pick(r, 'Propietario')),
+      vence: txt(pick(r, 'Vence')),
+      nota: txt(pick(r, 'Nota')),
+      propietario: txt(pick(r, 'Propietario')),
+      // Fotos de licencia y del arma guardadas en gSafeOne (varbinary). Se
+      // exponen como banderas; el binario se sirve bajo demanda por endpoint.
+      fotoLicenciaFrenteDb: flag('licenciaFrente'),
+      fotoLicenciaDorsoDb: flag('licenciaDorso'),
+      fotosArmaDb: ['arma1', 'arma2', 'arma3', 'arma4'].filter((k) => flag(k)),
       // Cantidad de cápsulas / munición asignada al arma (columna de Armamento
       // en gSafeOne). Se prueban varios nombres posibles de columna.
       capsulas: (() => {
@@ -891,6 +930,60 @@ async function readWeapons() {
 router.get('/weapons', auth, guard, async (req, res) => {
   try {
     res.json(await readWeapons());
+  } catch (e) { res.status(502).json({ message: e.message }); }
+});
+
+// ─── Imagen (licencia / arma) almacenada en gSafeOne ───
+// Las fotos viven como varbinary en Armamento; se sirven bajo demanda para no
+// cargar binarios en el listado. Acepta el token por query (?token=) porque un
+// <img> no puede enviar el header Authorization.
+const jwtLib = require('jsonwebtoken');
+function authImage(req, res, next) {
+  const header = req.headers.authorization;
+  const token = header && header.startsWith('Bearer ')
+    ? header.split(' ')[1]
+    : (req.query.token || null);
+  if (!token) return res.status(401).json({ message: 'Token requerido' });
+  try {
+    req.user = jwtLib.verify(String(token), process.env.JWT_SECRET);
+    next();
+  } catch (_) {
+    return res.status(401).json({ message: 'Token inválido o expirado' });
+  }
+}
+
+function sniffImageType(buf) {
+  if (!buf || buf.length < 4) return 'application/octet-stream';
+  if (buf[0] === 0xff && buf[1] === 0xd8) return 'image/jpeg';
+  if (buf[0] === 0x89 && buf[1] === 0x50) return 'image/png';
+  if (buf[0] === 0x47 && buf[1] === 0x49) return 'image/gif';
+  if (buf[0] === 0x42 && buf[1] === 0x4d) return 'image/bmp';
+  return 'image/jpeg';
+}
+
+router.get('/weapons/:oid/image/:kind', authImage, guard, async (req, res) => {
+  try {
+    const col = WEAPON_BLOB_COLS[req.params.kind];
+    if (!col) return res.status(400).json({ message: 'Tipo de imagen inválido' });
+    const oid = Number(req.params.oid);
+    if (!Number.isFinite(oid)) return res.status(400).json({ message: 'OID inválido' });
+    const cols = await tableColumnsMap('Armamento');
+    if (!cols.has(col.toLowerCase())) return res.status(404).json({ message: 'Columna no disponible' });
+    const rows = await sql.query(
+      `SELECT [${col}] AS Img FROM Armamento WHERE OID = @oid`, { oid }
+    );
+    let img = rows[0]?.Img;
+    if (!img) return res.status(404).json({ message: 'Sin imagen' });
+    if (!Buffer.isBuffer(img)) img = Buffer.from(img);
+    // XAF a veces guarda las imágenes con encabezado de serialización .NET;
+    // recortamos hasta la firma real del archivo si aparece más adelante.
+    const jpg = img.indexOf(Buffer.from([0xff, 0xd8, 0xff]));
+    const png = img.indexOf(Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+    const start = [jpg, png].filter((i) => i > 0).sort((a, b) => a - b)[0];
+    if (start && start < 512) img = img.subarray(start);
+    res.set('Content-Type', sniffImageType(img));
+    res.set('Cache-Control', 'private, max-age=3600');
+    res.send(img);
   } catch (e) { res.status(502).json({ message: e.message }); }
 });
 
@@ -940,6 +1033,11 @@ async function weaponsMap() {
         estatus: w.estatus,
         propietario: w.propietario,
         capsulas: w.capsulas,
+        vence: w.vence,
+        permanente: w.permanente,
+        fotoLicenciaFrenteDb: w.fotoLicenciaFrenteDb,
+        fotoLicenciaDorsoDb: w.fotoLicenciaDorsoDb,
+        fotosArmaDb: w.fotosArmaDb,
       });
     }
   } catch (_) { /* Armamento puede no existir; se ignora */ }
@@ -1058,6 +1156,11 @@ router.get('/expediente', auth, guard, async (req, res) => {
               estatus: arma.estatus,
               propietario: arma.propietario,
               capsulas: arma.capsulas ?? null,
+              vence: arma.vence ?? null,
+              permanente: !!arma.permanente,
+              fotoLicenciaFrenteDb: !!arma.fotoLicenciaFrenteDb,
+              fotoLicenciaDorsoDb: !!arma.fotoLicenciaDorsoDb,
+              fotosArmaDb: arma.fotosArmaDb || [],
             }
           : null,
         novedad: r.NovedadOID != null,

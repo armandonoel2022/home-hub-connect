@@ -809,20 +809,27 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
             <p className="text-xs font-semibold text-muted-foreground">Licencia (frente / dorso)</p>
             <div className="flex flex-wrap gap-3">
               {(["licenciaFrente", "licenciaDorso"] as const).map((kind) => {
-                const url = kind === "licenciaFrente" ? ov.fotoLicenciaFrente : ov.fotoLicenciaDorso;
+                const ovUrl = kind === "licenciaFrente" ? ov.fotoLicenciaFrente : ov.fotoLicenciaDorso;
+                // Si no hay imagen subida a la intranet, se usa la que ya está
+                // guardada en gSafeOne (Armamento.FotoLicenciaFrente/Dorso).
+                const hasDb = kind === "licenciaFrente" ? puesto.arma?.fotoLicenciaFrenteDb : puesto.arma?.fotoLicenciaDorsoDb;
+                const dbUrl = hasDb && puesto.arma?.oid != null ? generalSqlApi.weaponImageUrl(puesto.arma.oid, kind) : null;
+                const url = ovUrl ? getFileUrl(ovUrl) : dbUrl;
                 return (
                   <div key={kind} className="space-y-1">
-                    <p className="text-[10px] uppercase text-muted-foreground">{kind === "licenciaFrente" ? "Frente" : "Dorso"}</p>
+                    <p className="text-[10px] uppercase text-muted-foreground">
+                      {kind === "licenciaFrente" ? "Frente" : "Dorso"}{!ovUrl && dbUrl ? " · GENERAL" : ""}
+                    </p>
                     {url ? (
                       <div className="relative">
                         <img
-                          src={getFileUrl(url)}
+                          src={url}
                           alt="Licencia"
                           className="h-24 w-36 object-cover rounded border cursor-zoom-in hover:opacity-90"
-                          onClick={() => setLightbox(getFileUrl(url))}
+                          onClick={() => setLightbox(url)}
                         />
-                        {ctx.canEdit && (
-                          <button onClick={() => removePhoto(url, kind)} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5">
+                        {ctx.canEdit && ovUrl && (
+                          <button onClick={() => removePhoto(ovUrl, kind)} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5">
                             <X className="h-3 w-3" />
                           </button>
                         )}
@@ -899,8 +906,15 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
   const ov = weaponKey ? ctx.overlay[weaponKey] : undefined;
   const arma = applyWeaponOverride(puesto.arma, ov);
   const fotosArma = ov?.fotosArma || [];
-  const fotoLicenciaFrente = ov?.fotoLicenciaFrente || null;
-  const fotoLicenciaDorso = ov?.fotoLicenciaDorso || null;
+  // Fotos de licencia: primero la capa editable de la intranet y, si no existe,
+  // la imagen guardada en gSafeOne (Armamento.FotoLicenciaFrente/Dorso).
+  const armaOid = puesto.arma?.oid ?? null;
+  const fotoLicenciaFrente = ov?.fotoLicenciaFrente
+    ? getFileUrl(ov.fotoLicenciaFrente)
+    : (puesto.arma?.fotoLicenciaFrenteDb && armaOid != null ? generalSqlApi.weaponImageUrl(armaOid, "licenciaFrente") : null);
+  const fotoLicenciaDorso = ov?.fotoLicenciaDorso
+    ? getFileUrl(ov.fotoLicenciaDorso)
+    : (puesto.arma?.fotoLicenciaDorsoDb && armaOid != null ? generalSqlApi.weaponImageUrl(armaOid, "licenciaDorso") : null);
   const tipoArmaRaw = arma?.tipo || arma?.categoria || arma?.calibre || armed?.weaponCaliber || armed?.weaponType || puesto.armaModelo;
   const tipoArma = displayWeaponType(tipoArmaRaw);
   const serialArma = realSerial(arma?.serie || puesto.armaSerial || armed?.weaponSerial);
@@ -993,13 +1007,13 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
                     </button>
                   ))}
                   {fotoLicenciaFrente && (
-                    <button onClick={() => setLightbox(getFileUrl(fotoLicenciaFrente))} className="h-20 w-28 overflow-hidden rounded-md border border-border bg-background hover:border-primary" title="Ver licencia frente">
-                      <img src={getFileUrl(fotoLicenciaFrente)} alt="Licencia frente" className="h-full w-full object-cover" />
+                    <button onClick={() => setLightbox(fotoLicenciaFrente)} className="h-20 w-28 overflow-hidden rounded-md border border-border bg-background hover:border-primary" title="Ver licencia frente">
+                      <img src={fotoLicenciaFrente} alt="Licencia frente" className="h-full w-full object-cover" />
                     </button>
                   )}
                   {fotoLicenciaDorso && (
-                    <button onClick={() => setLightbox(getFileUrl(fotoLicenciaDorso))} className="h-20 w-28 overflow-hidden rounded-md border border-border bg-background hover:border-primary" title="Ver licencia dorso">
-                      <img src={getFileUrl(fotoLicenciaDorso)} alt="Licencia dorso" className="h-full w-full object-cover" />
+                    <button onClick={() => setLightbox(fotoLicenciaDorso)} className="h-20 w-28 overflow-hidden rounded-md border border-border bg-background hover:border-primary" title="Ver licencia dorso">
+                      <img src={fotoLicenciaDorso} alt="Licencia dorso" className="h-full w-full object-cover" />
                     </button>
                   )}
                   {!fotosArma.length && !fotoLicenciaFrente && !fotoLicenciaDorso && (

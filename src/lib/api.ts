@@ -1241,6 +1241,15 @@ export const generalSqlApi = {
     apiFetch<GeneralEmployee[]>(`/general-sql/employees?inactivos=${incluirInactivos}`),
   loans: () => apiFetch<{ count: number; totals: { prestado: number; cobrado: number; saldo: number }; items: GeneralLoan[] }>("/general-sql/loans"),
   weapons: () => apiFetch<GeneralWeapon[]>("/general-sql/weapons"),
+  /** URL directa de una foto (licencia/arma) guardada en gSafeOne. */
+  weaponImageUrl: (
+    oid: number | string,
+    kind: "licenciaFrente" | "licenciaDorso" | "arma1" | "arma2" | "arma3" | "arma4",
+  ) => {
+    if (!BASE_URL) return "";
+    const token = typeof localStorage !== "undefined" ? localStorage.getItem("safeone_token") : null;
+    return `${BASE_URL}/general-sql/weapons/${encodeURIComponent(String(oid))}/image/${kind}${token ? `?token=${encodeURIComponent(token)}` : ""}`;
+  },
   analyze: (body: { current: string | number; previous?: string | number; excelRows?: any[] }) =>
     apiFetch<PayrollAnalysis>("/general-sql/analyze", { method: "POST", body: JSON.stringify(body) }),
   employeeHistory: (empleadoOID: string | number) =>
@@ -1593,6 +1602,12 @@ export interface GeneralWeaponDetail {
   estatus: string | null;
   propietario: string | null;
   capsulas?: number | null;
+  vence?: string | null;
+  permanente?: boolean;
+  /** Fotos de licencia/arma almacenadas en gSafeOne (se sirven bajo demanda) */
+  fotoLicenciaFrenteDb?: boolean;
+  fotoLicenciaDorsoDb?: boolean;
+  fotosArmaDb?: string[];
 }
 
 export interface GeneralExpedientePuesto {
