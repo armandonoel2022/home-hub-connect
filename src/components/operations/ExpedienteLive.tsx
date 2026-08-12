@@ -1007,13 +1007,13 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
                     </button>
                   ))}
                   {fotoLicenciaFrente && (
-                    <button onClick={() => setLightbox(getFileUrl(fotoLicenciaFrente))} className="h-20 w-28 overflow-hidden rounded-md border border-border bg-background hover:border-primary" title="Ver licencia frente">
-                      <img src={getFileUrl(fotoLicenciaFrente)} alt="Licencia frente" className="h-full w-full object-cover" />
+                    <button onClick={() => setLightbox(fotoLicenciaFrente)} className="h-20 w-28 overflow-hidden rounded-md border border-border bg-background hover:border-primary" title="Ver licencia frente">
+                      <img src={fotoLicenciaFrente} alt="Licencia frente" className="h-full w-full object-cover" />
                     </button>
                   )}
                   {fotoLicenciaDorso && (
-                    <button onClick={() => setLightbox(getFileUrl(fotoLicenciaDorso))} className="h-20 w-28 overflow-hidden rounded-md border border-border bg-background hover:border-primary" title="Ver licencia dorso">
-                      <img src={getFileUrl(fotoLicenciaDorso)} alt="Licencia dorso" className="h-full w-full object-cover" />
+                    <button onClick={() => setLightbox(fotoLicenciaDorso)} className="h-20 w-28 overflow-hidden rounded-md border border-border bg-background hover:border-primary" title="Ver licencia dorso">
+                      <img src={fotoLicenciaDorso} alt="Licencia dorso" className="h-full w-full object-cover" />
                     </button>
                   )}
                   {!fotosArma.length && !fotoLicenciaFrente && !fotoLicenciaDorso && (
