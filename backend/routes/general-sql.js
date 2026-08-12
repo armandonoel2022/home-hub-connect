@@ -24,7 +24,8 @@ function canAccess(user) {
   if (!user) return false;
   if (user.isAdmin) return true;
   const dept = String(user.department || '').toLowerCase();
-  return /recursos humanos|rrhh|tecnolog|gerencia/.test(dept);
+  // Operaciones también consulta el Expediente de Clientes (armas/puestos).
+  return /recursos humanos|rrhh|tecnolog|gerencia|operac/.test(dept);
 }
 
 function guard(req, res, next) {
