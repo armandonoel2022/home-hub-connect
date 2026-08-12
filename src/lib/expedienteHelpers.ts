@@ -1,23 +1,33 @@
 import type { GeneralExpedientePuesto, GeneralExpedienteCliente, ExpedienteOverlayEntry, GeneralWeaponDetail } from "@/lib/api";
 
+// Normaliza cualquier valor a texto: gSafeOne puede devolver números o fechas
+// en campos de texto, y llamar .trim() sobre ellos rompía la vista completa.
+const str = (v: unknown): string => {
+  if (v == null) return "";
+  if (typeof v === "string") return v;
+  if (v instanceof Date) return v.toISOString();
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  return "";
+};
+
 // ¿El texto es una clasificación de letalidad (no un calibre real)?
 const LETHALITY_RE = /^(no\s*letal|menos\s+que\s+letal|less\s+lethal|letal|lethal)$/i;
 
-export function isLethalityLabel(value?: string | null): boolean {
-  return LETHALITY_RE.test((value || "").trim());
+export function isLethalityLabel(value?: unknown): boolean {
+  return LETHALITY_RE.test(str(value).trim());
 }
 
 // El campo Calibre debe mostrar SOLO un calibre real. En GENERAL el catálogo de
 // "Calibre" a veces guarda la letalidad ("Menos que letal"/"Letal"); esos textos
 // no son calibres, así que se ocultan (se muestran como —).
-export function displayCaliber(value?: string | null): string {
-  const v = (value || "").trim();
+export function displayCaliber(value?: unknown): string {
+  const v = str(value).trim();
   if (!v || isLethalityLabel(v)) return "—";
   return v;
 }
 
-export function displayWeaponType(value?: string | null): string {
-  const v = (value || "").trim();
+export function displayWeaponType(value?: unknown): string {
+  const v = str(value).trim();
   if (!v) return "—";
   if (/^(no\s*letal|menos\s+que\s+letal|less\s+lethal)$/i.test(v)) return "Menos que letal";
   if (/^letal$/i.test(v)) return "Letal";
@@ -29,13 +39,13 @@ export function displayWeaponType(value?: string | null): string {
 // son seriales y no deben tratarse como armas reales.
 const PLACEHOLDER_SERIAL_RE = /^(arma\s*asignada|no\s*requiere\s*arma|sin\s*arma|requiere\s*arma|n\/?a|ninguna?|—|-)$/i;
 
-export function isPlaceholderSerial(serie?: string | null): boolean {
-  return PLACEHOLDER_SERIAL_RE.test((serie || "").trim());
+export function isPlaceholderSerial(serie?: unknown): boolean {
+  return PLACEHOLDER_SERIAL_RE.test(str(serie).trim());
 }
 
 // Devuelve el serial real o null si está vacío o es un texto-marcador.
-export function realSerial(serie?: string | null): string | null {
-  const v = (serie || "").trim();
+export function realSerial(serie?: unknown): string | null {
+  const v = str(serie).trim();
   if (!v || isPlaceholderSerial(v)) return null;
   return v;
 }
@@ -50,7 +60,7 @@ function hasRealWeapon(p: { armaSerial?: string | null; arma?: GeneralWeaponDeta
 // Requerimiento de arma efectivo: ignora marcadores "NO REQUIERE ARMA" y trata
 // "ARMA ASIGNADA" sin arma real como que NO requiere arma.
 export function postRequiresWeapon(p: { requiereArma?: boolean; armaSerial?: string | null; arma?: GeneralWeaponDetail | null }): boolean {
-  const serie = (p.armaSerial || "").trim();
+  const serie = str(p.armaSerial).trim();
   if (/no\s*requiere\s*arma|sin\s*arma/i.test(serie)) return false;
   if (/arma\s*asignada/i.test(serie) && !hasRealWeapon(p)) return false;
   return !!p.requiereArma;
@@ -62,7 +72,7 @@ export function weaponCategoryLabel(
   arma?: { categoria?: string | null; tipo?: string | null; calibre?: string | null } | null,
   fallback?: string | null,
 ): string {
-  const cat = (arma?.categoria || "").trim();
+  const cat = str(arma?.categoria).trim();
   if (cat) return cat;
   return displayWeaponType(arma?.tipo || arma?.calibre || fallback);
 }
