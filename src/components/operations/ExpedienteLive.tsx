@@ -906,8 +906,15 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
   const ov = weaponKey ? ctx.overlay[weaponKey] : undefined;
   const arma = applyWeaponOverride(puesto.arma, ov);
   const fotosArma = ov?.fotosArma || [];
-  const fotoLicenciaFrente = ov?.fotoLicenciaFrente || null;
-  const fotoLicenciaDorso = ov?.fotoLicenciaDorso || null;
+  // Fotos de licencia: primero la capa editable de la intranet y, si no existe,
+  // la imagen guardada en gSafeOne (Armamento.FotoLicenciaFrente/Dorso).
+  const armaOid = puesto.arma?.oid ?? null;
+  const fotoLicenciaFrente = ov?.fotoLicenciaFrente
+    ? getFileUrl(ov.fotoLicenciaFrente)
+    : (puesto.arma?.fotoLicenciaFrenteDb && armaOid != null ? generalSqlApi.weaponImageUrl(armaOid, "licenciaFrente") : null);
+  const fotoLicenciaDorso = ov?.fotoLicenciaDorso
+    ? getFileUrl(ov.fotoLicenciaDorso)
+    : (puesto.arma?.fotoLicenciaDorsoDb && armaOid != null ? generalSqlApi.weaponImageUrl(armaOid, "licenciaDorso") : null);
   const tipoArmaRaw = arma?.tipo || arma?.categoria || arma?.calibre || armed?.weaponCaliber || armed?.weaponType || puesto.armaModelo;
   const tipoArma = displayWeaponType(tipoArmaRaw);
   const serialArma = realSerial(arma?.serie || puesto.armaSerial || armed?.weaponSerial);
