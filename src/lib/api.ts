@@ -1831,3 +1831,69 @@ export default apiFetch;
 
 
 
+
+// ─── Expediente contractual (Cliente → Localidad → Puesto → Horario → Detalle) ───
+export interface GeneralContratoDetalle {
+  oid: number | null;
+  horas: number;
+  tanda: string | null;
+  vigilanteOID: number | null;
+  vigilante: string | null;
+  vigilanteCodigo: number | null;
+  vigilanteCedula: string | null;
+  incentivo: number;
+  precio: number;
+  horaDesde: string | null;
+  horaHasta: string | null;
+}
+
+export interface GeneralContratoHorario {
+  oid: number | null;
+  dia: string | null;
+  regularHoras: number;
+  tandas: number;
+  detalles: GeneralContratoDetalle[];
+}
+
+export interface GeneralContratoPuesto {
+  oid: number | null;
+  referencia: string;
+  armaOID: number | null;
+  requiereArma: boolean;
+  armaSerial: string | null;
+  arma: GeneralWeaponDetail | null;
+  horarios: GeneralContratoHorario[];
+}
+
+export interface GeneralContratoLocalidad {
+  oid: number | null;
+  nombre: string;
+  zona: string | null;
+  subZona: string | null;
+  geo: string | null;
+  puestos: GeneralContratoPuesto[];
+}
+
+export interface GeneralContratoCliente {
+  oid: number;
+  codigo: number | null;
+  nombre: string;
+  rnc: string;
+  cedula: string;
+  direccion: string;
+  telefono: string;
+  email: string;
+  contacto: string;
+  inactivo: boolean;
+  localidades: GeneralContratoLocalidad[];
+}
+
+export interface GeneralContrato {
+  fuente: "contrato" | "hora-contratada";
+  disponible: { localidades: boolean; puestos: boolean; horarios: boolean; detalles: boolean };
+  clientes: GeneralContratoCliente[];
+  totals: {
+    clientes: number; localidades: number; puestos: number; horarios: number;
+    lineas: number; armas: number; vigilantes: number; horasSemana: number; precio: number;
+  };
+}
