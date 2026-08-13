@@ -1198,6 +1198,286 @@ router.get('/expediente', auth, guard, async (req, res) => {
   } catch (e) { res.status(502).json({ message: e.message }); }
 });
 
+// ─── Expediente CONTRACTUAL de Clientes (estructura contratada, no el reporte diario) ───
+//   Cliente (Nombre, RNC)
+//     → ClienteLocalidad (Nombre, Zona, SubZona, GeoLocalizacion)
+//       → ClientePuestoServicio (Referencia, Arma)
+//         → ClientePuestoHorario (Dia, RegularHoras, Tandas)
+//           → ClientePuestoHorarioD (Horas, Tanda, Vigilante, Incentivo, Precio, HoraDesde, HoraHasta)
+//
+// Las instalaciones de gSafeOne varían: si alguna tabla/columna no existe, se
+// resuelve con descubrimiento dinámico y, en el peor caso, se deriva la
+// localidad/puesto desde HoraContratada (respaldo) para no dejar la vista vacía.
+
+// Lee una tabla completa seleccionando solo columnas escalares (sin binarios).
+async function readTableScalar(table) {
+  const cols = await sql.listColumns(table);
+  const usable = cols
+    .filter((c) => !/varbinary|image|timestamp|geography|geometry|xml/i.test(String(c.type)))
+    .map((c) => c.name);
+  const list = usable.length ? usable.map((c) => `[${c}]`).join(', ') : '*';
+  const hasGC = cols.some((c) => String(c.name).toLowerCase() === 'gcrecord');
+  return sql.query(`SELECT ${list} FROM [${table}]${hasGC ? ' WHERE GCRecord IS NULL' : ''}`);
+}
+
+// Devuelve el primer valor no vacío de una fila entre varios nombres de columna.
+function pick(row, names) {
+  for (const n of names) {
+    for (const k of Object.keys(row)) {
+      if (k.toLowerCase() === String(n).toLowerCase()) {
+        const v = row[k];
+        if (v != null && v !== '' && v !== 'NULL') return v;
+      }
+    }
+  }
+  return null;
+}
+
+// Resuelve un valor que puede ser texto o código (FK) contra un catálogo.
+function resolveCat(value, map) {
+  if (value == null || value === '' || value === 'NULL') return null;
+  if (typeof value === 'number' || /^\d+$/.test(String(value).trim())) {
+    return map.get(Number(value)) || String(value);
+  }
+  return String(value).trim();
+}
+
+const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+function resolveDia(value, map) {
+  const txt = resolveCat(value, map);
+  if (txt == null) return null;
+  if (/^\d+$/.test(txt)) {
+    const n = Number(txt);
+    // XAF suele guardar 0-6 (Dom-Sáb) o 1-7 (Lun-Dom).
+    if (n >= 0 && n <= 6) return DIAS_SEMANA[n];
+    if (n === 7) return DIAS_SEMANA[0];
+  }
+  return txt;
+}
+
+const hhmm = (v) => {
+  if (v == null || v === '' || v === 'NULL') return null;
+  if (typeof v === 'string' && /^\d{1,2}:\d{2}/.test(v)) return v.slice(0, 5);
+  const d = new Date(v);
+  if (!Number.isNaN(d.getTime())) {
+    return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+  }
+  return String(v);
+};
+
+router.get('/contrato', auth, guard, async (req, res) => {
+  try {
+    const [hasLoc, hasPuesto, hasHorario, hasHorarioD] = await Promise.all([
+      tableExists('ClienteLocalidad'),
+      tableExists('ClientePuestoServicio'),
+      tableExists('ClientePuestoHorario'),
+      tableExists('ClientePuestoHorarioD'),
+    ]);
+
+    const [clientesRows, zonaCat, subZonaCat, tandaCat, diaCat, weapons] = await Promise.all([
+      readTableScalar('Cliente'),
+      catalogMap(['Zona', 'Zonas']),
+      catalogMap(['SubZona', 'Subzona', 'SubZonas']),
+      catalogMap(['Tanda', 'Tandas']),
+      catalogMap(['Dia', 'DiaSemana', 'Dias']),
+      weaponsMap(),
+    ]);
+
+    const localidades = hasLoc ? await readTableScalar('ClienteLocalidad') : [];
+    const servicios = hasPuesto ? await readTableScalar('ClientePuestoServicio') : [];
+    const horarios = hasHorario ? await readTableScalar('ClientePuestoHorario') : [];
+    const detalles = hasHorarioD ? await readTableScalar('ClientePuestoHorarioD') : [];
+
+    // Vigilantes (para resolver nombres en el detalle de horario).
+    const empleados = new Map();
+    try {
+      const emps = await sql.query(
+        `SELECT OID, Codigo, Nombre1, Apellido1, Cedula FROM Empleado WHERE GCRecord IS NULL`
+      );
+      for (const e of emps) {
+        empleados.set(Number(e.OID), {
+          oid: Number(e.OID), codigo: e.Codigo ?? null,
+          nombre: fullName(e) || `Empleado ${e.Codigo ?? e.OID}`,
+          cedula: cleanStr(e.Cedula),
+        });
+      }
+    } catch (_) { /* opcional */ }
+
+    // Detalles agrupados por horario.
+    const detByHorario = new Map();
+    for (const d of detalles) {
+      const key = Number(pick(d, ['ClientePuestoHorario', 'Horario', 'Padre']) ?? NaN);
+      if (Number.isNaN(key)) continue;
+      const vigOID = Number(pick(d, ['Vigilante', 'Empleado']) ?? NaN);
+      const vig = Number.isNaN(vigOID) ? null : empleados.get(vigOID) || null;
+      const arr = detByHorario.get(key) || [];
+      arr.push({
+        oid: d.OID ?? null,
+        horas: Number(pick(d, ['Horas'])) || 0,
+        tanda: resolveCat(pick(d, ['Tanda']), tandaCat),
+        vigilanteOID: Number.isNaN(vigOID) ? null : vigOID,
+        vigilante: vig?.nombre || null,
+        vigilanteCodigo: vig?.codigo ?? null,
+        vigilanteCedula: vig?.cedula ?? null,
+        incentivo: Number(pick(d, ['Incentivo'])) || 0,
+        precio: Number(pick(d, ['Precio'])) || 0,
+        horaDesde: hhmm(pick(d, ['HoraDesde'])),
+        horaHasta: hhmm(pick(d, ['HoraHasta'])),
+      });
+      detByHorario.set(key, arr);
+    }
+
+    // Horarios agrupados por puesto de servicio.
+    const horByServicio = new Map();
+    for (const h of horarios) {
+      const key = Number(pick(h, ['ClientePuestoServicio', 'PuestoServicio', 'Puesto', 'Padre']) ?? NaN);
+      if (Number.isNaN(key)) continue;
+      const arr = horByServicio.get(key) || [];
+      arr.push({
+        oid: h.OID ?? null,
+        dia: resolveDia(pick(h, ['Dia', 'DiaSemana']), diaCat),
+        regularHoras: Number(pick(h, ['RegularHoras', 'HorasRegulares'])) || 0,
+        tandas: Number(pick(h, ['Tandas'])) || 0,
+        detalles: detByHorario.get(Number(h.OID)) || [],
+      });
+      horByServicio.set(key, arr);
+    }
+
+    // Puestos de servicio agrupados por localidad.
+    const srvByLocalidad = new Map();
+    for (const s of servicios) {
+      const key = Number(pick(s, ['ClienteLocalidad', 'Localidad']) ?? NaN);
+      if (Number.isNaN(key)) continue;
+      const armaOID = Number(pick(s, ['Arma', 'Armamento']) ?? NaN);
+      const arma = Number.isNaN(armaOID) ? null : weapons.get(armaOID) || null;
+      const hs = horByServicio.get(Number(s.OID)) || [];
+      const arr = srvByLocalidad.get(key) || [];
+      arr.push({
+        oid: s.OID ?? null,
+        referencia: pick(s, ['Referencia', 'Descripcion', 'Nombre']) || `Puesto ${s.OID}`,
+        armaOID: Number.isNaN(armaOID) ? null : armaOID,
+        requiereArma: !Number.isNaN(armaOID),
+        armaSerial: arma?.serie || null,
+        arma: arma
+          ? {
+              oid: Number.isNaN(armaOID) ? null : armaOID,
+              serie: arma.serie, marca: arma.marca, tipo: arma.tipo,
+              calibre: arma.calibre, categoria: arma.categoria,
+              noLicencia: arma.noLicencia, estatus: arma.estatus,
+              propietario: arma.propietario, capsulas: arma.capsulas ?? null,
+              vence: arma.vence ?? null, permanente: !!arma.permanente,
+              fotoLicenciaFrenteDb: !!arma.fotoLicenciaFrenteDb,
+              fotoLicenciaDorsoDb: !!arma.fotoLicenciaDorsoDb,
+              fotosArmaDb: arma.fotosArmaDb || [],
+            }
+          : null,
+        horarios: hs,
+      });
+      srvByLocalidad.set(key, arr);
+    }
+
+    // Localidades agrupadas por cliente.
+    const locByCliente = new Map();
+    for (const l of localidades) {
+      const key = Number(pick(l, ['Cliente']) ?? NaN);
+      if (Number.isNaN(key)) continue;
+      const arr = locByCliente.get(key) || [];
+      arr.push({
+        oid: l.OID ?? null,
+        nombre: pick(l, ['Nombre', 'Descripcion']) || `Localidad ${l.OID}`,
+        zona: resolveCat(pick(l, ['Zona']), zonaCat),
+        subZona: resolveCat(pick(l, ['SubZona', 'Subzona']), subZonaCat),
+        geo: pick(l, ['GeoLocalizacion', 'Geolocalizacion', 'GeoLocalizacion1', 'Coordenadas']),
+        puestos: srvByLocalidad.get(Number(l.OID)) || [],
+      });
+      locByCliente.set(key, arr);
+    }
+
+    // Respaldo: sin tabla ClienteLocalidad, derivar localidad/puesto de HoraContratada.
+    let fuente = hasLoc ? 'contrato' : 'hora-contratada';
+    if (!hasLoc) {
+      try {
+        const hc = await sql.query(
+          `SELECT h.OID, h.Cliente, h.Descripcion FROM HoraContratada h WHERE h.GCRecord IS NULL`
+        );
+        for (const r of hc) {
+          const key = Number(r.Cliente);
+          if (Number.isNaN(key)) continue;
+          const arr = locByCliente.get(key) || [];
+          let sede = arr.find((a) => a.oid === null);
+          if (!sede) {
+            sede = { oid: null, nombre: 'Sede Principal', zona: null, subZona: null, geo: null, puestos: [] };
+            arr.push(sede);
+          }
+          sede.puestos.push({
+            oid: r.OID, referencia: cleanStr(r.Descripcion) || `Puesto ${r.OID}`,
+            armaOID: null, requiereArma: false, armaSerial: null, arma: null, horarios: [],
+          });
+          locByCliente.set(key, arr);
+        }
+      } catch (_) { /* respaldo opcional */ }
+    }
+
+    const soloConContrato = String(req.query.todos || '') !== '1';
+    const clientes = clientesRows
+      .map((c) => ({
+        oid: Number(c.OID),
+        codigo: c.Codigo ?? null,
+        nombre: cleanStr(c.Nombre) || `Cliente ${c.Codigo ?? c.OID}`,
+        rnc: cleanStr(c.RNC) || '',
+        cedula: cleanStr(c.Cedula) || '',
+        direccion: cleanStr(c.Direccion) || '',
+        telefono: cleanStr(c.Telefono) || '',
+        email: cleanStr(c.Email) || '',
+        contacto: cleanStr(c.Contacto) || '',
+        inactivo: !!c.Inactivo,
+        localidades: locByCliente.get(Number(c.OID)) || [],
+      }))
+      .filter((c) => (soloConContrato ? c.localidades.length > 0 : true))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+    let nLoc = 0, nPuestos = 0, nHorarios = 0, nLineas = 0, nArmas = 0, precio = 0, horas = 0;
+    const vigilantes = new Set();
+    for (const c of clientes) {
+      for (const l of c.localidades) {
+        nLoc++;
+        for (const p of l.puestos) {
+          nPuestos++;
+          if (p.requiereArma) nArmas++;
+          for (const h of p.horarios) {
+            nHorarios++;
+            horas += Number(h.regularHoras) || 0;
+            for (const d of h.detalles) {
+              nLineas++;
+              precio += Number(d.precio) || 0;
+              if (d.vigilanteOID != null) vigilantes.add(d.vigilanteOID);
+            }
+          }
+        }
+      }
+    }
+
+    res.json({
+      fuente,
+      disponible: { localidades: hasLoc, puestos: hasPuesto, horarios: hasHorario, detalles: hasHorarioD },
+      clientes,
+      totals: {
+        clientes: clientes.length,
+        localidades: nLoc,
+        puestos: nPuestos,
+        horarios: nHorarios,
+        lineas: nLineas,
+        armas: nArmas,
+        vigilantes: vigilantes.size,
+        horasSemana: round2(horas),
+        precio: round2(precio),
+      },
+    });
+  } catch (e) { res.status(502).json({ message: e.message }); }
+});
+
+
+
 // ─── Exportación de esquema: PKs/FKs por tabla ───
 router.get('/schema-keys', auth, guard, async (req, res) => {
   try {
