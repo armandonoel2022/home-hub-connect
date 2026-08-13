@@ -1259,6 +1259,9 @@ export const generalSqlApi = {
   expedienteDates: () => apiFetch<string[]>("/general-sql/expediente/dates"),
   expediente: (fecha?: string) =>
     apiFetch<GeneralExpediente>(`/general-sql/expediente${fecha ? `?fecha=${encodeURIComponent(fecha)}` : ""}`),
+  /** Expediente CONTRACTUAL: Cliente → Localidad → Puesto de servicio → Horario → Detalle. */
+  contrato: (todos = false) =>
+    apiFetch<GeneralContrato>(`/general-sql/contrato${todos ? "?todos=1" : ""}`),
   schemaKeys: () => apiFetch<Array<{ tabla: string; tipo: string; columna: string; restriccion: string }>>("/general-sql/schema-keys"),
   clients: () => apiFetch<GeneralClient[]>("/general-sql/clients"),
   employeesActive: () =>
