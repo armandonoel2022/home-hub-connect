@@ -28,7 +28,18 @@ import {
   Camera, Eye,
 } from "lucide-react";
 
-type FilterKey = "todos" | "armas" | "sinArma" | "novedad";
+type FilterKey = "todos" | "armas" | "sinArma" | "novedad" | "sinLicencia";
+
+// Número de licencia efectivo del arma de un puesto (overlay de auditoría > gSafeOne).
+function licenseOf(
+  p: { armaSerial?: string | null; arma?: GeneralWeaponDetail | null },
+  overlay: ExpedienteOverlayMap,
+): string | null {
+  const ov = p.armaSerial ? overlay[p.armaSerial] : undefined;
+  const lic = String(ov?.noLicencia ?? p.arma?.noLicencia ?? "").trim();
+  return lic || null;
+}
+
 
 function mapsHref(addr: string): string {
   return `https://www.google.com/maps?q=${encodeURIComponent(addr)}`;
@@ -246,9 +257,10 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
     return mergedData.clientes
       .map((c) => {
         let puestos = c.puestos.filter((p) => !hiddenKeys.has(lineHideKey(c, p)));
-        if (filter === "armas") puestos = puestos.filter((p) => p.requiereArma);
-        else if (filter === "sinArma") puestos = puestos.filter((p) => !p.requiereArma);
+        if (filter === "armas") puestos = puestos.filter((p) => postRequiresWeapon(p));
+        else if (filter === "sinArma") puestos = puestos.filter((p) => !postRequiresWeapon(p));
         else if (filter === "novedad") puestos = puestos.filter((p) => p.novedad);
+        else if (filter === "sinLicencia") puestos = puestos.filter((p) => postRequiresWeapon(p) && !licenseOf(p, overlay));
         return { ...c, puestos };
       })
       .filter((c) => c.puestos.length > 0)
@@ -256,11 +268,26 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
         !q ||
         c.nombre.toLowerCase().includes(q) ||
         String(c.codigo ?? "").includes(q) ||
-        c.puestos.some((p) => `${p.vigilante} ${p.armaSerial ?? ""}`.toLowerCase().includes(q)),
+        c.puestos.some((p) => `${p.vigilante} ${p.armaSerial ?? ""} ${licenseOf(p, overlay) ?? ""}`.toLowerCase().includes(q)),
       );
-  }, [mergedData, search, filter, hiddenKeys]);
+  }, [mergedData, search, filter, hiddenKeys, overlay]);
+
+  // Cobertura de licencias: evidencia clave para la auditoría.
+  const licStats = useMemo(() => {
+    let con = 0, sin = 0;
+    (mergedData?.clientes || []).forEach((c) =>
+      c.puestos.forEach((p) => {
+        if (hiddenKeys.has(lineHideKey(c, p))) return;
+        if (!postRequiresWeapon(p)) return;
+        if (licenseOf(p, overlay)) con++; else sin++;
+      }),
+    );
+    return { con, sin, total: con + sin };
+  }, [mergedData, overlay, hiddenKeys]);
 
   const t = mergedData?.totals || {};
+
+
 
   const ctx: LiveCtx = {
     overlay,
@@ -329,13 +356,27 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
         </Card>
       )}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
-        <KpiCard icon={<Building2 className="h-4 w-4" />} label="Clientes con cobertura" value={t.clientes ?? 0} />
+        <button type="button" onClick={() => setFilter("todos")} className="text-left w-full h-full">
+          <KpiCard icon={<Building2 className="h-4 w-4" />} label="Clientes con cobertura" value={t.clientes ?? 0} />
+        </button>
         <KpiCard icon={<ListChecks className="h-4 w-4" />} label="Puestos cubiertos" value={t.puestosCubiertos ?? 0} />
         <KpiCard icon={<Users className="h-4 w-4" />} label="Vigilantes en servicio" value={t.vigilantes ?? 0} />
-        <KpiCard icon={<Crosshair className="h-4 w-4" />} label="Armas en uso" value={t.armas ?? 0} accent="bg-gold/15 text-gold" />
-        <KpiCard icon={<ShieldOff className="h-4 w-4" />} label="Puestos sin arma" value={t.sinArma ?? 0} />
-        <KpiCard icon={<AlertTriangle className="h-4 w-4" />} label="Con novedad" value={t.conNovedad ?? 0} accent="bg-destructive/10 text-destructive" />
+        <button type="button" onClick={() => setFilter("armas")} className="text-left w-full h-full">
+          <KpiCard icon={<Crosshair className="h-4 w-4" />} label="Puestos con arma" value={licStats.total} accent="bg-gold/15 text-gold" />
+        </button>
+        <button type="button" onClick={() => setFilter("armas")} className="text-left w-full h-full">
+          <KpiCard icon={<ShieldCheck className="h-4 w-4" />} label="Armas con licencia" value={licStats.con} accent="bg-emerald-100 text-emerald-700" />
+        </button>
+        <button type="button" onClick={() => setFilter("sinLicencia")} className="text-left w-full h-full">
+          <KpiCard
+            icon={<AlertTriangle className="h-4 w-4" />}
+            label="Armas sin licencia registrada"
+            value={licStats.sin}
+            accent={licStats.sin > 0 ? "bg-destructive/10 text-destructive" : "bg-emerald-100 text-emerald-700"}
+          />
+        </button>
       </div>
+
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="text-xs text-muted-foreground inline-flex items-center gap-1 mr-2">
@@ -361,9 +402,11 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
           {([
             ["todos", "Todos"],
             ["armas", "Con armas"],
+            ["sinLicencia", "Sin licencia"],
             ["sinArma", "Sin arma"],
             ["novedad", "Con novedad"],
           ] as [FilterKey, string][]).map(([k, lbl]) => (
+
             <Button key={k} size="sm" variant={filter === k ? "default" : "outline"} onClick={() => setFilter(k)}>
               {lbl}
             </Button>

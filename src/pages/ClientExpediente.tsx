@@ -28,9 +28,6 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import ExpedienteLive from "@/components/operations/ExpedienteLive";
-import VaultView from "@/components/operations/VaultView";
-import ExpedienteDashboard from "@/components/operations/ExpedienteDashboard";
-import ExpedienteContrato from "@/components/operations/ExpedienteContrato";
 
 function mapsHref(coord: string): string | null {
   if (!coord) return null;
@@ -45,7 +42,6 @@ const ClientExpediente = () => {
   const [tick, setTick] = useState(0);
   const refresh = () => setTick((t) => t + 1);
   const [search, setSearch] = useState("");
-  const [mode, setMode] = useState<"vivo" | "dashboard" | "contrato" | "boveda" | "manual">("vivo");
 
   // dialogs
   const [clientDialog, setClientDialog] = useState<Partial<OpsClient> | null>(null);
@@ -99,128 +95,14 @@ const ClientExpediente = () => {
               <FolderTree className="h-6 w-6 text-primary" /> Expediente de Clientes
             </h1>
             <p className="text-sm text-muted-foreground">
-              Cliente → Localidad → Puesto → Turno. El personal y arma de cada puesto provienen del último reporte diario digitado.
+              Cliente → Localidad → Puesto → Turno, con el arma asignada, su serial y su número de licencia.
             </p>
           </div>
-          <div className="flex gap-2">
-            {mode === "manual" && (
-              <>
-                <Button variant="outline" size="sm" onClick={refresh}>
-                  <RefreshCw className="h-4 w-4 mr-1" /> Recargar
-                </Button>
-                <Button size="sm" onClick={() => setClientDialog({})}>
-                  <Plus className="h-4 w-4 mr-1" /> Nuevo cliente
-                </Button>
-              </>
-            )}
-          </div>
+
         </div>
 
-        {/* Selector de fuente de datos */}
-        <div className="inline-flex rounded-lg border border-border bg-muted/40 p-1">
-          <Button
-            size="sm"
-            variant={mode === "vivo" ? "default" : "ghost"}
-            className="h-8"
-            onClick={() => setMode("vivo")}
-          >
-            Vivo (GENERAL)
-          </Button>
-          <Button
-            size="sm"
-            variant={mode === "dashboard" ? "default" : "ghost"}
-            className="h-8"
-            onClick={() => setMode("dashboard")}
-          >
-            Dashboard
-          </Button>
-          <Button
-            size="sm"
-            variant={mode === "contrato" ? "default" : "ghost"}
-            className="h-8"
-            onClick={() => setMode("contrato")}
-          >
-            Contrato
-          </Button>
-          <Button
-            size="sm"
-            variant={mode === "boveda" ? "default" : "ghost"}
-            className="h-8"
-            onClick={() => setMode("boveda")}
-          >
-            Bóveda
-          </Button>
-          <Button
-            size="sm"
-            variant={mode === "manual" ? "default" : "ghost"}
-            className="h-8"
-            onClick={() => setMode("manual")}
-          >
-            Manual
-          </Button>
-        </div>
+        <ExpedienteLive />
 
-        {mode === "vivo" ? (
-          <ExpedienteLive onUnavailable={() => { /* el usuario puede cambiar a Manual */ }} />
-        ) : mode === "dashboard" ? (
-          <ExpedienteDashboard />
-        ) : mode === "contrato" ? (
-          <ExpedienteContrato />
-        ) : mode === "boveda" ? (
-          <VaultView />
-        ) : (
-          <>
-            <Input
-              placeholder="Buscar cliente…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="max-w-md"
-            />
-
-            <div className="space-y-4">
-              {clients.length === 0 && (
-                <Card className="p-10 text-center text-sm text-muted-foreground">
-                  No hay clientes. Crea uno o recarga; se siembran automáticamente desde Personal Armado.
-                </Card>
-              )}
-              {clients.map((client) => (
-                <ClientBlock
-                  key={client.id}
-                  client={client}
-                  onEditClient={() => setClientDialog(client)}
-                  onDeleteClient={() => {
-                    if (confirm(`¿Eliminar el cliente "${client.nombre}" y todas sus localidades/puestos?`)) {
-                      deleteClient(client.id);
-                      toast({ title: "Cliente eliminado" });
-                      refresh();
-                    }
-                  }}
-                  onAddLocation={() => setLocationDialog({ clientId: client.id, data: {} })}
-                  onEditLocation={(l) => setLocationDialog({ clientId: client.id, data: l })}
-                  onDeleteLocation={(l) => {
-                    if (confirm(`¿Eliminar la localidad "${l.nombre}"?`)) { deleteLocation(l.id); refresh(); }
-                  }}
-                  onAddPost={(locId) => setPostDialog({ locationId: locId, data: {} })}
-                  onEditPost={(p) => setPostDialog({ locationId: p.locationId, data: p })}
-                  onDeletePost={(p) => {
-                    if (confirm(`¿Eliminar el puesto "${p.nombre}"?`)) { deletePost(p.id); refresh(); }
-                  }}
-                  onReport={(p) => setReportDialog(p)}
-                  onPrint={async () => {
-                    try {
-                      toast({ title: "Generando expediente…" });
-                      await generateExpedientePDF(client, { open: true });
-                    } catch (e) {
-                      console.error("Error generando expediente PDF", e);
-                      toast({ title: "No se pudo generar el expediente", description: String((e as Error)?.message || e), variant: "destructive" });
-                    }
-                  }}
-                  tick={tick}
-                />
-              ))}
-            </div>
-          </>
-        )}
       </div>
 
       {clientDialog && (
