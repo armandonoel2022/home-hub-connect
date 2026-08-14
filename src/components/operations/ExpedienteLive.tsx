@@ -356,13 +356,27 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
         </Card>
       )}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
-        <KpiCard icon={<Building2 className="h-4 w-4" />} label="Clientes con cobertura" value={t.clientes ?? 0} />
+        <button type="button" onClick={() => setFilter("todos")} className="text-left">
+          <KpiCard icon={<Building2 className="h-4 w-4" />} label="Clientes con cobertura" value={t.clientes ?? 0} />
+        </button>
         <KpiCard icon={<ListChecks className="h-4 w-4" />} label="Puestos cubiertos" value={t.puestosCubiertos ?? 0} />
         <KpiCard icon={<Users className="h-4 w-4" />} label="Vigilantes en servicio" value={t.vigilantes ?? 0} />
-        <KpiCard icon={<Crosshair className="h-4 w-4" />} label="Armas en uso" value={t.armas ?? 0} accent="bg-gold/15 text-gold" />
-        <KpiCard icon={<ShieldOff className="h-4 w-4" />} label="Puestos sin arma" value={t.sinArma ?? 0} />
-        <KpiCard icon={<AlertTriangle className="h-4 w-4" />} label="Con novedad" value={t.conNovedad ?? 0} accent="bg-destructive/10 text-destructive" />
+        <button type="button" onClick={() => setFilter("armas")} className="text-left">
+          <KpiCard icon={<Crosshair className="h-4 w-4" />} label="Puestos con arma" value={licStats.total} accent="bg-gold/15 text-gold" />
+        </button>
+        <button type="button" onClick={() => setFilter("armas")} className="text-left">
+          <KpiCard icon={<ShieldCheck className="h-4 w-4" />} label="Armas con licencia" value={licStats.con} accent="bg-emerald-100 text-emerald-700" />
+        </button>
+        <button type="button" onClick={() => setFilter("sinLicencia")} className="text-left">
+          <KpiCard
+            icon={<AlertTriangle className="h-4 w-4" />}
+            label="Armas sin licencia registrada"
+            value={licStats.sin}
+            accent={licStats.sin > 0 ? "bg-destructive/10 text-destructive" : "bg-emerald-100 text-emerald-700"}
+          />
+        </button>
       </div>
+
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="text-xs text-muted-foreground inline-flex items-center gap-1 mr-2">
