@@ -28,9 +28,6 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import ExpedienteLive from "@/components/operations/ExpedienteLive";
-import VaultView from "@/components/operations/VaultView";
-import ExpedienteDashboard from "@/components/operations/ExpedienteDashboard";
-import ExpedienteContrato from "@/components/operations/ExpedienteContrato";
 
 function mapsHref(coord: string): string | null {
   if (!coord) return null;
@@ -45,7 +42,6 @@ const ClientExpediente = () => {
   const [tick, setTick] = useState(0);
   const refresh = () => setTick((t) => t + 1);
   const [search, setSearch] = useState("");
-  const [mode, setMode] = useState<"vivo" | "dashboard" | "contrato" | "boveda" | "manual">("vivo");
 
   // dialogs
   const [clientDialog, setClientDialog] = useState<Partial<OpsClient> | null>(null);
