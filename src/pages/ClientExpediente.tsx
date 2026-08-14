@@ -99,21 +99,10 @@ const ClientExpediente = () => {
               <FolderTree className="h-6 w-6 text-primary" /> Expediente de Clientes
             </h1>
             <p className="text-sm text-muted-foreground">
-              Cliente → Localidad → Puesto → Turno. El personal y arma de cada puesto provienen del último reporte diario digitado.
+              Cliente → Localidad → Puesto → Turno, con el arma asignada, su serial y su número de licencia.
             </p>
           </div>
-          <div className="flex gap-2">
-            {mode === "manual" && (
-              <>
-                <Button variant="outline" size="sm" onClick={refresh}>
-                  <RefreshCw className="h-4 w-4 mr-1" /> Recargar
-                </Button>
-                <Button size="sm" onClick={() => setClientDialog({})}>
-                  <Plus className="h-4 w-4 mr-1" /> Nuevo cliente
-                </Button>
-              </>
-            )}
-          </div>
+
         </div>
 
         <ExpedienteLive />
