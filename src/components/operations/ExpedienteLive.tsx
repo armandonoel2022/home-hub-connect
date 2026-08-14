@@ -356,18 +356,18 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
         </Card>
       )}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
-        <button type="button" onClick={() => setFilter("todos")} className="text-left">
+        <button type="button" onClick={() => setFilter("todos")} className="text-left w-full h-full">
           <KpiCard icon={<Building2 className="h-4 w-4" />} label="Clientes con cobertura" value={t.clientes ?? 0} />
         </button>
         <KpiCard icon={<ListChecks className="h-4 w-4" />} label="Puestos cubiertos" value={t.puestosCubiertos ?? 0} />
         <KpiCard icon={<Users className="h-4 w-4" />} label="Vigilantes en servicio" value={t.vigilantes ?? 0} />
-        <button type="button" onClick={() => setFilter("armas")} className="text-left">
+        <button type="button" onClick={() => setFilter("armas")} className="text-left w-full h-full">
           <KpiCard icon={<Crosshair className="h-4 w-4" />} label="Puestos con arma" value={licStats.total} accent="bg-gold/15 text-gold" />
         </button>
-        <button type="button" onClick={() => setFilter("armas")} className="text-left">
+        <button type="button" onClick={() => setFilter("armas")} className="text-left w-full h-full">
           <KpiCard icon={<ShieldCheck className="h-4 w-4" />} label="Armas con licencia" value={licStats.con} accent="bg-emerald-100 text-emerald-700" />
         </button>
-        <button type="button" onClick={() => setFilter("sinLicencia")} className="text-left">
+        <button type="button" onClick={() => setFilter("sinLicencia")} className="text-left w-full h-full">
           <KpiCard
             icon={<AlertTriangle className="h-4 w-4" />}
             label="Armas sin licencia registrada"
