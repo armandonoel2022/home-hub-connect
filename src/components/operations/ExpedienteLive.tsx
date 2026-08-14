@@ -402,9 +402,11 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
           {([
             ["todos", "Todos"],
             ["armas", "Con armas"],
+            ["sinLicencia", "Sin licencia"],
             ["sinArma", "Sin arma"],
             ["novedad", "Con novedad"],
           ] as [FilterKey, string][]).map(([k, lbl]) => (
+
             <Button key={k} size="sm" variant={filter === k ? "default" : "outline"} onClick={() => setFilter(k)}>
               {lbl}
             </Button>
