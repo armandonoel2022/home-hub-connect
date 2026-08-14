@@ -74,3 +74,8 @@ Helpers en `src/lib/expedienteHelpers.ts`:
 - **Perfil 360° (AgentDialog)**: se ocultan "Estado Arma", "Propietario" e "Incentivo". Se muestra "Munición" (`armed.ammunitionCount` cápsulas) cuando hay match en Personal Armado. WeaponDialog también muestra Munición.
 - **"Novedad" (badge rojo)**: viene de gSafeOne — `novedad = r.NovedadOID != null` en `general-sql.js` (la línea del reporte diario tiene una novedad registrada). No es un dato calculado por la intranet.
 - **Dashboard**: KPIs ahora son CLICABLES (muestran panel de detalle con la lista de puestos). Duplicados de arma = mismo serial real en puestos DISTINTOS (un mismo puesto con varios turnos ya NO se marca como duplicado; los marcadores se excluyen). "Vigilantes por puesto" reagrupado Cliente→Puesto con turnos anidados.
+
+## Modo Contrato (estructura contratada, ago 2026)
+Cuarto modo en `/operaciones/expediente`: **Contrato** (`src/components/operations/ExpedienteContrato.tsx`). Lee la estructura CONTRATADA (no el reporte diario) de gSafeOne vía `GET /general-sql/contrato?todos=1`:
+Cliente(Nombre/RNC) → ClienteLocalidad(Nombre/Zona/SubZona/GeoLocalizacion) → ClientePuestoServicio(Referencia/Arma) → ClientePuestoHorario(Dia/RegularHoras/Tandas) → ClientePuestoHorarioD(Horas/Tanda/Vigilante/Incentivo/Precio/HoraDesde/HoraHasta).
+Descubrimiento dinámico de tablas/columnas (`tableExists`, `pick`), catálogos Zona/SubZona/Tanda/Día, armas del `weaponsMap`, vigilantes de `Empleado`. Si no existen las tablas → respaldo a `HoraContratada` (`fuente:"hora-contratada"`); el campo `disponible` indica qué tablas se encontraron. Cliente API: `generalSqlApi.contrato(todos?)`, tipos `GeneralContrato*` en `src/lib/api.ts`.
