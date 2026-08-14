@@ -28,7 +28,18 @@ import {
   Camera, Eye,
 } from "lucide-react";
 
-type FilterKey = "todos" | "armas" | "sinArma" | "novedad";
+type FilterKey = "todos" | "armas" | "sinArma" | "novedad" | "sinLicencia";
+
+// Número de licencia efectivo del arma de un puesto (overlay de auditoría > gSafeOne).
+function licenseOf(
+  p: { armaSerial?: string | null; arma?: GeneralWeaponDetail | null },
+  overlay: ExpedienteOverlayMap,
+): string | null {
+  const ov = p.armaSerial ? overlay[p.armaSerial] : undefined;
+  const lic = String(ov?.noLicencia ?? p.arma?.noLicencia ?? "").trim();
+  return lic || null;
+}
+
 
 function mapsHref(addr: string): string {
   return `https://www.google.com/maps?q=${encodeURIComponent(addr)}`;
