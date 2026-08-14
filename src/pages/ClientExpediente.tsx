@@ -135,6 +135,14 @@ const ClientExpediente = () => {
           </Button>
           <Button
             size="sm"
+            variant={mode === "contrato" ? "default" : "ghost"}
+            className="h-8"
+            onClick={() => setMode("contrato")}
+          >
+            Contrato
+          </Button>
+          <Button
+            size="sm"
             variant={mode === "boveda" ? "default" : "ghost"}
             className="h-8"
             onClick={() => setMode("boveda")}
@@ -155,6 +163,8 @@ const ClientExpediente = () => {
           <ExpedienteLive onUnavailable={() => { /* el usuario puede cambiar a Manual */ }} />
         ) : mode === "dashboard" ? (
           <ExpedienteDashboard />
+        ) : mode === "contrato" ? (
+          <ExpedienteContrato />
         ) : mode === "boveda" ? (
           <VaultView />
         ) : (
