@@ -257,9 +257,10 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
     return mergedData.clientes
       .map((c) => {
         let puestos = c.puestos.filter((p) => !hiddenKeys.has(lineHideKey(c, p)));
-        if (filter === "armas") puestos = puestos.filter((p) => p.requiereArma);
-        else if (filter === "sinArma") puestos = puestos.filter((p) => !p.requiereArma);
+        if (filter === "armas") puestos = puestos.filter((p) => postRequiresWeapon(p));
+        else if (filter === "sinArma") puestos = puestos.filter((p) => !postRequiresWeapon(p));
         else if (filter === "novedad") puestos = puestos.filter((p) => p.novedad);
+        else if (filter === "sinLicencia") puestos = puestos.filter((p) => postRequiresWeapon(p) && !licenseOf(p, overlay));
         return { ...c, puestos };
       })
       .filter((c) => c.puestos.length > 0)
@@ -267,11 +268,26 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
         !q ||
         c.nombre.toLowerCase().includes(q) ||
         String(c.codigo ?? "").includes(q) ||
-        c.puestos.some((p) => `${p.vigilante} ${p.armaSerial ?? ""}`.toLowerCase().includes(q)),
+        c.puestos.some((p) => `${p.vigilante} ${p.armaSerial ?? ""} ${licenseOf(p, overlay) ?? ""}`.toLowerCase().includes(q)),
       );
-  }, [mergedData, search, filter, hiddenKeys]);
+  }, [mergedData, search, filter, hiddenKeys, overlay]);
+
+  // Cobertura de licencias: evidencia clave para la auditoría.
+  const licStats = useMemo(() => {
+    let con = 0, sin = 0;
+    (mergedData?.clientes || []).forEach((c) =>
+      c.puestos.forEach((p) => {
+        if (hiddenKeys.has(lineHideKey(c, p))) return;
+        if (!postRequiresWeapon(p)) return;
+        if (licenseOf(p, overlay)) con++; else sin++;
+      }),
+    );
+    return { con, sin, total: con + sin };
+  }, [mergedData, overlay, hiddenKeys]);
 
   const t = mergedData?.totals || {};
+
+
 
   const ctx: LiveCtx = {
     overlay,
