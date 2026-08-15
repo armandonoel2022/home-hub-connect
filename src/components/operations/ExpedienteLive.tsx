@@ -20,6 +20,8 @@ import { exportToPDF, exportToExcel } from "@/lib/exportUtils";
 import { useArmedPersonnel } from "@/hooks/useApiHooks";
 import { loadPosts } from "@/lib/postsData";
 import { mergeOperacionesIntoExpediente } from "@/lib/opsExpedienteMerge";
+import LocalidadMapDialog from "@/components/operations/LocalidadMapDialog";
+
 import { displayCaliber, displayWeaponType, lineHideKey, applyWeaponOverride, weaponCategoryLabel, realSerial, postRequiresWeapon } from "@/lib/expedienteHelpers";
 import {
   Building2, MapPin, Crosshair, Users, ChevronDown, ChevronRight, RefreshCw,
