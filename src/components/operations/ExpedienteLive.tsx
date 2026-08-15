@@ -484,7 +484,9 @@ function groupByLocalidad(puestos: GeneralExpedientePuesto[]): LocalidadGroup[] 
 
 function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx: LiveCtx }) {
   const [open, setOpen] = useState(false);
+  const [mapLoc, setMapLoc] = useState<LocalidadGroup | null>(null);
   const { toast } = useToast();
+
   const armas = client.puestos.filter((p) => p.requiereArma).length;
   const vigilantes = new Set(
     client.puestos
