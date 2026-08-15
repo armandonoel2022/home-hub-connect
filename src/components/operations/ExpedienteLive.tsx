@@ -637,20 +637,29 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
                               </button>
                               {p.tanda && <Badge variant="outline" className="text-[10px] shrink-0">{p.tanda}</Badge>}
                               {p.horas > 0 && <span className="text-muted-foreground shrink-0">{p.horas}h</span>}
-                              {postRequiresWeapon(p) && (
+                              {postRequiresWeapon(p) && (() => {
+                                const lic = licenseOf({ armaSerial: p.armaSerial, arma: arma }, ctx.overlay);
+                                return (
                                 <button
                                   onClick={() => ctx.openWeapon(p, client)}
-                                  className="inline-flex items-center gap-1 shrink-0 max-w-[260px] rounded-md border border-border px-2 py-1 font-medium hover:border-primary hover:text-primary"
+                                  className="inline-flex items-center gap-1 shrink-0 max-w-[320px] rounded-md border border-border px-2 py-1 font-medium hover:border-primary hover:text-primary"
                                   title="Ver / editar arma"
                                 >
                                   {ctx.canEdit ? <Pencil className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                                   <span className="truncate">
                                     {[weaponCategoryLabel(arma, p.armaModelo), realSerial(p.armaSerial)].filter((x) => x && x !== "—").join(" · ") || "Armado"}
                                   </span>
+                                  {lic ? (
+                                    <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px] font-semibold">Lic. {lic}</span>
+                                  ) : (
+                                    <span className="px-1.5 py-0.5 rounded bg-red-50 text-red-700 text-[10px] font-semibold">Sin licencia</span>
+                                  )}
                                   {estatus && <span className={`px-1.5 py-0.5 rounded ${statusColor(estatus)}`}>{estatus}</span>}
                                   {fotos > 0 && <Badge variant="outline" className="text-[9px]">{fotos}📷</Badge>}
                                 </button>
-                              )}
+                                );
+                              })()}
+
                               {p.novedad && <Badge variant="destructive" className="text-[10px] shrink-0">Novedad</Badge>}
                               {ctx.canEdit && (
                                 <button
