@@ -696,6 +696,17 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
           ))}
         </div>
       )}
+
+      {mapLoc && (
+        <LocalidadMapDialog
+          cliente={client.nombre}
+          localidad={mapLoc.nombre}
+          direccion={client.direccion}
+          puestos={mapLoc.puestos.map((x) => x.nombre)}
+          onClose={() => setMapLoc(null)}
+        />
+      )}
+
     </Card>
   );
 }
