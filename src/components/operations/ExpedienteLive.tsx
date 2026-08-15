@@ -573,9 +573,16 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
           {localidades.map((loc) => (
             <div key={loc.nombre} className="border-l-2 border-gold/40 pl-3 space-y-2">
               <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-gold shrink-0" />
-                <p className="text-sm font-semibold">{loc.nombre}</p>
+                <button
+                  onClick={() => setMapLoc(loc)}
+                  className="inline-flex items-center gap-2 text-sm font-semibold hover:text-primary"
+                  title="Ver localidad en el mapa (OpenStreetMap)"
+                >
+                  <MapPin className="h-4 w-4 text-gold shrink-0" />
+                  <span className="underline decoration-dotted underline-offset-4">{loc.nombre}</span>
+                </button>
               </div>
+
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
                 {loc.puestos.map((pg) => {
