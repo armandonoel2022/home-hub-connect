@@ -30,7 +30,7 @@ import {
   Camera, Eye,
 } from "lucide-react";
 
-type FilterKey = "todos" | "armas" | "sinArma" | "novedad" | "sinLicencia";
+type FilterKey = "todos" | "armas" | "sinArma" | "novedad" | "sinLicencia" | "boveda" | "global";
 
 // Número de licencia efectivo del arma de un puesto (overlay de auditoría > gSafeOne).
 function licenseOf(
@@ -55,7 +55,16 @@ function toInputDate(v: string | null | undefined): string {
   if (m) return `${m[1]}-${m[2]}-${m[3]}`;
   const d = new Date(s);
   if (Number.isNaN(d.getTime())) return "";
-  return d.toISOString().slice(0, 10);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// Muestra la fecha del reporte en dd/mm/aaaa SIN desplazamiento de zona horaria
+// (evita que aparezca un día posterior al real).
+function fmtReportDate(v: string | null | undefined): string {
+  const iso = toInputDate(v);
+  if (!iso) return "—";
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
 }
 
 function fileToDataUrl(file: File): Promise<string> {
@@ -383,7 +392,7 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
       <div className="flex flex-wrap items-center gap-2">
         <div className="text-xs text-muted-foreground inline-flex items-center gap-1 mr-2">
           <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-          Reporte: <span className="font-medium">{data?.fecha ? new Date(data.fecha).toLocaleDateString("es-DO") : "—"}</span>
+          Reporte: <span className="font-medium">{fmtReportDate(data?.fecha)}</span>
           {canEdit && <Badge variant="secondary" className="ml-2 text-[10px]">Edición habilitada</Badge>}
         </div>
         <div className="inline-flex items-center gap-1">
@@ -500,7 +509,7 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
     try {
       exportToPDF({
         title: `Expediente — ${client.nombre}`,
-        subtitle: `${client.direccion || "Sin dirección"}  ·  Reporte: ${ctx.reportDate ? new Date(ctx.reportDate).toLocaleDateString("es-DO") : "—"}  ·  ${client.rnc ? `RNC ${client.rnc}` : client.cedula ? `Céd. ${client.cedula}` : ""}`,
+        subtitle: `${client.direccion || "Sin dirección"}  ·  Reporte: ${fmtReportDate(ctx.reportDate)}  ·  ${client.rnc ? `RNC ${client.rnc}` : client.cedula ? `Céd. ${client.cedula}` : ""}`,
         columns: [
           { header: "Puesto", key: "puesto", width: 45 },
           { header: "Vigilante", key: "vigilante", width: 50 },
@@ -532,7 +541,7 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
   };
 
   const localidades = groupByLocalidad(client.puestos);
-  const reporteLabel = ctx.reportDate ? new Date(ctx.reportDate).toLocaleDateString("es-DO") : "—";
+  const reporteLabel = fmtReportDate(ctx.reportDate);
 
   return (
     <Card className="overflow-hidden">
@@ -1326,7 +1335,7 @@ function printPostFichaLive(p: GeneralExpedientePuesto, c: GeneralExpedienteClie
     ${rowHtml("Puesto", p.puesto)}${rowHtml("Cliente", c.nombre)}${rowHtml("Dirección", c.direccion)}
     ${rowHtml("Requiere arma", postRequiresWeapon(p) ? "Sí" : "No")}${rowHtml("Vigilante", p.vigilante)}
     ${postRequiresWeapon(p) ? rowHtml("Arma", [weaponCategoryLabel(p.arma, p.armaModelo), realSerial(p.armaSerial)].filter((x) => x && x !== "—").join(" · ")) : ""}
-    ${rowHtml("Reporte", fecha ? new Date(fecha).toLocaleDateString("es-DO") : "—")}
+    ${rowHtml("Reporte", fmtReportDate(fecha))}
     ${p.novedad ? rowHtml("Novedad", p.comentario || "Sí") : ""}
   </body></html>`);
 }
