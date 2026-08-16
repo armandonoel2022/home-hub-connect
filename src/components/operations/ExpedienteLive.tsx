@@ -30,7 +30,7 @@ import {
   Camera, Eye,
 } from "lucide-react";
 
-type FilterKey = "todos" | "armas" | "sinArma" | "novedad" | "sinLicencia";
+type FilterKey = "todos" | "armas" | "sinArma" | "novedad" | "sinLicencia" | "boveda" | "global";
 
 // Número de licencia efectivo del arma de un puesto (overlay de auditoría > gSafeOne).
 function licenseOf(
