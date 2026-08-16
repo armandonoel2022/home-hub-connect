@@ -64,7 +64,7 @@ export function buildArmaRows(
       if (serial && serial !== "—") usados.add(key(serial));
       asignadas.push({
         serial: serial && serial !== "—" ? serial : "",
-        tipo: displayWeaponType(arma?.tipo, p.armaModelo) || "",
+        tipo: displayWeaponType(arma?.tipo || p.armaModelo) || "",
         marca: norm(arma?.marca),
         calibre: displayCaliber(arma?.calibre) || "",
         licencia: norm(ov?.noLicencia ?? arma?.noLicencia),
@@ -87,7 +87,7 @@ export function buildArmaRows(
       const ov = w.serie ? overlay[String(w.serie)] : undefined;
       return {
         serial: norm(w.serie),
-        tipo: displayWeaponType(w.tipo, null) || "",
+        tipo: displayWeaponType(w.tipo) || "",
         marca: norm(w.marca),
         calibre: displayCaliber(w.calibre) || "",
         licencia: norm(ov?.noLicencia ?? w.noLicencia),
