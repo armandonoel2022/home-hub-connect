@@ -55,7 +55,16 @@ function toInputDate(v: string | null | undefined): string {
   if (m) return `${m[1]}-${m[2]}-${m[3]}`;
   const d = new Date(s);
   if (Number.isNaN(d.getTime())) return "";
-  return d.toISOString().slice(0, 10);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// Muestra la fecha del reporte en dd/mm/aaaa SIN desplazamiento de zona horaria
+// (evita que aparezca un día posterior al real).
+function fmtReportDate(v: string | null | undefined): string {
+  const iso = toInputDate(v);
+  if (!iso) return "—";
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
 }
 
 function fileToDataUrl(file: File): Promise<string> {
