@@ -413,6 +413,7 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
         )}
         {canEdit && <Badge variant="secondary" className="text-[10px]">Edición habilitada (fotos, licencias, traslados)</Badge>}
         <div className="inline-flex items-center gap-1">
+          <Input
             type="date"
             value={selectedDate}
             max={new Date().toISOString().slice(0, 10)}
