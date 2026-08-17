@@ -83,6 +83,14 @@ export function buildArmaRows(
         puesto: norm(p.puesto) || "Puesto General",
         vigilante: norm(p.vigilante),
         enBoveda: false,
+        categoria: norm(arma?.categoria),
+        propietario: norm(arma?.propietario),
+        municion: arma?.capsulas ?? null,
+        nota: norm(ov?.nota),
+        vigilanteCedula: norm(p.vigilanteCedula),
+        vigilanteCodigo: p.vigilanteCodigo ?? null,
+        tanda: norm(p.tanda),
+        horas: p.horas ?? null,
       });
     });
   });
@@ -111,8 +119,13 @@ export function buildArmaRows(
         puesto: "Bóveda / Almacén",
         vigilante: "",
         enBoveda: true,
+        categoria: norm(w.categoria),
+        propietario: norm(w.propietario),
+        municion: null,
+        nota: norm(ov?.nota),
       };
     });
+
 
 
   return { asignadas, boveda };
