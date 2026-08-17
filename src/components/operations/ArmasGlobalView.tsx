@@ -36,7 +36,12 @@ export interface ArmaRow {
   puesto: string;
   vigilante: string;
   enBoveda: boolean;
+  categoria?: string;
+  propietario?: string;
+  municion?: number | null;
+  nota?: string;
 }
+
 
 const norm = (s: unknown) => String(s ?? "").trim();
 const key = (s: unknown) => norm(s).toUpperCase().replace(/\s+/g, "");
