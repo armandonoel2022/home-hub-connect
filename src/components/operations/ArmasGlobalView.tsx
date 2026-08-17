@@ -2,7 +2,7 @@
 // asignadas en el reporte del día) y REPORTE GLOBAL (todas las armas en una sola
 // tabla tipo Excel, con vista alterna de mapa OpenStreetMap). Solo lectura.
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,7 +36,17 @@ export interface ArmaRow {
   puesto: string;
   vigilante: string;
   enBoveda: boolean;
+  categoria?: string;
+  propietario?: string;
+  municion?: number | null;
+  nota?: string;
+  vigilanteCedula?: string;
+  vigilanteCodigo?: number | null;
+  tanda?: string;
+  horas?: number | null;
 }
+
+
 
 const norm = (s: unknown) => String(s ?? "").trim();
 const key = (s: unknown) => norm(s).toUpperCase().replace(/\s+/g, "");
@@ -78,6 +88,14 @@ export function buildArmaRows(
         puesto: norm(p.puesto) || "Puesto General",
         vigilante: norm(p.vigilante),
         enBoveda: false,
+        categoria: norm(arma?.categoria),
+        propietario: norm(arma?.propietario),
+        municion: arma?.capsulas ?? null,
+        nota: norm(ov?.nota),
+        vigilanteCedula: norm(p.vigilanteCedula),
+        vigilanteCodigo: p.vigilanteCodigo ?? null,
+        tanda: norm(p.tanda),
+        horas: p.horas ?? null,
       });
     });
   });
@@ -106,8 +124,13 @@ export function buildArmaRows(
         puesto: "Bóveda / Almacén",
         vigilante: "",
         enBoveda: true,
+        categoria: norm(w.categoria),
+        propietario: norm(w.propietario),
+        municion: null,
+        nota: norm(ov?.nota),
       };
     });
+
 
 
   return { asignadas, boveda };
@@ -129,6 +152,8 @@ export default function ArmasGlobalView({ mode, clientes, sqlWeapons, overlay, r
   const [view, setView] = useState<"tabla" | "mapa">("tabla");
   const [q, setQ] = useState("");
   const [manage, setManage] = useState(false);
+  const [detail, setDetail] = useState<{ row: ArmaRow; tab: "arma" | "vigilante" } | null>(null);
+
   const { data: personnel } = useArmedPersonnel();
 
 
@@ -248,8 +273,13 @@ export default function ArmasGlobalView({ mode, clientes, sqlWeapons, overlay, r
                 <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">Sin armas que coincidan con la búsqueda.</td></tr>
               )}
               {rows.map((r, i) => (
-                <tr key={`${r.serial}-${r.puesto}-${i}`} className="border-b border-border/60 last:border-0 hover:bg-muted/40">
-                  <td className="p-2 font-mono font-semibold">{r.serial || "—"}</td>
+                <tr
+                  key={`${r.serial}-${r.puesto}-${i}`}
+                  className="border-b border-border/60 last:border-0 hover:bg-muted/40 cursor-pointer"
+                  onClick={() => setDetail({ row: r, tab: "arma" })}
+                  title="Ver ficha del arma"
+                >
+                  <td className="p-2 font-mono font-semibold text-primary underline-offset-2 hover:underline">{r.serial || "—"}</td>
                   <td className="p-2">{[r.tipo, r.marca, r.calibre].filter(Boolean).join(" · ") || "—"}</td>
                   <td className="p-2">
                     {r.licencia
@@ -268,9 +298,20 @@ export default function ArmasGlobalView({ mode, clientes, sqlWeapons, overlay, r
                     </div>
                     <p className="text-[11px] text-muted-foreground truncate">{r.localidad} · {r.puesto}</p>
                   </td>
-                  <td className="p-2 truncate">{r.vigilante || (r.enBoveda ? "En bóveda" : "Sin asignar")}</td>
+                  <td className="p-2 truncate">
+                    {r.vigilante ? (
+                      <button
+                        className="text-primary hover:underline"
+                        onClick={(e) => { e.stopPropagation(); setDetail({ row: r, tab: "vigilante" }); }}
+                        title="Ver ficha del vigilante"
+                      >
+                        {r.vigilante}
+                      </button>
+                    ) : (r.enBoveda ? "En bóveda" : "Sin asignar")}
+                  </td>
                 </tr>
               ))}
+
             </tbody>
           </table>
         </Card>
@@ -278,9 +319,20 @@ export default function ArmasGlobalView({ mode, clientes, sqlWeapons, overlay, r
         <ArmasMap rows={rows} personnel={personnel || []} />
       )}
 
+      {detail && (
+        <ArmaDetailDialog
+          row={detail.row}
+          tab={detail.tab}
+          personnel={personnel || []}
+          onTab={(t) => setDetail({ row: detail.row, tab: t })}
+          onClose={() => setDetail(null)}
+        />
+      )}
+
       <p className="text-[11px] text-muted-foreground">
         Reporte del día: {reportDate || "—"}. La bóveda es un registro manual: solo se contabilizan las armas marcadas explícitamente como resguardadas en {SEDE_CENTRAL.nombre}.
       </p>
+
     </div>
   );
 }
@@ -500,6 +552,115 @@ function BovedaManager({
           <Badge variant="secondary" className="mr-auto text-[11px]">{sel.size} arma(s) en bóveda</Badge>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button onClick={guardar} disabled={saving}>{saving ? "Guardando…" : "Guardar bóveda"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Ficha de arma / vigilante (SOLO LECTURA) ───
+function DField({ label, value }: { label: string; value?: ReactNode }) {
+  return (
+    <div>
+      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="font-medium break-words">{value || "—"}</p>
+    </div>
+  );
+}
+
+function ArmaDetailDialog({
+  row, tab, personnel, onTab, onClose,
+}: {
+  row: ArmaRow;
+  tab: "arma" | "vigilante";
+  personnel: any[];
+  onTab: (t: "arma" | "vigilante") => void;
+  onClose: () => void;
+}) {
+  const agente = useMemo(() => {
+    const n = key(row.vigilante);
+    if (!n) return null;
+    return (personnel || []).find((p: any) => key(p?.name) === n)
+      || (personnel || []).find((p: any) => key(p?.weaponSerial) === key(row.serial))
+      || null;
+  }, [personnel, row.vigilante, row.serial]);
+
+  const mapsUrl = `https://www.google.com/maps?q=${encodeURIComponent(`${row.cliente} ${row.localidad}`)}`;
+  const showVig = tab === "vigilante" && !!row.vigilante;
+
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-base">
+            {showVig
+              ? <>Ficha del vigilante · {row.vigilante}</>
+              : <>{row.tipo || "Arma"} · Serial {row.serial || "—"}</>}
+          </DialogTitle>
+        </DialogHeader>
+
+        {row.vigilante && (
+          <div className="inline-flex rounded-md border border-border overflow-hidden w-fit">
+            <Button size="sm" variant={tab === "arma" ? "default" : "ghost"} className="rounded-none h-8" onClick={() => onTab("arma")}>Arma</Button>
+            <Button size="sm" variant={tab === "vigilante" ? "default" : "ghost"} className="rounded-none h-8" onClick={() => onTab("vigilante")}>Vigilante</Button>
+          </div>
+        )}
+
+        {showVig && (
+          <Card className="p-3 flex items-center gap-3">
+            {agente?.photo
+              ? <img src={agente.photo} alt={row.vigilante} className="h-16 w-16 rounded-full object-cover border" />
+              : <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-xs">Sin foto</div>}
+            <div className="text-sm">
+              <p className="font-bold">{row.vigilante}</p>
+              <p className="text-xs text-muted-foreground">{agente?.position || "Vigilante"} · {row.cliente}</p>
+            </div>
+          </Card>
+        )}
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+          {showVig ? (
+            <>
+              <DField label="Cédula" value={row.vigilanteCedula || agente?.cedula} />
+              <DField label="Código" value={row.vigilanteCodigo ?? agente?.employeeCode} />
+              <DField label="Estatus" value={agente?.status} />
+              <DField label="Cliente" value={row.cliente} />
+              <DField label="Localidad" value={row.localidad} />
+              <DField label="Puesto" value={row.puesto} />
+              <DField label="Tanda / Turno" value={row.tanda} />
+              <DField label="Horas" value={row.horas != null ? `${row.horas}h` : undefined} />
+              <DField label="Arma asignada" value={row.serial ? `${row.tipo} · ${row.serial}` : "Sin arma"} />
+            </>
+          ) : (
+            <>
+              <DField label="Serie" value={row.serial} />
+              <DField label="Marca" value={row.marca} />
+              <DField label="Tipo de arma" value={row.tipo} />
+              <DField label="Calibre" value={row.calibre} />
+              <DField label="Categoría" value={row.categoria} />
+              <DField label="No. Licencia" value={row.licencia || "Sin licencia"} />
+              <DField label="Estatus" value={row.estatus} />
+              <DField label="Propietario" value={row.propietario} />
+              <DField label="Munición" value={row.municion != null ? `${row.municion} cápsulas` : undefined} />
+              <DField label="Cliente" value={row.cliente} />
+              <DField label="Localidad" value={row.localidad} />
+              <DField label="Puesto" value={row.puesto} />
+              <DField label="Vigilante / Custodio" value={row.vigilante || (row.enBoveda ? "En bóveda" : "Sin asignar")} />
+              <DField label="Ubicación física" value={row.enBoveda ? `${SEDE_CENTRAL.nombre} (Bóveda)` : "En servicio"} />
+              {row.nota && <DField label="Nota" value={row.nota} />}
+            </>
+          )}
+        </div>
+
+        <p className="text-[11px] text-muted-foreground">
+          Información de solo lectura proveniente de GENERAL (gSafeOne).
+        </p>
+
+        <DialogFooter>
+          <a href={mapsUrl} target="_blank" rel="noreferrer" className="mr-auto">
+            <Button size="sm" variant="outline"><MapPin className="h-4 w-4 mr-1" /> Ver ubicación</Button>
+          </a>
+          <Button variant="outline" onClick={onClose}>Cerrar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -323,26 +323,8 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
     openPost: (p, c) => setPostDlg({ p, c }),
   };
 
-  const exportSchema = async () => {
-    try {
-      toast({ title: "Consultando esquema…" });
-      const keys = await generalSqlApi.schemaKeys();
-      exportToExcel({
-        title: "Esquema de llaves (PK/FK) — gSafeOne",
-        columns: [
-          { header: "Tabla", key: "tabla", width: 28 },
-          { header: "Tipo", key: "tipo", width: 16 },
-          { header: "Columna", key: "columna", width: 28 },
-          { header: "Restricción", key: "restriccion", width: 36 },
-        ],
-        data: keys as unknown as Record<string, unknown>[],
-        filename: "esquema_llaves_gsafeone",
-      });
-      toast({ title: "Esquema exportado" });
-    } catch (e) {
-      toast({ title: "No se pudo exportar el esquema", description: String((e as Error)?.message || e), variant: "destructive" });
-    }
-  };
+
+
 
   if (loading) {
     return (
@@ -437,10 +419,6 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
           ))}
         </div>
         <Input placeholder="Buscar cliente, vigilante o serial…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs h-9" />
-        <div className="ml-auto flex gap-2">
-          <Button size="sm" variant="outline" onClick={exportSchema}><Download className="h-4 w-4 mr-1" /> Exportar esquema</Button>
-          <Button size="sm" variant="outline" onClick={() => load(selectedDate || undefined)}><RefreshCw className="h-4 w-4 mr-1" /> Recargar</Button>
-        </div>
       </div>
 
       <div className="space-y-2">
@@ -786,16 +764,8 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
     );
   }
 
-  const save = async () => {
-    setSaving(true);
-    try {
-      await expedienteOverlayApi.save(serie, { estatus, noLicencia, nota, marca, tipo, calibre, categoria, propietario });
-      ctx.reloadOverlay();
-      toast({ title: "Arma actualizada" });
-    } catch (e) {
-      toast({ title: "No se pudo guardar", description: String((e as Error)?.message || e), variant: "destructive" });
-    } finally { setSaving(false); }
-  };
+
+
 
   const upload = async (file: File, kind: "arma" | "licenciaFrente" | "licenciaDorso") => {
     try {
@@ -842,48 +812,15 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
             <Field label="Custodio" value={puesto.vigilante} />
           </div>
 
-          {ctx.canEdit ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <label className="text-xs space-y-1">
-                <span className="font-medium">Marca</span>
-                <Input value={marca} onChange={(e) => setMarca(e.target.value)} placeholder="Marca del arma" />
-              </label>
-              <label className="text-xs space-y-1">
-                <span className="font-medium">Tipo de arma</span>
-                <Input value={tipo} onChange={(e) => setTipo(e.target.value)} placeholder="Letal / Menos que letal" />
-              </label>
-              <label className="text-xs space-y-1">
-                <span className="font-medium">Calibre</span>
-                <Input value={calibre} onChange={(e) => setCalibre(e.target.value)} placeholder="Calibre / Menos que letal" />
-              </label>
-              <label className="text-xs space-y-1">
-                <span className="font-medium">Categoría</span>
-                <Input value={categoria} onChange={(e) => setCategoria(e.target.value)} placeholder="Categoría" />
-              </label>
-              <label className="text-xs space-y-1">
-                <span className="font-medium">Propietario</span>
-                <Input value={propietario} onChange={(e) => setPropietario(e.target.value)} placeholder="Propietario del arma" />
-              </label>
-              <label className="text-xs space-y-1">
-                <span className="font-medium">No. Licencia</span>
-                <Input value={noLicencia} onChange={(e) => setNoLicencia(e.target.value)} placeholder="Número de licencia" />
-              </label>
-              <label className="text-xs space-y-1">
-                <span className="font-medium">Estatus</span>
-                <Input value={estatus} onChange={(e) => setEstatus(e.target.value)} placeholder="En condiciones / Falta de mantenimiento…" />
-              </label>
-              <label className="text-xs space-y-1 sm:col-span-2">
-                <span className="font-medium">Nota</span>
-                <Textarea value={nota} onChange={(e) => setNota(e.target.value)} rows={2} />
-              </label>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <Field label="Estatus" value={estatus} />
-              <Field label="No. Licencia" value={noLicencia} />
-              {nota && <Field label="Nota" value={nota} />}
-            </div>
-          )}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+            <Field label="Estatus" value={estatus} />
+            <Field label="No. Licencia" value={noLicencia} />
+            {nota && <Field label="Nota" value={nota} />}
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Los datos del arma provienen de GENERAL y son de solo lectura.
+          </p>
+
 
           {/* Fotos del arma */}
           <div className="space-y-2">
@@ -977,7 +914,7 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
         </div>
 
         <DialogFooter>
-          {ctx.canEdit && <Button onClick={save} disabled={saving}>{saving ? "Guardando…" : "Guardar cambios"}</Button>}
+          
           <Button variant="outline" onClick={onClose}>Cerrar</Button>
         </DialogFooter>
       </DialogContent>
