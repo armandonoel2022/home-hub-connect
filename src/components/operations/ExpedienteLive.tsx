@@ -297,6 +297,15 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
     return { con, sin, total: con + sin };
   }, [mergedData, overlay, hiddenKeys]);
 
+  // Conteo de armas en bóveda (Sede Central): no asignadas en el reporte del día.
+  const bovedaCount = useMemo(() => {
+    const visibles = (mergedData?.clientes || []).map((c) => ({
+      ...c,
+      puestos: c.puestos.filter((p) => !hiddenKeys.has(lineHideKey(c, p))),
+    }));
+    return buildArmaRows(visibles, sqlWeapons, overlay).boveda.length;
+  }, [mergedData, sqlWeapons, overlay, hiddenKeys]);
+
   const t = mergedData?.totals || {};
 
 
