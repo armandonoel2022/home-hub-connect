@@ -323,26 +323,8 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
     openPost: (p, c) => setPostDlg({ p, c }),
   };
 
-  const exportSchema = async () => {
-    try {
-      toast({ title: "Consultando esquema…" });
-      const keys = await generalSqlApi.schemaKeys();
-      exportToExcel({
-        title: "Esquema de llaves (PK/FK) — gSafeOne",
-        columns: [
-          { header: "Tabla", key: "tabla", width: 28 },
-          { header: "Tipo", key: "tipo", width: 16 },
-          { header: "Columna", key: "columna", width: 28 },
-          { header: "Restricción", key: "restriccion", width: 36 },
-        ],
-        data: keys as unknown as Record<string, unknown>[],
-        filename: "esquema_llaves_gsafeone",
-      });
-      toast({ title: "Esquema exportado" });
-    } catch (e) {
-      toast({ title: "No se pudo exportar el esquema", description: String((e as Error)?.message || e), variant: "destructive" });
-    }
-  };
+
+
 
   if (loading) {
     return (
