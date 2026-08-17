@@ -955,7 +955,7 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
         </div>
 
         <DialogFooter>
-          {ctx.canEdit && <Button onClick={save} disabled={saving}>{saving ? "Guardando…" : "Guardar cambios"}</Button>}
+          
           <Button variant="outline" onClick={onClose}>Cerrar</Button>
         </DialogFooter>
       </DialogContent>
