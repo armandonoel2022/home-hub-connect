@@ -936,7 +936,10 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
           className="fixed inset-0 z-[100] bg-foreground/80 flex items-center justify-center p-6 cursor-zoom-out"
           onClick={() => setLightbox(null)}
         >
-          <img src={lightbox} alt="Vista ampliada" className="max-h-[90vh] max-w-[90vw] object-contain rounded shadow-2xl" />
+          <div className="relative">
+            <img src={lightbox} alt="Vista ampliada" className="max-h-[90vh] max-w-[90vw] object-contain rounded shadow-2xl" />
+            <div className="absolute inset-0 rounded" style={watermarkOverlayStyle()} aria-hidden />
+          </div>
           <button className="absolute top-4 right-4 text-background" onClick={() => setLightbox(null)}><X className="h-6 w-6" /></button>
         </div>
       )}
