@@ -31,7 +31,7 @@ import {
   Camera, Eye, Warehouse,
 } from "lucide-react";
 
-type FilterKey = "todos" | "armas" | "sinArma" | "novedad" | "sinLicencia" | "boveda" | "global";
+type FilterKey = "todos" | "armas" | "sinArma" | "sinLicencia" | "boveda" | "global";
 
 // Número de licencia efectivo del arma de un puesto (overlay de auditoría > gSafeOne).
 function licenseOf(
@@ -271,7 +271,6 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
         let puestos = c.puestos.filter((p) => !hiddenKeys.has(lineHideKey(c, p)));
         if (filter === "armas") puestos = puestos.filter((p) => postRequiresWeapon(p));
         else if (filter === "sinArma") puestos = puestos.filter((p) => !postRequiresWeapon(p));
-        else if (filter === "novedad") puestos = puestos.filter((p) => p.novedad);
         else if (filter === "sinLicencia") puestos = puestos.filter((p) => postRequiresWeapon(p) && !licenseOf(p, overlay));
         return { ...c, puestos };
       })
@@ -428,7 +427,6 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
             ["armas", "Con armas"],
             ["sinLicencia", "Sin licencia"],
             ["sinArma", "Sin arma"],
-            ["novedad", "Con novedad"],
             ["boveda", "Bóveda"],
             ["global", "Reporte global"],
           ] as [FilterKey, string][]).map(([k, lbl]) => (
@@ -545,7 +543,7 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
           { header: "Horas", key: "horas", width: 16 },
           { header: "Arma (Serial · Licencia)", key: "arma", width: 55 },
           { header: "Estado", key: "estado", width: 30 },
-          { header: "Novedad", key: "comentario", width: 45 },
+          { header: "Comentario", key: "comentario", width: 45 },
         ],
         data: client.puestos.map((p) => {
           const ov = p.armaSerial ? ctx.overlay[p.armaSerial] : undefined;
@@ -559,7 +557,7 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
               ? [weaponCategoryLabel(p.arma, p.armaModelo), realSerial(p.armaSerial), lic ? `Lic. ${lic}` : ""].filter((x) => x && x !== "—").join(" · ") || "Armado"
               : "—",
             estado: postRequiresWeapon(p) ? (estatus || "—") : "—",
-            comentario: p.comentario || (p.novedad ? "Con novedad" : ""),
+            comentario: p.comentario || "",
           };
         }),
         filename: `expediente_${(client.codigo ?? client.nombre).toString().replace(/\W+/g, "_")}`,
@@ -709,7 +707,6 @@ function LiveClientCard({ client, ctx }: { client: GeneralExpedienteCliente; ctx
                                 );
                               })()}
 
-                              {p.novedad && <Badge variant="destructive" className="text-[10px] shrink-0">Novedad</Badge>}
                               {ctx.canEdit && (
                                 <button
                                   onClick={() => {
@@ -1054,7 +1051,6 @@ function AgentDialog({ puesto, cliente, ctx, onClose }: {
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {requiereArmaEff && <Badge className="gap-1 text-[10px]"><Crosshair className="h-3 w-3" /> Requiere arma</Badge>}
                 {serialArma && <Badge variant="outline" className="gap-1 text-[10px]"><Shield className="h-3 w-3" /> {serialArma}</Badge>}
-                {puesto.novedad && <Badge variant="destructive" className="text-[10px]">Novedad</Badge>}
               </div>
             </div>
             {ctx.canEdit && (
@@ -1187,7 +1183,6 @@ function PostDialog({ puesto, cliente, ctx, onClose }: {
           <Field label="Vigilante" value={puesto.vigilante} />
           <Field label="Horas" value={`${puesto.horas}h`} />
           {postRequiresWeapon(puesto) && <Field label="Arma" value={[weaponCategoryLabel(puesto.arma, puesto.armaModelo), realSerial(puesto.armaSerial)].filter((x) => x && x !== "—").join(" · ")} />}
-          {puesto.novedad && <Field label="Novedad" value={puesto.comentario || "Sí"} />}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => printPostFichaLive(puesto, cliente, ctx.reportDate)}><FileText className="h-4 w-4 mr-1" /> Imprimir ficha</Button>
@@ -1350,7 +1345,7 @@ function printAgentFicha(
       <div>
         <div class="name">${escHtml(p.vigilante || "Sin asignar")}</div>
         <div class="sub">${escHtml((emp?.position || "Oficial de Seguridad") + " · " + (emp?.department || "Safeone"))}</div>
-        <div class="chips">${hasWeaponData ? `<span class="chip gold">Arma: ${escHtml([weaponCategory, weaponSerial].filter((x) => x && x !== "—").join(" · ") || "Asignada")}</span>` : ""}${p.novedad ? `<span class="chip">Novedad</span>` : ""}</div>
+        <div class="chips">${hasWeaponData ? `<span class="chip gold">Arma: ${escHtml([weaponCategory, weaponSerial].filter((x) => x && x !== "—").join(" · ") || "Asignada")}</span>` : ""}</div>
       </div>
     </div>
     <div class="grid">${datosGrid}</div>
@@ -1365,7 +1360,6 @@ function printPostFichaLive(p: GeneralExpedientePuesto, c: GeneralExpedienteClie
     ${rowHtml("Requiere arma", postRequiresWeapon(p) ? "Sí" : "No")}${rowHtml("Vigilante", p.vigilante)}
     ${postRequiresWeapon(p) ? rowHtml("Arma", [weaponCategoryLabel(p.arma, p.armaModelo), realSerial(p.armaSerial)].filter((x) => x && x !== "—").join(" · ")) : ""}
     ${rowHtml("Reporte", fmtReportDate(fecha))}
-    ${p.novedad ? rowHtml("Novedad", p.comentario || "Sí") : ""}
   </body></html>`);
 }
 
