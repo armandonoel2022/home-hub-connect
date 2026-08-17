@@ -764,16 +764,8 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
     );
   }
 
-  const save = async () => {
-    setSaving(true);
-    try {
-      await expedienteOverlayApi.save(serie, { estatus, noLicencia, nota, marca, tipo, calibre, categoria, propietario });
-      ctx.reloadOverlay();
-      toast({ title: "Arma actualizada" });
-    } catch (e) {
-      toast({ title: "No se pudo guardar", description: String((e as Error)?.message || e), variant: "destructive" });
-    } finally { setSaving(false); }
-  };
+
+
 
   const upload = async (file: File, kind: "arma" | "licenciaFrente" | "licenciaDorso") => {
     try {
