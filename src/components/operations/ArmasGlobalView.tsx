@@ -152,6 +152,8 @@ export default function ArmasGlobalView({ mode, clientes, sqlWeapons, overlay, r
   const [view, setView] = useState<"tabla" | "mapa">("tabla");
   const [q, setQ] = useState("");
   const [manage, setManage] = useState(false);
+  const [detail, setDetail] = useState<{ row: ArmaRow; tab: "arma" | "vigilante" } | null>(null);
+
   const { data: personnel } = useArmedPersonnel();
 
 
