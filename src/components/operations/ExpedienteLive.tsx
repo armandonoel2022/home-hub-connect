@@ -138,7 +138,9 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
   const [agentDlg, setAgentDlg] = useState<{ p: GeneralExpedientePuesto; c: GeneralExpedienteCliente } | null>(null);
   const [postDlg, setPostDlg] = useState<{ p: GeneralExpedientePuesto; c: GeneralExpedienteCliente } | null>(null);
 
-  const canEdit = serverCanEdit && canEditExpediente(user);
+  const [editMode, setEditMode] = useState(false);
+  const mayEdit = serverCanEdit && canEditExpediente(user);
+  const canEdit = mayEdit && editMode;
 
   const loadOverlay = async () => {
     try {
