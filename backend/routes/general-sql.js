@@ -1080,7 +1080,8 @@ router.get('/expediente', auth, guard, async (req, res) => {
 
     const [clienteCodigoExpr, puestoCodigoExpr, vigilanteCodigoExpr] = await Promise.all([
       optionalColumnExpr('Cliente', 'c', 'Codigo', 'ClienteCodigo'),
-      optionalColumnExpr('HoraContratada', 'h', 'Codigo', 'PuestoCodigo'),
+      // HoraContratada NO tiene columna Codigo: se usa Referencia como código de puesto.
+      optionalColumnExpr('HoraContratada', 'h', 'Referencia', 'PuestoCodigo'),
       optionalColumnExpr('Empleado', 'e', 'Codigo', 'VigilanteCodigo'),
     ]);
 
@@ -1088,7 +1089,7 @@ router.get('/expediente', auth, guard, async (req, res) => {
     // con Zona (localidad) y Tanda (turno) del ReporteDiario.
     const rows = await sql.query(
       `SELECT rp.OID AS LineaOID, rp.Horas, rp.Incentivo, rp.Arma AS ArmaOID,
-              rp.Novedad AS NovedadOID, rp.Comentario,
+              rp.Novedad AS NovedadOID, rp.Comentario, rp.Municiones AS MunicionesPuesto,
               c.OID AS ClienteOID, ${clienteCodigoExpr}, c.Nombre AS ClienteNombre,
               c.Direccion, c.Telefono, c.Email, c.RNC, c.Cedula, c.Contacto, c.Inactivo,
               h.OID AS PuestoOID, ${puestoCodigoExpr}, h.Descripcion AS PuestoDesc,
@@ -1162,7 +1163,7 @@ router.get('/expediente', auth, guard, async (req, res) => {
               noLicencia: arma.noLicencia,
               estatus: arma.estatus,
               propietario: arma.propietario,
-              capsulas: arma.capsulas ?? null,
+              capsulas: (r.MunicionesPuesto != null ? Number(r.MunicionesPuesto) : (arma.capsulas ?? null)),
               vence: arma.vence ?? null,
               permanente: !!arma.permanente,
               fotoLicenciaFrenteDb: !!arma.fotoLicenciaFrenteDb,
