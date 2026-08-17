@@ -114,14 +114,18 @@ interface Props {
   sqlWeapons: GeneralWeapon[];
   overlay: ExpedienteOverlayMap;
   reportDate: string;
+  canEdit?: boolean;
+  onOverlayChange?: () => void;
 }
 
 type MapPoint = { label: string; sub: string; pos: [number, number]; armas: number; sinLic: number; sede?: boolean };
 
-export default function ArmasGlobalView({ mode, clientes, sqlWeapons, overlay, reportDate }: Props) {
+export default function ArmasGlobalView({ mode, clientes, sqlWeapons, overlay, reportDate, canEdit, onOverlayChange }: Props) {
   const [view, setView] = useState<"tabla" | "mapa">("tabla");
   const [q, setQ] = useState("");
+  const [manage, setManage] = useState(false);
   const { data: personnel } = useArmedPersonnel();
+
 
   const { asignadas, boveda } = useMemo(
     () => buildArmaRows(clientes, sqlWeapons, overlay),
