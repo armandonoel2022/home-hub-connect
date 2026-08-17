@@ -434,12 +434,24 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
       </div>
 
       <div className="space-y-2">
-        {filtered.length === 0 && (
-          <Card className="p-10 text-center text-sm text-muted-foreground">
-            No hay clientes que coincidan con el filtro seleccionado.
-          </Card>
+        {(filter === "boveda" || filter === "global") ? (
+          <ArmasGlobalView
+            mode={filter}
+            clientes={filtered}
+            sqlWeapons={sqlWeapons}
+            overlay={overlay}
+            reportDate={fmtReportDate(data?.fecha)}
+          />
+        ) : (
+          <>
+            {filtered.length === 0 && (
+              <Card className="p-10 text-center text-sm text-muted-foreground">
+                No hay clientes que coincidan con el filtro seleccionado.
+              </Card>
+            )}
+            {filtered.map((c) => <LiveClientCard key={c.oid} client={c} ctx={ctx} />)}
+          </>
         )}
-        {filtered.map((c) => <LiveClientCard key={c.oid} client={c} ctx={ctx} />)}
       </div>
 
       {weaponDlg && (
