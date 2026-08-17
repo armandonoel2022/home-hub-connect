@@ -419,10 +419,6 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
           ))}
         </div>
         <Input placeholder="Buscar cliente, vigilante o serial…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs h-9" />
-        <div className="ml-auto flex gap-2">
-          <Button size="sm" variant="outline" onClick={exportSchema}><Download className="h-4 w-4 mr-1" /> Exportar esquema</Button>
-          <Button size="sm" variant="outline" onClick={() => load(selectedDate || undefined)}><RefreshCw className="h-4 w-4 mr-1" /> Recargar</Button>
-        </div>
       </div>
 
       <div className="space-y-2">
