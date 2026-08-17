@@ -881,8 +881,14 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
                           className="h-24 w-36 object-cover rounded border cursor-zoom-in hover:opacity-90"
                           onClick={() => setLightbox(url)}
                         />
+                        {/* Marca de agua visual: cubre también las imágenes ya guardadas en GENERAL */}
+                        <div
+                          className="absolute inset-0 rounded overflow-hidden"
+                          style={watermarkOverlayStyle()}
+                          aria-hidden
+                        />
                         {ctx.canEdit && ovUrl && (
-                          <button onClick={() => removePhoto(ovUrl, kind)} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5">
+                          <button onClick={() => removePhoto(ovUrl, kind)} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5 z-10">
                             <X className="h-3 w-3" />
                           </button>
                         )}
