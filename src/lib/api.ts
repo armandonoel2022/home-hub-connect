@@ -1477,6 +1477,8 @@ export interface ExpedienteOverlayEntry {
   nota?: string | null;
   noLicencia?: string | null;
   custodioOverride?: string | null;
+  /** Marca manual: el arma está resguardada en la bóveda de Sede Central. */
+  enBoveda?: boolean;
   // Sobrescrituras del catálogo de armas (auditoría: alinear lo mostrado).
   marca?: string | null;
   propietario?: string | null;
