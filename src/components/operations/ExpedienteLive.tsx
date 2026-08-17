@@ -770,10 +770,16 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
 
   const upload = async (file: File, kind: "arma" | "licenciaFrente" | "licenciaDorso") => {
     try {
-      const dataUrl = await fileToDataUrl(file);
+      // Documentos sensibles (licencia / cédula): se graban SIEMPRE con marca de agua.
+      const dataUrl = kind === "arma"
+        ? await fileToDataUrl(file)
+        : await applyWatermark(file, {
+            text: WATERMARK_TEXT,
+            subText: `Arma ${serie}${noLicencia ? ` · Lic. ${noLicencia}` : ""}`,
+          });
       await expedienteOverlayApi.uploadPhoto(serie, dataUrl, file.name, kind);
       ctx.reloadOverlay();
-      toast({ title: "Imagen subida" });
+      toast({ title: "Imagen subida con marca de agua" });
     } catch (e) {
       toast({ title: "No se pudo subir la imagen", description: String((e as Error)?.message || e), variant: "destructive" });
     }
