@@ -21,6 +21,7 @@ import { useArmedPersonnel } from "@/hooks/useApiHooks";
 import { loadPosts } from "@/lib/postsData";
 import { mergeOperacionesIntoExpediente } from "@/lib/opsExpedienteMerge";
 import LocalidadMapDialog from "@/components/operations/LocalidadMapDialog";
+import ArmasGlobalView, { buildArmaRows } from "@/components/operations/ArmasGlobalView";
 
 import { displayCaliber, displayWeaponType, lineHideKey, applyWeaponOverride, weaponCategoryLabel, realSerial, postRequiresWeapon } from "@/lib/expedienteHelpers";
 import {
@@ -416,6 +417,8 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
             ["sinLicencia", "Sin licencia"],
             ["sinArma", "Sin arma"],
             ["novedad", "Con novedad"],
+            ["boveda", "Bóveda"],
+            ["global", "Reporte global"],
           ] as [FilterKey, string][]).map(([k, lbl]) => (
 
             <Button key={k} size="sm" variant={filter === k ? "default" : "outline"} onClick={() => setFilter(k)}>
