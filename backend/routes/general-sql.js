@@ -1149,6 +1149,7 @@ router.get('/expediente', auth, guard, async (req, res) => {
         horas: Number(r.Horas) || 0,
         incentivo: Number(r.Incentivo) || 0,
         requiereArma: r.ArmaOID != null,
+        municiones: r.MunicionesPuesto != null ? Number(r.MunicionesPuesto) : null,
         armaOID: r.ArmaOID != null ? Number(r.ArmaOID) : null,
         armaSerial: arma?.serie || null,
         armaModelo: arma?.modelo || arma?.marca || null,
