@@ -388,12 +388,33 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="text-xs text-muted-foreground inline-flex items-center gap-1 mr-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="text-xs text-muted-foreground inline-flex items-center gap-1 mr-2">
           <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
           Reporte: <span className="font-medium">{fmtReportDate(data?.fecha)}</span>
-          {canEdit && <Badge variant="secondary" className="ml-2 text-[10px]">Edición habilitada</Badge>}
         </div>
+        {mayEdit && (
+          <div className="inline-flex items-center rounded-md border bg-muted/40 p-0.5 mr-1">
+            <Button
+              size="sm"
+              variant={editMode ? "ghost" : "default"}
+              className="h-7 px-2 text-xs"
+              onClick={() => setEditMode(false)}
+            >
+              <Eye className="h-3.5 w-3.5 mr-1" /> Vista
+            </Button>
+            <Button
+              size="sm"
+              variant={editMode ? "default" : "ghost"}
+              className="h-7 px-2 text-xs"
+              onClick={() => setEditMode(true)}
+            >
+              <Pencil className="h-3.5 w-3.5 mr-1" /> Editar
+            </Button>
+          </div>
+        )}
+        {canEdit && <Badge variant="secondary" className="text-[10px]">Edición habilitada (fotos, licencias, traslados)</Badge>}
         <div className="inline-flex items-center gap-1">
-          <Input
             type="date"
             value={selectedDate}
             max={new Date().toISOString().slice(0, 10)}
