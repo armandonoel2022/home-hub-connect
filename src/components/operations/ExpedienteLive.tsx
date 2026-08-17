@@ -453,6 +453,8 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
             sqlWeapons={sqlWeapons}
             overlay={overlay}
             reportDate={fmtReportDate(data?.fecha)}
+            canEdit={canEdit}
+            onOverlayChange={loadOverlay}
           />
         ) : (
           <>
