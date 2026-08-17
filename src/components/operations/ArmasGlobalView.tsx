@@ -19,6 +19,10 @@ import type {
   ExpedienteOverlayMap, GeneralExpedienteCliente, GeneralWeapon,
 } from "@/lib/api";
 import { Building2, Download, Loader2, MapPin, Search, Table2, Warehouse } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { expedienteOverlayApi } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 export interface ArmaRow {
   serial: string;
@@ -78,10 +82,14 @@ export function buildArmaRows(
     });
   });
 
+  // La bóveda es MANUAL: solo se contabilizan las armas marcadas explícitamente
+  // como resguardadas en Sede Central (overlay.enBoveda), nunca "todo lo que no
+  // aparece en el reporte del día".
   const boveda: ArmaRow[] = (sqlWeapons || [])
     .filter((w) => {
       const s = key(w.serie);
-      return !!s && !usados.has(s);
+      if (!s || usados.has(s)) return false;
+      return overlay[String(w.serie)]?.enBoveda === true;
     })
     .map((w) => {
       const ov = w.serie ? overlay[String(w.serie)] : undefined;
@@ -100,6 +108,7 @@ export function buildArmaRows(
       };
     });
 
+
   return { asignadas, boveda };
 }
 
@@ -109,14 +118,18 @@ interface Props {
   sqlWeapons: GeneralWeapon[];
   overlay: ExpedienteOverlayMap;
   reportDate: string;
+  canEdit?: boolean;
+  onOverlayChange?: () => void;
 }
 
 type MapPoint = { label: string; sub: string; pos: [number, number]; armas: number; sinLic: number; sede?: boolean };
 
-export default function ArmasGlobalView({ mode, clientes, sqlWeapons, overlay, reportDate }: Props) {
+export default function ArmasGlobalView({ mode, clientes, sqlWeapons, overlay, reportDate, canEdit, onOverlayChange }: Props) {
   const [view, setView] = useState<"tabla" | "mapa">("tabla");
   const [q, setQ] = useState("");
+  const [manage, setManage] = useState(false);
   const { data: personnel } = useArmedPersonnel();
+
 
   const { asignadas, boveda } = useMemo(
     () => buildArmaRows(clientes, sqlWeapons, overlay),
@@ -195,10 +208,26 @@ export default function ArmasGlobalView({ mode, clientes, sqlWeapons, overlay, r
             <Warehouse className="h-3 w-3" /> {SEDE_CENTRAL.nombre} · {SEDE_CENTRAL.empresa}
           </Badge>
         )}
-        <div className="ml-auto">
+        <div className="ml-auto flex gap-2">
+          {canEdit && (
+            <Button size="sm" variant="outline" onClick={() => setManage(true)}>
+              <Warehouse className="h-4 w-4 mr-1" /> Gestionar bóveda
+            </Button>
+          )}
           <Button size="sm" variant="outline" onClick={exportar}><Download className="h-4 w-4 mr-1" /> Exportar Excel</Button>
         </div>
       </div>
+
+      {manage && (
+        <BovedaManager
+          clientes={clientes}
+          sqlWeapons={sqlWeapons}
+          overlay={overlay}
+          onClose={() => setManage(false)}
+          onSaved={() => onOverlayChange?.()}
+        />
+      )}
+
 
       {view === "tabla" ? (
         <Card className="overflow-x-auto">
@@ -249,7 +278,7 @@ export default function ArmasGlobalView({ mode, clientes, sqlWeapons, overlay, r
       )}
 
       <p className="text-[11px] text-muted-foreground">
-        Reporte del día: {reportDate || "—"}. Las armas que no aparecen asignadas a un puesto en el reporte se contabilizan en la bóveda de {SEDE_CENTRAL.nombre}.
+        Reporte del día: {reportDate || "—"}. La bóveda es un registro manual: solo se contabilizan las armas marcadas explícitamente como resguardadas en {SEDE_CENTRAL.nombre}.
       </p>
     </div>
   );
@@ -369,4 +398,104 @@ function ArmasMap({ rows, personnel }: { rows: ArmaRow[]; personnel: any[] }) {
     );
   }
   return <div ref={containerRef} className="h-[460px] rounded-xl overflow-hidden border border-border" />;
+}
+
+
+// ─── Registro MANUAL de armas en bóveda (Sede Central) ───
+function BovedaManager({
+  clientes, sqlWeapons, overlay, onClose, onSaved,
+}: {
+  clientes: GeneralExpedienteCliente[];
+  sqlWeapons: GeneralWeapon[];
+  overlay: ExpedienteOverlayMap;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { toast } = useToast();
+  const [q, setQ] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [sel, setSel] = useState<Set<string>>(() => {
+    const s = new Set<string>();
+    (sqlWeapons || []).forEach((w) => { if (w.serie && overlay[String(w.serie)]?.enBoveda) s.add(String(w.serie)); });
+    return s;
+  });
+
+  const usados = useMemo(() => {
+    const set = new Set<string>();
+    clientes.forEach((c) => c.puestos.forEach((p) => {
+      if (!postRequiresWeapon(p)) return;
+      const serial = realSerial(p.armaSerial);
+      if (serial && serial !== "—") set.add(key(serial));
+    }));
+    return set;
+  }, [clientes]);
+
+  const candidatos = useMemo(() => {
+    const s = q.toLowerCase().trim();
+    return (sqlWeapons || [])
+      .filter((w) => !!norm(w.serie) && !usados.has(key(w.serie)))
+      .filter((w) => !s || `${w.serie} ${w.marca} ${w.tipo} ${w.calibre} ${w.noLicencia} ${w.estatus}`.toLowerCase().includes(s));
+  }, [sqlWeapons, usados, q]);
+
+  const toggle = (serie: string) => setSel((prev) => {
+    const n = new Set(prev);
+    if (n.has(serie)) n.delete(serie); else n.add(serie);
+    return n;
+  });
+
+  const guardar = async () => {
+    setSaving(true);
+    try {
+      const cambios: { serie: string; enBoveda: boolean }[] = [];
+      (sqlWeapons || []).forEach((w) => {
+        const serie = norm(w.serie);
+        if (!serie) return;
+        const antes = overlay[serie]?.enBoveda === true;
+        const ahora = sel.has(serie);
+        if (antes !== ahora) cambios.push({ serie, enBoveda: ahora });
+      });
+      for (const c of cambios) await expedienteOverlayApi.save(c.serie, { enBoveda: c.enBoveda });
+      toast({ title: "Bóveda actualizada", description: `${cambios.length} arma(s) actualizada(s).` });
+      onSaved();
+      onClose();
+    } catch (e) {
+      toast({ title: "No se pudo guardar", description: e instanceof Error ? e.message : "Error", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><Warehouse className="h-4 w-4" /> Armas resguardadas en bóveda</DialogTitle>
+        </DialogHeader>
+        <p className="text-xs text-muted-foreground">
+          Marca únicamente las armas que físicamente están en la bóveda de {SEDE_CENTRAL.nombre}. Las armas asignadas a un puesto en el reporte del día no aparecen en esta lista.
+        </p>
+        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar serial, marca, licencia…" className="h-9" />
+        <div className="max-h-[50vh] overflow-y-auto border border-border rounded-md divide-y divide-border/60">
+          {candidatos.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">Sin armas disponibles.</p>}
+          {candidatos.map((w) => {
+            const serie = norm(w.serie);
+            return (
+              <label key={serie} className="flex items-center gap-3 p-2 text-xs hover:bg-muted/40 cursor-pointer">
+                <Checkbox checked={sel.has(serie)} onCheckedChange={() => toggle(serie)} />
+                <span className="font-mono font-semibold w-44 truncate">{serie}</span>
+                <span className="flex-1 truncate">{[displayWeaponType(w.tipo), norm(w.marca), displayCaliber(w.calibre)].filter(Boolean).join(" · ") || "—"}</span>
+                <span className="w-32 truncate">{norm(overlay[serie]?.noLicencia ?? w.noLicencia) || "Sin licencia"}</span>
+                <span className="w-32 truncate text-muted-foreground">{norm(overlay[serie]?.estatus ?? w.estatus) || "—"}</span>
+              </label>
+            );
+          })}
+        </div>
+        <DialogFooter className="items-center">
+          <Badge variant="secondary" className="mr-auto text-[11px]">{sel.size} arma(s) en bóveda</Badge>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button onClick={guardar} disabled={saving}>{saving ? "Guardando…" : "Guardar bóveda"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }

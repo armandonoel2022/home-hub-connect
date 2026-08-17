@@ -87,7 +87,7 @@ router.put('/:serie', auth, editGuard, jsonLarge, (req, res) => {
   if (!serie) return res.status(400).json({ message: 'serie requerida' });
   const overlay = readOverlay();
   const prev = overlay[serie] || {};
-  const allowed = ['estatus', 'nota', 'noLicencia', 'custodioOverride', 'puestoOverride', 'clienteOverride',
+  const allowed = ['estatus', 'nota', 'noLicencia', 'custodioOverride', 'puestoOverride', 'clienteOverride', 'enBoveda',
     'marca', 'propietario', 'calibre', 'categoria', 'tipo'];
   const patch = {};
   for (const k of allowed) {
