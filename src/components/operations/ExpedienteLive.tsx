@@ -820,48 +820,15 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
             <Field label="Custodio" value={puesto.vigilante} />
           </div>
 
-          {ctx.canEdit ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <label className="text-xs space-y-1">
-                <span className="font-medium">Marca</span>
-                <Input value={marca} onChange={(e) => setMarca(e.target.value)} placeholder="Marca del arma" />
-              </label>
-              <label className="text-xs space-y-1">
-                <span className="font-medium">Tipo de arma</span>
-                <Input value={tipo} onChange={(e) => setTipo(e.target.value)} placeholder="Letal / Menos que letal" />
-              </label>
-              <label className="text-xs space-y-1">
-                <span className="font-medium">Calibre</span>
-                <Input value={calibre} onChange={(e) => setCalibre(e.target.value)} placeholder="Calibre / Menos que letal" />
-              </label>
-              <label className="text-xs space-y-1">
-                <span className="font-medium">Categoría</span>
-                <Input value={categoria} onChange={(e) => setCategoria(e.target.value)} placeholder="Categoría" />
-              </label>
-              <label className="text-xs space-y-1">
-                <span className="font-medium">Propietario</span>
-                <Input value={propietario} onChange={(e) => setPropietario(e.target.value)} placeholder="Propietario del arma" />
-              </label>
-              <label className="text-xs space-y-1">
-                <span className="font-medium">No. Licencia</span>
-                <Input value={noLicencia} onChange={(e) => setNoLicencia(e.target.value)} placeholder="Número de licencia" />
-              </label>
-              <label className="text-xs space-y-1">
-                <span className="font-medium">Estatus</span>
-                <Input value={estatus} onChange={(e) => setEstatus(e.target.value)} placeholder="En condiciones / Falta de mantenimiento…" />
-              </label>
-              <label className="text-xs space-y-1 sm:col-span-2">
-                <span className="font-medium">Nota</span>
-                <Textarea value={nota} onChange={(e) => setNota(e.target.value)} rows={2} />
-              </label>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <Field label="Estatus" value={estatus} />
-              <Field label="No. Licencia" value={noLicencia} />
-              {nota && <Field label="Nota" value={nota} />}
-            </div>
-          )}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+            <Field label="Estatus" value={estatus} />
+            <Field label="No. Licencia" value={noLicencia} />
+            {nota && <Field label="Nota" value={nota} />}
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Los datos del arma provienen de GENERAL y son de solo lectura.
+          </p>
+
 
           {/* Fotos del arma */}
           <div className="space-y-2">
