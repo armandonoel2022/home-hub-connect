@@ -78,10 +78,14 @@ export function buildArmaRows(
     });
   });
 
+  // La bóveda es MANUAL: solo se contabilizan las armas marcadas explícitamente
+  // como resguardadas en Sede Central (overlay.enBoveda), nunca "todo lo que no
+  // aparece en el reporte del día".
   const boveda: ArmaRow[] = (sqlWeapons || [])
     .filter((w) => {
       const s = key(w.serie);
-      return !!s && !usados.has(s);
+      if (!s || usados.has(s)) return false;
+      return overlay[String(w.serie)]?.enBoveda === true;
     })
     .map((w) => {
       const ov = w.serie ? overlay[String(w.serie)] : undefined;
@@ -99,6 +103,7 @@ export function buildArmaRows(
         enBoveda: true,
       };
     });
+
 
   return { asignadas, boveda };
 }
