@@ -271,8 +271,13 @@ export default function ArmasGlobalView({ mode, clientes, sqlWeapons, overlay, r
                 <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">Sin armas que coincidan con la búsqueda.</td></tr>
               )}
               {rows.map((r, i) => (
-                <tr key={`${r.serial}-${r.puesto}-${i}`} className="border-b border-border/60 last:border-0 hover:bg-muted/40">
-                  <td className="p-2 font-mono font-semibold">{r.serial || "—"}</td>
+                <tr
+                  key={`${r.serial}-${r.puesto}-${i}`}
+                  className="border-b border-border/60 last:border-0 hover:bg-muted/40 cursor-pointer"
+                  onClick={() => setDetail({ row: r, tab: "arma" })}
+                  title="Ver ficha del arma"
+                >
+                  <td className="p-2 font-mono font-semibold text-primary underline-offset-2 hover:underline">{r.serial || "—"}</td>
                   <td className="p-2">{[r.tipo, r.marca, r.calibre].filter(Boolean).join(" · ") || "—"}</td>
                   <td className="p-2">
                     {r.licencia
@@ -291,9 +296,20 @@ export default function ArmasGlobalView({ mode, clientes, sqlWeapons, overlay, r
                     </div>
                     <p className="text-[11px] text-muted-foreground truncate">{r.localidad} · {r.puesto}</p>
                   </td>
-                  <td className="p-2 truncate">{r.vigilante || (r.enBoveda ? "En bóveda" : "Sin asignar")}</td>
+                  <td className="p-2 truncate">
+                    {r.vigilante ? (
+                      <button
+                        className="text-primary hover:underline"
+                        onClick={(e) => { e.stopPropagation(); setDetail({ row: r, tab: "vigilante" }); }}
+                        title="Ver ficha del vigilante"
+                      >
+                        {r.vigilante}
+                      </button>
+                    ) : (r.enBoveda ? "En bóveda" : "Sin asignar")}
+                  </td>
                 </tr>
               ))}
+
             </tbody>
           </table>
         </Card>
