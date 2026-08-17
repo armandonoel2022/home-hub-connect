@@ -21,13 +21,14 @@ import { useArmedPersonnel } from "@/hooks/useApiHooks";
 import { loadPosts } from "@/lib/postsData";
 import { mergeOperacionesIntoExpediente } from "@/lib/opsExpedienteMerge";
 import LocalidadMapDialog from "@/components/operations/LocalidadMapDialog";
+import ArmasGlobalView, { buildArmaRows } from "@/components/operations/ArmasGlobalView";
 
 import { displayCaliber, displayWeaponType, lineHideKey, applyWeaponOverride, weaponCategoryLabel, realSerial, postRequiresWeapon } from "@/lib/expedienteHelpers";
 import {
   Building2, MapPin, Crosshair, Users, ChevronDown, ChevronRight, RefreshCw,
   AlertTriangle, FileText, Phone, Mail, ExternalLink, ShieldCheck, ShieldOff, ListChecks,
   Download, Pencil, ArrowRightLeft, Upload, Trash2, IdCard, User, X, Shield,
-  Camera, Eye,
+  Camera, Eye, Warehouse,
 } from "lucide-react";
 
 type FilterKey = "todos" | "armas" | "sinArma" | "novedad" | "sinLicencia" | "boveda" | "global";
@@ -296,6 +297,15 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
     return { con, sin, total: con + sin };
   }, [mergedData, overlay, hiddenKeys]);
 
+  // Conteo de armas en bóveda (Sede Central): no asignadas en el reporte del día.
+  const bovedaCount = useMemo(() => {
+    const visibles = (mergedData?.clientes || []).map((c) => ({
+      ...c,
+      puestos: c.puestos.filter((p) => !hiddenKeys.has(lineHideKey(c, p))),
+    }));
+    return buildArmaRows(visibles, sqlWeapons, overlay).boveda.length;
+  }, [mergedData, sqlWeapons, overlay, hiddenKeys]);
+
   const t = mergedData?.totals || {};
 
 
@@ -386,6 +396,9 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
             accent={licStats.sin > 0 ? "bg-destructive/10 text-destructive" : "bg-emerald-100 text-emerald-700"}
           />
         </button>
+        <button type="button" onClick={() => setFilter("boveda")} className="text-left w-full h-full">
+          <KpiCard icon={<Warehouse className="h-4 w-4" />} label="Armas en bóveda (Sede Central)" value={bovedaCount} accent="bg-slate-100 text-slate-700" />
+        </button>
       </div>
 
 
@@ -416,6 +429,8 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
             ["sinLicencia", "Sin licencia"],
             ["sinArma", "Sin arma"],
             ["novedad", "Con novedad"],
+            ["boveda", "Bóveda"],
+            ["global", "Reporte global"],
           ] as [FilterKey, string][]).map(([k, lbl]) => (
 
             <Button key={k} size="sm" variant={filter === k ? "default" : "outline"} onClick={() => setFilter(k)}>
@@ -431,12 +446,24 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
       </div>
 
       <div className="space-y-2">
-        {filtered.length === 0 && (
-          <Card className="p-10 text-center text-sm text-muted-foreground">
-            No hay clientes que coincidan con el filtro seleccionado.
-          </Card>
+        {(filter === "boveda" || filter === "global") ? (
+          <ArmasGlobalView
+            mode={filter}
+            clientes={filtered}
+            sqlWeapons={sqlWeapons}
+            overlay={overlay}
+            reportDate={fmtReportDate(data?.fecha)}
+          />
+        ) : (
+          <>
+            {filtered.length === 0 && (
+              <Card className="p-10 text-center text-sm text-muted-foreground">
+                No hay clientes que coincidan con el filtro seleccionado.
+              </Card>
+            )}
+            {filtered.map((c) => <LiveClientCard key={c.oid} client={c} ctx={ctx} />)}
+          </>
         )}
-        {filtered.map((c) => <LiveClientCard key={c.oid} client={c} ctx={ctx} />)}
       </div>
 
       {weaponDlg && (
