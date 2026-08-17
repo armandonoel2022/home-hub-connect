@@ -179,7 +179,9 @@ router.get('/overtime', auth, guard, async (req, res) => {
        JOIN ReporteDiarioD rdd ON rdd.OID = rse.ReporteDiarioD
        JOIN ReporteDiario rd ON rd.OID = rdd.ReporteDiario
        LEFT JOIN Empleado e ON e.OID = rse.Vigilante
-       WHERE rse.GCRecord IS NULL AND rd.Fecha >= @desde AND rd.Fecha <= @hasta
+       WHERE rse.GCRecord IS NULL
+         AND CAST(rd.Fecha AS DATE) >= CAST(@desde AS DATE)
+         AND CAST(rd.Fecha AS DATE) <= CAST(@hasta AS DATE)
        ORDER BY rd.Fecha`,
       { desde, hasta }
     );
