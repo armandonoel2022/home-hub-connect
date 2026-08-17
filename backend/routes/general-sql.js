@@ -179,7 +179,9 @@ router.get('/overtime', auth, guard, async (req, res) => {
        JOIN ReporteDiarioD rdd ON rdd.OID = rse.ReporteDiarioD
        JOIN ReporteDiario rd ON rd.OID = rdd.ReporteDiario
        LEFT JOIN Empleado e ON e.OID = rse.Vigilante
-       WHERE rse.GCRecord IS NULL AND rd.Fecha >= @desde AND rd.Fecha <= @hasta
+       WHERE rse.GCRecord IS NULL
+         AND CAST(rd.Fecha AS DATE) >= CAST(@desde AS DATE)
+         AND CAST(rd.Fecha AS DATE) <= CAST(@hasta AS DATE)
        ORDER BY rd.Fecha`,
       { desde, hasta }
     );
@@ -509,7 +511,12 @@ ORDER BY p.Ano DESC, p.Mes DESC, p.Periodo DESC`);
   } catch (e) { res.status(502).json({ message: e.message }); }
 });
 
-const safeCode = (v) => String(v || '').replace(/[^A-Za-z0-9._-]/g, '').slice(0, 20);
+// Empleado.Codigo es INT en gSafeOne: comparar como número evita el error
+// "Error al convertir el tipo de datos nvarchar a int".
+const safeCode = (v) => {
+  const n = Number.parseInt(String(v ?? '').replace(/[^0-9]/g, ''), 10);
+  return Number.isFinite(n) ? String(n) : '';
+};
 
 // ─── Historial de pagos de un empleado (Query 1) ───
 router.get('/employee-payments', auth, guard, async (req, res) => {
@@ -527,7 +534,7 @@ INNER JOIN PagoConcepto pc ON pd.PagoConcepto = pc.OID
 INNER JOIN Pago p ON pc.Pago = p.OID
 INNER JOIN Concepto c ON pc.Concepto = c.OID
 INNER JOIN Empleado e ON pd.Empleado = e.OID
-WHERE e.Codigo = '${codigo}' AND p.GCRecord IS NULL AND pd.Calculado > 0
+WHERE e.Codigo = ${codigo} AND p.GCRecord IS NULL AND pd.Calculado > 0
 GROUP BY p.OID, p.Fecha, p.Periodo, p.Mes, p.Ano, p.Nomina
 ORDER BY p.Ano DESC, p.Mes DESC, p.Periodo DESC`);
     res.json(rows.map((r) => ({
@@ -557,7 +564,7 @@ INNER JOIN PagoConcepto pc ON pd.PagoConcepto = pc.OID
 INNER JOIN Pago p ON pc.Pago = p.OID
 INNER JOIN Concepto c ON pc.Concepto = c.OID
 INNER JOIN Empleado e ON pd.Empleado = e.OID
-WHERE e.Codigo = '${codigo}' AND p.OID = ${pagoOid} AND p.GCRecord IS NULL AND pd.Calculado > 0
+WHERE e.Codigo = ${codigo} AND p.OID = ${pagoOid} AND p.GCRecord IS NULL AND pd.Calculado > 0
 ORDER BY c.Tipo DESC, c.Descripcion`);
     const puestos = await catalogMap(['Puesto', 'Cargo', 'Posicion']);
     const first = rows[0] || {};
@@ -597,7 +604,7 @@ INNER JOIN PagoConcepto pc ON pd.PagoConcepto = pc.OID
 INNER JOIN Pago p ON pc.Pago = p.OID
 INNER JOIN Concepto c ON pc.Concepto = c.OID
 INNER JOIN Empleado e ON pd.Empleado = e.OID
-WHERE e.Codigo = '${codigo}' AND p.OID = ${oid} AND p.GCRecord IS NULL AND pd.Calculado > 0`;
+WHERE e.Codigo = ${codigo} AND p.OID = ${oid} AND p.GCRecord IS NULL AND pd.Calculado > 0`;
   try {
     const [rowsA, rowsB] = await Promise.all([sql.query(q(a)), sql.query(q(b))]);
     const toMap = (rows) => {
@@ -1073,7 +1080,8 @@ router.get('/expediente', auth, guard, async (req, res) => {
 
     const [clienteCodigoExpr, puestoCodigoExpr, vigilanteCodigoExpr] = await Promise.all([
       optionalColumnExpr('Cliente', 'c', 'Codigo', 'ClienteCodigo'),
-      optionalColumnExpr('HoraContratada', 'h', 'Codigo', 'PuestoCodigo'),
+      // HoraContratada NO tiene columna Codigo: se usa Referencia como código de puesto.
+      optionalColumnExpr('HoraContratada', 'h', 'Referencia', 'PuestoCodigo'),
       optionalColumnExpr('Empleado', 'e', 'Codigo', 'VigilanteCodigo'),
     ]);
 
@@ -1081,7 +1089,7 @@ router.get('/expediente', auth, guard, async (req, res) => {
     // con Zona (localidad) y Tanda (turno) del ReporteDiario.
     const rows = await sql.query(
       `SELECT rp.OID AS LineaOID, rp.Horas, rp.Incentivo, rp.Arma AS ArmaOID,
-              rp.Novedad AS NovedadOID, rp.Comentario,
+              rp.Novedad AS NovedadOID, rp.Comentario, rp.Municiones AS MunicionesPuesto,
               c.OID AS ClienteOID, ${clienteCodigoExpr}, c.Nombre AS ClienteNombre,
               c.Direccion, c.Telefono, c.Email, c.RNC, c.Cedula, c.Contacto, c.Inactivo,
               h.OID AS PuestoOID, ${puestoCodigoExpr}, h.Descripcion AS PuestoDesc,
@@ -1141,6 +1149,7 @@ router.get('/expediente', auth, guard, async (req, res) => {
         horas: Number(r.Horas) || 0,
         incentivo: Number(r.Incentivo) || 0,
         requiereArma: r.ArmaOID != null,
+        municiones: r.MunicionesPuesto != null ? Number(r.MunicionesPuesto) : null,
         armaOID: r.ArmaOID != null ? Number(r.ArmaOID) : null,
         armaSerial: arma?.serie || null,
         armaModelo: arma?.modelo || arma?.marca || null,
@@ -1155,7 +1164,7 @@ router.get('/expediente', auth, guard, async (req, res) => {
               noLicencia: arma.noLicencia,
               estatus: arma.estatus,
               propietario: arma.propietario,
-              capsulas: arma.capsulas ?? null,
+              capsulas: (r.MunicionesPuesto != null ? Number(r.MunicionesPuesto) : (arma.capsulas ?? null)),
               vence: arma.vence ?? null,
               permanente: !!arma.permanente,
               fotoLicenciaFrenteDb: !!arma.fotoLicenciaFrenteDb,
