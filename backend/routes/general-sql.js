@@ -850,6 +850,18 @@ const WEAPON_BLOB_COLS = {
   arma4: 'FotoArma4',
 };
 
+// Propietarios válidos (grupo SafeOne). Se comparan normalizados (mayúsculas,
+// sin puntos ni espacios sobrantes); todo lo demás (terceros, NULL, vacío) se excluye.
+const WEAPON_OWNERS = [
+  'SAFE ONE SEGURITY',
+  'SAFEONE SECURITY COMPANY, SRL.',
+  'GUARDIANES LA CUSTODIA C POR A',
+];
+const WEAPON_OWNER_KEYS = WEAPON_OWNERS.map((o) => o.toUpperCase().replace(/\./g, '').trim());
+// EstatusArma: 9 Regular, 12 EN REPARACION, 14 En Boveda.
+const WEAPON_STATUS_ALLOWED = [9, 12, 14];
+const WEAPON_STATUS_VAULT = 14;
+
 // Lee todas las armas de Armamento con sus catálogos resueltos.
 async function readWeapons() {
   // Solo columnas escalares + banderas de existencia de cada foto.
@@ -860,8 +872,17 @@ async function readWeapons() {
   const flagList = Object.entries(WEAPON_BLOB_COLS)
     .filter(([, col]) => colsMap.has(col.toLowerCase()))
     .map(([key, col]) => `CASE WHEN DATALENGTH([${col}]) > 0 THEN 1 ELSE 0 END AS [has_${key}]`);
+  // Filtros de auditoría (ago 2026):
+  //  • Solo armas propiedad del grupo SafeOne (se excluyen terceros, NULL y vacíos).
+  //  • Solo estatus operativos relevantes: 9 Regular, 12 EN REPARACION, 14 En Boveda.
+  const ownerFilter = colsMap.has('propietario')
+    ? ` AND LTRIM(RTRIM(UPPER(REPLACE(ISNULL(Propietario,''),'.','')))) IN (${WEAPON_OWNER_KEYS.map((o) => `'${o}'`).join(', ')})`
+    : '';
+  const statusFilter = colsMap.has('estatus')
+    ? ` AND Estatus IN (${WEAPON_STATUS_ALLOWED.join(', ')})`
+    : '';
   const rows = await sql.query(
-    `SELECT ${selectList}${flagList.length ? ', ' + flagList.join(', ') : ''} FROM Armamento WHERE GCRecord IS NULL`
+    `SELECT ${selectList}${flagList.length ? ', ' + flagList.join(', ') : ''} FROM Armamento WHERE GCRecord IS NULL${ownerFilter}${statusFilter}`
   );
   const [marcaCat, tipoCat, calCat, catCat, catalogEstatus] = await Promise.all([
     catalogMap(['MarcaArma', 'Marca', 'Marcas']),
@@ -906,6 +927,8 @@ async function readWeapons() {
       categoria: txt(resolve(catCat, catCode)),
       noLicencia: txt(pick(r, 'NoLicencia', 'Licencia', 'NoRegistro', 'Registro')),
       estatus: txt(resolve(catalogEstatus, pick(r, 'Estatus'))),
+      estatusOid: (() => { const v = pick(r, 'Estatus'); return v == null ? null : Number(v); })(),
+      enBovedaDb: Number(pick(r, 'Estatus')) === WEAPON_STATUS_VAULT,
       permanente: pick(r, 'Permanente') === 1 || pick(r, 'Permanente') === true,
       vence: txt(pick(r, 'Vence')),
       nota: txt(pick(r, 'Nota')),
