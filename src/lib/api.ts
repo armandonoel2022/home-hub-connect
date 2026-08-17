@@ -1683,6 +1683,10 @@ export interface GeneralWeapon {
   registro?: string | null; marca?: string | null; calibre?: string | null;
   tipo?: string | null; categoria?: string | null; noLicencia?: string | null;
   estatus?: string | null; propietario?: string | null;
+  /** OID de EstatusArma (9 Regular, 12 EN REPARACION, 14 En Boveda). */
+  estatusOid?: number | null;
+  /** true cuando el estatus en gSafeOne es 14 (En Boveda). */
+  enBovedaDb?: boolean;
 }
 
 // ─── Operaciones: Expediente Digital (clientes, localidades, puestos, reporte diario, bóveda) ───

@@ -82,14 +82,15 @@ export function buildArmaRows(
     });
   });
 
-  // La bóveda es MANUAL: solo se contabilizan las armas marcadas explícitamente
-  // como resguardadas en Sede Central (overlay.enBoveda), nunca "todo lo que no
-  // aparece en el reporte del día".
+  // La bóveda se lee de la BASE DE DATOS: Armamento.Estatus = 14 (En Boveda),
+  // ya filtrado en el backend por propietario del grupo SafeOne. El overlay local
+  // solo actúa como ajuste manual (marcar/desmarcar casos puntuales).
   const boveda: ArmaRow[] = (sqlWeapons || [])
     .filter((w) => {
       const s = key(w.serie);
       if (!s || usados.has(s)) return false;
-      return overlay[String(w.serie)]?.enBoveda === true;
+      const ov = overlay[String(w.serie)]?.enBoveda;
+      return ov === undefined ? w.enBovedaDb === true : ov === true;
     })
     .map((w) => {
       const ov = w.serie ? overlay[String(w.serie)] : undefined;
@@ -416,7 +417,11 @@ function BovedaManager({
   const [saving, setSaving] = useState(false);
   const [sel, setSel] = useState<Set<string>>(() => {
     const s = new Set<string>();
-    (sqlWeapons || []).forEach((w) => { if (w.serie && overlay[String(w.serie)]?.enBoveda) s.add(String(w.serie)); });
+    (sqlWeapons || []).forEach((w) => {
+      if (!w.serie) return;
+      const ov = overlay[String(w.serie)]?.enBoveda;
+      if (ov === undefined ? w.enBovedaDb === true : ov === true) s.add(String(w.serie));
+    });
     return s;
   });
 
@@ -450,7 +455,8 @@ function BovedaManager({
       (sqlWeapons || []).forEach((w) => {
         const serie = norm(w.serie);
         if (!serie) return;
-        const antes = overlay[serie]?.enBoveda === true;
+        const ovPrev = overlay[serie]?.enBoveda;
+        const antes = ovPrev === undefined ? w.enBovedaDb === true : ovPrev === true;
         const ahora = sel.has(serie);
         if (antes !== ahora) cambios.push({ serie, enBoveda: ahora });
       });
