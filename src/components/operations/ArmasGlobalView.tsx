@@ -204,10 +204,26 @@ export default function ArmasGlobalView({ mode, clientes, sqlWeapons, overlay, r
             <Warehouse className="h-3 w-3" /> {SEDE_CENTRAL.nombre} · {SEDE_CENTRAL.empresa}
           </Badge>
         )}
-        <div className="ml-auto">
+        <div className="ml-auto flex gap-2">
+          {canEdit && (
+            <Button size="sm" variant="outline" onClick={() => setManage(true)}>
+              <Warehouse className="h-4 w-4 mr-1" /> Gestionar bóveda
+            </Button>
+          )}
           <Button size="sm" variant="outline" onClick={exportar}><Download className="h-4 w-4 mr-1" /> Exportar Excel</Button>
         </div>
       </div>
+
+      {manage && (
+        <BovedaManager
+          clientes={clientes}
+          sqlWeapons={sqlWeapons}
+          overlay={overlay}
+          onClose={() => setManage(false)}
+          onSaved={() => onOverlayChange?.()}
+        />
+      )}
+
 
       {view === "tabla" ? (
         <Card className="overflow-x-auto">
