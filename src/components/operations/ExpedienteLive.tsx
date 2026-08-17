@@ -28,7 +28,7 @@ import {
   Building2, MapPin, Crosshair, Users, ChevronDown, ChevronRight, RefreshCw,
   AlertTriangle, FileText, Phone, Mail, ExternalLink, ShieldCheck, ShieldOff, ListChecks,
   Download, Pencil, ArrowRightLeft, Upload, Trash2, IdCard, User, X, Shield,
-  Camera, Eye,
+  Camera, Eye, Warehouse,
 } from "lucide-react";
 
 type FilterKey = "todos" | "armas" | "sinArma" | "novedad" | "sinLicencia" | "boveda" | "global";
