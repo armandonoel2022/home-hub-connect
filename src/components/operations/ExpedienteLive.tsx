@@ -138,7 +138,9 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
   const [agentDlg, setAgentDlg] = useState<{ p: GeneralExpedientePuesto; c: GeneralExpedienteCliente } | null>(null);
   const [postDlg, setPostDlg] = useState<{ p: GeneralExpedientePuesto; c: GeneralExpedienteCliente } | null>(null);
 
-  const canEdit = serverCanEdit && canEditExpediente(user);
+  const [editMode, setEditMode] = useState(false);
+  const mayEdit = serverCanEdit && canEditExpediente(user);
+  const canEdit = mayEdit && editMode;
 
   const loadOverlay = async () => {
     try {
@@ -388,8 +390,28 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
         <div className="text-xs text-muted-foreground inline-flex items-center gap-1 mr-2">
           <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
           Reporte: <span className="font-medium">{fmtReportDate(data?.fecha)}</span>
-          {canEdit && <Badge variant="secondary" className="ml-2 text-[10px]">Edición habilitada</Badge>}
         </div>
+        {mayEdit && (
+          <div className="inline-flex items-center rounded-md border bg-muted/40 p-0.5 mr-1">
+            <Button
+              size="sm"
+              variant={editMode ? "ghost" : "default"}
+              className="h-7 px-2 text-xs"
+              onClick={() => setEditMode(false)}
+            >
+              <Eye className="h-3.5 w-3.5 mr-1" /> Vista
+            </Button>
+            <Button
+              size="sm"
+              variant={editMode ? "default" : "ghost"}
+              className="h-7 px-2 text-xs"
+              onClick={() => setEditMode(true)}
+            >
+              <Pencil className="h-3.5 w-3.5 mr-1" /> Editar
+            </Button>
+          </div>
+        )}
+        {canEdit && <Badge variant="secondary" className="text-[10px]">Edición habilitada (fotos, licencias, traslados)</Badge>}
         <div className="inline-flex items-center gap-1">
           <Input
             type="date"
