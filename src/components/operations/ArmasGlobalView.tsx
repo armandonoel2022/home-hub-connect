@@ -40,7 +40,12 @@ export interface ArmaRow {
   propietario?: string;
   municion?: number | null;
   nota?: string;
+  vigilanteCedula?: string;
+  vigilanteCodigo?: number | null;
+  tanda?: string;
+  horas?: number | null;
 }
+
 
 
 const norm = (s: unknown) => String(s ?? "").trim();
