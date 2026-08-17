@@ -79,3 +79,9 @@ Helpers en `src/lib/expedienteHelpers.ts`:
 Cuarto modo en `/operaciones/expediente`: **Contrato** (`src/components/operations/ExpedienteContrato.tsx`). Lee la estructura CONTRATADA (no el reporte diario) de gSafeOne vía `GET /general-sql/contrato?todos=1`:
 Cliente(Nombre/RNC) → ClienteLocalidad(Nombre/Zona/SubZona/GeoLocalizacion) → ClientePuestoServicio(Referencia/Arma) → ClientePuestoHorario(Dia/RegularHoras/Tandas) → ClientePuestoHorarioD(Horas/Tanda/Vigilante/Incentivo/Precio/HoraDesde/HoraHasta).
 Descubrimiento dinámico de tablas/columnas (`tableExists`, `pick`), catálogos Zona/SubZona/Tanda/Día, armas del `weaponsMap`, vigilantes de `Empleado`. Si no existen las tablas → respaldo a `HoraContratada` (`fuente:"hora-contratada"`); el campo `disponible` indica qué tablas se encontraron. Cliente API: `generalSqlApi.contrato(todos?)`, tipos `GeneralContrato*` en `src/lib/api.ts`.
+
+## Filtro de Armamento y bóveda por estatus (ago 2026)
+`readWeapons()` en `backend/routes/general-sql.js` filtra en SQL:
+- **Propietario** solo del grupo SafeOne: `SAFE ONE SEGURITY`, `SAFEONE SECURITY COMPANY, SRL.`, `GUARDIANES LA CUSTODIA C POR A` (normalizado sin puntos/espacios). Se excluyen terceros (PANTERA, VIGILANTE SANTO DOMINGO), NULL y vacíos.
+- **Estatus** (FK a `EstatusArma`, la columna se llama `Estatus`): solo 9 Regular, 12 EN REPARACION, 14 En Boveda.
+Cada arma expone `estatusOid` y `enBovedaDb` (Estatus=14). La **bóveda ya no es manual**: `buildArmaRows` en `ArmasGlobalView.tsx` la deriva de `enBovedaDb`; el overlay local `enBoveda` solo sobreescribe casos puntuales (si está definido gana sobre la BD).
