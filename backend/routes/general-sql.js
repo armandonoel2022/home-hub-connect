@@ -511,7 +511,12 @@ ORDER BY p.Ano DESC, p.Mes DESC, p.Periodo DESC`);
   } catch (e) { res.status(502).json({ message: e.message }); }
 });
 
-const safeCode = (v) => String(v || '').replace(/[^A-Za-z0-9._-]/g, '').slice(0, 20);
+// Empleado.Codigo es INT en gSafeOne: comparar como número evita el error
+// "Error al convertir el tipo de datos nvarchar a int".
+const safeCode = (v) => {
+  const n = Number.parseInt(String(v ?? '').replace(/[^0-9]/g, ''), 10);
+  return Number.isFinite(n) ? String(n) : '';
+};
 
 // ─── Historial de pagos de un empleado (Query 1) ───
 router.get('/employee-payments', auth, guard, async (req, res) => {
@@ -529,7 +534,7 @@ INNER JOIN PagoConcepto pc ON pd.PagoConcepto = pc.OID
 INNER JOIN Pago p ON pc.Pago = p.OID
 INNER JOIN Concepto c ON pc.Concepto = c.OID
 INNER JOIN Empleado e ON pd.Empleado = e.OID
-WHERE e.Codigo = '${codigo}' AND p.GCRecord IS NULL AND pd.Calculado > 0
+WHERE e.Codigo = ${codigo} AND p.GCRecord IS NULL AND pd.Calculado > 0
 GROUP BY p.OID, p.Fecha, p.Periodo, p.Mes, p.Ano, p.Nomina
 ORDER BY p.Ano DESC, p.Mes DESC, p.Periodo DESC`);
     res.json(rows.map((r) => ({
@@ -559,7 +564,7 @@ INNER JOIN PagoConcepto pc ON pd.PagoConcepto = pc.OID
 INNER JOIN Pago p ON pc.Pago = p.OID
 INNER JOIN Concepto c ON pc.Concepto = c.OID
 INNER JOIN Empleado e ON pd.Empleado = e.OID
-WHERE e.Codigo = '${codigo}' AND p.OID = ${pagoOid} AND p.GCRecord IS NULL AND pd.Calculado > 0
+WHERE e.Codigo = ${codigo} AND p.OID = ${pagoOid} AND p.GCRecord IS NULL AND pd.Calculado > 0
 ORDER BY c.Tipo DESC, c.Descripcion`);
     const puestos = await catalogMap(['Puesto', 'Cargo', 'Posicion']);
     const first = rows[0] || {};
@@ -599,7 +604,7 @@ INNER JOIN PagoConcepto pc ON pd.PagoConcepto = pc.OID
 INNER JOIN Pago p ON pc.Pago = p.OID
 INNER JOIN Concepto c ON pc.Concepto = c.OID
 INNER JOIN Empleado e ON pd.Empleado = e.OID
-WHERE e.Codigo = '${codigo}' AND p.OID = ${oid} AND p.GCRecord IS NULL AND pd.Calculado > 0`;
+WHERE e.Codigo = ${codigo} AND p.OID = ${oid} AND p.GCRecord IS NULL AND pd.Calculado > 0`;
   try {
     const [rowsA, rowsB] = await Promise.all([sql.query(q(a)), sql.query(q(b))]);
     const toMap = (rows) => {
