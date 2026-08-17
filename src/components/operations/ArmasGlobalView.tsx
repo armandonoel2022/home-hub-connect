@@ -319,9 +319,20 @@ export default function ArmasGlobalView({ mode, clientes, sqlWeapons, overlay, r
         <ArmasMap rows={rows} personnel={personnel || []} />
       )}
 
+      {detail && (
+        <ArmaDetailDialog
+          row={detail.row}
+          tab={detail.tab}
+          personnel={personnel || []}
+          onTab={(t) => setDetail({ row: detail.row, tab: t })}
+          onClose={() => setDetail(null)}
+        />
+      )}
+
       <p className="text-[11px] text-muted-foreground">
         Reporte del día: {reportDate || "—"}. La bóveda es un registro manual: solo se contabilizan las armas marcadas explícitamente como resguardadas en {SEDE_CENTRAL.nombre}.
       </p>
+
     </div>
   );
 }
