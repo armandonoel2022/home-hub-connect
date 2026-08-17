@@ -396,6 +396,9 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
             accent={licStats.sin > 0 ? "bg-destructive/10 text-destructive" : "bg-emerald-100 text-emerald-700"}
           />
         </button>
+        <button type="button" onClick={() => setFilter("boveda")} className="text-left w-full h-full">
+          <KpiCard icon={<Warehouse className="h-4 w-4" />} label="Armas en bóveda (Sede Central)" value={bovedaCount} accent="bg-slate-100 text-slate-700" />
+        </button>
       </div>
 
 
