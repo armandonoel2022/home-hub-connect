@@ -388,8 +388,6 @@ const ExpedienteLive = ({ onUnavailable }: { onUnavailable?: () => void }) => {
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="text-xs text-muted-foreground inline-flex items-center gap-1 mr-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="text-xs text-muted-foreground inline-flex items-center gap-1 mr-2">
           <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
           Reporte: <span className="font-medium">{fmtReportDate(data?.fecha)}</span>
         </div>
