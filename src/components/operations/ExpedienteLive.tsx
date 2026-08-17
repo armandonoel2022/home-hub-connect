@@ -23,6 +23,7 @@ import { mergeOperacionesIntoExpediente } from "@/lib/opsExpedienteMerge";
 import LocalidadMapDialog from "@/components/operations/LocalidadMapDialog";
 import ArmasGlobalView, { buildArmaRows } from "@/components/operations/ArmasGlobalView";
 
+import { applyWatermark, watermarkOverlayStyle, WATERMARK_TEXT } from "@/lib/watermark";
 import { displayCaliber, displayWeaponType, lineHideKey, applyWeaponOverride, weaponCategoryLabel, realSerial, postRequiresWeapon } from "@/lib/expedienteHelpers";
 import {
   Building2, MapPin, Crosshair, Users, ChevronDown, ChevronRight, RefreshCw,
@@ -769,10 +770,16 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
 
   const upload = async (file: File, kind: "arma" | "licenciaFrente" | "licenciaDorso") => {
     try {
-      const dataUrl = await fileToDataUrl(file);
+      // Documentos sensibles (licencia / cédula): se graban SIEMPRE con marca de agua.
+      const dataUrl = kind === "arma"
+        ? await fileToDataUrl(file)
+        : await applyWatermark(file, {
+            text: WATERMARK_TEXT,
+            subText: `Arma ${serie}${noLicencia ? ` · Lic. ${noLicencia}` : ""}`,
+          });
       await expedienteOverlayApi.uploadPhoto(serie, dataUrl, file.name, kind);
       ctx.reloadOverlay();
-      toast({ title: "Imagen subida" });
+      toast({ title: "Imagen subida con marca de agua" });
     } catch (e) {
       toast({ title: "No se pudo subir la imagen", description: String((e as Error)?.message || e), variant: "destructive" });
     }
@@ -874,8 +881,14 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
                           className="h-24 w-36 object-cover rounded border cursor-zoom-in hover:opacity-90"
                           onClick={() => setLightbox(url)}
                         />
+                        {/* Marca de agua visual: cubre también las imágenes ya guardadas en GENERAL */}
+                        <div
+                          className="absolute inset-0 rounded overflow-hidden"
+                          style={watermarkOverlayStyle()}
+                          aria-hidden
+                        />
                         {ctx.canEdit && ovUrl && (
-                          <button onClick={() => removePhoto(ovUrl, kind)} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5">
+                          <button onClick={() => removePhoto(ovUrl, kind)} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5 z-10">
                             <X className="h-3 w-3" />
                           </button>
                         )}
@@ -923,7 +936,10 @@ function WeaponDialog({ puesto, cliente, ctx, onClose }: {
           className="fixed inset-0 z-[100] bg-foreground/80 flex items-center justify-center p-6 cursor-zoom-out"
           onClick={() => setLightbox(null)}
         >
-          <img src={lightbox} alt="Vista ampliada" className="max-h-[90vh] max-w-[90vw] object-contain rounded shadow-2xl" />
+          <div className="relative">
+            <img src={lightbox} alt="Vista ampliada" className="max-h-[90vh] max-w-[90vw] object-contain rounded shadow-2xl" />
+            <div className="absolute inset-0 rounded" style={watermarkOverlayStyle()} aria-hidden />
+          </div>
           <button className="absolute top-4 right-4 text-background" onClick={() => setLightbox(null)}><X className="h-6 w-6" /></button>
         </div>
       )}
