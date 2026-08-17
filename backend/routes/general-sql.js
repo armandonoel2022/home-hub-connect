@@ -1171,9 +1171,11 @@ router.get('/expediente', auth, guard, async (req, res) => {
         vigilanteEdad: computeAge(r.VigilanteNacimiento),
         horas: Number(r.Horas) || 0,
         incentivo: Number(r.Incentivo) || 0,
-        requiereArma: r.ArmaOID != null,
-        municiones: r.MunicionesPuesto != null ? Number(r.MunicionesPuesto) : null,
-        armaOID: r.ArmaOID != null ? Number(r.ArmaOID) : null,
+        // Solo se consideran armas del grupo SafeOne con estatus 9/12/14
+        // (readWeapons ya aplica ese filtro; si el arma no está, se ignora).
+        requiereArma: !!arma,
+        municiones: arma && r.MunicionesPuesto != null ? Number(r.MunicionesPuesto) : null,
+        armaOID: arma && r.ArmaOID != null ? Number(r.ArmaOID) : null,
         armaSerial: arma?.serie || null,
         armaModelo: arma?.modelo || arma?.marca || null,
         arma: arma
