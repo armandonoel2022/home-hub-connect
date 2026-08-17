@@ -23,6 +23,7 @@ import { mergeOperacionesIntoExpediente } from "@/lib/opsExpedienteMerge";
 import LocalidadMapDialog from "@/components/operations/LocalidadMapDialog";
 import ArmasGlobalView, { buildArmaRows } from "@/components/operations/ArmasGlobalView";
 
+import { applyWatermark, watermarkOverlayStyle, WATERMARK_TEXT } from "@/lib/watermark";
 import { displayCaliber, displayWeaponType, lineHideKey, applyWeaponOverride, weaponCategoryLabel, realSerial, postRequiresWeapon } from "@/lib/expedienteHelpers";
 import {
   Building2, MapPin, Crosshair, Users, ChevronDown, ChevronRight, RefreshCw,
