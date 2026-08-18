@@ -1,0 +1,1 @@
+- [Flotilla Vehicular](mem://funcionalidades/flotilla-vehicular) — /flotilla sin mocks, CRUD server-first, documentos, asignaciones e historial
