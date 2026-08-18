@@ -116,8 +116,20 @@ const VehicleDetailDialog = ({ vehicle, onOpenChange, onEdit, canEdit }: Props) 
             )}
           </ol>
         </section>
+
+        <Dialog open={!!preview} onOpenChange={(o) => !o && setPreview(null)}>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>{preview?.label}</DialogTitle>
+            </DialogHeader>
+            {preview && (
+              <img src={preview.src} alt={preview.label} className="w-full max-h-[75vh] object-contain rounded" />
+            )}
+          </DialogContent>
+        </Dialog>
       </DialogContent>
     </Dialog>
+
   );
 };
 
