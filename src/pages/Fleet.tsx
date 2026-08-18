@@ -165,15 +165,14 @@ const FleetPage = () => {
                   { header: "Año", key: "anio", width: 8 },
                   { header: "VIN", key: "vin", width: 20 },
                   { header: "Estado", key: "estado", width: 16 },
-                  { header: "Marbete", key: "marbeteEstado", width: 12 },
                   { header: "Asignado a", key: "asignado", width: 22 },
                   { header: "Kilometraje", key: "kilometraje", width: 12 },
                 ]}
                 data={filtered.map((v) => ({
                   ...v,
-                  marbeteEstado: v.marbete?.estado,
                   asignado: v.asignacion?.empleadoNombre || v.asignacion?.departamento || "—",
                 }))}
+
                 filename="flotilla-vehicular"
               />
             </div>
