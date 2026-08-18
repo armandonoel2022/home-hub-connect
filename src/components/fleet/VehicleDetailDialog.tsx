@@ -1,10 +1,12 @@
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import VehicleAvatar from "./VehicleAvatar";
-import { DOCUMENT_FIELDS, daysUntil, documentFileName } from "@/lib/vehicleTypes";
+import { DOCUMENT_FIELDS } from "@/lib/vehicleTypes";
 import type { Vehiculo } from "@/lib/vehicleTypes";
 import { Pencil, Clock } from "lucide-react";
+
 
 interface Props {
   vehicle: Vehiculo | null;
