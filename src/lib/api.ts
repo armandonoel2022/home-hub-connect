@@ -569,6 +569,22 @@ export const fleetMaintenanceApi = {
     apiFetch<{ changed: number }>("/fleet-maintenance/normalize-talleres", { method: "POST" }),
 };
 
+// ─── Flotilla Vehicular (registro completo) ───
+export const fleetVehiclesApi = {
+  getAll: (includeInactive = false) =>
+    apiFetch<any[]>(`/fleet-vehicles${includeInactive ? "?includeInactive=1" : ""}`),
+  create: (v: any) =>
+    apiFetch<any>("/fleet-vehicles", { method: "POST", body: JSON.stringify(v) }),
+  update: (id: string, data: any) =>
+    apiFetch<any>(`/fleet-vehicles/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  remove: (id: string, motivo?: string, usuario?: string) =>
+    apiFetch<any>(
+      `/fleet-vehicles/${id}?motivo=${encodeURIComponent(motivo || "")}&usuario=${encodeURIComponent(usuario || "")}`,
+      { method: "DELETE" }
+    ),
+  assignments: () => apiFetch<any[]>("/fleet-vehicles/asignaciones"),
+};
+
 // ─── Audit Log API ───
 export const auditApi = {
   getAll: (filters?: Record<string, string>) => {
