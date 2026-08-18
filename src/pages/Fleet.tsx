@@ -128,7 +128,7 @@ const FleetPage = () => {
     { label: "Asignados", value: kpis.asignados, icon: UserCheck, onClick: () => { setFAsign("asignado"); setFState(""); } },
     { label: "Disponibles", value: kpis.disponibles, icon: Car, onClick: () => { setFAsign("disponible"); setFState(""); } },
     { label: "En mantenimiento", value: kpis.mantenimiento, icon: Wrench, onClick: () => { setFState("En Mantenimiento"); setFAsign(""); } },
-    { label: "Marbetes por vencer", value: kpis.vencimientos, icon: AlertTriangle, onClick: () => setFMarbete("Vencido") },
+    
   ];
 
   return (
