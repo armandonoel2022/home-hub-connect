@@ -1,10 +1,12 @@
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import VehicleAvatar from "./VehicleAvatar";
-import { DOCUMENT_FIELDS, daysUntil, documentFileName } from "@/lib/vehicleTypes";
+import { DOCUMENT_FIELDS } from "@/lib/vehicleTypes";
 import type { Vehiculo } from "@/lib/vehicleTypes";
 import { Pencil, Clock } from "lucide-react";
+
 
 interface Props {
   vehicle: Vehiculo | null;
@@ -21,8 +23,8 @@ const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
 );
 
 const VehicleDetailDialog = ({ vehicle, onOpenChange, onEdit, canEdit }: Props) => {
+  const [preview, setPreview] = useState<{ src: string; label: string } | null>(null);
   if (!vehicle) return null;
-  const dias = daysUntil(vehicle.marbete?.fechaVencimiento);
 
   return (
     <Dialog open={!!vehicle} onOpenChange={onOpenChange}>
@@ -41,10 +43,6 @@ const VehicleDetailDialog = ({ vehicle, onOpenChange, onEdit, canEdit }: Props) 
 
         <div className="flex flex-wrap gap-2">
           <Badge variant="secondary">{vehicle.estado}</Badge>
-          <Badge variant={vehicle.marbete?.estado === "Vencido" ? "destructive" : "outline"}>
-            Marbete: {vehicle.marbete?.estado}
-            {dias !== null && ` (${dias >= 0 ? `${dias} días` : `vencido hace ${Math.abs(dias)} días`})`}
-          </Badge>
           {vehicle.numeroActivoFijo && <Badge variant="outline">Activo fijo: {vehicle.numeroActivoFijo}</Badge>}
           {canEdit && (
             <Button size="sm" variant="outline" className="ml-auto" onClick={() => onEdit(vehicle)}>
@@ -52,6 +50,7 @@ const VehicleDetailDialog = ({ vehicle, onOpenChange, onEdit, canEdit }: Props) 
             </Button>
           )}
         </div>
+
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 mt-4">
           <div>
@@ -84,21 +83,22 @@ const VehicleDetailDialog = ({ vehicle, onOpenChange, onEdit, canEdit }: Props) 
           <h4 className="font-semibold text-sm mb-2">Documentos</h4>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {DOCUMENT_FIELDS.filter((d) => vehicle.documentos?.[d.key]).map((d) => (
-              <a
+              <button
                 key={d.key}
-                href={vehicle.documentos[d.key]}
-                download={documentFileName(vehicle.id, d.slug)}
-                className="border border-border rounded-lg p-2 hover:border-primary transition-colors"
+                type="button"
+                onClick={() => setPreview({ src: vehicle.documentos[d.key]!, label: d.label })}
+                className="text-left border border-border rounded-lg p-2 hover:border-primary transition-colors"
               >
                 <img src={vehicle.documentos[d.key]} alt={d.label} className="h-24 w-full object-cover rounded" />
                 <p className="text-[11px] mt-1 truncate">{d.label}</p>
-              </a>
+              </button>
             ))}
             {DOCUMENT_FIELDS.every((d) => !vehicle.documentos?.[d.key]) && (
               <p className="text-xs text-muted-foreground col-span-full">Sin documentos cargados.</p>
             )}
           </div>
         </section>
+
 
         <section className="mt-5">
           <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
@@ -116,8 +116,20 @@ const VehicleDetailDialog = ({ vehicle, onOpenChange, onEdit, canEdit }: Props) 
             )}
           </ol>
         </section>
+
+        <Dialog open={!!preview} onOpenChange={(o) => !o && setPreview(null)}>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>{preview?.label}</DialogTitle>
+            </DialogHeader>
+            {preview && (
+              <img src={preview.src} alt={preview.label} className="w-full max-h-[75vh] object-contain rounded" />
+            )}
+          </DialogContent>
+        </Dialog>
       </DialogContent>
     </Dialog>
+
   );
 };
 

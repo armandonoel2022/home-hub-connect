@@ -168,19 +168,9 @@ const VehicleFormDialog = ({ open, onOpenChange, vehicle, usuario, onSaved }: Pr
             </div>
           </section>
 
-          {/* Marbete, seguro y mantenimiento */}
+          {/* Seguro y mantenimiento */}
           <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-border pt-4">
-            <div>
-              <Label>Vencimiento marbete</Label>
-              <Input
-                type="date"
-                value={form.marbete?.fechaVencimiento || ""}
-                onChange={(e) => set("marbete", { ...(form.marbete || {}), fechaVencimiento: e.target.value || null })}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Estado: {computeMarbeteEstado(form.marbete?.fechaVencimiento)}
-              </p>
-            </div>
+
             <div><Label>Aseguradora</Label><Input value={form.seguro?.compania || ""} onChange={(e) => set("seguro", { ...(form.seguro || {}), compania: e.target.value })} /></div>
             <div><Label>Póliza</Label><Input value={form.seguro?.poliza || ""} onChange={(e) => set("seguro", { ...(form.seguro || {}), poliza: e.target.value })} /></div>
             <div><Label>Vigencia seguro</Label><Input type="date" value={form.seguro?.vigenciaHasta || ""} onChange={(e) => set("seguro", { ...(form.seguro || {}), vigenciaHasta: e.target.value })} /></div>

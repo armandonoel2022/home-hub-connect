@@ -88,12 +88,9 @@ const FleetPage = () => {
     const activos = vehicles.filter((v) => v.estado === "Activo").length;
     const asignados = vehicles.filter((v) => v.asignacion?.empleadoNombre || v.asignacion?.departamento).length;
     const mantenimiento = vehicles.filter((v) => v.estado === "En Mantenimiento").length;
-    const vencimientos = vehicles.filter((v) => {
-      const d = daysUntil(v.marbete?.fechaVencimiento);
-      return d !== null && d <= 30;
-    }).length;
-    return { activos, asignados, disponibles: vehicles.length - asignados, mantenimiento, vencimientos };
+    return { activos, asignados, disponibles: vehicles.length - asignados, mantenimiento };
   }, [vehicles]);
+
 
   const byType = useMemo(
     () =>
@@ -128,7 +125,7 @@ const FleetPage = () => {
     { label: "Asignados", value: kpis.asignados, icon: UserCheck, onClick: () => { setFAsign("asignado"); setFState(""); } },
     { label: "Disponibles", value: kpis.disponibles, icon: Car, onClick: () => { setFAsign("disponible"); setFState(""); } },
     { label: "En mantenimiento", value: kpis.mantenimiento, icon: Wrench, onClick: () => { setFState("En Mantenimiento"); setFAsign(""); } },
-    { label: "Marbetes por vencer", value: kpis.vencimientos, icon: AlertTriangle, onClick: () => setFMarbete("Vencido") },
+    
   ];
 
   return (
@@ -165,15 +162,14 @@ const FleetPage = () => {
                   { header: "Año", key: "anio", width: 8 },
                   { header: "VIN", key: "vin", width: 20 },
                   { header: "Estado", key: "estado", width: 16 },
-                  { header: "Marbete", key: "marbeteEstado", width: 12 },
                   { header: "Asignado a", key: "asignado", width: 22 },
                   { header: "Kilometraje", key: "kilometraje", width: 12 },
                 ]}
                 data={filtered.map((v) => ({
                   ...v,
-                  marbeteEstado: v.marbete?.estado,
                   asignado: v.asignacion?.empleadoNombre || v.asignacion?.departamento || "—",
                 }))}
+
                 filename="flotilla-vehicular"
               />
             </div>
@@ -244,18 +240,13 @@ const FleetPage = () => {
             <option value="disponible">Disponibles</option>
             {asignables.map((a) => <option key={a} value={a}>{a}</option>)}
           </select>
-          <select className={selectCls} value={fMarbete} onChange={(e) => setFMarbete(e.target.value)}>
-            <option value="">Marbete: todos</option>
-            <option value="Al dia">Al día</option>
-            <option value="Vencido">Vencido</option>
-            <option value="Pendiente">Pendiente</option>
-          </select>
-          {(fType || fState || fAsign || fMarbete || search) && (
-            <Button variant="ghost" size="sm" onClick={() => { setFType(""); setFState(""); setFAsign(""); setFMarbete(""); setSearch(""); }}>
+          {(fType || fState || fAsign || search) && (
+            <Button variant="ghost" size="sm" onClick={() => { setFType(""); setFState(""); setFAsign(""); setSearch(""); }}>
               Limpiar filtros
             </Button>
           )}
         </div>
+
 
         {/* Tabla */}
         <div className="px-6 py-5">
@@ -263,7 +254,7 @@ const FleetPage = () => {
             <table className="w-full text-sm">
               <thead className="bg-muted/60 text-xs uppercase text-muted-foreground">
                 <tr>
-                  {["Vehículo", "Placa / VIN", "Tipo", "Estado", "Marbete", "Asignado a", "Km", ""].map((h) => (
+                  {["Vehículo", "Placa / VIN", "Tipo", "Estado", "Asignado a", "Km", ""].map((h) => (
                     <th key={h} className="text-left font-semibold px-4 py-3">{h}</th>
                   ))}
                 </tr>
@@ -280,7 +271,6 @@ const FleetPage = () => {
                   </tr>
                 )}
                 {filtered.map((v) => {
-                  const dias = daysUntil(v.marbete?.fechaVencimiento);
                   return (
                     <tr key={v.id} className="border-t border-border hover:bg-muted/40 cursor-pointer" onClick={() => setDetail(v)}>
                       <td className="px-4 py-3">
@@ -300,11 +290,7 @@ const FleetPage = () => {
                       <td className="px-4 py-3">
                         <span className={`text-xs font-semibold px-2 py-1 rounded-full ${stateTone[v.estado] || ""}`}>{v.estado}</span>
                       </td>
-                      <td className="px-4 py-3">
-                        <Badge variant={v.marbete?.estado === "Vencido" ? "destructive" : "outline"}>
-                          {v.marbete?.estado}{dias !== null && dias >= 0 && dias <= 30 ? ` · ${dias}d` : ""}
-                        </Badge>
-                      </td>
+
                       <td className="px-4 py-3">{v.asignacion?.empleadoNombre || v.asignacion?.departamento || <span className="text-muted-foreground">Disponible</span>}</td>
                       <td className="px-4 py-3">{(v.kilometraje || 0).toLocaleString()}</td>
                       <td className="px-4 py-3 text-right">
