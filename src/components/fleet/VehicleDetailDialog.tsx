@@ -21,8 +21,8 @@ const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
 );
 
 const VehicleDetailDialog = ({ vehicle, onOpenChange, onEdit, canEdit }: Props) => {
+  const [preview, setPreview] = useState<{ src: string; label: string } | null>(null);
   if (!vehicle) return null;
-  const dias = daysUntil(vehicle.marbete?.fechaVencimiento);
 
   return (
     <Dialog open={!!vehicle} onOpenChange={onOpenChange}>
@@ -41,10 +41,6 @@ const VehicleDetailDialog = ({ vehicle, onOpenChange, onEdit, canEdit }: Props) 
 
         <div className="flex flex-wrap gap-2">
           <Badge variant="secondary">{vehicle.estado}</Badge>
-          <Badge variant={vehicle.marbete?.estado === "Vencido" ? "destructive" : "outline"}>
-            Marbete: {vehicle.marbete?.estado}
-            {dias !== null && ` (${dias >= 0 ? `${dias} días` : `vencido hace ${Math.abs(dias)} días`})`}
-          </Badge>
           {vehicle.numeroActivoFijo && <Badge variant="outline">Activo fijo: {vehicle.numeroActivoFijo}</Badge>}
           {canEdit && (
             <Button size="sm" variant="outline" className="ml-auto" onClick={() => onEdit(vehicle)}>
@@ -52,6 +48,7 @@ const VehicleDetailDialog = ({ vehicle, onOpenChange, onEdit, canEdit }: Props) 
             </Button>
           )}
         </div>
+
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 mt-4">
           <div>
