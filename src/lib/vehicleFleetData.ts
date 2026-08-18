@@ -18,9 +18,24 @@ function readLocal(): Vehiculo[] {
     return [];
   }
 }
-function writeLocal(items: Vehiculo[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+/** Copia sin fotos (las imágenes base64 desbordan la cuota de localStorage). */
+function stripDocs(items: Vehiculo[]): Vehiculo[] {
+  return items.map((v) => ({ ...v, documentos: {} as Vehiculo["documentos"] }));
 }
+
+function writeLocal(items: Vehiculo[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  } catch {
+    // Cuota excedida: guardamos los datos sin las fotos para no perder el registro.
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(stripDocs(items)));
+    } catch {
+      /* sin espacio: se ignora el caché local */
+    }
+  }
+}
+
 
 function nextId(items: Vehiculo[]) {
   const nums = items.map((v) => parseInt(String(v.id).replace(/\D/g, ""), 10) || 0);
