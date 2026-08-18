@@ -61,7 +61,7 @@ export async function listVehicles(includeInactive = false): Promise<Vehiculo[]>
     try {
       const data = await fleetVehiclesApi.getAll(includeInactive);
       serverMode = true;
-      writeLocal(data as Vehiculo[]);
+      writeLocal(stripDocs(data as Vehiculo[]));
       return data as Vehiculo[];
     } catch {
       serverMode = false;
@@ -152,7 +152,7 @@ export async function deleteVehicle(id: string, motivo: string, usuario: string)
 }
 
 /** Comprime una imagen a JPEG dataURL (máx 1200px de ancho). */
-export function compressImage(file: File, maxWidth = 1200, quality = 0.72): Promise<string> {
+export function compressImage(file: File, maxWidth = 1000, quality = 0.62): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error("No se pudo leer el archivo"));
