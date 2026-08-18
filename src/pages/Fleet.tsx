@@ -280,7 +280,6 @@ const FleetPage = () => {
                   </tr>
                 )}
                 {filtered.map((v) => {
-                  const dias = daysUntil(v.marbete?.fechaVencimiento);
                   return (
                     <tr key={v.id} className="border-t border-border hover:bg-muted/40 cursor-pointer" onClick={() => setDetail(v)}>
                       <td className="px-4 py-3">
@@ -300,11 +299,7 @@ const FleetPage = () => {
                       <td className="px-4 py-3">
                         <span className={`text-xs font-semibold px-2 py-1 rounded-full ${stateTone[v.estado] || ""}`}>{v.estado}</span>
                       </td>
-                      <td className="px-4 py-3">
-                        <Badge variant={v.marbete?.estado === "Vencido" ? "destructive" : "outline"}>
-                          {v.marbete?.estado}{dias !== null && dias >= 0 && dias <= 30 ? ` · ${dias}d` : ""}
-                        </Badge>
-                      </td>
+
                       <td className="px-4 py-3">{v.asignacion?.empleadoNombre || v.asignacion?.departamento || <span className="text-muted-foreground">Disponible</span>}</td>
                       <td className="px-4 py-3">{(v.kilometraje || 0).toLocaleString()}</td>
                       <td className="px-4 py-3 text-right">
