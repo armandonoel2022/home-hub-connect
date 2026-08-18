@@ -88,7 +88,7 @@ const ClientExpediente = () => {
           <div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
               <Link to="/" className="hover:text-primary inline-flex items-center gap-1">
-                <ArrowLeft className="h-3 w-3" /> Operaciones
+                <ArrowLeft className="h-3 w-3" /> Dashboard
               </Link>
             </div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
