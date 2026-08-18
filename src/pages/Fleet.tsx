@@ -114,7 +114,7 @@ const FleetPage = () => {
   const confirmDelete = async () => {
     if (!toDelete) return;
     try {
-      await deleteVehicle(toDelete.id, "Descargado desde Flotilla Vehicular", user?.name || "Sistema");
+      await deleteVehicle(toDelete.id, "Descargado desde Flotilla Vehicular", user?.fullName || "Sistema");
       toast({ title: `Vehículo ${toDelete.placa} descargado` });
       setToDelete(null);
       refresh();
@@ -331,7 +331,7 @@ const FleetPage = () => {
         open={formOpen}
         onOpenChange={setFormOpen}
         vehicle={editing}
-        usuario={user?.name || "Sistema"}
+        usuario={user?.fullName || "Sistema"}
         onSaved={refresh}
       />
 
