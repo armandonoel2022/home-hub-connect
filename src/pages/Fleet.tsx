@@ -88,12 +88,9 @@ const FleetPage = () => {
     const activos = vehicles.filter((v) => v.estado === "Activo").length;
     const asignados = vehicles.filter((v) => v.asignacion?.empleadoNombre || v.asignacion?.departamento).length;
     const mantenimiento = vehicles.filter((v) => v.estado === "En Mantenimiento").length;
-    const vencimientos = vehicles.filter((v) => {
-      const d = daysUntil(v.marbete?.fechaVencimiento);
-      return d !== null && d <= 30;
-    }).length;
-    return { activos, asignados, disponibles: vehicles.length - asignados, mantenimiento, vencimientos };
+    return { activos, asignados, disponibles: vehicles.length - asignados, mantenimiento };
   }, [vehicles]);
+
 
   const byType = useMemo(
     () =>
