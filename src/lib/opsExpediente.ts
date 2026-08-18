@@ -348,7 +348,11 @@ export function saveVaultMovement(input: Partial<VaultMovement>): VaultMovement 
     notas: input.notas || "",
     createdBy: input.createdBy || "",
     createdAt: new Date().toISOString(),
+    empleadoCodigo: input.empleadoCodigo || "",
+    empleadoOid: input.empleadoOid ?? null,
+    hora: input.hora || new Date().toTimeString().slice(0, 5),
   };
+
   writeLS(K_VAULT, [created, ...list]);
   if (isApiConfigured()) vaultMovementsApi.create(created).catch(() => {});
   return created;
