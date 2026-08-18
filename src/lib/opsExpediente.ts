@@ -96,7 +96,12 @@ export interface VaultMovement {
   notas: string;
   createdBy: string;
   createdAt: string;
+  /** Empleado activo (gSafeOne) vinculado al movimiento. */
+  empleadoCodigo?: string;
+  empleadoOid?: number | null;
+  hora?: string;
 }
+
 
 // ─── Claves localStorage ───
 const K_CLIENTS = "safeone_ops_clients_v1";
