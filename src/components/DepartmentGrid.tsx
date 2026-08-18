@@ -109,8 +109,9 @@ const DEPT_MULTI_ROUTES: Record<string, { label: string; route: string; icon: an
     { label: "Expediente de Asociados", route: "/servicio-al-cliente/registro-mercantil", icon: FileText },
   ],
   "Operaciones": [
-    { label: "Personal Armado", route: "/operaciones", icon: Shield },
-    { label: "Matriz de Levantamiento", route: "/operaciones/matriz-mantenimiento", icon: Shield },
+    { label: "Expediente de Clientes", route: "/operaciones/expediente", icon: Shield },
+    { label: "Bóveda de Armas", route: "/operaciones/boveda", icon: Shield },
+
     { label: "Centro de Operaciones", route: "/centro-operaciones", icon: Users },
   ],
 };
