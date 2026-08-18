@@ -263,7 +263,7 @@ const FleetPage = () => {
             <table className="w-full text-sm">
               <thead className="bg-muted/60 text-xs uppercase text-muted-foreground">
                 <tr>
-                  {["Vehículo", "Placa / VIN", "Tipo", "Estado", "Marbete", "Asignado a", "Km", ""].map((h) => (
+                  {["Vehículo", "Placa / VIN", "Tipo", "Estado", "Asignado a", "Km", ""].map((h) => (
                     <th key={h} className="text-left font-semibold px-4 py-3">{h}</th>
                   ))}
                 </tr>
