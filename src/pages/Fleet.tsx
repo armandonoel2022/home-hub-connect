@@ -244,18 +244,13 @@ const FleetPage = () => {
             <option value="disponible">Disponibles</option>
             {asignables.map((a) => <option key={a} value={a}>{a}</option>)}
           </select>
-          <select className={selectCls} value={fMarbete} onChange={(e) => setFMarbete(e.target.value)}>
-            <option value="">Marbete: todos</option>
-            <option value="Al dia">Al día</option>
-            <option value="Vencido">Vencido</option>
-            <option value="Pendiente">Pendiente</option>
-          </select>
-          {(fType || fState || fAsign || fMarbete || search) && (
-            <Button variant="ghost" size="sm" onClick={() => { setFType(""); setFState(""); setFAsign(""); setFMarbete(""); setSearch(""); }}>
+          {(fType || fState || fAsign || search) && (
+            <Button variant="ghost" size="sm" onClick={() => { setFType(""); setFState(""); setFAsign(""); setSearch(""); }}>
               Limpiar filtros
             </Button>
           )}
         </div>
+
 
         {/* Tabla */}
         <div className="px-6 py-5">
