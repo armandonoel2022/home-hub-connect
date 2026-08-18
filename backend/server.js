@@ -52,6 +52,7 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/tickets', require('./routes/tickets'));
 app.use('/api/equipment', require('./routes/equipment'));
 app.use('/api/vehicles', require('./routes/vehicles'));
+app.use('/api/fleet-vehicles', require('./routes/fleet-vehicles'));
 app.use('/api/phones', require('./routes/phones'));
 app.use('/api/armed-personnel', require('./routes/armed-personnel'));
 app.use('/api/notifications', require('./routes/notifications'));
