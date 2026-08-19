@@ -28,6 +28,7 @@ import {
   type VaultWeaponState,
 } from "@/lib/vaultWeapons";
 import VaultRoom from "@/components/vault/VaultRoom";
+import AmmoPanel from "@/components/vault/AmmoPanel";
 import { WeaponGlyph } from "@/components/vault/WeaponSvgs";
 import {
   getVaultMovements, saveVaultMovement, deleteVaultMovement, getWeaponHistory,
@@ -203,11 +204,16 @@ const WeaponVault = () => {
               <TabsList>
                 <TabsTrigger value="boveda">Bóveda</TabsTrigger>
                 <TabsTrigger value="inventario">Inventario</TabsTrigger>
+                <TabsTrigger value="municiones">Municiones</TabsTrigger>
                 <TabsTrigger value="movimientos">Movimientos</TabsTrigger>
               </TabsList>
 
               <TabsContent value="boveda" className="space-y-3">
                 <VaultRoom weapons={filtered} counts={counts} onSelect={(w) => setDetail(w)} />
+              </TabsContent>
+
+              <TabsContent value="municiones" className="space-y-3">
+                <AmmoPanel />
               </TabsContent>
 
               <TabsContent value="inventario" className="space-y-3">
