@@ -28,6 +28,7 @@ import {
   type VaultWeaponState,
 } from "@/lib/vaultWeapons";
 import VaultRoom from "@/components/vault/VaultRoom";
+import AmmoPanel from "@/components/vault/AmmoPanel";
 import { WeaponGlyph } from "@/components/vault/WeaponSvgs";
 import {
   getVaultMovements, saveVaultMovement, deleteVaultMovement, getWeaponHistory,
