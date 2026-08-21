@@ -1,1 +1,2 @@
 - [Flotilla Vehicular](mem://funcionalidades/flotilla-vehicular) — /flotilla sin mocks, CRUD server-first, documentos, asignaciones e historial
+- [Documentos por Cliente](mem://funcionalidades/documentos-cliente) — Botón Subir por documento/formulario, archivos en backend/data/uploads/clientes, borrado con justificación
