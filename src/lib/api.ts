@@ -1349,6 +1349,40 @@ export const mercantileRegistryApi = {
     ),
 };
 
+// ─── Documentos digitales por cliente (Servicio al Cliente) ───
+export interface ClientDocument {
+  id: string;
+  docKey: string;
+  docNombre: string;
+  fileName: string;
+  storedName: string;
+  url: string;
+  mime?: string;
+  size: number;
+  nota?: string;
+  activo: boolean;
+  uploadedAt: string;
+  uploadedBy?: string | null;
+}
+
+export const clientDocumentsApi = {
+  list: (clienteId: string | number) =>
+    apiFetch<ClientDocument[]>(`/client-documents/${encodeURIComponent(String(clienteId))}`),
+  upload: (
+    clienteId: string | number,
+    body: { docKey: string; docNombre: string; fileName: string; dataUrl: string; mime?: string; nota?: string },
+  ) =>
+    apiFetch<ClientDocument>(`/client-documents/${encodeURIComponent(String(clienteId))}`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  remove: (clienteId: string | number, docId: string, reason: string) =>
+    apiFetch<ClientDocument>(`/client-documents/${encodeURIComponent(String(clienteId))}/${docId}`, {
+      method: "DELETE",
+      body: JSON.stringify({ reason }),
+    }),
+};
+
 
 // ─── Activo Fijo — base [SafeOne] (SQL Server, solo lectura) ───
 export interface SafeOneActivoFijoRow {
