@@ -472,7 +472,7 @@ function Client360Dialog({
           </section>
 
           {/* 3. Expediente de Asociado de Negocio */}
-          <BusinessPartnerDossier dossier={dossier} canEdit={canEdit} onChange={setDossier} />
+          <BusinessPartnerDossier dossier={dossier} canEdit={canEdit} onChange={setDossier} clienteId={client.oid} />
 
           {canEdit && (
             <div className="flex flex-wrap gap-2">
