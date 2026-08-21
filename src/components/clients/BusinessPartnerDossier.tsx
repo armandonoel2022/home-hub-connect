@@ -13,6 +13,7 @@ import {
   calcularProgreso, dossierEstado, uidRef,
   type PartnerDossier, type PartnerForm,
 } from "@/lib/businessPartnerForms";
+import { DocUploadCell, useClientDocs } from "@/components/clients/ClientDocUploader";
 import {
   Download, MapPin, ShieldAlert, ExternalLink, Plus, Trash2, FileCheck2, ClipboardList, Briefcase,
 } from "lucide-react";
@@ -21,9 +22,12 @@ interface Props {
   dossier: PartnerDossier;
   canEdit: boolean;
   onChange: (next: PartnerDossier) => void;
+  /** ID del cliente en gSafeOne — habilita la carga de evidencias en el servidor */
+  clienteId?: string | number;
 }
 
-export default function BusinessPartnerDossier({ dossier, canEdit, onChange }: Props) {
+export default function BusinessPartnerDossier({ dossier, canEdit, onChange, clienteId }: Props) {
+  const { docs, reload } = useClientDocs(clienteId);
   const progreso = calcularProgreso(dossier);
   const estado = dossierEstado(progreso);
 
@@ -80,6 +84,8 @@ export default function BusinessPartnerDossier({ dossier, canEdit, onChange }: P
             onChange={(e) => setForm(f.code, { fecha: e.target.value })} />
           <Input className="h-8 flex-1 min-w-[140px] text-xs" placeholder="Nota" value={st.nota || ""} disabled={!canEdit}
             onChange={(e) => setForm(f.code, { nota: e.target.value })} />
+          <DocUploadCell clienteId={clienteId} docKey={`form:${f.code}`} docNombre={`${f.code} · ${f.nombre}`}
+            canEdit={canEdit} docs={docs} onChanged={reload} />
         </div>
       </div>
     );
@@ -156,6 +162,8 @@ export default function BusinessPartnerDossier({ dossier, canEdit, onChange }: P
                 onChange={(e) => setDoc(doc.key, { fecha: e.target.value })} />
               <Input className="h-8 w-[180px] text-xs" placeholder="Nota / referencia" value={st.nota || ""} disabled={!canEdit}
                 onChange={(e) => setDoc(doc.key, { nota: e.target.value })} />
+              <DocUploadCell clienteId={clienteId} docKey={doc.key} docNombre={doc.nombre}
+                canEdit={canEdit} docs={docs} onChanged={reload} />
             </div>
           );
         })}
