@@ -489,7 +489,11 @@ export default function PayrollPayslipsPanel() {
                   <div className="flex justify-between text-base font-bold border-t pt-2 mt-2">
                     <span>Neto a recibir</span><span className="text-gold">{fmt(payDetail.neto)}</span>
                   </div>
-                  <Button className="w-full mt-3" variant="outline" onClick={() => window.print()}>Imprimir</Button>
+                  <Button className="w-full mt-3" variant="outline" disabled={printing} onClick={printPayslip}>
+                    <Printer className="h-4 w-4 mr-2" />
+                    {printing ? "Generando comprobante..." : "Imprimir comprobante (hoja membretada)"}
+                  </Button>
+
                 </div>
               )}
             </div>
