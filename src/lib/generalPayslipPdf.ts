@@ -18,6 +18,27 @@ export function periodLabel(periodo?: number | null, mes?: number | null, ano?: 
   return [q, m ? `de ${m}` : "", ano ? String(ano) : ""].filter(Boolean).join(" ");
 }
 
+/**
+ * Fecha real de pago SafeOne según la quincena:
+ *  - Q1 (01–15) → se paga el día 15 del mismo mes
+ *  - Q2 (16–fin) → se paga el último día del mes
+ * La fecha almacenada en gSafeOne corresponde al procesamiento del pago, no al
+ * desembolso, por eso no se usa para la leyenda del comprobante.
+ */
+export function payDateForPeriod(
+  periodo?: number | null, mes?: number | null, ano?: number | null,
+): Date | null {
+  if (!mes || !ano || mes < 1 || mes > 12) return null;
+  const day = periodo === 1 ? 15 : new Date(ano, mes, 0).getDate();
+  return new Date(ano, mes - 1, day);
+}
+
+/** "30/8/2026" o "—" */
+export function payDateLabel(periodo?: number | null, mes?: number | null, ano?: number | null): string {
+  const d = payDateForPeriod(periodo, mes, ano);
+  return d ? d.toLocaleDateString("es-DO") : "—";
+}
+
 async function toDataUrl(url: string): Promise<string | null> {
   try {
     const blob = await fetch(url).then(r => r.blob());
