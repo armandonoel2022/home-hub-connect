@@ -1142,13 +1142,20 @@ function VacationForm({ userName, department, showSignature }: { userName: strin
         </div>
         <p className="text-xs text-muted-foreground mt-2 border-t border-border pt-2">
           Jornada: <strong>{workDaysPerWeek} día{workDaysPerWeek > 1 ? "s" : ""}/semana</strong> • 
-          Según Art. 177 del Código de Trabajo: 14 días (1-4 años) o 18 días (+5 años)
+          Según Art. 177 del Código de Trabajo: 6 meses (proporcional), 14 días (1-4 años) o 18 días (+5 años).
+          {firstEligible && <> Puedes solicitar por adelantado períodos que inicien desde el <strong>{firstEligible}</strong>.</>}
         </p>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <DatePickerField label="Fecha de Inicio" date={startDate} setDate={setStartDate} />
         <DatePickerField label="Fecha de Fin" date={endDate} setDate={setEndDate} />
       </div>
+      {startsTooEarly && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
+          La fecha de inicio es anterior al {firstEligible}, cuando cumples la antigüedad mínima. Puedes registrar la solicitud con antelación, pero el disfrute debe iniciar en o después de esa fecha.
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-4">
         <FormField label="Días Solicitados">
           <Input type="number" value={daysRequested} readOnly className="font-bold" />
