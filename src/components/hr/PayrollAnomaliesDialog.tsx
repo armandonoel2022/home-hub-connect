@@ -57,7 +57,7 @@ export default function PayrollAnomaliesDialog({ open, onOpenChange, period }: P
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [grupo, setGrupo] = useState<Grupo>("todas");
+  const [grupo, setGrupo] = useState<Grupo>("reales");
 
   const load = async () => {
     setLoading(true); setError(null);
