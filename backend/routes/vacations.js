@@ -339,6 +339,11 @@ router.get('/roster/:deptId', auth, async (req, res) => {
       tiempoServicio: service ? { years: service.years, months: service.months, days: service.days } : null,
       diasDerecho: dias != null ? dias : policy.under5Days,
       diasEstimados: dias == null,
+      // Elegibilidad progresiva: puede solicitar por adelantado períodos que
+      // inicien a partir de la fecha en que cumple la antigüedad requerida.
+      elegibleDesde: hireDate ? addMonthsISO(hireDate, 6) : null,
+      hitos: tenureMilestones(hireDate, policy),
+
       diasAprobados,
       diasPendientes,
       workDays: workDaysForEmployee(store, e),
