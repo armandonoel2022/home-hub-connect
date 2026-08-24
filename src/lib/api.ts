@@ -67,13 +67,20 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
   });
 
   if (res.status === 401) {
-    localStorage.removeItem("safeone_token");
-    localStorage.removeItem("safeone_user");
-    // Only redirect if not already on login page to avoid infinite loop
-    if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-      window.location.href = "/login";
+    const err = await res.json().catch(() => ({ message: "No autorizado" }));
+    const isCredentialValidation = endpoint === "/auth/login" || endpoint === "/auth/change-password";
+
+    // Invalid login/current-password credentials are form validation errors, not
+    // evidence that the active JWT is expired. Clearing it here caused a logout
+    // immediately after the forced password-change flow.
+    if (!isCredentialValidation) {
+      localStorage.removeItem("safeone_token");
+      localStorage.removeItem("safeone_user");
+      if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+        window.location.href = "/login";
+      }
     }
-    throw new Error("No autorizado");
+    throw new Error(err.message || "No autorizado");
   }
 
   if (res.status === 403) {
@@ -114,7 +121,7 @@ export const authApi = {
   me: () =>
     apiFetch<IntranetUser>("/auth/me"),
   changePassword: (currentPassword: string, newPassword: string) =>
-    apiFetch<{ message: string }>("/auth/change-password", {
+    apiFetch<{ message: string; user: IntranetUser }>("/auth/change-password", {
       method: "POST",
       body: JSON.stringify({ currentPassword, newPassword }),
     }),
