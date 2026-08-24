@@ -144,6 +144,39 @@ export default function PayrollPayslipsPanel() {
     try { setCompare(await generalSqlApi.paymentCompare(detail.codigo, selA, selB)); } catch { setCompare(null); }
   };
 
+  /** Genera el comprobante A4 membretado (hoja de datos + desglose) sin arrastrar la UI. */
+  const printPayslip = async () => {
+    if (!payDetail || !detail) return;
+    setPrinting(true);
+    try {
+      const code = String(detail.codigo || "").trim();
+      const ced = String(detail.cedula || "").replace(/\D/g, "");
+      const local = localEmployees.find(e =>
+        (code && String(e.employeeCode || "").trim() === code) ||
+        (ced && [e.cedula, e.tss].some(v => String(v || "").replace(/\D/g, "") === ced))
+      );
+      const gen = activeEmployees.find(e =>
+        (code && String(e.codigo || "").trim() === code) ||
+        (ced && String(e.cedula || "").replace(/\D/g, "") === ced)
+      );
+      await generateGeneralPayslipPDF(payDetail, {
+        nombre: detail.empleado || local?.fullName || gen?.nombreCompleto || "—",
+        codigo: detail.codigo,
+        cedula: detail.cedula || local?.cedula || gen?.cedula,
+        puesto: detail.puesto || local?.position || gen?.puesto,
+        departamento: local?.department || gen?.departamento,
+        categoria: local?.category,
+        nomina: local?.payrollType,
+        fechaIngreso: local?.hireDate || gen?.fechaIngreso,
+        estatus: local?.status || gen?.estatus,
+        photoUrl: resolvePhoto(local?.photoUrl || local?.photo),
+      }, { open: true });
+    } finally {
+      setPrinting(false);
+    }
+  };
+
+
   const exportCSV = () => {
     const headers = ["Empleado", "Código", "Cédula", "Puesto", "Fecha Pago", "Periodo", "Mes", "Año", "Nómina",
       ...ingresos, ...deducciones, "Total Devengado", "Total Deducciones", "Neto a Recibir"];
