@@ -1073,29 +1073,29 @@ function VacationForm({ userName, department, showSignature }: { userName: strin
   // Calculate days based on employee's work schedule
   const workDaysPerWeek = user?.workDaysPerWeek || 5;
   
-  // Calculate vacation entitlement based on Dominican Republic Labor Law (Código de Trabajo)
-  // Article 177: 14 días laborables after 1 year, 18 días laborables after 5 years
+  // Derecho según Ley RD (Art. 177), proyectado a la fecha de inicio elegida:
+  // se puede solicitar por adelantado, pero no disfrutar antes de cumplir el tiempo.
   const calcVacationEntitlement = (): { years: number; daysEntitled: number; message: string } => {
     if (!user?.hireDate) return { years: 0, daysEntitled: 0, message: "Sin fecha de ingreso registrada" };
-    const hire = new Date(user.hireDate);
-    const now = new Date();
-    const diffMs = now.getTime() - hire.getTime();
-    const years = Math.floor(diffMs / (365.25 * 24 * 60 * 60 * 1000));
-    
-    if (years < 1) {
-      return { years, daysEntitled: 0, message: "Aún no cumple 1 año (no aplica vacaciones)" };
-    } else if (years >= 5) {
-      // 18 días laborables (Ley RD para +5 años)
-      const daysEntitled = Math.round((18 / 5) * workDaysPerWeek);
-      return { years, daysEntitled, message: `${years} años de antigüedad → 18 días laborables` };
-    } else {
-      // 14 días laborables (Ley RD para 1-4 años)
-      const daysEntitled = Math.round((14 / 5) * workDaysPerWeek);
-      return { years, daysEntitled, message: `${years} año${years > 1 ? "s" : ""} de antigüedad → 14 días laborables` };
+    const at = startDate ?? new Date();
+    const svc = serviceTimeAt(user.hireDate, at);
+    const base = entitledDaysAt(user.hireDate, at) ?? 0;
+    const years = svc?.years ?? 0;
+    const scaled = Math.round((base / 5) * workDaysPerWeek);
+    const when = startDate ? ` (a la fecha de inicio ${format(startDate, "dd/MM/yyyy")})` : "";
+    if (base === 0) {
+      const from = eligibleFrom(user.hireDate);
+      return { years, daysEntitled: 0, message: `Aún no cumple 6 meses${from ? ` — podrá disfrutar vacaciones a partir del ${from}` : ""}` };
     }
+    if (years >= 5) return { years, daysEntitled: scaled, message: `${years} años de antigüedad → 18 días laborables${when}` };
+    if (years >= 1) return { years, daysEntitled: scaled, message: `${years} año${years > 1 ? "s" : ""} de antigüedad → 14 días laborables${when}` };
+    return { years, daysEntitled: scaled, message: `${svc?.totalMonths ?? 6} meses de antigüedad → ${base} días proporcionales${when}` };
   };
 
   const entitlement = calcVacationEntitlement();
+  const firstEligible = eligibleFrom(user?.hireDate);
+  const startsTooEarly = !!(firstEligible && startDate && format(startDate, "yyyy-MM-dd") < firstEligible);
+
 
   // Auto-calculate working days based on employee's schedule
   const calcDays = (start?: Date, end?: Date): number => {
