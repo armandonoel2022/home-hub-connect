@@ -706,6 +706,24 @@ GROUP BY Codigo, Empleado, Cedula, Concepto, Tipo`;
     const mapA = new Map();
     rowsA.forEach((r) => mapA.set(key(r), r));
 
+    // Totales de ingresos por empleado en cada período: sirven para distinguir
+    // una reclasificación de concepto (el devengado total no cambió) de una
+    // variación real de ingresos.
+    const totalIngresos = (rows) => {
+      const m = new Map();
+      rows.forEach((r) => {
+        if (Number(r.Tipo) !== 1) return;
+        const c = String(r.Codigo ?? '').trim();
+        m.set(c, (m.get(c) || 0) + (Number(r.Monto) || 0));
+      });
+      return m;
+    };
+    const ingA = totalIngresos(rowsA), ingB = totalIngresos(rowsB);
+    const difIngresoEmpleado = (r) => {
+      const c = String(r.Codigo ?? '').trim();
+      return round2((ingA.get(c) || 0) - (ingB.get(c) || 0));
+    };
+
     const items = [];
     const push = (r, tipoAnomalia, severidad, actualMonto, anteriorMonto, nota) => {
       const diferencia = round2(actualMonto - anteriorMonto);
@@ -722,6 +740,8 @@ GROUP BY Codigo, Empleado, Cedula, Concepto, Tipo`;
         anterior: round2(anteriorMonto),
         diferencia,
         variacion,
+        pagos: Number(r.Pagos) || 1,
+        lineas: Number(r.Lineas) || 1,
         nota: nota || '',
       });
     };
@@ -731,27 +751,44 @@ GROUP BY Codigo, Empleado, Cedula, Concepto, Tipo`;
       const prev = mapB.get(key(r));
       const montoPrev = prev ? round2(Number(prev.Monto) || 0) : 0;
       const esDeduccion = Number(r.Tipo) !== 1;
-      const lineas = Number(r.Lineas) || 1;
+      const pagos = Number(r.Pagos) || 1;
+      const maxLineasPago = Number(r.MaxLineasPago) || 1;
 
-      if (lineas > 1) {
+      // Duplicidad REAL: el mismo concepto aparece más de una vez dentro del
+      // mismo pago. Varios pagos en la quincena (nómina + novedades) NO es
+      // duplicidad y por eso ya no se reporta como tal.
+      if (maxLineasPago > 1) {
         push(r, 'Duplicidad de concepto', 'alta', monto, montoPrev,
-          `${lineas} líneas del mismo concepto en el mismo pago`);
+          `${maxLineasPago} líneas del mismo concepto dentro de un mismo pago`);
       }
+
+      const difEmp = difIngresoEmpleado(r);
       if (!prev) {
-        push(r, esDeduccion ? 'Deducción nueva' : 'Ingreso nuevo', esDeduccion ? 'alta' : 'media',
-          monto, 0, 'No existía en la quincena anterior');
+        if (!esDeduccion && Math.abs(difEmp) < umbral) {
+          push(r, 'Reclasificación de concepto', 'baja', monto, 0,
+            'Concepto nuevo, pero el total devengado del empleado no varió (cambio de concepto, no de monto)');
+        } else if (esDeduccion || monto >= umbral) {
+          push(r, esDeduccion ? 'Deducción nueva' : 'Ingreso nuevo', esDeduccion ? 'alta' : 'media',
+            monto, 0, pagos > 1 ? `No existía en la quincena anterior · ${pagos} pagos en el período` : 'No existía en la quincena anterior');
+        }
         return;
       }
       const dif = monto - montoPrev;
       const pct = montoPrev === 0 ? null : (dif / Math.abs(montoPrev)) * 100;
       if (Math.abs(dif) >= umbral && (pct === null || Math.abs(pct) >= umbralPct)) {
         const sube = dif > 0;
-        push(r,
-          esDeduccion
-            ? (sube ? 'Aumento de deducción' : 'Disminución de deducción')
-            : (sube ? 'Aumento de ingreso' : 'Disminución de ingreso'),
-          esDeduccion && sube ? 'alta' : 'media',
-          monto, montoPrev, '');
+        if (!esDeduccion && Math.abs(difEmp) < umbral) {
+          push(r, 'Reclasificación de concepto', 'baja', monto, montoPrev,
+            'El monto se movió entre conceptos; el total devengado del empleado se mantiene');
+        } else {
+          push(r,
+            esDeduccion
+              ? (sube ? 'Aumento de deducción' : 'Disminución de deducción')
+              : (sube ? 'Aumento de ingreso' : 'Disminución de ingreso'),
+            esDeduccion && sube ? 'alta' : 'media',
+            monto, montoPrev,
+            pagos > 1 ? `${pagos} pagos del empleado en este período` : '');
+        }
       }
     });
 
@@ -760,9 +797,17 @@ GROUP BY Codigo, Empleado, Cedula, Concepto, Tipo`;
       if (mapA.has(key(r))) return;
       const monto = round2(Number(r.Monto) || 0);
       const esDeduccion = Number(r.Tipo) !== 1;
+      const difEmp = difIngresoEmpleado(r);
+      if (!esDeduccion && Math.abs(difEmp) < umbral) {
+        push(r, 'Reclasificación de concepto', 'baja', 0, monto,
+          'Dejó de usarse este concepto, pero el total devengado del empleado no varió');
+        return;
+      }
+      if (!esDeduccion && monto < umbral) return;
       push(r, esDeduccion ? 'Deducción eliminada' : 'Ingreso eliminado', 'media', 0, monto,
         'Se cobraba en la quincena anterior y ya no aparece');
     });
+
 
     items.sort((a, b) => Math.abs(b.diferencia) - Math.abs(a.diferencia));
 
