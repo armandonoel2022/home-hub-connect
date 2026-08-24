@@ -148,17 +148,15 @@ export default function Payroll() {
 
 
   // ─── Load ───
+  // Solo datos del servidor: sin respaldo de JSON local (evita mostrar data hardcodeada).
   const loadEmployees = async () => {
     setLoading(true);
     try {
-      if (isApiConfigured()) {
-        const data = await employeesApi.getAll();
-        if (data?.length) { setEmployees(data); return; }
-      }
-      const r = await fetch("/data/employees_seed.json");
-      if (r.ok) setEmployees(await r.json());
+      const data = isApiConfigured() ? await employeesApi.getAll() : [];
+      setEmployees(Array.isArray(data) ? data : []);
     } catch {
-      try { const r = await fetch("/data/employees_seed.json"); if (r.ok) setEmployees(await r.json()); } catch {}
+      setEmployees([]);
+      toast.error("No se pudo cargar el personal desde el servidor");
     } finally { setLoading(false); }
   };
 
