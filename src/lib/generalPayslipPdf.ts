@@ -218,7 +218,18 @@ export async function generateGeneralPayslipPDF(
 
   const fname = opts?.fileName ||
     `Comprobante_${emp.codigo || "empleado"}_${detail.ano || ""}-${String(detail.mes || "").padStart(2, "0")}-Q${detail.periodo || ""}.pdf`;
-  if (opts?.open) pdf.output("dataurlnewwindow");
-  else pdf.save(fname);
+  if (opts?.open) {
+    // Blob URL: más fiable que "dataurlnewwindow" (que se abre en blanco dentro de iframes/preview).
+    try {
+      const url = URL.createObjectURL(pdf.output("blob"));
+      const win = window.open(url, "_blank");
+      if (!win) pdf.save(fname);
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      pdf.save(fname);
+    }
+  } else {
+    pdf.save(fname);
+  }
   return pdf;
 }
