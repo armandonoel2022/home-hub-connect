@@ -195,7 +195,10 @@ export default function PayrollAnomaliesDialog({ open, onOpenChange, period }: P
                   <TableCell className="font-medium">{i.empleado}</TableCell>
                   <TableCell>{i.concepto}</TableCell>
                   <TableCell>
-                    <Badge variant={i.severidad === "alta" ? "destructive" : "secondary"}>{i.anomalia}</Badge>
+                    <Badge variant={i.severidad === "alta" ? "destructive" : i.severidad === "baja" ? "outline" : "secondary"}>{i.anomalia}</Badge>
+                    {(i.pagos ?? 1) > 1 && (
+                      <span className="ml-1 text-[10px] text-muted-foreground">{i.pagos} pagos</span>
+                    )}
                     {i.nota && <p className="text-[11px] text-muted-foreground mt-1">{i.nota}</p>}
                   </TableCell>
                   <TableCell className="text-right">{fmt(i.actual)}</TableCell>
