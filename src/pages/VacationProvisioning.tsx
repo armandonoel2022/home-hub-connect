@@ -669,7 +669,12 @@ const VacationProvisioning = () => {
             <div className="space-y-5">
               <div className="flex flex-wrap gap-2 text-xs">
                 <Badge variant="secondary">Cód. {editEmp.codigo}</Badge>
-                <Badge variant="secondary">Derecho: {editEmp.diasDerecho} días</Badge>
+                <Badge variant="secondary">Derecho hoy: {editEmp.diasDerecho} días</Badge>
+                {projectedEntitlement !== editEmp.diasDerecho && (
+                  <Badge className="bg-indigo-500/15 text-indigo-600 border-0">
+                    Derecho a la fecha seleccionada: {projectedEntitlement} días
+                  </Badge>
+                )}
                 <Badge className="bg-emerald-500/15 text-emerald-600 border-0">Aprobados: {editEmp.diasAprobados}</Badge>
                 {editEmp.diasPendientes > 0 && <Badge className="bg-amber-500/15 text-amber-600 border-0">Pendientes: {editEmp.diasPendientes}</Badge>}
                 {draftTotal > 0 && <Badge className="bg-sky-500/15 text-sky-600 border-0">En selección: {draftTotal}</Badge>}
@@ -679,6 +684,14 @@ const VacationProvisioning = () => {
                 Tiempo de servicio: <strong className="text-foreground">{formatServiceTime(editEmp.tiempoServicio)}</strong>
                 {editEmp.diasEstimados && " · derecho estimado"}
               </p>
+              {eligibleDate && (
+                <div className="rounded-lg bg-muted/50 border border-border p-3 text-xs text-muted-foreground -mt-2">
+                  Puede solicitar por adelantado: los días se acreditan según la antigüedad que tendrá <strong className="text-foreground">al iniciar</strong> el período.
+                  {" "}Primer día disfrutable: <strong className="text-foreground">{eligibleDate}</strong> (6 meses → {Math.floor((policy?.under5Days ?? 14) / 2)} días).
+                  {upcoming && <> A partir del <strong className="text-foreground">{upcoming.date}</strong> corresponden hasta <strong className="text-foreground">{upcoming.days}</strong> días.</>}
+                </div>
+              )}
+
               {willNeedManagement && (
                 <div className="flex items-start gap-2 rounded-lg bg-purple-500/10 border border-purple-500/20 p-3 text-xs text-purple-700">
                   <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
