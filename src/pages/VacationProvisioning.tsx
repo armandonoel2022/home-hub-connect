@@ -241,7 +241,18 @@ const VacationProvisioning = () => {
 
   // Días ya comprometidos (aprobados + pendientes) y restantes en vivo.
   const alreadyUsed = editEmp ? editEmp.diasAprobados + editEmp.diasPendientes : 0;
-  const remainingDays = editEmp ? Math.max(0, editEmp.diasDerecho - alreadyUsed - draftTotal) : 0;
+  // Derecho máximo proyectado (según la antigüedad que tendrá al iniciar el
+  // período que se está eligiendo). Permite solicitar por adelantado.
+  const projectedEntitlement = useMemo(() => {
+    if (!editEmp) return 0;
+    if (!editEmp.fechaIngreso) return editEmp.diasDerecho;
+    const at = range?.from ?? new Date();
+    const d = entitledDaysAt(editEmp.fechaIngreso, at, policy);
+    return d == null ? editEmp.diasDerecho : d;
+  }, [editEmp, range?.from, policy]);
+  const remainingDays = editEmp ? Math.max(0, projectedEntitlement - alreadyUsed - draftTotal) : 0;
+  const eligibleDate = editEmp ? editEmp.elegibleDesde || eligibleFrom(editEmp.fechaIngreso) : null;
+  const upcoming = editEmp ? nextMilestone(editEmp.fechaIngreso, range?.from ?? new Date(), policy) : null;
   // Períodos vigentes existentes (no rechazados) + los del borrador.
   const existingPeriodCount = editEmp
     ? editEmp.requests.filter((r) => r.status !== "rechazada").reduce((a, r) => a + r.periods.length, 0)
@@ -255,12 +266,22 @@ const VacationProvisioning = () => {
       return;
     }
     if (!editEmp) return;
+    // Restricción: las vacaciones no pueden iniciar antes de cumplir 6 meses,
+    // aunque sí pueden solicitarse por adelantado para fechas posteriores.
+    if (eligibleDate && iso(range.from) < eligibleDate) {
+      toast({
+        title: "Aún no puede disfrutar vacaciones en esa fecha",
+        description: `El período debe iniciar a partir del ${eligibleDate}, fecha en que cumple 6 meses de antigüedad. Puedes solicitarlas desde ahora, pero para fechas posteriores a ese día.`,
+        variant: "destructive",
+      });
+      return;
+    }
     const days = countWorkDays(range.from, range.to, workDaySet, holidaySet);
-    // Restricción: no exceder los días a los que tiene derecho.
+    // Restricción: no exceder los días acreditados a la fecha de inicio.
     if (days > remainingDays) {
       toast({
-        title: "Excede tus días de vacaciones",
-        description: `Solo te quedan ${remainingDays} día(s) disponibles de ${editEmp.diasDerecho}. Según la Política de Gestión de Vacaciones de SafeOne no puedes solicitar más de lo que te corresponde.`,
+        title: "Excede los días acreditados a esa fecha",
+        description: `Al ${iso(range.from)} corresponden ${projectedEntitlement} día(s) y quedan ${remainingDays} disponible(s).${upcoming ? ` A partir del ${upcoming.date} podrá solicitar hasta ${upcoming.days} día(s).` : ""}`,
         variant: "destructive",
       });
       return;
@@ -275,6 +296,7 @@ const VacationProvisioning = () => {
     setDraftPeriods((p) => [...p, { start: iso(range.from!), end: iso(range.to!), days }]);
     setRange(undefined);
   };
+
 
   const submitRequest = async () => {
     if (!editEmp || !draftPeriods.length) {
