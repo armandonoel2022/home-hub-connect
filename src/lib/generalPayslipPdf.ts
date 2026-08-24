@@ -155,7 +155,7 @@ export async function generateGeneralPayslipPDF(
     ["Nómina", emp.nomina || "—"],
     ["Fecha de ingreso", emp.fechaIngreso ? new Date(emp.fechaIngreso).toLocaleDateString("es-DO") : "—"],
     ["Estatus", emp.estatus || "—"],
-    ["Fecha de pago", detail.fecha ? new Date(detail.fecha).toLocaleDateString("es-DO") : "—"],
+    ["Fecha de pago", payDateLabel(detail.periodo, detail.mes, detail.ano)],
   ];
 
   let ry = y + 5;
