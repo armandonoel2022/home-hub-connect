@@ -1241,6 +1241,38 @@ export interface GeneralPaymentCompare {
   totales: { actual: number; anterior: number };
   anomalias: number;
 }
+
+export interface GeneralPayrollAnomalyItem {
+  codigo: string;
+  empleado: string;
+  cedula: string;
+  concepto: string;
+  tipo: "Ingreso" | "Deducción";
+  anomalia: string;
+  severidad: "alta" | "media";
+  actual: number;
+  anterior: number;
+  diferencia: number;
+  variacion: number | null;
+  nota: string;
+}
+
+export interface GeneralPayrollAnomalies {
+  actual?: { ano: number; mes: number; periodo: number; fecha: string | null };
+  anterior?: { ano: number; mes: number; periodo: number; fecha: string | null };
+  periodos: Array<{ ano: number; mes: number; periodo: number; fecha: string | null }>;
+  resumen: {
+    total?: number;
+    empleados?: number;
+    duplicidades?: number;
+    deduccionesNuevas?: number;
+    deduccionesEliminadas?: number;
+    aumentosDeduccion?: number;
+    ingresosNuevos?: number;
+    impactoDeducciones?: number;
+  };
+  items: GeneralPayrollAnomalyItem[];
+}
 export const generalSqlApi = {
 
   status: () => apiFetch<GeneralSqlStatus>("/general-sql/status"),
