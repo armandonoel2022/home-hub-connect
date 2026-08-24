@@ -95,12 +95,15 @@ function yearsBetween(fecha) {
   return (Date.now() - d.getTime()) / (365.25 * 24 * 3600 * 1000);
 }
 
-// Tiempo de servicio detallado (años, meses, días) desde la fecha de ingreso.
-function serviceTime(fecha) {
+// Tiempo de servicio detallado (años, meses, días) desde la fecha de ingreso,
+// evaluado a una fecha determinada (por defecto hoy). Permite proyectar la
+// antigüedad al momento en que iniciarían las vacaciones solicitadas.
+function serviceTime(fecha, at) {
   if (!fecha) return null;
   const d = new Date(fecha);
   if (isNaN(d.getTime())) return null;
-  const now = new Date();
+  const now = at ? new Date(at) : new Date();
+  if (isNaN(now.getTime())) return null;
   let years = now.getFullYear() - d.getFullYear();
   let months = now.getMonth() - d.getMonth();
   let days = now.getDate() - d.getDate();
@@ -115,16 +118,48 @@ function serviceTime(fecha) {
   return { years, months, days, totalMonths: years * 12 + months };
 }
 
+// Suma meses a una fecha (devuelve ISO yyyy-mm-dd).
+function addMonthsISO(fecha, months) {
+  if (!fecha) return null;
+  const d = new Date(fecha);
+  if (isNaN(d.getTime())) return null;
+  const day = d.getDate();
+  const out = new Date(d.getFullYear(), d.getMonth() + months, 1);
+  const lastDay = new Date(out.getFullYear(), out.getMonth() + 1, 0).getDate();
+  out.setDate(Math.min(day, lastDay));
+  return out.toISOString().slice(0, 10);
+}
+
 // Días de vacaciones a los que tiene derecho según antigüedad (Art. 177 CT).
-//   < 1 año  → proporcional por meses trabajados (6 meses = mitad).
+//   < 6 meses → 0 (aún no puede disfrutar vacaciones)
+//   6–11 meses → proporcional (6 meses = 7 días)
 //   1–4 años → under5Days (14)
 //   >= 5 años → from5Days (18)
 function entitledDays(service, policy) {
   if (!service) return null;
   if (service.years >= policy.tenureThresholdYears) return policy.from5Days;
   if (service.years >= 1) return policy.under5Days;
+  if (service.totalMonths < 6) return 0;
   return Math.floor((policy.under5Days * service.totalMonths) / 12);
 }
+
+// Derecho proyectado a una fecha futura (fecha de inicio del período solicitado).
+function entitledDaysAtDate(hireDate, atDate, policy) {
+  const s = serviceTime(hireDate, atDate);
+  if (!s) return null;
+  return entitledDays(s, policy);
+}
+
+// Hitos de antigüedad para mostrar en la interfaz.
+function tenureMilestones(hireDate, policy) {
+  if (!hireDate) return null;
+  return {
+    seisMeses: addMonthsISO(hireDate, 6),
+    unAnio: addMonthsISO(hireDate, 12),
+    cincoAnios: addMonthsISO(hireDate, 12 * (policy.tenureThresholdYears || 5)),
+  };
+}
+
 
 // Correos de la Gerencia Comercial autorizados para aprobar el fraccionamiento
 // de vacaciones en más de dos períodos (Samuel Aurelio Pérez y Leonela Báez).
