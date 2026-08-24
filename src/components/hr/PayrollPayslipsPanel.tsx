@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   generalSqlApi,
+  employeesApi,
+  getFileUrl,
   type GeneralPayslip,
   type GeneralPayslipsResponse,
   type GeneralPayrollPeriod,
@@ -8,6 +10,7 @@ import {
   type GeneralPaymentDetail,
   type GeneralPaymentCompare,
   type GeneralActiveEmployee,
+  type Employee,
 } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,11 +19,19 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Download, RefreshCw, Receipt, AlertTriangle, History, ArrowLeftRight, UserX } from "lucide-react";
+import { Search, Download, RefreshCw, Receipt, AlertTriangle, History, ArrowLeftRight, UserX, Printer } from "lucide-react";
+import { generateGeneralPayslipPDF, periodLabel } from "@/lib/generalPayslipPdf";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP", maximumFractionDigits: 2 }).format(n || 0);
 const fmtDate = (v?: string | null) => (v ? new Date(v).toLocaleDateString("es-DO") : "—");
+
+function resolvePhoto(url?: string | null): string | undefined {
+  if (!url) return undefined;
+  if (url.startsWith("/photos") || url.startsWith("/uploads")) return getFileUrl(url);
+  return url;
+}
+
 
 /** Comprobantes de pago de gSafeOne: última nómina por defecto, con retroceso por períodos. */
 export default function PayrollPayslipsPanel() {
@@ -33,6 +44,9 @@ export default function PayrollPayslipsPanel() {
   const [detail, setDetail] = useState<GeneralPayslip | null>(null);
   const [missingOnly, setMissingOnly] = useState(false);
   const [activeEmployees, setActiveEmployees] = useState<GeneralActiveEmployee[]>([]);
+  const [localEmployees, setLocalEmployees] = useState<Employee[]>([]);
+  const [printing, setPrinting] = useState(false);
+
 
   // Historial por empleado
   const [history, setHistory] = useState<GeneralEmployeePayment[]>([]);
@@ -59,6 +73,8 @@ export default function PayrollPayslipsPanel() {
   useEffect(() => {
     generalSqlApi.payrollPeriods().then(setPeriods).catch(() => setPeriods([]));
     generalSqlApi.employeesActive().then(r => setActiveEmployees(r.items || [])).catch(() => setActiveEmployees([]));
+    employeesApi.getAll().then(setLocalEmployees).catch(() => setLocalEmployees([]));
+
     load("last");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -127,6 +143,39 @@ export default function PayrollPayslipsPanel() {
     if (!detail?.codigo || !selA || !selB) return;
     try { setCompare(await generalSqlApi.paymentCompare(detail.codigo, selA, selB)); } catch { setCompare(null); }
   };
+
+  /** Genera el comprobante A4 membretado (hoja de datos + desglose) sin arrastrar la UI. */
+  const printPayslip = async () => {
+    if (!payDetail || !detail) return;
+    setPrinting(true);
+    try {
+      const code = String(detail.codigo || "").trim();
+      const ced = String(detail.cedula || "").replace(/\D/g, "");
+      const local = localEmployees.find(e =>
+        (code && String(e.employeeCode || "").trim() === code) ||
+        (ced && [e.cedula, e.tss].some(v => String(v || "").replace(/\D/g, "") === ced))
+      );
+      const gen = activeEmployees.find(e =>
+        (code && String(e.codigo || "").trim() === code) ||
+        (ced && String(e.cedula || "").replace(/\D/g, "") === ced)
+      );
+      await generateGeneralPayslipPDF(payDetail, {
+        nombre: detail.empleado || local?.fullName || gen?.nombreCompleto || "—",
+        codigo: detail.codigo,
+        cedula: detail.cedula || local?.cedula || gen?.cedula,
+        puesto: detail.puesto || local?.position || gen?.puesto,
+        departamento: local?.department || gen?.departamento,
+        categoria: local?.category,
+        nomina: local?.payrollType,
+        fechaIngreso: local?.hireDate || gen?.fechaIngreso,
+        estatus: local?.status || gen?.estatus,
+        photoUrl: resolvePhoto(local?.photoUrl || local?.photo),
+      }, { open: true });
+    } finally {
+      setPrinting(false);
+    }
+  };
+
 
   const exportCSV = () => {
     const headers = ["Empleado", "Código", "Cédula", "Puesto", "Fecha Pago", "Periodo", "Mes", "Año", "Nómina",
@@ -416,8 +465,9 @@ export default function PayrollPayslipsPanel() {
               {payDetail && (
                 <div>
                   <p className="font-semibold mb-1">
-                    Desglose · {fmtDate(payDetail.fecha)} (Q{payDetail.periodo} {payDetail.mes}/{payDetail.ano})
+                    Desglose · {periodLabel(payDetail.periodo, payDetail.mes, payDetail.ano)} · pagado el {fmtDate(payDetail.fecha)}
                   </p>
+
                   <div className="mb-2">
                     <p className="text-green-600 font-medium">Ingresos</p>
                     {payDetail.lineas.filter(l => l.tipo === 1).map((l, k) => (
@@ -439,7 +489,11 @@ export default function PayrollPayslipsPanel() {
                   <div className="flex justify-between text-base font-bold border-t pt-2 mt-2">
                     <span>Neto a recibir</span><span className="text-gold">{fmt(payDetail.neto)}</span>
                   </div>
-                  <Button className="w-full mt-3" variant="outline" onClick={() => window.print()}>Imprimir</Button>
+                  <Button className="w-full mt-3" variant="outline" disabled={printing} onClick={printPayslip}>
+                    <Printer className="h-4 w-4 mr-2" />
+                    {printing ? "Generando comprobante..." : "Imprimir comprobante (hoja membretada)"}
+                  </Button>
+
                 </div>
               )}
             </div>
