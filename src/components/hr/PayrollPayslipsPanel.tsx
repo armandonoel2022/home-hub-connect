@@ -465,8 +465,9 @@ export default function PayrollPayslipsPanel() {
               {payDetail && (
                 <div>
                   <p className="font-semibold mb-1">
-                    Desglose · {fmtDate(payDetail.fecha)} (Q{payDetail.periodo} {payDetail.mes}/{payDetail.ano})
+                    Desglose · {periodLabel(payDetail.periodo, payDetail.mes, payDetail.ano)} · pagado el {fmtDate(payDetail.fecha)}
                   </p>
+
                   <div className="mb-2">
                     <p className="text-green-600 font-medium">Ingresos</p>
                     {payDetail.lineas.filter(l => l.tipo === 1).map((l, k) => (
