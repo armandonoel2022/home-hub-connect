@@ -1241,6 +1241,38 @@ export interface GeneralPaymentCompare {
   totales: { actual: number; anterior: number };
   anomalias: number;
 }
+
+export interface GeneralPayrollAnomalyItem {
+  codigo: string;
+  empleado: string;
+  cedula: string;
+  concepto: string;
+  tipo: "Ingreso" | "Deducción";
+  anomalia: string;
+  severidad: "alta" | "media";
+  actual: number;
+  anterior: number;
+  diferencia: number;
+  variacion: number | null;
+  nota: string;
+}
+
+export interface GeneralPayrollAnomalies {
+  actual?: { ano: number; mes: number; periodo: number; fecha: string | null };
+  anterior?: { ano: number; mes: number; periodo: number; fecha: string | null };
+  periodos: Array<{ ano: number; mes: number; periodo: number; fecha: string | null }>;
+  resumen: {
+    total?: number;
+    empleados?: number;
+    duplicidades?: number;
+    deduccionesNuevas?: number;
+    deduccionesEliminadas?: number;
+    aumentosDeduccion?: number;
+    ingresosNuevos?: number;
+    impactoDeducciones?: number;
+  };
+  items: GeneralPayrollAnomalyItem[];
+}
 export const generalSqlApi = {
 
   status: () => apiFetch<GeneralSqlStatus>("/general-sql/status"),
@@ -1293,6 +1325,11 @@ export const generalSqlApi = {
     apiFetch<GeneralPaymentDetail>(`/general-sql/payment-detail?codigo=${encodeURIComponent(codigo)}&pagoOid=${pagoOid}`),
   paymentCompare: (codigo: string, pago1: number, pago2: number) =>
     apiFetch<GeneralPaymentCompare>(`/general-sql/payment-compare?codigo=${encodeURIComponent(codigo)}&pago1=${pago1}&pago2=${pago2}`),
+  /** Anomalías de toda la nómina: quincena seleccionada vs quincena anterior. */
+  payrollAnomalies: (p?: { ano: number; mes: number; periodo: number }) =>
+    apiFetch<GeneralPayrollAnomalies>(
+      `/general-sql/payroll-anomalies${p ? `?ano=${p.ano}&mes=${p.mes}&periodo=${p.periodo}` : ""}`
+    ),
 
   clientServices: (oid: number | string) =>
     apiFetch<GeneralClientService[]>(`/general-sql/clients/${encodeURIComponent(String(oid))}/servicios`),

@@ -19,8 +19,9 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Download, RefreshCw, Receipt, AlertTriangle, History, ArrowLeftRight, UserX, Printer } from "lucide-react";
-import { generateGeneralPayslipPDF, periodLabel } from "@/lib/generalPayslipPdf";
+import { Search, Download, RefreshCw, Receipt, AlertTriangle, History, ArrowLeftRight, UserX, Printer, Siren } from "lucide-react";
+import { generateGeneralPayslipPDF, periodLabel, payDateLabel } from "@/lib/generalPayslipPdf";
+import PayrollAnomaliesDialog from "@/components/hr/PayrollAnomaliesDialog";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP", maximumFractionDigits: 2 }).format(n || 0);
@@ -46,6 +47,7 @@ export default function PayrollPayslipsPanel() {
   const [activeEmployees, setActiveEmployees] = useState<GeneralActiveEmployee[]>([]);
   const [localEmployees, setLocalEmployees] = useState<Employee[]>([]);
   const [printing, setPrinting] = useState(false);
+  const [anomaliesOpen, setAnomaliesOpen] = useState(false);
 
 
   // Historial por empleado
@@ -181,7 +183,7 @@ export default function PayrollPayslipsPanel() {
     const headers = ["Empleado", "Código", "Cédula", "Puesto", "Fecha Pago", "Periodo", "Mes", "Año", "Nómina",
       ...ingresos, ...deducciones, "Total Devengado", "Total Deducciones", "Neto a Recibir"];
     const rows = filtered.map(i => [
-      i.empleado, i.codigo, i.cedula, i.puesto, fmtDate(i.fechaPago), i.periodo, i.mes, i.ano, i.nomina,
+      i.empleado, i.codigo, i.cedula, i.puesto, payDateLabel(i.periodo, i.mes, i.ano), i.periodo, i.mes, i.ano, i.nomina,
       ...ingresos.map(c => i.ingresos[c] ?? 0),
       ...deducciones.map(c => i.deducciones[c] ?? 0),
       i.totalDevengado, i.totalDeducciones, i.neto,
@@ -214,6 +216,9 @@ export default function PayrollPayslipsPanel() {
               ))}
             </SelectContent>
           </Select>
+          <Button variant="destructive" size="sm" onClick={() => setAnomaliesOpen(true)}>
+            <Siren className="h-4 w-4 mr-2" /> Anomalías de nómina
+          </Button>
           <Button variant={missingOnly ? "default" : "outline"} size="sm" onClick={() => setMissingOnly(v => !v)}>
             <UserX className="h-4 w-4 mr-2" /> Sin pago ({missing.length})
           </Button>
@@ -317,7 +322,7 @@ export default function PayrollPayslipsPanel() {
                   <TableCell className="font-mono text-xs">{i.codigo || "—"}</TableCell>
                   <TableCell className="font-mono text-xs">{i.cedula || "—"}</TableCell>
                   <TableCell>{i.puesto || "—"}</TableCell>
-                  <TableCell>{fmtDate(i.fechaPago)}</TableCell>
+                  <TableCell>{payDateLabel(i.periodo, i.mes, i.ano)}</TableCell>
                   <TableCell>{i.periodo ?? "—"}</TableCell>
                   <TableCell>{i.mes ?? "—"}/{i.ano ?? "—"}</TableCell>
                   {ingresos.map(c => <TableCell key={c} className="text-right">{(i.ingresos[c] || 0) ? fmt(i.ingresos[c]) : "—"}</TableCell>)}
@@ -465,7 +470,7 @@ export default function PayrollPayslipsPanel() {
               {payDetail && (
                 <div>
                   <p className="font-semibold mb-1">
-                    Desglose · {periodLabel(payDetail.periodo, payDetail.mes, payDetail.ano)} · pagado el {fmtDate(payDetail.fecha)}
+                    Desglose · {periodLabel(payDetail.periodo, payDetail.mes, payDetail.ano)} · pago el {payDateLabel(payDetail.periodo, payDetail.mes, payDetail.ano)}
                   </p>
 
                   <div className="mb-2">
@@ -500,6 +505,12 @@ export default function PayrollPayslipsPanel() {
           )}
         </DialogContent>
       </Dialog>
+
+      <PayrollAnomaliesDialog
+        open={anomaliesOpen}
+        onOpenChange={setAnomaliesOpen}
+        period={periods.find(p => `${p.ano}-${p.mes}-${p.periodo}` === periodKey) || null}
+      />
     </Card>
   );
 }

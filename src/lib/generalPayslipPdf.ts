@@ -18,6 +18,28 @@ export function periodLabel(periodo?: number | null, mes?: number | null, ano?: 
   return [q, m ? `de ${m}` : "", ano ? String(ano) : ""].filter(Boolean).join(" ");
 }
 
+/**
+ * Fecha real de pago SafeOne según la quincena:
+ *  - Q1 (01–15) → se paga el día 15 del mismo mes
+ *  - Q2 (16–fin) → se paga el día 30 (o el último día si el mes es más corto)
+ * La fecha almacenada en gSafeOne corresponde al procesamiento del pago, no al
+ * desembolso, por eso no se usa para la leyenda del comprobante.
+ */
+export function payDateForPeriod(
+  periodo?: number | null, mes?: number | null, ano?: number | null,
+): Date | null {
+  if (!mes || !ano || mes < 1 || mes > 12) return null;
+  const last = new Date(ano, mes, 0).getDate();
+  const day = periodo === 1 ? 15 : Math.min(30, last);
+  return new Date(ano, mes - 1, day);
+}
+
+/** "30/8/2026" o "—" */
+export function payDateLabel(periodo?: number | null, mes?: number | null, ano?: number | null): string {
+  const d = payDateForPeriod(periodo, mes, ano);
+  return d ? d.toLocaleDateString("es-DO") : "—";
+}
+
 async function toDataUrl(url: string): Promise<string | null> {
   try {
     const blob = await fetch(url).then(r => r.blob());
@@ -134,7 +156,7 @@ export async function generateGeneralPayslipPDF(
     ["Nómina", emp.nomina || "—"],
     ["Fecha de ingreso", emp.fechaIngreso ? new Date(emp.fechaIngreso).toLocaleDateString("es-DO") : "—"],
     ["Estatus", emp.estatus || "—"],
-    ["Fecha de pago", detail.fecha ? new Date(detail.fecha).toLocaleDateString("es-DO") : "—"],
+    ["Fecha de pago", payDateLabel(detail.periodo, detail.mes, detail.ano)],
   ];
 
   let ry = y + 5;
