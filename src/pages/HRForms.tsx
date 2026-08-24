@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { serviceTimeAt, entitledDaysAt, eligibleFrom } from "@/lib/vacationEntitlement";
 import {
   ArrowLeft, Printer, CalendarIcon, Palmtree, CalendarOff, UtensilsCrossed,
   UserX, PartyPopper, Clock, Banknote, CheckCircle2, Send, FileText,
