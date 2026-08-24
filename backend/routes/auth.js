@@ -14,15 +14,23 @@ function mapUser(u) {
   return safe;
 }
 
+function mustChangePasswordFor(user) {
+  return !user.passwordHash || !!user.mustChangePassword;
+}
+
+function normalizeLogin(value = '') {
+  return String(value).trim().toLowerCase();
+}
+
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    const login = normalizeLogin(email);
     const users = readData(USERS_FILE);
 
-    const user = users.find(u =>
-      u.email && u.email.toLowerCase() === email.toLowerCase()
-    );
+    const user = users.find(u => [u.email, u.fullName, u.id, u.employeeCode, u.cedula]
+      .some(value => value && normalizeLogin(value) === login));
 
     if (!user) {
       return res.status(401).json({ message: 'Usuario o contraseña incorrectos' });
@@ -41,7 +49,7 @@ router.post('/login', async (req, res) => {
 
     // Determine if user must change password
     // mustChangePassword is true if: no custom passwordHash (still using default), or flag is explicitly set
-    const mustChangePassword = !user.passwordHash || !!user.mustChangePassword;
+    const mustChangePassword = mustChangePasswordFor(user);
 
     const token = jwt.sign(
       { id: user.id, email: user.email, isAdmin: !!user.isAdmin },
@@ -61,7 +69,7 @@ router.get('/me', auth, (req, res) => {
   const users = readData(USERS_FILE);
   const user = users.find(u => u.id === req.user.id);
   if (!user) return res.status(404).json({ message: 'Usuario no encontrado' });
-  res.json(mapUser(user));
+  res.json({ ...mapUser(user), mustChangePassword: mustChangePasswordFor(user) });
 });
 
 // POST /api/auth/refresh
@@ -94,10 +102,10 @@ router.post('/change-password', auth, async (req, res) => {
   // Verify current password
   if (user.passwordHash) {
     const valid = await bcrypt.compare(currentPassword, user.passwordHash);
-    if (!valid) return res.status(401).json({ message: 'Contraseña actual incorrecta' });
+    if (!valid) return res.status(400).json({ message: 'Contraseña actual incorrecta' });
   } else {
-    if (currentPassword.toLowerCase() !== 'safeone') {
-      return res.status(401).json({ message: 'Contraseña actual incorrecta' });
+    if (String(currentPassword || '').toLowerCase() !== 'safeone') {
+      return res.status(400).json({ message: 'Contraseña actual incorrecta' });
     }
   }
 
@@ -105,9 +113,14 @@ router.post('/change-password', auth, async (req, res) => {
   users[idx].passwordHash = await bcrypt.hash(newPassword, 12);
   users[idx].mustChangePassword = false;
   users[idx].updatedAt = new Date().toISOString();
-  writeData(USERS_FILE, users);
+  if (!writeData(USERS_FILE, users)) {
+    return res.status(500).json({ message: 'No se pudo guardar la nueva contraseña' });
+  }
 
-  res.json({ message: 'Contraseña actualizada' });
+  res.json({
+    message: 'Contraseña actualizada',
+    user: { ...mapUser(users[idx]), mustChangePassword: false },
+  });
 });
 
 // POST /api/auth/forgot-password — creates a password reset request + IT ticket

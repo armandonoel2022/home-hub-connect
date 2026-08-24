@@ -486,6 +486,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           try {
             const currentUser = await authApi.me();
             setUser(currentUser);
+            localStorage.setItem("safeone_user", JSON.stringify(currentUser));
+            setMustChangePassword(!!currentUser.mustChangePassword);
           } catch {
             localStorage.removeItem("safeone_token");
             localStorage.removeItem("safeone_user");
@@ -532,10 +534,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setAllUsers(users);
         } catch {}
         return true;
-      } catch {
-        // If API fails, try local fallback
-        console.warn("API login failed, trying local fallback...");
-        return localLogin(username, password);
+      } catch (err) {
+        // The server is the authentication source of truth whenever configured.
+        // A local fallback would create a mock token that the next API request
+        // rejects, making the user appear to log in and immediately log out.
+        console.warn("API login failed", err);
+        return false;
       }
     } else {
       return localLogin(username, password);
@@ -714,24 +718,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (serverSession) {
       // Persistir en el backend — esta es la fuente de verdad.
       try {
-        await authApi.changePassword(current, newPassword);
+        const result = await authApi.changePassword(current, newPassword);
+        const updatedUser = result.user;
+        setUser(updatedUser);
+        localStorage.setItem("safeone_user", JSON.stringify(updatedUser));
       } catch (err: any) {
         const msg = String(err?.message || "");
-        const unauthorized = /401|no autorizado|token/i.test(msg);
-        if (!unauthorized) {
-          return { ok: false, message: msg || "No se pudo cambiar la contraseña" };
-        }
-        // Sesión no válida en el servidor: continuamos con actualización local
-        console.warn("changePassword: sesión no válida en el servidor, aplicando cambio local");
+        return { ok: false, message: msg || "No se pudo cambiar la contraseña" };
       }
       // Refrescar lista de usuarios para reflejar mustChangePassword=false
       try {
         const users = await usersApi.getAll();
         setAllUsers(users);
       } catch {}
-      const updatedUser = { ...user, mustChangePassword: false, lastPasswordChange: new Date().toISOString() };
-      setUser(updatedUser);
-      localStorage.setItem("safeone_user", JSON.stringify(updatedUser));
     } else {
       const hash = simpleHash(newPassword);
       const updates: Partial<IntranetUser> = {
