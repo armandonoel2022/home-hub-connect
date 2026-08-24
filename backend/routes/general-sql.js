@@ -657,18 +657,28 @@ WHERE p.GCRecord IS NULL AND pd.Calculado > 0
 GROUP BY p.Ano, p.Mes, p.Periodo
 ORDER BY p.Ano DESC, p.Mes DESC, p.Periodo DESC`;
 
+  // Se agrupa primero por PAGO para poder distinguir una duplicidad real
+  // (mismo concepto repetido dentro del MISMO pago) de un período con varios
+  // pagos legítimos (ej. una nómina normal + una de novedades en la quincena).
   const dataQuery = (a, m, q) => `
-SELECT e.Codigo, e.NombreCompleto AS Empleado, e.Cedula,
-       c.Descripcion AS Concepto, c.Tipo,
-       SUM(pd.Calculado) AS Monto, COUNT(*) AS Lineas
-FROM PagoD pd
-INNER JOIN PagoConcepto pc ON pd.PagoConcepto = pc.OID
-INNER JOIN Pago p ON pc.Pago = p.OID
-INNER JOIN Concepto c ON pc.Concepto = c.OID
-INNER JOIN Empleado e ON pd.Empleado = e.OID
-WHERE p.GCRecord IS NULL AND e.GCRecord IS NULL AND pd.Calculado > 0
-  AND p.Ano = ${a} AND p.Mes = ${m} AND p.Periodo = ${q}
-GROUP BY e.Codigo, e.NombreCompleto, e.Cedula, c.Descripcion, c.Tipo`;
+SELECT Codigo, Empleado, Cedula, Concepto, Tipo,
+       SUM(Monto) AS Monto, SUM(Lineas) AS Lineas,
+       COUNT(*) AS Pagos, MAX(Lineas) AS MaxLineasPago
+FROM (
+  SELECT e.Codigo, e.NombreCompleto AS Empleado, e.Cedula,
+         c.Descripcion AS Concepto, c.Tipo, p.OID AS PagoOID,
+         SUM(pd.Calculado) AS Monto, COUNT(*) AS Lineas
+  FROM PagoD pd
+  INNER JOIN PagoConcepto pc ON pd.PagoConcepto = pc.OID
+  INNER JOIN Pago p ON pc.Pago = p.OID
+  INNER JOIN Concepto c ON pc.Concepto = c.OID
+  INNER JOIN Empleado e ON pd.Empleado = e.OID
+  WHERE p.GCRecord IS NULL AND e.GCRecord IS NULL AND pd.Calculado > 0
+    AND p.Ano = ${a} AND p.Mes = ${m} AND p.Periodo = ${q}
+  GROUP BY e.Codigo, e.NombreCompleto, e.Cedula, c.Descripcion, c.Tipo, p.OID
+) t
+GROUP BY Codigo, Empleado, Cedula, Concepto, Tipo`;
+
 
   try {
     const periods = (await sql.query(periodQuery)).map((r) => ({
