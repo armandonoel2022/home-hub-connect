@@ -73,6 +73,8 @@ export default function PayrollPayslipsPanel() {
   useEffect(() => {
     generalSqlApi.payrollPeriods().then(setPeriods).catch(() => setPeriods([]));
     generalSqlApi.employeesActive().then(r => setActiveEmployees(r.items || [])).catch(() => setActiveEmployees([]));
+    employeesApi.getAll().then(setLocalEmployees).catch(() => setLocalEmployees([]));
+
     load("last");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
