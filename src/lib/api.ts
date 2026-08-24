@@ -1827,7 +1827,10 @@ export interface VacationEmployee {
   fechaIngreso: string | null;
   antiguedadAnios: number | null; tiempoServicio?: VacationServiceTime | null;
   diasDerecho: number; diasEstimados: boolean;
+  elegibleDesde?: string | null;
+  hitos?: { seisMeses: string | null; unAnio: string | null; cincoAnios: string | null } | null;
   diasAprobados: number; diasPendientes: number;
+
   workDays?: number[];          // 0=Dom..6=Sáb — días que cuentan como laborables
   workDaysCustom?: boolean;     // true si fue configurado manualmente
   requests: VacationRequest[];
