@@ -21,7 +21,7 @@ export function periodLabel(periodo?: number | null, mes?: number | null, ano?: 
 /**
  * Fecha real de pago SafeOne según la quincena:
  *  - Q1 (01–15) → se paga el día 15 del mismo mes
- *  - Q2 (16–fin) → se paga el último día del mes
+ *  - Q2 (16–fin) → se paga el día 30 (o el último día si el mes es más corto)
  * La fecha almacenada en gSafeOne corresponde al procesamiento del pago, no al
  * desembolso, por eso no se usa para la leyenda del comprobante.
  */
@@ -29,7 +29,8 @@ export function payDateForPeriod(
   periodo?: number | null, mes?: number | null, ano?: number | null,
 ): Date | null {
   if (!mes || !ano || mes < 1 || mes > 12) return null;
-  const day = periodo === 1 ? 15 : new Date(ano, mes, 0).getDate();
+  const last = new Date(ano, mes, 0).getDate();
+  const day = periodo === 1 ? 15 : Math.min(30, last);
   return new Date(ano, mes - 1, day);
 }
 
