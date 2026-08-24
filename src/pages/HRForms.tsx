@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { serviceTimeAt, entitledDaysAt, eligibleFrom } from "@/lib/vacationEntitlement";
 import {
   ArrowLeft, Printer, CalendarIcon, Palmtree, CalendarOff, UtensilsCrossed,
   UserX, PartyPopper, Clock, Banknote, CheckCircle2, Send, FileText,
@@ -1073,29 +1074,29 @@ function VacationForm({ userName, department, showSignature }: { userName: strin
   // Calculate days based on employee's work schedule
   const workDaysPerWeek = user?.workDaysPerWeek || 5;
   
-  // Calculate vacation entitlement based on Dominican Republic Labor Law (Código de Trabajo)
-  // Article 177: 14 días laborables after 1 year, 18 días laborables after 5 years
+  // Derecho según Ley RD (Art. 177), proyectado a la fecha de inicio elegida:
+  // se puede solicitar por adelantado, pero no disfrutar antes de cumplir el tiempo.
   const calcVacationEntitlement = (): { years: number; daysEntitled: number; message: string } => {
     if (!user?.hireDate) return { years: 0, daysEntitled: 0, message: "Sin fecha de ingreso registrada" };
-    const hire = new Date(user.hireDate);
-    const now = new Date();
-    const diffMs = now.getTime() - hire.getTime();
-    const years = Math.floor(diffMs / (365.25 * 24 * 60 * 60 * 1000));
-    
-    if (years < 1) {
-      return { years, daysEntitled: 0, message: "Aún no cumple 1 año (no aplica vacaciones)" };
-    } else if (years >= 5) {
-      // 18 días laborables (Ley RD para +5 años)
-      const daysEntitled = Math.round((18 / 5) * workDaysPerWeek);
-      return { years, daysEntitled, message: `${years} años de antigüedad → 18 días laborables` };
-    } else {
-      // 14 días laborables (Ley RD para 1-4 años)
-      const daysEntitled = Math.round((14 / 5) * workDaysPerWeek);
-      return { years, daysEntitled, message: `${years} año${years > 1 ? "s" : ""} de antigüedad → 14 días laborables` };
+    const at = startDate ?? new Date();
+    const svc = serviceTimeAt(user.hireDate, at);
+    const base = entitledDaysAt(user.hireDate, at) ?? 0;
+    const years = svc?.years ?? 0;
+    const scaled = Math.round((base / 5) * workDaysPerWeek);
+    const when = startDate ? ` (a la fecha de inicio ${format(startDate, "dd/MM/yyyy")})` : "";
+    if (base === 0) {
+      const from = eligibleFrom(user.hireDate);
+      return { years, daysEntitled: 0, message: `Aún no cumple 6 meses${from ? ` — podrá disfrutar vacaciones a partir del ${from}` : ""}` };
     }
+    if (years >= 5) return { years, daysEntitled: scaled, message: `${years} años de antigüedad → 18 días laborables${when}` };
+    if (years >= 1) return { years, daysEntitled: scaled, message: `${years} año${years > 1 ? "s" : ""} de antigüedad → 14 días laborables${when}` };
+    return { years, daysEntitled: scaled, message: `${svc?.totalMonths ?? 6} meses de antigüedad → ${base} días proporcionales${when}` };
   };
 
   const entitlement = calcVacationEntitlement();
+  const firstEligible = eligibleFrom(user?.hireDate);
+  const startsTooEarly = !!(firstEligible && startDate && format(startDate, "yyyy-MM-dd") < firstEligible);
+
 
   // Auto-calculate working days based on employee's schedule
   const calcDays = (start?: Date, end?: Date): number => {
@@ -1141,13 +1142,20 @@ function VacationForm({ userName, department, showSignature }: { userName: strin
         </div>
         <p className="text-xs text-muted-foreground mt-2 border-t border-border pt-2">
           Jornada: <strong>{workDaysPerWeek} día{workDaysPerWeek > 1 ? "s" : ""}/semana</strong> • 
-          Según Art. 177 del Código de Trabajo: 14 días (1-4 años) o 18 días (+5 años)
+          Según Art. 177 del Código de Trabajo: 6 meses (proporcional), 14 días (1-4 años) o 18 días (+5 años).
+          {firstEligible && <> Puedes solicitar por adelantado períodos que inicien desde el <strong>{firstEligible}</strong>.</>}
         </p>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <DatePickerField label="Fecha de Inicio" date={startDate} setDate={setStartDate} />
         <DatePickerField label="Fecha de Fin" date={endDate} setDate={setEndDate} />
       </div>
+      {startsTooEarly && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
+          La fecha de inicio es anterior al {firstEligible}, cuando cumples la antigüedad mínima. Puedes registrar la solicitud con antelación, pero el disfrute debe iniciar en o después de esa fecha.
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-4">
         <FormField label="Días Solicitados">
           <Input type="number" value={daysRequested} readOnly className="font-bold" />

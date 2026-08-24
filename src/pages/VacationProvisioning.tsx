@@ -24,6 +24,7 @@ import {
   type Holiday,
 } from "@/lib/api";
 import { getDirectApprover, isApproverFor, isSamePerson } from "@/lib/vacationHierarchy";
+import { entitledDaysAt, eligibleFrom, nextMilestone, DEFAULT_VACATION_POLICY } from "@/lib/vacationEntitlement";
 import {
   Palmtree,
   ArrowLeft,
@@ -241,7 +242,18 @@ const VacationProvisioning = () => {
 
   // Días ya comprometidos (aprobados + pendientes) y restantes en vivo.
   const alreadyUsed = editEmp ? editEmp.diasAprobados + editEmp.diasPendientes : 0;
-  const remainingDays = editEmp ? Math.max(0, editEmp.diasDerecho - alreadyUsed - draftTotal) : 0;
+  // Derecho máximo proyectado (según la antigüedad que tendrá al iniciar el
+  // período que se está eligiendo). Permite solicitar por adelantado.
+  const projectedEntitlement = useMemo(() => {
+    if (!editEmp) return 0;
+    if (!editEmp.fechaIngreso) return editEmp.diasDerecho;
+    const at = range?.from ?? new Date();
+    const d = entitledDaysAt(editEmp.fechaIngreso, at, policy ?? DEFAULT_VACATION_POLICY);
+    return d == null ? editEmp.diasDerecho : d;
+  }, [editEmp, range?.from, policy]);
+  const remainingDays = editEmp ? Math.max(0, projectedEntitlement - alreadyUsed - draftTotal) : 0;
+  const eligibleDate = editEmp ? editEmp.elegibleDesde || eligibleFrom(editEmp.fechaIngreso) : null;
+  const upcoming = editEmp ? nextMilestone(editEmp.fechaIngreso, range?.from ?? new Date(), policy ?? DEFAULT_VACATION_POLICY) : null;
   // Períodos vigentes existentes (no rechazados) + los del borrador.
   const existingPeriodCount = editEmp
     ? editEmp.requests.filter((r) => r.status !== "rechazada").reduce((a, r) => a + r.periods.length, 0)
@@ -255,12 +267,22 @@ const VacationProvisioning = () => {
       return;
     }
     if (!editEmp) return;
+    // Restricción: las vacaciones no pueden iniciar antes de cumplir 6 meses,
+    // aunque sí pueden solicitarse por adelantado para fechas posteriores.
+    if (eligibleDate && iso(range.from) < eligibleDate) {
+      toast({
+        title: "Aún no puede disfrutar vacaciones en esa fecha",
+        description: `El período debe iniciar a partir del ${eligibleDate}, fecha en que cumple 6 meses de antigüedad. Puedes solicitarlas desde ahora, pero para fechas posteriores a ese día.`,
+        variant: "destructive",
+      });
+      return;
+    }
     const days = countWorkDays(range.from, range.to, workDaySet, holidaySet);
-    // Restricción: no exceder los días a los que tiene derecho.
+    // Restricción: no exceder los días acreditados a la fecha de inicio.
     if (days > remainingDays) {
       toast({
-        title: "Excede tus días de vacaciones",
-        description: `Solo te quedan ${remainingDays} día(s) disponibles de ${editEmp.diasDerecho}. Según la Política de Gestión de Vacaciones de SafeOne no puedes solicitar más de lo que te corresponde.`,
+        title: "Excede los días acreditados a esa fecha",
+        description: `Al ${iso(range.from)} corresponden ${projectedEntitlement} día(s) y quedan ${remainingDays} disponible(s).${upcoming ? ` A partir del ${upcoming.date} podrá solicitar hasta ${upcoming.days} día(s).` : ""}`,
         variant: "destructive",
       });
       return;
@@ -275,6 +297,7 @@ const VacationProvisioning = () => {
     setDraftPeriods((p) => [...p, { start: iso(range.from!), end: iso(range.to!), days }]);
     setRange(undefined);
   };
+
 
   const submitRequest = async () => {
     if (!editEmp || !draftPeriods.length) {
@@ -646,7 +669,12 @@ const VacationProvisioning = () => {
             <div className="space-y-5">
               <div className="flex flex-wrap gap-2 text-xs">
                 <Badge variant="secondary">Cód. {editEmp.codigo}</Badge>
-                <Badge variant="secondary">Derecho: {editEmp.diasDerecho} días</Badge>
+                <Badge variant="secondary">Derecho hoy: {editEmp.diasDerecho} días</Badge>
+                {projectedEntitlement !== editEmp.diasDerecho && (
+                  <Badge className="bg-indigo-500/15 text-indigo-600 border-0">
+                    Derecho a la fecha seleccionada: {projectedEntitlement} días
+                  </Badge>
+                )}
                 <Badge className="bg-emerald-500/15 text-emerald-600 border-0">Aprobados: {editEmp.diasAprobados}</Badge>
                 {editEmp.diasPendientes > 0 && <Badge className="bg-amber-500/15 text-amber-600 border-0">Pendientes: {editEmp.diasPendientes}</Badge>}
                 {draftTotal > 0 && <Badge className="bg-sky-500/15 text-sky-600 border-0">En selección: {draftTotal}</Badge>}
@@ -656,6 +684,14 @@ const VacationProvisioning = () => {
                 Tiempo de servicio: <strong className="text-foreground">{formatServiceTime(editEmp.tiempoServicio)}</strong>
                 {editEmp.diasEstimados && " · derecho estimado"}
               </p>
+              {eligibleDate && (
+                <div className="rounded-lg bg-muted/50 border border-border p-3 text-xs text-muted-foreground -mt-2">
+                  Puede solicitar por adelantado: los días se acreditan según la antigüedad que tendrá <strong className="text-foreground">al iniciar</strong> el período.
+                  {" "}Primer día disfrutable: <strong className="text-foreground">{eligibleDate}</strong> (6 meses → {Math.floor((policy?.under5Days ?? 14) / 2)} días).
+                  {upcoming && <> A partir del <strong className="text-foreground">{upcoming.date}</strong> corresponden hasta <strong className="text-foreground">{upcoming.days}</strong> días.</>}
+                </div>
+              )}
+
               {willNeedManagement && (
                 <div className="flex items-start gap-2 rounded-lg bg-purple-500/10 border border-purple-500/20 p-3 text-xs text-purple-700">
                   <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />

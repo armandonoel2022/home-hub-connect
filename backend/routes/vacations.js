@@ -95,12 +95,15 @@ function yearsBetween(fecha) {
   return (Date.now() - d.getTime()) / (365.25 * 24 * 3600 * 1000);
 }
 
-// Tiempo de servicio detallado (años, meses, días) desde la fecha de ingreso.
-function serviceTime(fecha) {
+// Tiempo de servicio detallado (años, meses, días) desde la fecha de ingreso,
+// evaluado a una fecha determinada (por defecto hoy). Permite proyectar la
+// antigüedad al momento en que iniciarían las vacaciones solicitadas.
+function serviceTime(fecha, at) {
   if (!fecha) return null;
   const d = new Date(fecha);
   if (isNaN(d.getTime())) return null;
-  const now = new Date();
+  const now = at ? new Date(at) : new Date();
+  if (isNaN(now.getTime())) return null;
   let years = now.getFullYear() - d.getFullYear();
   let months = now.getMonth() - d.getMonth();
   let days = now.getDate() - d.getDate();
@@ -115,16 +118,48 @@ function serviceTime(fecha) {
   return { years, months, days, totalMonths: years * 12 + months };
 }
 
+// Suma meses a una fecha (devuelve ISO yyyy-mm-dd).
+function addMonthsISO(fecha, months) {
+  if (!fecha) return null;
+  const d = new Date(fecha);
+  if (isNaN(d.getTime())) return null;
+  const day = d.getDate();
+  const out = new Date(d.getFullYear(), d.getMonth() + months, 1);
+  const lastDay = new Date(out.getFullYear(), out.getMonth() + 1, 0).getDate();
+  out.setDate(Math.min(day, lastDay));
+  return out.toISOString().slice(0, 10);
+}
+
 // Días de vacaciones a los que tiene derecho según antigüedad (Art. 177 CT).
-//   < 1 año  → proporcional por meses trabajados (6 meses = mitad).
+//   < 6 meses → 0 (aún no puede disfrutar vacaciones)
+//   6–11 meses → proporcional (6 meses = 7 días)
 //   1–4 años → under5Days (14)
 //   >= 5 años → from5Days (18)
 function entitledDays(service, policy) {
   if (!service) return null;
   if (service.years >= policy.tenureThresholdYears) return policy.from5Days;
   if (service.years >= 1) return policy.under5Days;
+  if (service.totalMonths < 6) return 0;
   return Math.floor((policy.under5Days * service.totalMonths) / 12);
 }
+
+// Derecho proyectado a una fecha futura (fecha de inicio del período solicitado).
+function entitledDaysAtDate(hireDate, atDate, policy) {
+  const s = serviceTime(hireDate, atDate);
+  if (!s) return null;
+  return entitledDays(s, policy);
+}
+
+// Hitos de antigüedad para mostrar en la interfaz.
+function tenureMilestones(hireDate, policy) {
+  if (!hireDate) return null;
+  return {
+    seisMeses: addMonthsISO(hireDate, 6),
+    unAnio: addMonthsISO(hireDate, 12),
+    cincoAnios: addMonthsISO(hireDate, 12 * (policy.tenureThresholdYears || 5)),
+  };
+}
+
 
 // Correos de la Gerencia Comercial autorizados para aprobar el fraccionamiento
 // de vacaciones en más de dos períodos (Samuel Aurelio Pérez y Leonela Báez).
@@ -304,6 +339,11 @@ router.get('/roster/:deptId', auth, async (req, res) => {
       tiempoServicio: service ? { years: service.years, months: service.months, days: service.days } : null,
       diasDerecho: dias != null ? dias : policy.under5Days,
       diasEstimados: dias == null,
+      // Elegibilidad progresiva: puede solicitar por adelantado períodos que
+      // inicien a partir de la fecha en que cumple la antigüedad requerida.
+      elegibleDesde: hireDate ? addMonthsISO(hireDate, 6) : null,
+      hitos: tenureMilestones(hireDate, policy),
+
       diasAprobados,
       diasPendientes,
       workDays: workDaysForEmployee(store, e),
@@ -388,9 +428,11 @@ router.post('/requests', auth, (req, res) => {
   // ── Validaciones de política ──────────────────────────────────────────────
   const employees = loadEmployees();
   const emp = employees.find((e) => e.codigo === String(codigo));
-  const service = serviceTime(emp && emp.hireDate);
+  const hireDate = emp && emp.hireDate;
+  const service = serviceTime(hireDate);
   const entitled = entitledDays(service, store.policy);
   const diasDerecho = entitled != null ? entitled : store.policy.under5Days;
+  const elegibleDesde = hireDate ? addMonthsISO(hireDate, 6) : null;
 
   // Solicitudes vigentes del colaborador (no rechazadas).
   const existing = store.requests.filter(
@@ -399,13 +441,36 @@ router.post('/requests', auth, (req, res) => {
   const usadosDias = totalDays(existing.flatMap((r) => r.periods));
   const nuevosDias = totalDays(periods);
 
-  // 1) No se pueden solicitar más días de los que corresponden.
-  if (usadosDias + nuevosDias > diasDerecho) {
+  // 1) Los días se acreditan según la antigüedad que se tendrá AL INICIAR cada
+  //    período. Se puede solicitar por adelantado, pero no disfrutar antes.
+  if (hireDate) {
+    const ordenados = [...periods].sort((a, b) => String(a.start).localeCompare(String(b.start)));
+    let acumulado = usadosDias;
+    for (const p of ordenados) {
+      const start = String(p.start || '').slice(0, 10);
+      if (elegibleDesde && start < elegibleDesde) {
+        return res.status(400).json({
+          message: `Las vacaciones no pueden iniciar antes del ${elegibleDesde}, fecha en que se cumplen los 6 meses de antigüedad. Puedes solicitarlas por adelantado, pero el período debe iniciar en o después de esa fecha.`,
+          code: 'BEFORE_ELIGIBILITY',
+        });
+      }
+      const derechoEnFecha = entitledDaysAtDate(hireDate, start, store.policy);
+      const tope = derechoEnFecha != null ? derechoEnFecha : store.policy.under5Days;
+      acumulado += Number(p.days) || 0;
+      if (acumulado > tope) {
+        return res.status(400).json({
+          message: `Para un período que inicia el ${start} te corresponden ${tope} día(s) acumulados (antigüedad a esa fecha) y estarías solicitando ${acumulado}. Puedes tomar el resto a partir de que cumplas la siguiente antigüedad. (Política de Gestión de Vacaciones — SafeOne).`,
+          code: 'EXCEEDS_ENTITLEMENT',
+        });
+      }
+    }
+  } else if (usadosDias + nuevosDias > diasDerecho) {
     return res.status(400).json({
       message: `No es posible solicitar ${nuevosDias} día(s). Te corresponden ${diasDerecho} día(s) de vacaciones y ya tienes ${usadosDias} solicitado(s). Disponibles: ${Math.max(0, diasDerecho - usadosDias)}. (Política de Gestión de Vacaciones — SafeOne).`,
       code: 'EXCEEDS_ENTITLEMENT',
     });
   }
+
 
   // 2) No se fracciona en más de dos períodos sin aprobación de la Gerencia Comercial.
   const periodosExistentes = existing.reduce((a, r) => a + (r.periods ? r.periods.length : 0), 0);
