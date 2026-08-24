@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   generalSqlApi,
+  employeesApi,
+  getFileUrl,
   type GeneralPayslip,
   type GeneralPayslipsResponse,
   type GeneralPayrollPeriod,
@@ -8,6 +10,7 @@ import {
   type GeneralPaymentDetail,
   type GeneralPaymentCompare,
   type GeneralActiveEmployee,
+  type Employee,
 } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,11 +19,19 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Download, RefreshCw, Receipt, AlertTriangle, History, ArrowLeftRight, UserX } from "lucide-react";
+import { Search, Download, RefreshCw, Receipt, AlertTriangle, History, ArrowLeftRight, UserX, Printer } from "lucide-react";
+import { generateGeneralPayslipPDF, periodLabel } from "@/lib/generalPayslipPdf";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP", maximumFractionDigits: 2 }).format(n || 0);
 const fmtDate = (v?: string | null) => (v ? new Date(v).toLocaleDateString("es-DO") : "—");
+
+function resolvePhoto(url?: string | null): string | undefined {
+  if (!url) return undefined;
+  if (url.startsWith("/photos") || url.startsWith("/uploads")) return getFileUrl(url);
+  return url;
+}
+
 
 /** Comprobantes de pago de gSafeOne: última nómina por defecto, con retroceso por períodos. */
 export default function PayrollPayslipsPanel() {
