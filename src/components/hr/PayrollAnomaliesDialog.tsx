@@ -17,27 +17,32 @@ import { payDateLabel, periodLabel } from "@/lib/generalPayslipPdf";
 const fmt = (n: number) =>
   new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP", maximumFractionDigits: 2 }).format(n || 0);
 
-type Grupo = "todas" | "deducciones_suben" | "nuevas" | "duplicidad" | "eliminadas" | "ingresos";
+type Grupo = "todas" | "reales" | "deducciones_suben" | "nuevas" | "duplicidad" | "eliminadas" | "ingresos" | "reclasificaciones";
 
 const GRUPOS: Array<{ value: Grupo; label: string }> = [
+  { value: "reales", label: "Solo anomalías reales (sin reclasificaciones)" },
   { value: "todas", label: "Todas las anomalías" },
   { value: "deducciones_suben", label: "Deducciones que aumentan" },
   { value: "nuevas", label: "Conceptos nuevos (antes no se cobraba)" },
-  { value: "duplicidad", label: "Duplicidades (ej. doble ISR)" },
+  { value: "duplicidad", label: "Duplicidades reales (mismo pago)" },
   { value: "eliminadas", label: "Conceptos que desaparecieron" },
   { value: "ingresos", label: "Variaciones de ingresos" },
+  { value: "reclasificaciones", label: "Reclasificaciones (mismo total devengado)" },
 ];
 
 function matchGrupo(i: GeneralPayrollAnomalyItem, g: Grupo) {
   switch (g) {
+    case "reales": return i.anomalia !== "Reclasificación de concepto";
     case "deducciones_suben": return i.anomalia === "Aumento de deducción";
     case "nuevas": return i.anomalia === "Deducción nueva" || i.anomalia === "Ingreso nuevo";
     case "duplicidad": return i.anomalia === "Duplicidad de concepto";
     case "eliminadas": return i.anomalia.includes("eliminad");
-    case "ingresos": return i.tipo === "Ingreso";
+    case "ingresos": return i.tipo === "Ingreso" && i.anomalia !== "Reclasificación de concepto";
+    case "reclasificaciones": return i.anomalia === "Reclasificación de concepto";
     default: return true;
   }
 }
+
 
 interface Props {
   open: boolean;
@@ -52,7 +57,7 @@ export default function PayrollAnomaliesDialog({ open, onOpenChange, period }: P
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [grupo, setGrupo] = useState<Grupo>("todas");
+  const [grupo, setGrupo] = useState<Grupo>("reales");
 
   const load = async () => {
     setLoading(true); setError(null);
@@ -190,7 +195,10 @@ export default function PayrollAnomaliesDialog({ open, onOpenChange, period }: P
                   <TableCell className="font-medium">{i.empleado}</TableCell>
                   <TableCell>{i.concepto}</TableCell>
                   <TableCell>
-                    <Badge variant={i.severidad === "alta" ? "destructive" : "secondary"}>{i.anomalia}</Badge>
+                    <Badge variant={i.severidad === "alta" ? "destructive" : i.severidad === "baja" ? "outline" : "secondary"}>{i.anomalia}</Badge>
+                    {(i.pagos ?? 1) > 1 && (
+                      <span className="ml-1 text-[10px] text-muted-foreground">{i.pagos} pagos</span>
+                    )}
                     {i.nota && <p className="text-[11px] text-muted-foreground mt-1">{i.nota}</p>}
                   </TableCell>
                   <TableCell className="text-right">{fmt(i.actual)}</TableCell>
