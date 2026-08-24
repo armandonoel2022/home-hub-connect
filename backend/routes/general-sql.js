@@ -822,6 +822,7 @@ GROUP BY Codigo, Empleado, Cedula, Concepto, Tipo`;
         deduccionesEliminadas: count('Deducción eliminada'),
         aumentosDeduccion: count('Aumento de deducción'),
         ingresosNuevos: count('Ingreso nuevo'),
+        reclasificaciones: count('Reclasificación de concepto'),
         impactoDeducciones: round2(items
           .filter((i) => i.tipo === 'Deducción')
           .reduce((s, i) => s + i.diferencia, 0)),
