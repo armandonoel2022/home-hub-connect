@@ -1293,6 +1293,11 @@ export const generalSqlApi = {
     apiFetch<GeneralPaymentDetail>(`/general-sql/payment-detail?codigo=${encodeURIComponent(codigo)}&pagoOid=${pagoOid}`),
   paymentCompare: (codigo: string, pago1: number, pago2: number) =>
     apiFetch<GeneralPaymentCompare>(`/general-sql/payment-compare?codigo=${encodeURIComponent(codigo)}&pago1=${pago1}&pago2=${pago2}`),
+  /** Anomalías de toda la nómina: quincena seleccionada vs quincena anterior. */
+  payrollAnomalies: (p?: { ano: number; mes: number; periodo: number }) =>
+    apiFetch<GeneralPayrollAnomalies>(
+      `/general-sql/payroll-anomalies${p ? `?ano=${p.ano}&mes=${p.mes}&periodo=${p.periodo}` : ""}`
+    ),
 
   clientServices: (oid: number | string) =>
     apiFetch<GeneralClientService[]>(`/general-sql/clients/${encodeURIComponent(String(oid))}/servicios`),
