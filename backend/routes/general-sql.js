@@ -638,6 +638,145 @@ WHERE e.Codigo = ${codigo} AND p.OID = ${oid} AND p.GCRecord IS NULL AND pd.Calc
   } catch (e) { res.status(502).json({ message: e.message }); }
 });
 
+// ─── Anomalías masivas de nómina: período actual vs período anterior ───
+// Detecta por empleado: conceptos nuevos, conceptos que dejaron de cobrarse,
+// duplicidades (mismo concepto con más de una línea en el mismo pago) y
+// variaciones relevantes de montos (con foco en deducciones: ISR, AFP, SFS...).
+router.get('/payroll-anomalies', auth, guard, async (req, res) => {
+  const int = (v) => (v == null || v === '' ? NaN : Number.parseInt(String(v), 10));
+  const ano = int(req.query.ano), mes = int(req.query.mes), periodo = int(req.query.periodo);
+  const umbral = Number(req.query.umbral) || 500;      // RD$ mínimo para reportar variación
+  const umbralPct = Number(req.query.umbralPct) || 15; // % mínimo de variación
+
+  const periodQuery = `
+SELECT DISTINCT p.Ano, p.Mes, p.Periodo, MAX(p.Fecha) AS Fecha
+FROM Pago p
+INNER JOIN PagoConcepto pc ON pc.Pago = p.OID
+INNER JOIN PagoD pd ON pd.PagoConcepto = pc.OID
+WHERE p.GCRecord IS NULL AND pd.Calculado > 0
+GROUP BY p.Ano, p.Mes, p.Periodo
+ORDER BY p.Ano DESC, p.Mes DESC, p.Periodo DESC`;
+
+  const dataQuery = (a, m, q) => `
+SELECT e.Codigo, e.NombreCompleto AS Empleado, e.Cedula,
+       c.Descripcion AS Concepto, c.Tipo,
+       SUM(pd.Calculado) AS Monto, COUNT(*) AS Lineas
+FROM PagoD pd
+INNER JOIN PagoConcepto pc ON pd.PagoConcepto = pc.OID
+INNER JOIN Pago p ON pc.Pago = p.OID
+INNER JOIN Concepto c ON pc.Concepto = c.OID
+INNER JOIN Empleado e ON pd.Empleado = e.OID
+WHERE p.GCRecord IS NULL AND e.GCRecord IS NULL AND pd.Calculado > 0
+  AND p.Ano = ${a} AND p.Mes = ${m} AND p.Periodo = ${q}
+GROUP BY e.Codigo, e.NombreCompleto, e.Cedula, c.Descripcion, c.Tipo`;
+
+  try {
+    const periods = (await sql.query(periodQuery)).map((r) => ({
+      ano: Number(r.Ano), mes: Number(r.Mes), periodo: Number(r.Periodo), fecha: r.Fecha || null,
+    }));
+    if (periods.length < 2) return res.json({ items: [], resumen: {}, periodos: periods });
+
+    let idx = 0;
+    if (Number.isFinite(ano) && Number.isFinite(mes) && Number.isFinite(periodo)) {
+      const f = periods.findIndex((p) => p.ano === ano && p.mes === mes && p.periodo === periodo);
+      if (f >= 0) idx = f;
+    }
+    const actual = periods[idx];
+    const anterior = periods[idx + 1];
+    if (!anterior) return res.json({ items: [], resumen: {}, periodos: periods, actual });
+
+    const [rowsA, rowsB] = await Promise.all([
+      sql.query(dataQuery(actual.ano, actual.mes, actual.periodo)),
+      sql.query(dataQuery(anterior.ano, anterior.mes, anterior.periodo)),
+    ]);
+
+    const key = (r) => `${String(r.Codigo ?? '').trim()}|${cleanStr(r.Concepto)}`;
+    const mapB = new Map();
+    rowsB.forEach((r) => mapB.set(key(r), r));
+    const mapA = new Map();
+    rowsA.forEach((r) => mapA.set(key(r), r));
+
+    const items = [];
+    const push = (r, tipoAnomalia, severidad, actualMonto, anteriorMonto, nota) => {
+      const diferencia = round2(actualMonto - anteriorMonto);
+      const variacion = anteriorMonto === 0 ? null : round2((diferencia / Math.abs(anteriorMonto)) * 100);
+      items.push({
+        codigo: String(r.Codigo ?? '').trim(),
+        empleado: cleanStr(r.Empleado),
+        cedula: cleanStr(r.Cedula),
+        concepto: cleanStr(r.Concepto),
+        tipo: Number(r.Tipo) === 1 ? 'Ingreso' : 'Deducción',
+        anomalia: tipoAnomalia,
+        severidad,
+        actual: round2(actualMonto),
+        anterior: round2(anteriorMonto),
+        diferencia,
+        variacion,
+        nota: nota || '',
+      });
+    };
+
+    rowsA.forEach((r) => {
+      const monto = round2(Number(r.Monto) || 0);
+      const prev = mapB.get(key(r));
+      const montoPrev = prev ? round2(Number(prev.Monto) || 0) : 0;
+      const esDeduccion = Number(r.Tipo) !== 1;
+      const lineas = Number(r.Lineas) || 1;
+
+      if (lineas > 1) {
+        push(r, 'Duplicidad de concepto', 'alta', monto, montoPrev,
+          `${lineas} líneas del mismo concepto en el mismo pago`);
+      }
+      if (!prev) {
+        push(r, esDeduccion ? 'Deducción nueva' : 'Ingreso nuevo', esDeduccion ? 'alta' : 'media',
+          monto, 0, 'No existía en la quincena anterior');
+        return;
+      }
+      const dif = monto - montoPrev;
+      const pct = montoPrev === 0 ? null : (dif / Math.abs(montoPrev)) * 100;
+      if (Math.abs(dif) >= umbral && (pct === null || Math.abs(pct) >= umbralPct)) {
+        const sube = dif > 0;
+        push(r,
+          esDeduccion
+            ? (sube ? 'Aumento de deducción' : 'Disminución de deducción')
+            : (sube ? 'Aumento de ingreso' : 'Disminución de ingreso'),
+          esDeduccion && sube ? 'alta' : 'media',
+          monto, montoPrev, '');
+      }
+    });
+
+    // Conceptos que existían antes y ya no aparecen
+    rowsB.forEach((r) => {
+      if (mapA.has(key(r))) return;
+      const monto = round2(Number(r.Monto) || 0);
+      const esDeduccion = Number(r.Tipo) !== 1;
+      push(r, esDeduccion ? 'Deducción eliminada' : 'Ingreso eliminado', 'media', 0, monto,
+        'Se cobraba en la quincena anterior y ya no aparece');
+    });
+
+    items.sort((a, b) => Math.abs(b.diferencia) - Math.abs(a.diferencia));
+
+    const count = (t) => items.filter((i) => i.anomalia === t).length;
+    res.json({
+      actual, anterior, periodos: periods,
+      resumen: {
+        total: items.length,
+        empleados: new Set(items.map((i) => i.codigo)).size,
+        duplicidades: count('Duplicidad de concepto'),
+        deduccionesNuevas: count('Deducción nueva'),
+        deduccionesEliminadas: count('Deducción eliminada'),
+        aumentosDeduccion: count('Aumento de deducción'),
+        ingresosNuevos: count('Ingreso nuevo'),
+        impactoDeducciones: round2(items
+          .filter((i) => i.tipo === 'Deducción')
+          .reduce((s, i) => s + i.diferencia, 0)),
+      },
+      items,
+    });
+  } catch (e) { res.status(502).json({ message: e.message }); }
+});
+
+
 
 
 
