@@ -24,6 +24,7 @@ import {
   type Holiday,
 } from "@/lib/api";
 import { getDirectApprover, isApproverFor, isSamePerson } from "@/lib/vacationHierarchy";
+import { entitledDaysAt, eligibleFrom, nextMilestone, DEFAULT_VACATION_POLICY } from "@/lib/vacationEntitlement";
 import {
   Palmtree,
   ArrowLeft,
@@ -247,12 +248,12 @@ const VacationProvisioning = () => {
     if (!editEmp) return 0;
     if (!editEmp.fechaIngreso) return editEmp.diasDerecho;
     const at = range?.from ?? new Date();
-    const d = entitledDaysAt(editEmp.fechaIngreso, at, policy);
+    const d = entitledDaysAt(editEmp.fechaIngreso, at, policy ?? DEFAULT_VACATION_POLICY);
     return d == null ? editEmp.diasDerecho : d;
   }, [editEmp, range?.from, policy]);
   const remainingDays = editEmp ? Math.max(0, projectedEntitlement - alreadyUsed - draftTotal) : 0;
   const eligibleDate = editEmp ? editEmp.elegibleDesde || eligibleFrom(editEmp.fechaIngreso) : null;
-  const upcoming = editEmp ? nextMilestone(editEmp.fechaIngreso, range?.from ?? new Date(), policy) : null;
+  const upcoming = editEmp ? nextMilestone(editEmp.fechaIngreso, range?.from ?? new Date(), policy ?? DEFAULT_VACATION_POLICY) : null;
   // Períodos vigentes existentes (no rechazados) + los del borrador.
   const existingPeriodCount = editEmp
     ? editEmp.requests.filter((r) => r.status !== "rechazada").reduce((a, r) => a + r.periods.length, 0)
