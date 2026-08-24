@@ -1249,11 +1249,13 @@ export interface GeneralPayrollAnomalyItem {
   concepto: string;
   tipo: "Ingreso" | "Deducción";
   anomalia: string;
-  severidad: "alta" | "media";
+  severidad: "alta" | "media" | "baja";
   actual: number;
   anterior: number;
   diferencia: number;
   variacion: number | null;
+  pagos?: number;
+  lineas?: number;
   nota: string;
 }
 
@@ -1269,6 +1271,7 @@ export interface GeneralPayrollAnomalies {
     deduccionesEliminadas?: number;
     aumentosDeduccion?: number;
     ingresosNuevos?: number;
+    reclasificaciones?: number;
     impactoDeducciones?: number;
   };
   items: GeneralPayrollAnomalyItem[];
