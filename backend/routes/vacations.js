@@ -428,9 +428,11 @@ router.post('/requests', auth, (req, res) => {
   // ── Validaciones de política ──────────────────────────────────────────────
   const employees = loadEmployees();
   const emp = employees.find((e) => e.codigo === String(codigo));
-  const service = serviceTime(emp && emp.hireDate);
+  const hireDate = emp && emp.hireDate;
+  const service = serviceTime(hireDate);
   const entitled = entitledDays(service, store.policy);
   const diasDerecho = entitled != null ? entitled : store.policy.under5Days;
+  const elegibleDesde = hireDate ? addMonthsISO(hireDate, 6) : null;
 
   // Solicitudes vigentes del colaborador (no rechazadas).
   const existing = store.requests.filter(
@@ -439,13 +441,36 @@ router.post('/requests', auth, (req, res) => {
   const usadosDias = totalDays(existing.flatMap((r) => r.periods));
   const nuevosDias = totalDays(periods);
 
-  // 1) No se pueden solicitar más días de los que corresponden.
-  if (usadosDias + nuevosDias > diasDerecho) {
+  // 1) Los días se acreditan según la antigüedad que se tendrá AL INICIAR cada
+  //    período. Se puede solicitar por adelantado, pero no disfrutar antes.
+  if (hireDate) {
+    const ordenados = [...periods].sort((a, b) => String(a.start).localeCompare(String(b.start)));
+    let acumulado = usadosDias;
+    for (const p of ordenados) {
+      const start = String(p.start || '').slice(0, 10);
+      if (elegibleDesde && start < elegibleDesde) {
+        return res.status(400).json({
+          message: `Las vacaciones no pueden iniciar antes del ${elegibleDesde}, fecha en que se cumplen los 6 meses de antigüedad. Puedes solicitarlas por adelantado, pero el período debe iniciar en o después de esa fecha.`,
+          code: 'BEFORE_ELIGIBILITY',
+        });
+      }
+      const derechoEnFecha = entitledDaysAtDate(hireDate, start, store.policy);
+      const tope = derechoEnFecha != null ? derechoEnFecha : store.policy.under5Days;
+      acumulado += Number(p.days) || 0;
+      if (acumulado > tope) {
+        return res.status(400).json({
+          message: `Para un período que inicia el ${start} te corresponden ${tope} día(s) acumulados (antigüedad a esa fecha) y estarías solicitando ${acumulado}. Puedes tomar el resto a partir de que cumplas la siguiente antigüedad. (Política de Gestión de Vacaciones — SafeOne).`,
+          code: 'EXCEEDS_ENTITLEMENT',
+        });
+      }
+    }
+  } else if (usadosDias + nuevosDias > diasDerecho) {
     return res.status(400).json({
       message: `No es posible solicitar ${nuevosDias} día(s). Te corresponden ${diasDerecho} día(s) de vacaciones y ya tienes ${usadosDias} solicitado(s). Disponibles: ${Math.max(0, diasDerecho - usadosDias)}. (Política de Gestión de Vacaciones — SafeOne).`,
       code: 'EXCEEDS_ENTITLEMENT',
     });
   }
+
 
   // 2) No se fracciona en más de dos períodos sin aprobación de la Gerencia Comercial.
   const periodosExistentes = existing.reduce((a, r) => a + (r.periods ? r.periods.length : 0), 0);
