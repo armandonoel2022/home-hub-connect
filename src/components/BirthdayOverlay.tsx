@@ -4,6 +4,7 @@ import html2canvas from "html2canvas";
 import { sendBrowserNotification } from "@/lib/windowsNotifications";
 import { getFileUrl } from "@/lib/api";
 import type { IntranetUser } from "@/lib/types";
+import BirthdayShareCard from "./BirthdayShareCard";
 
 function resolvePhoto(url?: string | null): string {
   if (!url) return "";
@@ -93,6 +94,7 @@ const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest, onSendCongrats,
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [sent, setSent] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const shareRef = useRef<HTMLDivElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const notificationSentRef = useRef(false);
 
@@ -170,12 +172,24 @@ const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest, onSendCongrats,
   };
 
   const handleDownload = useCallback(async () => {
-    if (!cardRef.current) return;
+    const target = shareRef.current || cardRef.current;
+    if (!target) return;
     setDownloading(true);
     try {
-      const canvas = await html2canvas(cardRef.current, {
-        backgroundColor: null,
-        scale: 2,
+      // Esperamos a que las fotos del lienzo vertical estén cargadas.
+      const imgs = Array.from(target.querySelectorAll("img")) as HTMLImageElement[];
+      await Promise.all(
+        imgs.map((img) =>
+          img.complete ? Promise.resolve() : new Promise<void>((r) => { img.onload = () => r(); img.onerror = () => r(); })
+        )
+      );
+      const canvas = await html2canvas(target, {
+        backgroundColor: "#0B0E13",
+        scale: 1,
+        width: 1080,
+        height: 1920,
+        windowWidth: 1080,
+        windowHeight: 1920,
         useCORS: true,
         allowTaint: true,
       });
@@ -195,6 +209,7 @@ const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest, onSendCongrats,
       setDownloading(false);
     }
   }, [person, groupMode]);
+
 
   const handleBirthdayPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -222,6 +237,8 @@ const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest, onSendCongrats,
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-500">
+      <BirthdayShareCard ref={shareRef} people={person ? [person] : birthdayUsers} />
+
       {/* Confetti */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {Array.from({ length: 20 }).map((_, i) => (
