@@ -4,6 +4,7 @@ import html2canvas from "html2canvas";
 import { sendBrowserNotification } from "@/lib/windowsNotifications";
 import { getFileUrl } from "@/lib/api";
 import type { IntranetUser } from "@/lib/types";
+import BirthdayShareCard from "./BirthdayShareCard";
 
 function resolvePhoto(url?: string | null): string {
   if (!url) return "";
@@ -93,6 +94,7 @@ const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest, onSendCongrats,
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [sent, setSent] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const shareRef = useRef<HTMLDivElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const notificationSentRef = useRef(false);
 
@@ -175,7 +177,7 @@ const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest, onSendCongrats,
     setDownloading(true);
     try {
       // Esperamos a que las fotos del lienzo vertical estén cargadas.
-      const imgs = Array.from(target.querySelectorAll("img"));
+      const imgs = Array.from(target.querySelectorAll("img")) as HTMLImageElement[];
       await Promise.all(
         imgs.map((img) =>
           img.complete ? Promise.resolve() : new Promise<void>((r) => { img.onload = () => r(); img.onerror = () => r(); })
@@ -235,6 +237,8 @@ const BirthdayOverlay = ({ birthdayUsers, isTest, onDismissTest, onSendCongrats,
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-500">
+      <BirthdayShareCard ref={shareRef} people={person ? [person] : birthdayUsers} />
+
       {/* Confetti */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {Array.from({ length: 20 }).map((_, i) => (
