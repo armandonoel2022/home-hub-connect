@@ -98,12 +98,10 @@ const BirthdayShareCard = forwardRef<HTMLDivElement, Props>(({ people }, ref) =>
             fontFamily: "'Montserrat', sans-serif",
             fontSize: single ? 104 : 88,
             fontWeight: 900,
-            lineHeight: 1.02,
+            lineHeight: 1.08,
             margin: 0,
-            background: `linear-gradient(180deg, #FFFFFF 30%, ${GOLD} 130%)`,
-            WebkitBackgroundClip: "text",
-            backgroundClip: "text",
             color: GOLD,
+            textShadow: `0 6px 30px ${GOLD}55, 0 2px 0 #B8860B`,
           }}
         >
           ¡Feliz
