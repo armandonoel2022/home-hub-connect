@@ -279,8 +279,10 @@ export default function FixedAssetsManager({ onBack }: Props) {
   // ══════════════════════════════════════════
   if (view === "label" && selectedAsset) {
     const a = selectedAsset;
-    // QR codifica SOLO el ID del activo para máxima compatibilidad con cualquier lector
-    const qrData = a.id;
+    // El QR codifica la URL de consulta en la intranet: al escanear desde la red
+    // SafeOne-Corp se abre la ficha completa del activo (previa autenticación).
+    const qrData = `${window.location.origin}/activo/${encodeURIComponent(a.id)}`;
+
 
     return (
       <div>
