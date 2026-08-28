@@ -355,6 +355,27 @@ export default function FixedAssetsManager({ onBack }: Props) {
           </p>
           <code className="block text-xs bg-muted px-2 py-1 rounded font-mono break-all">{qrData}</code>
 
+          <label className="block text-xs font-medium mt-3 mb-1">
+            Dirección del servidor (debe ser accesible desde el celular)
+          </label>
+          <div className="flex gap-2">
+            <input
+              value={labelBase}
+              onChange={(e) => updateLabelBase(e.target.value)}
+              placeholder="http://intranet.safeone.com.do"
+              className="flex-1 text-xs px-2 py-1.5 rounded border border-border bg-background font-mono"
+            />
+            <Button size="sm" variant="outline" onClick={() => window.open(qrData, "_blank")}>
+              Probar
+            </Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            Si el dominio no resuelve desde el WiFi, usa la IP del servidor (ej.{" "}
+            <code>http://192.168.1.10:3000</code>). Las etiquetas impresas antes de este cambio
+            traen solo el texto <code>AF-XXXXX</code> y deben reimprimirse.
+          </p>
+
+
           <h3 className="font-semibold text-sm mt-4 mb-2">Datos que verá al escanear:</h3>
 
           <div className="text-xs space-y-1 text-muted-foreground">
