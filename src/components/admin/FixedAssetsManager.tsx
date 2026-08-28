@@ -337,11 +337,14 @@ export default function FixedAssetsManager({ onBack }: Props) {
         <div className="max-w-md mx-auto mt-4 border rounded-lg p-4 bg-card">
           <h3 className="font-semibold text-sm mb-2">Datos codificados en el QR:</h3>
           <p className="text-xs text-muted-foreground mb-2">
-            El QR codifica únicamente el ID del activo para que cualquier lector estándar lo interprete sin depender de red ni servidor.
+            El QR abre la ficha del activo en la intranet. Desde un celular conectado a la red
+            SafeOne (SSID <strong>SafeOne-Corp</strong>) se solicita inicio de sesión y luego se
+            muestran todos los detalles leídos de la base SafeOne.
           </p>
-          <code className="block text-sm bg-muted px-2 py-1 rounded font-mono">{qrData}</code>
+          <code className="block text-xs bg-muted px-2 py-1 rounded font-mono break-all">{qrData}</code>
 
-          <h3 className="font-semibold text-sm mt-4 mb-2">Datos de referencia (no escaneables):</h3>
+          <h3 className="font-semibold text-sm mt-4 mb-2">Datos que verá al escanear:</h3>
+
           <div className="text-xs space-y-1 text-muted-foreground">
             <p>Tipo: {getAssetTypeLabel(a.tipo)}</p>
             <p>Marca: {a.marca || "—"}</p>
