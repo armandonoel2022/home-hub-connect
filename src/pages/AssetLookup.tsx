@@ -15,7 +15,7 @@ const Row = ({ label, value }: { label: string; value?: string | null }) => (
 /** Ficha pública-interna de un activo fijo, abierta al escanear el QR de la etiqueta. */
 const AssetLookup = () => {
   const { code = "" } = useParams();
-  const { user, loading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [data, setData] = useState<AssetLookupResult | null>(null);
   const [error, setError] = useState("");
