@@ -60,6 +60,15 @@ export default function FixedAssetsManager({ onBack }: Props) {
   const [filterCondicion, setFilterCondicion] = useState<string>("all");
   const [filterUbicacion, setFilterUbicacion] = useState<string>("all");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  // Base URL que se codifica en el QR de la etiqueta (debe ser resoluble desde el celular)
+  const [labelBase, setLabelBase] = useState<string>(
+    () => localStorage.getItem("safeone_label_base") || "http://intranet.safeone.com.do"
+  );
+  const updateLabelBase = (v: string) => {
+    setLabelBase(v);
+    localStorage.setItem("safeone_label_base", v);
+  };
+
   const printRef = useRef<HTMLDivElement>(null);
 
   const reload = async (silent = false) => {
