@@ -1496,8 +1496,34 @@ export interface FixedAssetsAnalytics {
   errors: Record<string, string>;
 }
 
+export interface AssetLookupResult {
+  code: string;
+  asset: {
+    OID: number;
+    Descripcion?: string | null;
+    Serial?: string | null;
+    Modelo?: string | null;
+    CodigoBarra?: string | null;
+    Ubicacion?: string | null;
+    Departamento?: string | null;
+    Encargado?: string | null;
+    Comentario?: string | null;
+    FechaAdq?: string | null;
+    FechaInicio?: string | null;
+    FechaRet?: string | null;
+    CostoAdq?: number | null;
+    Transito?: number | null;
+    Retirado?: number | null;
+    CategoriaNombre?: string | null;
+    TipoNombre?: string | null;
+    SuplidorNombre?: string | null;
+  };
+}
+
 export const fixedAssetsSqlApi = {
+  lookup: (code: string) => apiFetch<AssetLookupResult>(`/fixed-assets-sql/lookup/${encodeURIComponent(code)}`),
   status: () => apiFetch<{ configured: boolean; connected: boolean; message: string; host: string | null; database: string | null }>("/fixed-assets-sql/status"),
+
   list: (includeRetired = false) =>
     apiFetch<{ count: number; rows: SafeOneActivoFijoRow[] }>(`/fixed-assets-sql/activo-fijo?includeRetired=${includeRetired}`),
   compare: (intranet: any[]) =>
