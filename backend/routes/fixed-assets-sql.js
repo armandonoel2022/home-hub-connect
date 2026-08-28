@@ -385,6 +385,46 @@ router.get('/detalle', auth, guard, async (req, res) => {
   res.json({ count: r.rows.length, total, rows: r.rows });
 });
 
+// ── Consulta de etiqueta QR: cualquier usuario autenticado de la intranet ──
+// GET /lookup/:code  → ficha del activo por CodigoBarra, AF-<OID>, OID o Serial
+router.get('/lookup/:code', auth, async (req, res) => {
+  const raw = String(req.params.code || '').trim();
+  if (!raw) return res.status(400).json({ message: 'Código requerido' });
+
+  const code = norm(raw);
+  const oidMatch = raw.match(/^(?:AF[-_ ]?)?(\d+)$/i);
+  const oid = oidMatch ? Number(oidMatch[1]) : null;
+
+  try {
+    const rows = await sql.query(`
+      SELECT TOP 1
+        af.OID, af.Descripcion, af.Serial, af.Modelo, af.CodigoBarra,
+        af.Ubicacion, af.Departamento, af.Encargado, af.Comentario,
+        af.FechaAdq, af.FechaInicio, af.FechaRet, af.CostoAdq,
+        af.Transito, af.Retirado,
+        c.Descripcion AS CategoriaNombre,
+        t.Descripcion AS TipoNombre,
+        s.Nombre      AS SuplidorNombre
+      FROM dbo.ActivoFijo af
+      LEFT JOIN dbo.AFCategoria c ON af.Categoria = c.OID
+      LEFT JOIN dbo.AFTipo t      ON af.Tipo = t.OID
+      LEFT JOIN dbo.Suplidor s    ON af.Suplidor = s.OID
+      WHERE af.GCRecord IS NULL
+        AND (
+          (@oid IS NOT NULL AND af.OID = @oid)
+          OR UPPER(REPLACE(REPLACE(REPLACE(ISNULL(af.CodigoBarra,''),' ',''),'-',''),'_','')) = @code
+          OR UPPER(REPLACE(REPLACE(REPLACE(ISNULL(af.Serial,''),' ',''),'-',''),'_','')) = @code
+        )
+      ORDER BY af.OID DESC
+    `, { code, oid });
+
+    if (!rows.length) return res.status(404).json({ message: `No se encontró el activo ${raw}` });
+    res.json({ code: raw, asset: rows[0] });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
 
 // Esquema disponible (para saber qué tablas relacionadas existen realmente)
 router.get('/schema', auth, guard, async (req, res) => {
