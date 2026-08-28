@@ -60,6 +60,15 @@ export default function FixedAssetsManager({ onBack }: Props) {
   const [filterCondicion, setFilterCondicion] = useState<string>("all");
   const [filterUbicacion, setFilterUbicacion] = useState<string>("all");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  // Base URL que se codifica en el QR de la etiqueta (debe ser resoluble desde el celular)
+  const [labelBase, setLabelBase] = useState<string>(
+    () => localStorage.getItem("safeone_label_base") || "http://intranet.safeone.com.do"
+  );
+  const updateLabelBase = (v: string) => {
+    setLabelBase(v);
+    localStorage.setItem("safeone_label_base", v);
+  };
+
   const printRef = useRef<HTMLDivElement>(null);
 
   const reload = async (silent = false) => {
@@ -281,9 +290,10 @@ export default function FixedAssetsManager({ onBack }: Props) {
     const a = selectedAsset;
     // El QR codifica la URL de consulta en la intranet: al escanear desde la red
     // SafeOne-Corp se abre la ficha completa del activo (previa autenticación).
-    // URL fija del servidor de producción (HTTP, sin HTTPS) en la red corporativa.
-    const INTRANET_BASE = "http://intranet.safeone.com.do";
-    const qrData = `${INTRANET_BASE}/activo/${encodeURIComponent(a.id)}`;
+    // La base es configurable porque el celular debe poder resolver el host
+    // (dominio interno o IP del servidor). Se guarda en localStorage.
+    const qrData = `${labelBase.replace(/\/+$/, "")}/activo/${encodeURIComponent(a.id)}`;
+
 
 
     return (
@@ -344,6 +354,27 @@ export default function FixedAssetsManager({ onBack }: Props) {
             muestran todos los detalles leídos de la base SafeOne.
           </p>
           <code className="block text-xs bg-muted px-2 py-1 rounded font-mono break-all">{qrData}</code>
+
+          <label className="block text-xs font-medium mt-3 mb-1">
+            Dirección del servidor (debe ser accesible desde el celular)
+          </label>
+          <div className="flex gap-2">
+            <input
+              value={labelBase}
+              onChange={(e) => updateLabelBase(e.target.value)}
+              placeholder="http://intranet.safeone.com.do"
+              className="flex-1 text-xs px-2 py-1.5 rounded border border-border bg-background font-mono"
+            />
+            <Button size="sm" variant="outline" onClick={() => window.open(qrData, "_blank")}>
+              Probar
+            </Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            Si el dominio no resuelve desde el WiFi, usa la IP del servidor (ej.{" "}
+            <code>http://192.168.1.10:3000</code>). Las etiquetas impresas antes de este cambio
+            traen solo el texto <code>AF-XXXXX</code> y deben reimprimirse.
+          </p>
+
 
           <h3 className="font-semibold text-sm mt-4 mb-2">Datos que verá al escanear:</h3>
 
