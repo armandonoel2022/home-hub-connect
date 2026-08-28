@@ -281,9 +281,10 @@ export default function FixedAssetsManager({ onBack }: Props) {
     const a = selectedAsset;
     // El QR codifica la URL de consulta en la intranet: al escanear desde la red
     // SafeOne-Corp se abre la ficha completa del activo (previa autenticación).
-    // URL fija del servidor de producción (HTTP, sin HTTPS) en la red corporativa.
-    const INTRANET_BASE = "http://intranet.safeone.com.do";
-    const qrData = `${INTRANET_BASE}/activo/${encodeURIComponent(a.id)}`;
+    // La base es configurable porque el celular debe poder resolver el host
+    // (dominio interno o IP del servidor). Se guarda en localStorage.
+    const qrData = `${labelBase.replace(/\/+$/, "")}/activo/${encodeURIComponent(a.id)}`;
+
 
 
     return (
