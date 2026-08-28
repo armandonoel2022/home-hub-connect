@@ -79,6 +79,7 @@ import RouteGuard from "@/components/RouteGuard";
 import AnnouncementOverlay from "@/components/AnnouncementOverlay";
 import SurveyOverlay from "@/components/SurveyOverlay";
 import SurveyPublic from "./pages/SurveyPublic";
+import AssetLookup from "./pages/AssetLookup";
 
 
 const queryClient = new QueryClient();
@@ -247,6 +248,7 @@ function ProtectedRoutes() {
       />
       <Routes>
         <Route path="/" element={<Index />} />
+        <Route path="/activo/:code" element={<AssetLookup />} />
         <Route path="/provisionamiento-vacaciones" element={<RouteGuard module="vacations"><VacationProvisioning /></RouteGuard>} />
         <Route path="/servicio-al-cliente/registro-mercantil" element={<MercantileRegistry />} />
         <Route path="/recepcion" element={<RouteGuard module="reception"><Reception /></RouteGuard>} />

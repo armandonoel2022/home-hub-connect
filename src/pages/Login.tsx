@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import logo from "@/assets/safeone-logo.png";
 import { Lock, User, LogIn } from "lucide-react";
@@ -9,6 +9,8 @@ import ForgotPasswordModal from "@/components/ForgotPasswordModal";
 const LoginPage = () => {
   const { login, user, mustChangePassword, changePassword, createForgotPasswordTicket } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get("redirect") || "/";
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -46,7 +48,7 @@ const LoginPage = () => {
           onChangePassword={async (newPw) => {
             const res = await changePassword(newPw);
             if (res.ok) {
-              navigate("/", { replace: true });
+              navigate(redirectTo, { replace: true });
             }
             return res;
           }}
@@ -57,7 +59,7 @@ const LoginPage = () => {
 
   // If logged in and no password change needed, redirect
   if (user && !mustChangePassword) {
-    navigate("/", { replace: true });
+    navigate(redirectTo, { replace: true });
     return null;
   }
 
