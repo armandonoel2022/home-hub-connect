@@ -1,5 +1,6 @@
 import type { IntranetUser } from "@/lib/types";
 import { canAccessAnyAdminModule } from "@/lib/adminHubAccess";
+import { canViewFullPayroll } from "@/lib/payrollAccess";
 
 /**
  * Sistema central de permisos por módulo.
@@ -30,6 +31,7 @@ export type ModuleKey =
   | "hrApprovals"
   | "hrConsolidated"
   | "generalNomina"
+  | "myPayroll"
   | "hrConstancias"
   | "purchaseRequests"
   | "hiringRequests"
@@ -174,13 +176,15 @@ export function canView(module: ModuleKey, user: IntranetUser | null | undefined
     case "hrConsolidated":
       return inDept(user, "Recursos Humanos") || isAdmin(user);
 
-    // Nómina Analítica (GENERAL/gSafeOne) — RRHH, Tecnología y Monitoreo, líderes y admin
+    // Nómina COMPLETA (GENERAL/gSafeOne) — sólo RRHH y excepciones autorizadas.
+    // Ser administrador de la intranet ya NO otorga acceso a todos los salarios.
     case "generalNomina":
-      return (
-        isAdmin(user) ||
-        isLeader(user) ||
-        inDept(user, "Recursos Humanos", "Tecnología", "Tecnología y Monitoreo")
-      );
+      return canViewFullPayroll(user);
+
+    // Mi Nómina — todos: el backend limita a su propio registro (o a su
+    // departamento si el usuario es líder).
+    case "myPayroll":
+      return !!user;
 
     // Provisionamiento de Vacaciones — todo el personal con acceso a la intranet
     // puede solicitar sus propias vacaciones. Líderes/RRHH/admin gestionan y aprueban.

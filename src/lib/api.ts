@@ -2029,3 +2029,46 @@ export interface GeneralContrato {
     lineas: number; armas: number; vigilantes: number; horasSemana: number; precio: number;
   };
 }
+
+// ============= Mi Nómina (alcance propio / equipo) =============
+export type MyPayrollLevel = "full" | "dept" | "self" | "none";
+
+export interface MyPayrollScope {
+  level: MyPayrollLevel;
+  deptOID: number | null;
+  deptNombre: string | null;
+  empleado: { oid: number; codigo: string | null; cedula: string | null; nombre: string } | null;
+}
+
+export interface MyPayrollTeamMember {
+  oid: number;
+  codigo: string | null;
+  cedula: string | null;
+  nombre: string;
+  fechaIngreso: string | null;
+  salario: number;
+}
+
+export interface MyPayrollPeriod {
+  ano: number; mes: number; periodo: number;
+  fecha: string | null; descripcion: string;
+}
+
+export interface MyPayrollPayslipsResponse extends GeneralPayslipsResponse {
+  level: MyPayrollLevel;
+  deptNombre?: string | null;
+  message?: string;
+}
+
+export const myPayrollApi = {
+  scope: () => apiFetch<MyPayrollScope>("/my-payroll/scope"),
+  team: () =>
+    apiFetch<{ level: MyPayrollLevel; deptNombre: string | null; items: MyPayrollTeamMember[] }>(
+      "/my-payroll/team"
+    ),
+  periods: () => apiFetch<MyPayrollPeriod[]>("/my-payroll/periods"),
+  payslips: (p?: { ano: number; mes: number; periodo: number }) =>
+    apiFetch<MyPayrollPayslipsResponse>(
+      `/my-payroll/payslips${p ? `?ano=${p.ano}&mes=${p.mes}&periodo=${p.periodo}` : ""}`
+    ),
+};

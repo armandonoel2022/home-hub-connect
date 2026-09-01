@@ -65,6 +65,7 @@ const navItems: NavItem[] = [
   { title: "Archivos", url: "/archivos", icon: FolderOpen, module: "sharedFiles" },
   { title: "Wiki", url: "/wiki", icon: BookMarked, module: "wiki" },
   { title: "Encuestas", url: "/encuestas", icon: ClipboardList, module: "surveys" },
+  { title: "Mi Nómina", url: "/mi-nomina", icon: Wallet, module: "myPayroll" },
   { title: "Gastos Menores", url: "/gastos-menores", icon: Wallet, module: "minorPurchases" },
   { title: "Seguimiento Clientes Monitoreo", url: "/seguimiento-clientes", icon: Radar, module: "clientTracking" },
   { title: "Recepción", url: "/recepcion", icon: UserPlus, module: "reception" },

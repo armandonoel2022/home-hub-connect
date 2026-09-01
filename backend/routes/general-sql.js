@@ -33,6 +33,27 @@ function guard(req, res, next) {
   next();
 }
 
+// Guardia específica para SALARIOS: ser administrador de la intranet NO basta.
+// Sólo RRHH y la lista de excepciones ven la nómina completa; el resto usa
+// /api/my-payroll, que filtra por empleado o departamento.
+const { isFullAccess } = require('./my-payroll');
+function hasFullPayroll(req) {
+  const users = readData('users.json') || [];
+  const u = users.find((x) => x.id === req.user.id) ||
+    users.find((x) => String(x.email || '').toLowerCase() === String(req.user.email || '').toLowerCase());
+  return isFullAccess(u);
+}
+
+function payrollGuard(req, res, next) {
+  const users = readData('users.json') || [];
+  const u = users.find((x) => x.id === req.user.id) ||
+    users.find((x) => String(x.email || '').toLowerCase() === String(req.user.email || '').toLowerCase());
+  if (!isFullAccess(u)) {
+    return res.status(403).json({ message: 'No autorizado para ver la nómina completa. Usa Mi Nómina.' });
+  }
+  next();
+}
+
 const fullName = (r) => [r.Nombre1, r.Apellido1].filter(Boolean).join(' ').trim();
 
 // Algunas instalaciones de GENERAL/gSafeOne no exponen la columna "Codigo" en
@@ -138,7 +159,7 @@ router.get('/columns/:table', auth, guard, async (req, res) => {
 });
 
 // ─── Períodos de pago ───
-router.get('/periods', auth, guard, async (req, res) => {
+router.get('/periods', auth, payrollGuard, async (req, res) => {
   try {
     const rows = await sql.query(
       `SELECT TOP 60 p.OID, p.Fecha, p.Mes, p.Ano, p.Cerrado,
@@ -153,7 +174,7 @@ router.get('/periods', auth, guard, async (req, res) => {
 });
 
 // ─── Detalle de nómina ───
-router.get('/payroll/:pagoOID', auth, guard, async (req, res) => {
+router.get('/payroll/:pagoOID', auth, payrollGuard, async (req, res) => {
   try {
     const items = await readPayroll(req.params.pagoOID);
     const totals = items.reduce((a, i) => ({
@@ -245,7 +266,7 @@ function reportedExtrasForReconcile() {
 
 // ─── Análisis integral ───
 // body: { current: pagoOID, previous?: pagoOID, excelRows?: [{empleado,codigo,concepto,monto}] }
-router.post('/analyze', auth, guard, async (req, res) => {
+router.post('/analyze', auth, payrollGuard, async (req, res) => {
   const { current, previous, excelRows = [] } = req.body || {};
   if (!current) return res.status(400).json({ message: 'current (OID de Pago) requerido' });
   try {
@@ -316,6 +337,7 @@ router.get('/peek/:table', auth, guard, async (req, res) => {
 // para que TSS y otros listados muestren también el personal inactivo.
 router.get('/employees', auth, guard, async (req, res) => {
   const incluirInactivos = String(req.query.inactivos || 'true').toLowerCase() !== 'false';
+  const verSalarios = hasFullPayroll(req);
   try {
     const rows = await sql.query(
       `SELECT e.OID, e.Codigo, e.Nombre1, e.Apellido1, e.Cedula, e.Salario,
@@ -328,7 +350,8 @@ router.get('/employees', auth, guard, async (req, res) => {
     );
     const mapped = rows.map(r => ({
       oid: r.OID, codigo: r.Codigo, nombre: fullName(r), cedula: r.Cedula,
-      salario: Number(r.Salario) || 0, tarifa: Number(r.Tarifa) || 0,
+      salario: verSalarios ? (Number(r.Salario) || 0) : null,
+      tarifa: verSalarios ? (Number(r.Tarifa) || 0) : null,
       fechaIngreso: r.FechaIngreso, puestoOID: r.PuestoOID, deptOID: r.DeptOID,
       activo: !!r.Activo,
     }));
@@ -339,6 +362,7 @@ router.get('/employees', auth, guard, async (req, res) => {
 // ─── Empleados ACTIVOS en GENERAL (Empleado.Estatus = 0, no eliminados) ───
 // Fuente viva para la pantalla "Empleados activos" del directorio de RRHH.
 router.get('/employees-active', auth, guard, async (req, res) => {
+  const verSalarios = hasFullPayroll(req);
   try {
     const rows = await sql.query(
       `SELECT * FROM Empleado WHERE Estatus = 0 AND GCRecord IS NULL`
@@ -373,7 +397,7 @@ router.get('/employees-active', auth, guard, async (req, res) => {
         puesto: typeof puestoRaw === 'number' ? (puestos.get(Number(puestoRaw)) || null) : cleanStr(puestoRaw),
         departamento: typeof deptRaw === 'number' ? (depts.get(Number(deptRaw)) || null) : cleanStr(deptRaw),
         fechaIngreso: r.FechaIngreso || null,
-        salario: Number(r.Salario) || 0,
+        salario: verSalarios ? (Number(r.Salario) || 0) : null,
         estatus: 'Activo',
       };
     }).sort((a, b) => String(a.nombreCompleto).localeCompare(String(b.nombreCompleto), 'es'));
@@ -390,7 +414,7 @@ const PAYSLIP_INCOME = [
 ];
 const PAYSLIP_DEDUCTIONS = ['AFP', 'SFS', 'ISR', 'Comida', 'Prestamo', 'Avance Efectivo', 'Percapita', 'Uniforme'];
 
-router.get('/payslips', auth, guard, async (req, res) => {
+router.get('/payslips', auth, payrollGuard, async (req, res) => {
   const brackets = (arr) => arr.map((c) => `[${c}]`).join(', ');
   const sumOf = (arr) => arr.map((c) => `ISNULL([${c}], 0)`).join(' + ');
   const int = (v) => (v == null || v === '' ? null : Number.parseInt(String(v), 10));
@@ -492,7 +516,7 @@ ORDER BY Empleado`;
 });
 
 // ─── Historial de nómina: períodos disponibles (Query 5) ───
-router.get('/payroll-periods', auth, guard, async (req, res) => {
+router.get('/payroll-periods', auth, payrollGuard, async (req, res) => {
   try {
     const rows = await sql.query(`
 SELECT DISTINCT p.Ano, p.Mes, p.Periodo, MAX(p.Fecha) AS Fecha, MIN(p.OID) AS PagoOID
@@ -519,7 +543,7 @@ const safeCode = (v) => {
 };
 
 // ─── Historial de pagos de un empleado (Query 1) ───
-router.get('/employee-payments', auth, guard, async (req, res) => {
+router.get('/employee-payments', auth, payrollGuard, async (req, res) => {
   const codigo = safeCode(req.query.codigo);
   if (!codigo) return res.status(400).json({ message: 'codigo requerido' });
   try {
@@ -642,7 +666,7 @@ WHERE e.Codigo = ${codigo} AND p.OID = ${oid} AND p.GCRecord IS NULL AND pd.Calc
 // Detecta por empleado: conceptos nuevos, conceptos que dejaron de cobrarse,
 // duplicidades (mismo concepto con más de una línea en el mismo pago) y
 // variaciones relevantes de montos (con foco en deducciones: ISR, AFP, SFS...).
-router.get('/payroll-anomalies', auth, guard, async (req, res) => {
+router.get('/payroll-anomalies', auth, payrollGuard, async (req, res) => {
   const int = (v) => (v == null || v === '' ? NaN : Number.parseInt(String(v), 10));
   const ano = int(req.query.ano), mes = int(req.query.mes), periodo = int(req.query.periodo);
   const umbral = Number(req.query.umbral) || 500;      // RD$ mínimo para reportar variación
