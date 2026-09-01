@@ -42,7 +42,7 @@ router.post('/login', async (req, res) => {
       if (!valid) return res.status(401).json({ message: 'Usuario o contraseña incorrectos' });
     } else {
       // Default password for users without hash
-      if (password.toLowerCase() !== 'safeone') {
+      if (String(password || '').trim().toLowerCase() !== 'safeone') {
         return res.status(401).json({ message: 'Usuario o contraseña incorrectos' });
       }
     }
@@ -104,7 +104,7 @@ router.post('/change-password', auth, async (req, res) => {
     const valid = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!valid) return res.status(400).json({ message: 'Contraseña actual incorrecta' });
   } else {
-    if (String(currentPassword || '').toLowerCase() !== 'safeone') {
+    if (String(currentPassword || '').trim().toLowerCase() !== 'safeone') {
       return res.status(400).json({ message: 'Contraseña actual incorrecta' });
     }
   }
