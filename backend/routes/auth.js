@@ -195,8 +195,11 @@ router.get('/password-reset-requests', auth, (req, res) => {
 router.post('/admin-reset-password/:userId', auth, async (req, res) => {
   if (!req.user.isAdmin) return res.status(403).json({ message: 'No autorizado' });
 
-  const { tempPassword } = req.body;
-  if (!tempPassword || tempPassword.length < 8) {
+  const { tempPassword, resetToDefault } = req.body || {};
+  const useDefault = !!resetToDefault || !tempPassword ||
+    String(tempPassword).trim().toLowerCase() === 'safeone';
+
+  if (!useDefault && String(tempPassword).length < 8) {
     return res.status(400).json({ message: 'La contraseña temporal debe tener al menos 8 caracteres' });
   }
 
@@ -204,10 +207,17 @@ router.post('/admin-reset-password/:userId', auth, async (req, res) => {
   const idx = users.findIndex(u => u.id === req.params.userId);
   if (idx === -1) return res.status(404).json({ message: 'Usuario no encontrado' });
 
-  users[idx].passwordHash = await bcrypt.hash(tempPassword, 12);
+  if (useDefault) {
+    // Sin hash => el login acepta la contraseña por defecto "safeone"
+    delete users[idx].passwordHash;
+    delete users[idx].PasswordHash;
+  } else {
+    users[idx].passwordHash = await bcrypt.hash(tempPassword, 12);
+  }
   users[idx].mustChangePassword = true; // Force change on next login
   users[idx].updatedAt = new Date().toISOString();
   writeData(USERS_FILE, users);
+
 
   // Mark any pending reset requests as completed
   const requests = readData(PASSWORD_RESET_FILE);

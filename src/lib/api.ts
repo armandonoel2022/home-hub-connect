@@ -132,10 +132,10 @@ export const authApi = {
     }),
   getPasswordResetRequests: () =>
     apiFetch<any[]>("/auth/password-reset-requests"),
-  adminResetPassword: (userId: string, tempPassword: string) =>
-    apiFetch<{ message: string }>(`/auth/admin-reset-password/${userId}`, {
+  adminResetPassword: (userId: string, tempPassword?: string) =>
+    apiFetch<{ message: string; tempPassword?: string }>(`/auth/admin-reset-password/${userId}`, {
       method: "POST",
-      body: JSON.stringify({ tempPassword }),
+      body: JSON.stringify(tempPassword ? { tempPassword } : { resetToDefault: true }),
     }),
 };
 

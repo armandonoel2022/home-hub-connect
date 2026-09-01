@@ -752,8 +752,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const resetUserPassword = async (userId: string) => {
     if (apiMode) {
       try {
-        // Restablece la contraseña a "safeone" y fuerza cambio en el próximo login.
-        await authApi.adminResetPassword(userId, "safeone1");
+        // Restablece la contraseña a la de por defecto "safeone" (sin hash)
+        // y fuerza el cambio en el próximo inicio de sesión.
+        await authApi.adminResetPassword(userId);
         const users = await usersApi.getAll();
         setAllUsers(users);
         return;
