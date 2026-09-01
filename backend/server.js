@@ -120,6 +120,16 @@ app.use((err, req, res, next) => {
 });
 
 // Start — no database connection needed!
+// Polling del buzón de tecnología → tickets de IT
+try {
+  const mailTickets = require('./services/mailTickets');
+  if (mailTickets.startPolling()) {
+    console.log('[mail] Sincronización de tickets por correo activada');
+  }
+} catch (e) {
+  console.warn('[mail] Integración de correo inactiva:', e.message);
+}
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ SafeOne API corriendo en puerto ${PORT}`);
   console.log(`   Almacenamiento: JSON files en ${path.join(__dirname, 'data')}`);
