@@ -172,7 +172,42 @@ export const ticketsApi = {
     apiFetch<Ticket>(`/tickets/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   delete: (id: string) =>
     apiFetch<void>(`/tickets/${id}`, { method: "DELETE" }),
+  /** Estado del buzón tecnologia@safeone.com.do (IMAP/SMTP) */
+  mailStatus: () => apiFetch<TicketMailStatus>("/tickets/mail/status"),
+  /** Lee el buzón y crea/actualiza tickets desde los correos no leídos */
+  mailSync: (limit = 25) =>
+    apiFetch<TicketMailSyncResult>("/tickets/mail/sync", {
+      method: "POST",
+      body: JSON.stringify({ limit }),
+    }),
+  /** Responde al solicitante por correo y registra el comentario */
+  reply: (id: string, message: string) =>
+    apiFetch<{ ticket: Ticket; mail: { sent: boolean; reason?: string } }>(
+      `/tickets/${id}/reply`,
+      { method: "POST", body: JSON.stringify({ message }) }
+    ),
 };
+
+export interface TicketMailStatus {
+  configured: boolean;
+  dependencies: boolean;
+  dependenciesError: string | null;
+  user: string;
+  imap: string;
+  smtp: string;
+  pollMinutes: number;
+  polling: boolean;
+  lastSync: TicketMailSyncResult | null;
+}
+
+export interface TicketMailSyncResult {
+  ok: boolean;
+  message?: string;
+  created?: string[];
+  replies?: string[];
+  count?: number;
+  at?: string;
+}
 
 // ─── Equipment API ───
 export const equipmentApi = {
@@ -2029,3 +2064,46 @@ export interface GeneralContrato {
     lineas: number; armas: number; vigilantes: number; horasSemana: number; precio: number;
   };
 }
+
+// ============= Mi Nómina (alcance propio / equipo) =============
+export type MyPayrollLevel = "full" | "dept" | "self" | "none";
+
+export interface MyPayrollScope {
+  level: MyPayrollLevel;
+  deptOID: number | null;
+  deptNombre: string | null;
+  empleado: { oid: number; codigo: string | null; cedula: string | null; nombre: string } | null;
+}
+
+export interface MyPayrollTeamMember {
+  oid: number;
+  codigo: string | null;
+  cedula: string | null;
+  nombre: string;
+  fechaIngreso: string | null;
+  salario: number;
+}
+
+export interface MyPayrollPeriod {
+  ano: number; mes: number; periodo: number;
+  fecha: string | null; descripcion: string;
+}
+
+export interface MyPayrollPayslipsResponse extends GeneralPayslipsResponse {
+  level: MyPayrollLevel;
+  deptNombre?: string | null;
+  message?: string;
+}
+
+export const myPayrollApi = {
+  scope: () => apiFetch<MyPayrollScope>("/my-payroll/scope"),
+  team: () =>
+    apiFetch<{ level: MyPayrollLevel; deptNombre: string | null; items: MyPayrollTeamMember[] }>(
+      "/my-payroll/team"
+    ),
+  periods: () => apiFetch<MyPayrollPeriod[]>("/my-payroll/periods"),
+  payslips: (p?: { ano: number; mes: number; periodo: number }) =>
+    apiFetch<MyPayrollPayslipsResponse>(
+      `/my-payroll/payslips${p ? `?ano=${p.ano}&mes=${p.mes}&periodo=${p.periodo}` : ""}`
+    ),
+};

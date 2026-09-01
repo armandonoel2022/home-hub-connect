@@ -1,2 +1,4 @@
 - [Flotilla Vehicular](mem://funcionalidades/flotilla-vehicular) — /flotilla sin mocks, CRUD server-first, documentos, asignaciones e historial
 - [Documentos por Cliente](mem://funcionalidades/documentos-cliente) — Botón Subir por documento/formulario, archivos en backend/data/uploads/clientes, borrado con justificación
+- [Acceso a Nómina](mem://auth/acceso-nomina) — Nómina completa solo RRHH + Aurelio/Samuel/Armando/Chrisnel; líderes ven su departamento; resto solo su propia información
+- [Tickets IT por correo](mem://funcionalidades/tickets-correo-imap) — Buzón tecnologia@safeone.com.do IMAP 993 / SMTP 465, tickets desde correo y acuses automáticos

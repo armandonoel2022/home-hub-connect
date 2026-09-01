@@ -59,6 +59,7 @@ import Training from "./pages/Training";
 import Kiosk from "./pages/Kiosk";
 import EmployeeDirectory from "./pages/EmployeeDirectory";
 import Payroll from "./pages/Payroll";
+import MyPayroll from "./pages/MyPayroll";
 import PayrollExtrasPage from "./pages/PayrollExtras";
 import PayrollAnalytics from "./pages/PayrollAnalytics";
 import HRBirthdays from "./pages/HRBirthdays";
@@ -268,7 +269,8 @@ function ProtectedRoutes() {
         <Route path="/rrhh/formularios" element={<HRForms />} />
         <Route path="/rrhh/consolidado-nomina" element={<HRPayrollReport />} />
         <Route path="/rrhh/empleados" element={<EmployeeDirectory />} />
-        <Route path="/rrhh/nomina" element={<Payroll />} />
+        <Route path="/rrhh/nomina" element={<RouteGuard module="generalNomina"><Payroll /></RouteGuard>} />
+        <Route path="/mi-nomina" element={<RouteGuard module="myPayroll"><MyPayroll /></RouteGuard>} />
         <Route path="/rrhh/beneficios" element={<HRBenefits />} />
         <Route path="/rrhh/horas-extras" element={<PayrollExtrasPage />} />
         <Route path="/rrhh/nomina-analitica" element={<PayrollAnalytics />} />
