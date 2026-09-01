@@ -172,7 +172,42 @@ export const ticketsApi = {
     apiFetch<Ticket>(`/tickets/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   delete: (id: string) =>
     apiFetch<void>(`/tickets/${id}`, { method: "DELETE" }),
+  /** Estado del buzón tecnologia@safeone.com.do (IMAP/SMTP) */
+  mailStatus: () => apiFetch<TicketMailStatus>("/tickets/mail/status"),
+  /** Lee el buzón y crea/actualiza tickets desde los correos no leídos */
+  mailSync: (limit = 25) =>
+    apiFetch<TicketMailSyncResult>("/tickets/mail/sync", {
+      method: "POST",
+      body: JSON.stringify({ limit }),
+    }),
+  /** Responde al solicitante por correo y registra el comentario */
+  reply: (id: string, message: string) =>
+    apiFetch<{ ticket: Ticket; mail: { sent: boolean; reason?: string } }>(
+      `/tickets/${id}/reply`,
+      { method: "POST", body: JSON.stringify({ message }) }
+    ),
 };
+
+export interface TicketMailStatus {
+  configured: boolean;
+  dependencies: boolean;
+  dependenciesError: string | null;
+  user: string;
+  imap: string;
+  smtp: string;
+  pollMinutes: number;
+  polling: boolean;
+  lastSync: TicketMailSyncResult | null;
+}
+
+export interface TicketMailSyncResult {
+  ok: boolean;
+  message?: string;
+  created?: string[];
+  replies?: string[];
+  count?: number;
+  at?: string;
+}
 
 // ─── Equipment API ───
 export const equipmentApi = {
