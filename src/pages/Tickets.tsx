@@ -2,6 +2,8 @@ import { useState } from "react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTickets } from "@/hooks/useApiHooks";
+import MailSyncPanel from "@/components/tickets/MailSyncPanel";
+import { isITSuper, inDept } from "@/lib/permissions";
 import {
   TICKET_CATEGORIES,
   DEPARTMENTS,
@@ -203,6 +205,12 @@ const TicketsPage = () => {
             </div>
           </div>
         </div>
+
+        {(isITSuper(user) || inDept(user, "Tecnología y Monitoreo")) && (
+          <div className="px-6 pt-4">
+            <MailSyncPanel />
+          </div>
+        )}
 
         {/* Search */}
         <div className="px-6 py-4">
