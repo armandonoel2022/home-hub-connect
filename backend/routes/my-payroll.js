@@ -95,15 +95,14 @@ async function deptName(oid) {
 async function resolveScope(req) {
   const user = loadUser(req);
   if (!user) throw new Error('Usuario no encontrado');
-  if (isFullAccess(user)) {
-    return { user, level: 'full', empleado: null, deptOID: null, deptNombre: null };
-  }
+  // "Mi Nómina" NUNCA muestra la nómina completa (eso vive en RRHH → Nómina).
+  // Los usuarios con acceso total se tratan como líderes de su propio departamento.
   const emp = await findEmpleado(user);
   if (!emp) {
     return { user, level: 'none', empleado: null, deptOID: null, deptNombre: null };
   }
   const deptOID = emp.Departamento == null ? null : Number(emp.Departamento);
-  const leader = !!user.isDepartmentLeader;
+  const leader = !!user.isDepartmentLeader || isFullAccess(user);
   return {
     user,
     level: leader && deptOID != null ? 'dept' : 'self',
@@ -112,6 +111,7 @@ async function resolveScope(req) {
     deptNombre: await deptName(deptOID),
   };
 }
+
 
 /** Cláusula SQL (sobre alias `e` de Empleado) según el alcance. */
 function scopeClause(scope, alias = 'e') {

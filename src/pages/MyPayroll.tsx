@@ -7,6 +7,7 @@ import {
   type MyPayrollPeriod,
   type MyPayrollPayslipsResponse,
   type GeneralPayslip,
+  type GeneralPaymentDetail,
 } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,15 +20,43 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Wallet, ShieldCheck, Users, User, AlertTriangle, RefreshCw } from "lucide-react";
-import { periodLabel, payDateLabel } from "@/lib/generalPayslipPdf";
+import { Wallet, ShieldCheck, Users, User, AlertTriangle, RefreshCw, Printer } from "lucide-react";
+import { periodLabel, payDateLabel, generateGeneralPayslipPDF } from "@/lib/generalPayslipPdf";
 
 const money = (n: number) =>
   new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP" }).format(Number(n) || 0);
 
+/** Convierte un comprobante resumido en el detalle que consume el PDF membretado. */
+const toPaymentDetail = (i: GeneralPayslip): GeneralPaymentDetail => ({
+  empleado: i.empleado,
+  codigo: i.codigo,
+  cedula: i.cedula,
+  puesto: i.puesto,
+  fecha: i.fechaPago,
+  periodo: i.periodo,
+  mes: i.mes,
+  ano: i.ano,
+  nomina: i.nomina,
+  totalDevengado: i.totalDevengado,
+  totalDeducciones: i.totalDeducciones,
+  neto: i.neto,
+  lineas: [
+    ...Object.entries(i.ingresos || {})
+      .filter(([, v]) => Number(v) !== 0)
+      .map(([concepto, v]) => ({
+        concepto, tipo: 1, valor: Number(v), calculado: Number(v), monto: Number(v), comentario: null,
+      })),
+    ...Object.entries(i.deducciones || {})
+      .filter(([, v]) => Number(v) !== 0)
+      .map(([concepto, v]) => ({
+        concepto, tipo: 2, valor: Number(v), calculado: Math.abs(Number(v)), monto: -Math.abs(Number(v)), comentario: null,
+      })),
+  ],
+});
+
 const LEVEL_META: Record<string, { label: string; desc: string; icon: typeof User }> = {
   full: { label: "Acceso total", desc: "Puedes ver la nómina completa de la empresa.", icon: ShieldCheck },
-  dept: { label: "Mi equipo", desc: "Ves tu información y la del personal a tu cargo.", icon: Users },
+  dept: { label: "Mi equipo", desc: "Ves tu comprobante y el del personal de tu departamento.", icon: Users },
   self: { label: "Sólo mi información", desc: "Ves únicamente tu propio comprobante de pago.", icon: User },
   none: { label: "Sin registro", desc: "No encontramos tu registro de empleado en GENERAL.", icon: AlertTriangle },
 };
@@ -42,6 +71,7 @@ const MyPayroll = () => {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<GeneralPayslip | null>(null);
+  const [printing, setPrinting] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -81,12 +111,47 @@ const MyPayroll = () => {
 
   useEffect(() => { void load(); }, [load]);
 
+  const digits = (v?: string | null) => String(v || "").replace(/\D/g, "");
+  const mine = useMemo(() => {
+    const items = data?.items || [];
+    const code = String(scope?.empleado?.codigo || "").trim();
+    const ced = digits(scope?.empleado?.cedula);
+    return (
+      items.find(
+        (i) =>
+          (code && String(i.codigo || "").trim() === code) ||
+          (ced && digits(i.cedula) === ced)
+      ) || null
+    );
+  }, [data, scope]);
+
+  const printPayslip = async (item: GeneralPayslip) => {
+    setPrinting(true);
+    try {
+      await generateGeneralPayslipPDF(
+        toPaymentDetail(item),
+        {
+          nombre: item.empleado || "—",
+          codigo: item.codigo,
+          cedula: item.cedula,
+          puesto: item.puesto,
+          departamento: scope?.deptNombre || null,
+        },
+        { open: true }
+      );
+    } finally {
+      setPrinting(false);
+    }
+  };
+
   const meta = LEVEL_META[scope?.level || "self"];
   const Icon = meta.icon;
 
-  const items = (data?.items || []).filter((i) =>
-    !search.trim() || String(i.empleado || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const items = (data?.items || [])
+    .filter((i) => !mine || i !== mine)
+    .filter((i) =>
+      !search.trim() || String(i.empleado || "").toLowerCase().includes(search.toLowerCase())
+    );
   const multi = (data?.level === "dept" || data?.level === "full");
 
   return (
@@ -166,11 +231,48 @@ const MyPayroll = () => {
           </Card>
         )}
 
+        {!loading && mine && (
+          <Card className="border-primary/40">
+            <CardHeader className="pb-2 flex-row items-start justify-between gap-3 space-y-0">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <User className="w-4 h-4 text-primary" /> Mi comprobante de pago
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {periodLabel(mine.periodo, mine.mes, mine.ano)} · {payDateLabel(mine.periodo, mine.mes, mine.ano)}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={() => setSelected(mine)}>
+                  Ver desglose
+                </Button>
+                <Button size="sm" disabled={printing} onClick={() => void printPayslip(mine)}>
+                  <Printer className="w-4 h-4 mr-1.5" /> Imprimir
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="grid grid-cols-3 gap-3 text-sm">
+              <div>
+                <div className="text-muted-foreground text-xs">Devengado</div>
+                <div className="font-semibold">{money(mine.totalDevengado)}</div>
+              </div>
+              <div>
+                <div className="text-muted-foreground text-xs">Deducciones</div>
+                <div className="font-semibold text-destructive">{money(mine.totalDeducciones)}</div>
+              </div>
+              <div>
+                <div className="text-muted-foreground text-xs">Neto</div>
+                <div className="font-bold text-primary">{money(mine.neto)}</div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {!loading && multi && items.length > 0 && (
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base">
-                Personal a tu cargo ({items.length})
+                Personal de mi departamento ({items.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="overflow-x-auto">
@@ -216,6 +318,11 @@ const MyPayroll = () => {
               <p className="text-xs text-muted-foreground">
                 {payDateLabel(selected.periodo, selected.mes, selected.ano)}
               </p>
+              <div className="pt-2">
+                <Button size="sm" variant="outline" disabled={printing} onClick={() => void printPayslip(selected)}>
+                  <Printer className="w-4 h-4 mr-1.5" /> Imprimir comprobante
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-2">
               <div>
