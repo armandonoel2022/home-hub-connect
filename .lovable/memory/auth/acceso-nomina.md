@@ -6,9 +6,11 @@ type: feature
 
 Ser administrador de la intranet NO otorga acceso a todos los salarios.
 
-- **Acceso total (nómina completa):** departamento Recursos Humanos + Aurelio Pérez (aperez@), Samuel Pérez (sperez@), Armando Noel (anoel@), Chrisnel Fabián (cfabian@) y tecnologia@safeone.com.do.
+- **Mi Nómina NUNCA muestra la nómina completa**: siempre lo propio arriba (con botón Imprimir comprobante) y el departamento abajo, incluso para Armando, Chrisnel, Samuel y Dilia. La nómina de toda la empresa vive sólo en RRHH → Nómina.
+- **Acceso total (nómina completa en RRHH):** departamento Recursos Humanos + Aurelio Pérez (aperez@), Samuel Pérez (sperez@), Armando Noel (anoel@), Chrisnel Fabián (cfabian@) y tecnologia@safeone.com.do.
 - **Líderes de departamento** (ej. Luis Ovalle, lovalles@safeone.com.do, Seguridad Electrónica): ven su propia información y la de su departamento.
 - **Usuarios regulares:** sólo su propia información.
+
 
 Implementación:
 - Pantalla **Mi Nómina** en `/mi-nomina` (módulo `myPayroll`, visible para todos).
