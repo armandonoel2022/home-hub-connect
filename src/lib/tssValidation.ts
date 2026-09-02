@@ -90,7 +90,7 @@ export interface TssLookup {
 export function buildTssLookup(snap: TssValidationSnapshot | null): TssLookup | null {
   if (!snap) return null;
   const ceds = new Set(snap.cedulas.map(normalizeCedulaKey).filter(Boolean));
-  const names = new Set((snap.names || []).map(normalizeNameKey).filter(Boolean));
+  const names = new Set((snap.names || []).map(nameTokenKey).filter(Boolean));
   return {
     period: snap.period,
     validatedAt: snap.validatedAt,
@@ -98,9 +98,10 @@ export function buildTssLookup(snap: TssValidationSnapshot | null): TssLookup | 
     isCovered: (emp) => {
       const ced = normalizeCedulaKey(emp?.cedula || emp?.tss);
       if (ced && ceds.has(ced)) return true;
-      const nm = normalizeNameKey(emp?.fullName);
+      const nm = nameTokenKey(emp?.fullName);
       return !!nm && names.has(nm);
     },
+
     reportedSalary: (cedula) => {
       const ced = normalizeCedulaKey(cedula);
       const v = ced ? snap.salaries?.[ced] : undefined;
