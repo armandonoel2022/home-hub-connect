@@ -26,6 +26,7 @@ import { uniformAssignmentsApi, flashlightsApi } from "@/lib/api";
 import { equipmentStatusColors, phoneStatusColors, EQUIPMENT_STATUSES, PHONE_STATUSES } from "@/lib/deviceAssignment";
 import { HardDrive, Smartphone, Shirt, Flashlight } from "lucide-react";
 import { displayCaliber } from "@/lib/expedienteHelpers";
+import { getTssValidation, buildTssLookup } from "@/lib/tssValidation";
 
 function resolvePhoto(url?: string | null): string | undefined {
   if (!url) return undefined;
@@ -52,6 +53,19 @@ const EmployeeDirectory = () => {
   const [creating, setCreating] = useState(false);
   const [formData, setFormData] = useState<Partial<Employee>>({});
   const [viewing, setViewing] = useState<Employee | null>(null);
+
+  // Última validación del archivo TSS hecha en RRHH → Nómina
+  const [tssSnap, setTssSnap] = useState(() => getTssValidation());
+  useEffect(() => {
+    const refresh = () => setTssSnap(getTssValidation());
+    window.addEventListener("tss-validation-updated", refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener("tss-validation-updated", refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, []);
+  const tssLookup = useMemo(() => buildTssLookup(tssSnap), [tssSnap]);
 
   const { data: armedPersonnel } = useArmedPersonnel();
   const { data: equipment, update: updateEquipment } = useEquipment();
@@ -330,6 +344,16 @@ const EmployeeDirectory = () => {
               <p className="text-muted-foreground mt-1 text-sm">
 {stats.total} empleados activos en GENERAL (gSafeOne) · {stats.depts} departamentos
               </p>
+              {tssLookup ? (
+                <p className="text-xs mt-1 text-muted-foreground">
+                  TSS validada con el archivo del período <span className="font-semibold text-foreground">{tssLookup.period}</span>
+                  {" "}({tssLookup.totalRows} afiliados) · {new Date(tssLookup.validatedAt).toLocaleString("es-DO")}
+                </p>
+              ) : (
+                <p className="text-xs mt-1 text-amber-600">
+                  Aún no se ha validado un archivo TSS. Hazlo en RRHH → Nómina → “Validar archivo TSS”.
+                </p>
+              )}
             </div>
             <div className="flex gap-2 flex-wrap" />
 
@@ -474,12 +498,14 @@ const EmployeeDirectory = () => {
                         <TableCell className="text-sm">{emp.position}</TableCell>
                         <TableCell className="text-xs">{emp.payrollType}</TableCell>
                         <TableCell>
-                          {(emp as any).tssRegistered ? (
-                            <Badge className="bg-green-600 text-xs">✓ TSS</Badge>
-                          ) : emp.status === "Activo" ? (
-                            <Badge className="bg-red-600 text-xs">Sin TSS</Badge>
-                          ) : (
+                          {!tssLookup ? (
+                            <Badge variant="outline" className="text-xs text-muted-foreground">Sin validar</Badge>
+                          ) : emp.status !== "Activo" ? (
                             <Badge variant="outline" className="text-xs">—</Badge>
+                          ) : tssLookup.isCovered(emp as any) ? (
+                            <Badge className="bg-green-600 text-xs">✓ TSS</Badge>
+                          ) : (
+                            <Badge className="bg-red-600 text-xs">Sin TSS</Badge>
                           )}
                         </TableCell>
                         <TableCell>

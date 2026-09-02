@@ -22,11 +22,12 @@ import {
 } from "lucide-react";
 import PayrollPayslipsPanel from "@/components/hr/PayrollPayslipsPanel";
 
-import { employeesApi, isApiConfigured, tasksApi, payrollExtrasApi, type Employee, type PayrollExtra } from "@/lib/api";
+import { employeesApi, isApiConfigured, tasksApi, payrollExtrasApi, generalSqlApi, type Employee, type PayrollExtra } from "@/lib/api";
 import { calcDeductions, fmtRD } from "@/lib/payrollCalc";
 import { generatePayslipPDF } from "@/lib/payslipPdf";
 import { getApprovedLoans, loanBalance } from "@/lib/hrRequestService";
-import { parseTssFile, type TssRow } from "@/lib/tssParser";
+import { parseTssFiles, type TssRow } from "@/lib/tssParser";
+import { saveTssValidation, normalizeNameKey } from "@/lib/tssValidation";
 import * as XLSX from "xlsx";
 
 /** Recargos y divisores legales (espejo de PayrollExtras). */
@@ -409,10 +410,30 @@ export default function Payroll() {
   };
 
   // ─── Validación con archivo TSS ───
-  const handleValidateFile = async (file: File) => {
+  // Se valida SIEMPRE contra los empleados activos de GENERAL (gSafeOne), que es
+  // la misma fuente del Directorio de Empleados. El resultado se persiste para
+  // que el Directorio muestre el badge TSS sin volver a cargar el archivo.
+  const handleValidateFile = async (files: File[]) => {
     setValidating(true);
     try {
-      const parsed = await parseTssFile(file);
+      const parsed = await parseTssFiles(files);
+
+      // Fuente de activos: GENERAL (gSafeOne); respaldo: empleados locales
+      let activeList: Employee[] = [];
+      try {
+        const res = await generalSqlApi.employeesActive();
+        activeList = (res?.items || []).map(g => ({
+          employeeCode: String(g.codigo || g.oid),
+          fullName: g.nombreCompleto,
+          status: "Activo",
+          department: String(g.departamento || "—"),
+          position: String(g.puesto || ""),
+          salary: Number(g.salario) || 0,
+          tss: g.cedula || "",
+        }) as unknown as Employee);
+      } catch { /* sin SQL, usar locales */ }
+      if (!activeList.length) activeList = employees.filter(e => e.status === "Activo");
+
       const tssByCed = new Map<string, TssRow>();
       const tssByName = new Map<string, TssRow>();
       parsed.rows.forEach(r => {
@@ -424,9 +445,8 @@ export default function Payroll() {
       const activeNotInTss: Employee[] = [];
       const matchedTssCeds = new Set<string>();
 
-      employees.forEach(e => {
-        if (e.status !== "Activo") return;
-        const ced = normalizeCedula(e.tss);
+      activeList.forEach(e => {
+        const ced = normalizeCedula((e as any).cedula || e.tss);
         let row = ced ? tssByCed.get(ced) : null;
         if (!row) row = tssByName.get(normalizeName(e.fullName)) || null;
         if (row) {
@@ -450,13 +470,29 @@ export default function Payroll() {
         tssNotActive,
       });
       setShowValidation(true);
-      toast.success(`Archivo TSS procesado: ${parsed.rows.length} registros del período ${parsed.period}`);
+
+      // Persistir para el Directorio de Empleados
+      saveTssValidation({
+        period: parsed.period,
+        validatedAt: new Date().toISOString(),
+        validatedBy: user?.fullName,
+        fileName: files.map(f => f.name).join(" + "),
+        totalRows: parsed.rows.length,
+        cedulas: parsed.rows.map(r => r.cedula).filter(Boolean),
+        names: parsed.rows.map(r => normalizeNameKey(r.nombre)).filter(Boolean),
+        salaries: Object.fromEntries(parsed.rows.filter(r => r.cedula).map(r => [r.cedula, r.salarioReportado])),
+      });
+
+      toast.success(
+        `TSS ${parsed.period}: ${parsed.rows.length} afiliados · ${matchedActive.length} activos validados · ${activeNotInTss.length} sin TSS`
+      );
     } catch (e: any) {
-      toast.error(`Error al procesar archivo TSS: ${e.message}`);
+      toast.error(e?.message || "No se pudo procesar el archivo TSS", { duration: 12000 });
     } finally {
       setValidating(false);
     }
   };
+
 
   // Reconciliar: aplicar cambios masivos en empleados según validación
   const handleReconcile = async () => {
@@ -464,8 +500,10 @@ export default function Payroll() {
     setSaving(true);
     let updates = 0;
     try {
+      const localCodes = new Set(employees.map(x => String(x.employeeCode)));
       // Marcar como registrados en TSS los que aparecen en el archivo
       for (const { e, tss } of validation.matchedActive) {
+        if (!localCodes.has(String(e.employeeCode))) continue; // sólo empleados del registro local
         if (e.tssRegistered && Number(e.tssReportedSalary) === tss.salarioReportado) continue;
         const patch: Partial<Employee> = {
           tssRegistered: true,
@@ -483,6 +521,7 @@ export default function Payroll() {
       }
       // Marcar como sin TSS los activos que NO aparecen
       for (const e of validation.activeNotInTss) {
+        if (!localCodes.has(String(e.employeeCode))) continue;
         if (e.tssRegistered === false) continue;
         const patch: Partial<Employee> = { tssRegistered: false };
         if (isApiConfigured()) {
@@ -593,8 +632,8 @@ export default function Payroll() {
           <div className="flex gap-2 flex-wrap">
             <label htmlFor="tss-validate-input">
               <input
-                id="tss-validate-input" type="file" accept=".xls,.xlsx" className="hidden"
-                onChange={e => { const f = e.target.files?.[0]; if (f) handleValidateFile(f); e.target.value = ""; }}
+                id="tss-validate-input" type="file" accept=".htm,.html,.xls,.xlsx" multiple className="hidden"
+                onChange={e => { const fs = Array.from(e.target.files || []); if (fs.length) handleValidateFile(fs); e.target.value = ""; }}
               />
               <Button variant="default" disabled={validating} asChild>
                 <span className="cursor-pointer">
