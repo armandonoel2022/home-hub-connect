@@ -22,8 +22,21 @@ export interface TssValidationSnapshot {
   salaries: Record<string, number>;
 }
 
+/**
+ * Canonicaliza una cédula dominicana.
+ *
+ * En la base de datos (tabla Empleado) el campo `Cedula` viene con guiones y con
+ * los ceros a la izquierda: `000-0000000-0` (11 dígitos). En cambio los archivos
+ * de la TSS suelen traer el número sin guiones y SIN los ceros iniciales
+ * (ej. `111551818` → `00111551818`). Aquí se dejan sólo dígitos y se rellena a
+ * 11 posiciones para que ambas fuentes sean comparables.
+ */
 export function normalizeCedulaKey(v?: string | null): string {
-  return String(v || "").replace(/\D/g, "");
+  const d = String(v || "").replace(/\D/g, "");
+  if (!d) return "";
+  if (d.length >= 11) return d.slice(-11);
+  if (d.length >= 7) return d.padStart(11, "0");
+  return d;
 }
 
 export function normalizeNameKey(v?: string | null): string {
@@ -31,6 +44,20 @@ export function normalizeNameKey(v?: string | null): string {
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .toUpperCase().replace(/\s+/g, " ").trim();
 }
+
+/**
+ * Clave de nombre insensible al orden: la TSS exporta "Apellido Apellido, Nombre"
+ * y GENERAL almacena "Nombre Apellido Apellido". Se comparan los tokens ordenados.
+ */
+export function nameTokenKey(v?: string | null): string {
+  return normalizeNameKey(v)
+    .replace(/[^A-Z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter(t => t.length > 1)
+    .sort()
+    .join(" ");
+}
+
 
 export function saveTssValidation(snap: TssValidationSnapshot): void {
   try { localStorage.setItem(KEY, JSON.stringify(snap)); } catch { /* cuota */ }
@@ -63,7 +90,7 @@ export interface TssLookup {
 export function buildTssLookup(snap: TssValidationSnapshot | null): TssLookup | null {
   if (!snap) return null;
   const ceds = new Set(snap.cedulas.map(normalizeCedulaKey).filter(Boolean));
-  const names = new Set((snap.names || []).map(normalizeNameKey).filter(Boolean));
+  const names = new Set((snap.names || []).map(nameTokenKey).filter(Boolean));
   return {
     period: snap.period,
     validatedAt: snap.validatedAt,
@@ -71,9 +98,10 @@ export function buildTssLookup(snap: TssValidationSnapshot | null): TssLookup | 
     isCovered: (emp) => {
       const ced = normalizeCedulaKey(emp?.cedula || emp?.tss);
       if (ced && ceds.has(ced)) return true;
-      const nm = normalizeNameKey(emp?.fullName);
+      const nm = nameTokenKey(emp?.fullName);
       return !!nm && names.has(nm);
     },
+
     reportedSalary: (cedula) => {
       const ced = normalizeCedulaKey(cedula);
       const v = ced ? snap.salaries?.[ced] : undefined;
