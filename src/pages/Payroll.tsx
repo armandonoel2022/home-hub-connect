@@ -409,10 +409,30 @@ export default function Payroll() {
   };
 
   // ─── Validación con archivo TSS ───
-  const handleValidateFile = async (file: File) => {
+  // Se valida SIEMPRE contra los empleados activos de GENERAL (gSafeOne), que es
+  // la misma fuente del Directorio de Empleados. El resultado se persiste para
+  // que el Directorio muestre el badge TSS sin volver a cargar el archivo.
+  const handleValidateFile = async (files: File[]) => {
     setValidating(true);
     try {
-      const parsed = await parseTssFile(file);
+      const parsed = await parseTssFiles(files);
+
+      // Fuente de activos: GENERAL (gSafeOne); respaldo: empleados locales
+      let activeList: Employee[] = [];
+      try {
+        const res = await generalSqlApi.employeesActive();
+        activeList = (res?.items || []).map(g => ({
+          employeeCode: String(g.codigo || g.oid),
+          fullName: g.nombreCompleto,
+          status: "Activo",
+          department: String(g.departamento || "—"),
+          position: String(g.puesto || ""),
+          salary: Number(g.salario) || 0,
+          tss: g.cedula || "",
+        }) as unknown as Employee);
+      } catch { /* sin SQL, usar locales */ }
+      if (!activeList.length) activeList = employees.filter(e => e.status === "Activo");
+
       const tssByCed = new Map<string, TssRow>();
       const tssByName = new Map<string, TssRow>();
       parsed.rows.forEach(r => {
@@ -424,9 +444,8 @@ export default function Payroll() {
       const activeNotInTss: Employee[] = [];
       const matchedTssCeds = new Set<string>();
 
-      employees.forEach(e => {
-        if (e.status !== "Activo") return;
-        const ced = normalizeCedula(e.tss);
+      activeList.forEach(e => {
+        const ced = normalizeCedula((e as any).cedula || e.tss);
         let row = ced ? tssByCed.get(ced) : null;
         if (!row) row = tssByName.get(normalizeName(e.fullName)) || null;
         if (row) {
@@ -450,13 +469,29 @@ export default function Payroll() {
         tssNotActive,
       });
       setShowValidation(true);
-      toast.success(`Archivo TSS procesado: ${parsed.rows.length} registros del período ${parsed.period}`);
+
+      // Persistir para el Directorio de Empleados
+      saveTssValidation({
+        period: parsed.period,
+        validatedAt: new Date().toISOString(),
+        validatedBy: user?.fullName,
+        fileName: files.map(f => f.name).join(" + "),
+        totalRows: parsed.rows.length,
+        cedulas: parsed.rows.map(r => r.cedula).filter(Boolean),
+        names: parsed.rows.map(r => normalizeNameKey(r.nombre)).filter(Boolean),
+        salaries: Object.fromEntries(parsed.rows.filter(r => r.cedula).map(r => [r.cedula, r.salarioReportado])),
+      });
+
+      toast.success(
+        `TSS ${parsed.period}: ${parsed.rows.length} afiliados · ${matchedActive.length} activos validados · ${activeNotInTss.length} sin TSS`
+      );
     } catch (e: any) {
-      toast.error(`Error al procesar archivo TSS: ${e.message}`);
+      toast.error(e?.message || "No se pudo procesar el archivo TSS", { duration: 12000 });
     } finally {
       setValidating(false);
     }
   };
+
 
   // Reconciliar: aplicar cambios masivos en empleados según validación
   const handleReconcile = async () => {
