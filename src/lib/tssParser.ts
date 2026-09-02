@@ -110,7 +110,7 @@ function rowsFromMatrix(matrix: string[][]): TssParsed {
   for (let r = headerIdx + 1; r < matrix.length; r++) {
     const cells = matrix[r];
     if (!cells || cells.length < 2) continue;
-    const cedula = String(at(cells, iCed)).replace(/\D/g, "");
+    const cedula = normalizeCedulaKey(at(cells, iCed));
     const nombre = String(at(cells, iNom)).trim();
     if (!cedula && !nombre) continue;
     if (normHeader(nombre) === "NOMBRES") continue; // encabezado repetido
@@ -130,6 +130,40 @@ function rowsFromMatrix(matrix: string[][]): TssParsed {
   if (!out.length) throw new Error("El archivo TSS no contiene filas de afiliados.");
   return { period: period || "Sin período", rows: out };
 }
+
+/**
+ * Muchas descargas/recortes de la TSS vienen SIN encabezados: sólo dos columnas
+ * (nombre y cédula, en cualquier orden). Aquí se detecta ese caso.
+ */
+function rowsFromHeaderlessMatrix(matrix: string[][]): TssParsed | null {
+  const rows = matrix.filter(r => r && r.filter(c => String(c).trim()).length >= 2);
+  if (rows.length < 5) return null;
+
+  const isDigits = (v: string) => /^[\d\s.\-]{7,}$/.test(String(v).trim()) && String(v).replace(/\D/g, "").length >= 7;
+  const isText = (v: string) => /[A-Za-zÁÉÍÓÚÑáéíóúñ]{3,}/.test(String(v));
+
+  const sample = rows.slice(0, Math.min(rows.length, 40));
+  const col0Ced = sample.filter(r => isDigits(r[0])).length / sample.length;
+  const col1Ced = sample.filter(r => isDigits(r[1])).length / sample.length;
+  const col0Txt = sample.filter(r => isText(r[0])).length / sample.length;
+  const col1Txt = sample.filter(r => isText(r[1])).length / sample.length;
+
+  let iNom = -1, iCed = -1;
+  if (col1Ced > 0.8 && col0Txt > 0.8) { iNom = 0; iCed = 1; }
+  else if (col0Ced > 0.8 && col1Txt > 0.8) { iNom = 1; iCed = 0; }
+  else return null;
+
+  const out: TssRow[] = [];
+  for (const r of rows) {
+    const cedula = normalizeCedulaKey(r[iCed]);
+    const nombre = String(r[iNom] ?? "").trim();
+    if (!cedula && !nombre) continue;
+    if (/^(nombre|nombres|cedula|documento)$/i.test(nombre)) continue;
+    out.push({ cedula, nombre, idNss: "", salarioSS: 0, salarioReportado: 0, sfsAfiliado: 0, afpAfiliado: 0, total: 0 });
+  }
+  return out.length ? { period: "Sin período", rows: out } : null;
+}
+
 
 function decode(buffer: ArrayBuffer): string {
   const view = new Uint8Array(buffer);
