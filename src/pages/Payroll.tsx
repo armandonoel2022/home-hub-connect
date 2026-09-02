@@ -500,8 +500,10 @@ export default function Payroll() {
     setSaving(true);
     let updates = 0;
     try {
+      const localCodes = new Set(employees.map(x => String(x.employeeCode)));
       // Marcar como registrados en TSS los que aparecen en el archivo
       for (const { e, tss } of validation.matchedActive) {
+        if (!localCodes.has(String(e.employeeCode))) continue; // sólo empleados del registro local
         if (e.tssRegistered && Number(e.tssReportedSalary) === tss.salarioReportado) continue;
         const patch: Partial<Employee> = {
           tssRegistered: true,
@@ -519,6 +521,7 @@ export default function Payroll() {
       }
       // Marcar como sin TSS los activos que NO aparecen
       for (const e of validation.activeNotInTss) {
+        if (!localCodes.has(String(e.employeeCode))) continue;
         if (e.tssRegistered === false) continue;
         const patch: Partial<Employee> = { tssRegistered: false };
         if (isApiConfigured()) {
