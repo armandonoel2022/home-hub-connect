@@ -22,11 +22,12 @@ import {
 } from "lucide-react";
 import PayrollPayslipsPanel from "@/components/hr/PayrollPayslipsPanel";
 
-import { employeesApi, isApiConfigured, tasksApi, payrollExtrasApi, type Employee, type PayrollExtra } from "@/lib/api";
+import { employeesApi, isApiConfigured, tasksApi, payrollExtrasApi, generalSqlApi, type Employee, type PayrollExtra } from "@/lib/api";
 import { calcDeductions, fmtRD } from "@/lib/payrollCalc";
 import { generatePayslipPDF } from "@/lib/payslipPdf";
 import { getApprovedLoans, loanBalance } from "@/lib/hrRequestService";
-import { parseTssFile, type TssRow } from "@/lib/tssParser";
+import { parseTssFiles, type TssRow } from "@/lib/tssParser";
+import { saveTssValidation, normalizeNameKey } from "@/lib/tssValidation";
 import * as XLSX from "xlsx";
 
 /** Recargos y divisores legales (espejo de PayrollExtras). */
@@ -628,8 +629,8 @@ export default function Payroll() {
           <div className="flex gap-2 flex-wrap">
             <label htmlFor="tss-validate-input">
               <input
-                id="tss-validate-input" type="file" accept=".xls,.xlsx" className="hidden"
-                onChange={e => { const f = e.target.files?.[0]; if (f) handleValidateFile(f); e.target.value = ""; }}
+                id="tss-validate-input" type="file" accept=".htm,.html,.xls,.xlsx" multiple className="hidden"
+                onChange={e => { const fs = Array.from(e.target.files || []); if (fs.length) handleValidateFile(fs); e.target.value = ""; }}
               />
               <Button variant="default" disabled={validating} asChild>
                 <span className="cursor-pointer">
