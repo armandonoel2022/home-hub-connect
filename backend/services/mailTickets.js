@@ -47,18 +47,50 @@ function isConfigured() {
   return !!(c.enabled && c.user && c.pass && c.imapHost && c.smtpHost);
 }
 
-function deps() {
+/**
+ * Carga de dependencias tolerante a paquetes ESM.
+ * imapflow >= 2, nodemailer >= 10 y mailparser >= 3.7 se publican como ESM,
+ * por lo que `require()` falla con ERR_REQUIRE_ESM en Node < 22.
+ * Se intenta require() y, si falla, import() dinámico.
+ */
+let _depsCache = null;
+
+async function loadOne(name) {
   try {
-    return {
-      ImapFlow: require('imapflow').ImapFlow,
-      simpleParser: require('mailparser').simpleParser,
-      nodemailer: require('nodemailer'),
-      ok: true,
-    };
+    return { ok: true, mod: require(name), mode: 'require' };
   } catch (e) {
-    return { ok: false, error: e.message };
+    try {
+      const m = await import(name);
+      return { ok: true, mod: m.default && !m.ImapFlow && !m.simpleParser ? m.default : m, mode: 'import' };
+    } catch (e2) {
+      return { ok: false, error: `${name}: ${e2.code || ''} ${e2.message}`.trim() };
+    }
   }
 }
+
+async function loadDeps() {
+  if (_depsCache && _depsCache.ok) return _depsCache;
+  const [imap, parser, mailer] = await Promise.all([
+    loadOne('imapflow'), loadOne('mailparser'), loadOne('nodemailer'),
+  ]);
+  const missing = [imap, parser, mailer].filter((r) => !r.ok).map((r) => r.error);
+  if (missing.length) {
+    _depsCache = { ok: false, error: missing.join(' | '), missing };
+    return _depsCache;
+  }
+  _depsCache = {
+    ok: true,
+    ImapFlow: imap.mod.ImapFlow || imap.mod.default?.ImapFlow,
+    simpleParser: parser.mod.simpleParser || parser.mod.default?.simpleParser,
+    nodemailer: mailer.mod.createTransport ? mailer.mod : (mailer.mod.default || mailer.mod),
+    modes: { imapflow: imap.mode, mailparser: parser.mode, nodemailer: mailer.mode },
+  };
+  if (!_depsCache.ImapFlow || !_depsCache.simpleParser || !_depsCache.nodemailer?.createTransport) {
+    _depsCache = { ok: false, error: 'Los módulos se cargaron pero no exponen ImapFlow/simpleParser/createTransport' };
+  }
+  return _depsCache;
+}
+
 
 // ─── SLA por prioridad (política interna SafeOne) ───
 const SLA_HOURS = { Crítica: 2, Alta: 8, Media: 24, Baja: 72 };
