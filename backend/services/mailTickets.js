@@ -47,18 +47,50 @@ function isConfigured() {
   return !!(c.enabled && c.user && c.pass && c.imapHost && c.smtpHost);
 }
 
-function deps() {
+/**
+ * Carga de dependencias tolerante a paquetes ESM.
+ * imapflow >= 2, nodemailer >= 10 y mailparser >= 3.7 se publican como ESM,
+ * por lo que `require()` falla con ERR_REQUIRE_ESM en Node < 22.
+ * Se intenta require() y, si falla, import() dinámico.
+ */
+let _depsCache = null;
+
+async function loadOne(name) {
   try {
-    return {
-      ImapFlow: require('imapflow').ImapFlow,
-      simpleParser: require('mailparser').simpleParser,
-      nodemailer: require('nodemailer'),
-      ok: true,
-    };
+    return { ok: true, mod: require(name), mode: 'require' };
   } catch (e) {
-    return { ok: false, error: e.message };
+    try {
+      const m = await import(name);
+      return { ok: true, mod: m.default && !m.ImapFlow && !m.simpleParser ? m.default : m, mode: 'import' };
+    } catch (e2) {
+      return { ok: false, error: `${name}: ${e2.code || ''} ${e2.message}`.trim() };
+    }
   }
 }
+
+async function loadDeps() {
+  if (_depsCache && _depsCache.ok) return _depsCache;
+  const [imap, parser, mailer] = await Promise.all([
+    loadOne('imapflow'), loadOne('mailparser'), loadOne('nodemailer'),
+  ]);
+  const missing = [imap, parser, mailer].filter((r) => !r.ok).map((r) => r.error);
+  if (missing.length) {
+    _depsCache = { ok: false, error: missing.join(' | '), missing };
+    return _depsCache;
+  }
+  _depsCache = {
+    ok: true,
+    ImapFlow: imap.mod.ImapFlow || imap.mod.default?.ImapFlow,
+    simpleParser: parser.mod.simpleParser || parser.mod.default?.simpleParser,
+    nodemailer: mailer.mod.createTransport ? mailer.mod : (mailer.mod.default || mailer.mod),
+    modes: { imapflow: imap.mode, mailparser: parser.mode, nodemailer: mailer.mode },
+  };
+  if (!_depsCache.ImapFlow || !_depsCache.simpleParser || !_depsCache.nodemailer?.createTransport) {
+    _depsCache = { ok: false, error: 'Los módulos se cargaron pero no exponen ImapFlow/simpleParser/createTransport' };
+  }
+  return _depsCache;
+}
+
 
 // ─── SLA por prioridad (política interna SafeOne) ───
 const SLA_HOURS = { Crítica: 2, Alta: 8, Media: 24, Baja: 72 };
@@ -94,8 +126,8 @@ function slaDeadline(priority, from = new Date()) {
 
 // ─── SMTP ───
 let _transport = null;
-function transport() {
-  const d = deps();
+async function transport() {
+  const d = await loadDeps();
   if (!d.ok) throw new Error(`Faltan dependencias de correo: ${d.error}`);
   if (_transport) return _transport;
   const c = config();
@@ -126,7 +158,7 @@ async function sendMail({ to, subject, html, text }) {
   if (!isConfigured()) return { sent: false, reason: 'Correo IT no configurado' };
   if (!to) return { sent: false, reason: 'Sin destinatario' };
   const c = config();
-  const info = await transport().sendMail({
+  const info = await (await transport()).sendMail({
     from: `"SafeOne Soporte IT" <${c.user}>`,
     to, subject, html, text: text || String(html).replace(/<[^>]+>/g, ' '),
   });
@@ -168,7 +200,7 @@ async function notifyTicketUpdated(ticket, { comment, statusChanged } = {}) {
 // ─── IMAP: lectura y creación de tickets ───
 async function syncInbox({ limit = 25 } = {}) {
   if (!isConfigured()) return { ok: false, message: 'Correo IT no configurado (revisa IT_MAIL_* en backend/.env)' };
-  const d = deps();
+  const d = await loadDeps();
   if (!d.ok) return { ok: false, message: `Faltan dependencias: ${d.error}. Ejecuta: npm i imapflow mailparser nodemailer` };
 
   const c = config();
@@ -266,11 +298,15 @@ let _last = null;
 
 async function status() {
   const c = config();
-  const d = deps();
+  const d = await loadDeps();
   return {
     configured: isConfigured(),
     dependencies: d.ok,
     dependenciesError: d.ok ? null : d.error,
+    loadMode: d.ok ? d.modes : null,
+    node: process.version,
+    hasPassword: !!c.pass,
+    enabled: c.enabled,
     user: c.user,
     imap: `${c.imapHost}:${c.imapPort}`,
     smtp: `${c.smtpHost}:${c.smtpPort}`,
@@ -280,9 +316,35 @@ async function status() {
   };
 }
 
-function startPolling() {
+/** Prueba real de conexión: SMTP (verify) e IMAP (login). */
+async function testConnection() {
+  const d = await loadDeps();
+  if (!d.ok) return { ok: false, smtp: false, imap: false, message: d.error };
+  if (!isConfigured()) return { ok: false, smtp: false, imap: false, message: 'Faltan variables IT_MAIL_* en backend/.env' };
   const c = config();
-  if (_timer || !isConfigured() || !deps().ok || !(c.pollMinutes > 0)) return false;
+  const out = { smtp: false, imap: false, errors: [] };
+  try { await (await transport()).verify(); out.smtp = true; }
+  catch (e) { out.errors.push(`SMTP: ${e.message}`); }
+  try {
+    const client = new d.ImapFlow({
+      host: c.imapHost, port: c.imapPort, secure: true,
+      auth: { user: c.user, pass: c.pass },
+      tls: { rejectUnauthorized: false }, logger: false,
+    });
+    await client.connect();
+    await client.logout().catch(() => {});
+    out.imap = true;
+  } catch (e) { out.errors.push(`IMAP: ${e.message}`); }
+  return { ok: out.smtp && out.imap, ...out, message: out.errors.join(' | ') || 'Conexión correcta' };
+}
+
+async function startPolling() {
+  const c = config();
+  const d = await loadDeps();
+  if (_timer || !isConfigured() || !d.ok || !(c.pollMinutes > 0)) {
+    if (!d.ok) console.warn('[mail] dependencias no disponibles:', d.error);
+    return false;
+  }
   const run = async () => {
     try { _last = await syncInbox(); }
     catch (e) { _last = { ok: false, message: e.message, at: new Date().toISOString() }; }
@@ -293,8 +355,8 @@ function startPolling() {
 }
 
 module.exports = {
-  config, isConfigured, status, syncInbox, sendMail,
-  notifyTicketCreated, notifyTicketUpdated, startPolling,
+  config, isConfigured, status, syncInbox, sendMail, testConnection,
+  notifyTicketCreated, notifyTicketUpdated, startPolling, loadDeps,
   SLA_HOURS,
   get lastSync() { return _last; },
 };

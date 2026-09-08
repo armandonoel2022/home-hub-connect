@@ -180,6 +180,9 @@ export const ticketsApi = {
       method: "POST",
       body: JSON.stringify({ limit }),
     }),
+  /** Prueba real de conexión SMTP + IMAP */
+  mailTest: () =>
+    apiFetch<TicketMailTestResult>("/tickets/mail/test", { method: "POST" }),
   /** Responde al solicitante por correo y registra el comentario */
   reply: (id: string, message: string) =>
     apiFetch<{ ticket: Ticket; mail: { sent: boolean; reason?: string } }>(
@@ -188,10 +191,22 @@ export const ticketsApi = {
     ),
 };
 
+export interface TicketMailTestResult {
+  ok: boolean;
+  smtp?: boolean;
+  imap?: boolean;
+  message?: string;
+  errors?: string[];
+}
+
 export interface TicketMailStatus {
   configured: boolean;
   dependencies: boolean;
   dependenciesError: string | null;
+  loadMode?: Record<string, string> | null;
+  node?: string;
+  hasPassword?: boolean;
+  enabled?: boolean;
   user: string;
   imap: string;
   smtp: string;
