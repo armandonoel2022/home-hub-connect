@@ -126,8 +126,8 @@ function slaDeadline(priority, from = new Date()) {
 
 // ─── SMTP ───
 let _transport = null;
-function transport() {
-  const d = deps();
+async function transport() {
+  const d = await loadDeps();
   if (!d.ok) throw new Error(`Faltan dependencias de correo: ${d.error}`);
   if (_transport) return _transport;
   const c = config();
