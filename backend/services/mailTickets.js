@@ -158,7 +158,7 @@ async function sendMail({ to, subject, html, text }) {
   if (!isConfigured()) return { sent: false, reason: 'Correo IT no configurado' };
   if (!to) return { sent: false, reason: 'Sin destinatario' };
   const c = config();
-  const info = await transport().sendMail({
+  const info = await (await transport()).sendMail({
     from: `"SafeOne Soporte IT" <${c.user}>`,
     to, subject, html, text: text || String(html).replace(/<[^>]+>/g, ' '),
   });
