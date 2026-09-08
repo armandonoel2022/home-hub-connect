@@ -298,11 +298,15 @@ let _last = null;
 
 async function status() {
   const c = config();
-  const d = deps();
+  const d = await loadDeps();
   return {
     configured: isConfigured(),
     dependencies: d.ok,
     dependenciesError: d.ok ? null : d.error,
+    loadMode: d.ok ? d.modes : null,
+    node: process.version,
+    hasPassword: !!c.pass,
+    enabled: c.enabled,
     user: c.user,
     imap: `${c.imapHost}:${c.imapPort}`,
     smtp: `${c.smtpHost}:${c.smtpPort}`,
@@ -312,9 +316,35 @@ async function status() {
   };
 }
 
-function startPolling() {
+/** Prueba real de conexión: SMTP (verify) e IMAP (login). */
+async function testConnection() {
+  const d = await loadDeps();
+  if (!d.ok) return { ok: false, smtp: false, imap: false, message: d.error };
+  if (!isConfigured()) return { ok: false, smtp: false, imap: false, message: 'Faltan variables IT_MAIL_* en backend/.env' };
   const c = config();
-  if (_timer || !isConfigured() || !deps().ok || !(c.pollMinutes > 0)) return false;
+  const out = { smtp: false, imap: false, errors: [] };
+  try { await (await transport()).verify(); out.smtp = true; }
+  catch (e) { out.errors.push(`SMTP: ${e.message}`); }
+  try {
+    const client = new d.ImapFlow({
+      host: c.imapHost, port: c.imapPort, secure: true,
+      auth: { user: c.user, pass: c.pass },
+      tls: { rejectUnauthorized: false }, logger: false,
+    });
+    await client.connect();
+    await client.logout().catch(() => {});
+    out.imap = true;
+  } catch (e) { out.errors.push(`IMAP: ${e.message}`); }
+  return { ok: out.smtp && out.imap, ...out, message: out.errors.join(' | ') || 'Conexión correcta' };
+}
+
+async function startPolling() {
+  const c = config();
+  const d = await loadDeps();
+  if (_timer || !isConfigured() || !d.ok || !(c.pollMinutes > 0)) {
+    if (!d.ok) console.warn('[mail] dependencias no disponibles:', d.error);
+    return false;
+  }
   const run = async () => {
     try { _last = await syncInbox(); }
     catch (e) { _last = { ok: false, message: e.message, at: new Date().toISOString() }; }
@@ -325,8 +355,8 @@ function startPolling() {
 }
 
 module.exports = {
-  config, isConfigured, status, syncInbox, sendMail,
-  notifyTicketCreated, notifyTicketUpdated, startPolling,
+  config, isConfigured, status, syncInbox, sendMail, testConnection,
+  notifyTicketCreated, notifyTicketUpdated, startPolling, loadDeps,
   SLA_HOURS,
   get lastSync() { return _last; },
 };
