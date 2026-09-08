@@ -123,9 +123,11 @@ app.use((err, req, res, next) => {
 // Polling del buzón de tecnología → tickets de IT
 try {
   const mailTickets = require('./services/mailTickets');
-  if (mailTickets.startPolling()) {
-    console.log('[mail] Sincronización de tickets por correo activada');
-  }
+  Promise.resolve(mailTickets.startPolling())
+    .then((on) => console.log(on
+      ? '[mail] Sincronización de tickets por correo activada'
+      : '[mail] Sincronización por correo inactiva (revisa dependencias o IT_MAIL_*)'))
+    .catch((e) => console.warn('[mail] Error al iniciar sincronización:', e.message));
 } catch (e) {
   console.warn('[mail] Integración de correo inactiva:', e.message);
 }
