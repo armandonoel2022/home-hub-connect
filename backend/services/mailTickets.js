@@ -200,7 +200,7 @@ async function notifyTicketUpdated(ticket, { comment, statusChanged } = {}) {
 // ─── IMAP: lectura y creación de tickets ───
 async function syncInbox({ limit = 25 } = {}) {
   if (!isConfigured()) return { ok: false, message: 'Correo IT no configurado (revisa IT_MAIL_* en backend/.env)' };
-  const d = deps();
+  const d = await loadDeps();
   if (!d.ok) return { ok: false, message: `Faltan dependencias: ${d.error}. Ejecuta: npm i imapflow mailparser nodemailer` };
 
   const c = config();
