@@ -23,6 +23,11 @@ router.get('/mail/status', auth, async (req, res) => {
   catch (e) { res.status(500).json({ message: e.message }); }
 });
 
+router.post('/mail/test', auth, async (req, res) => {
+  try { res.json(await mail.testConnection()); }
+  catch (e) { res.status(502).json({ ok: false, message: e.message }); }
+});
+
 router.post('/mail/sync', auth, async (req, res) => {
   try {
     const result = await mail.syncInbox({ limit: Number(req.body?.limit) || 25 });
