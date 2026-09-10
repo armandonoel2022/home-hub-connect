@@ -99,14 +99,21 @@ const MailSyncPanel = () => {
           {status.polling ? `revisión cada ${status.pollMinutes} min` : "sin revisión automática"}
         </p>
         {!status.dependencies && (
+          <div className="text-xs text-destructive mt-1 space-y-0.5">
+            <p>No se pudieron cargar los módulos de correo en el servidor (Node {status.node}).</p>
+            <p className="font-mono break-all">{status.dependenciesError}</p>
+            <p className="text-muted-foreground">
+              Instálalos en la MISMA carpeta donde corre el API (backend): cd C:\intranet-nueva\backend && npm install imapflow@1 mailparser nodemailer@6 — luego reinicia el servicio.
+            </p>
+          </div>
+        )}
+        {status.dependencies && !status.hasPassword && (
           <p className="text-xs text-destructive mt-1">
-            Falta instalar dependencias en el servidor: npm install imapflow mailparser nodemailer
+            Falta IT_MAIL_PASS en backend/.env (contraseña del buzón).
           </p>
         )}
-        {!status.configured && status.dependencies && (
-          <p className="text-xs text-destructive mt-1">
-            Configura IT_MAIL_* en backend/.env (usuario y contraseña del buzón).
-          </p>
+        {status.dependencies && status.hasPassword && !status.enabled && (
+          <p className="text-xs text-destructive mt-1">IT_MAIL_ENABLED está en false.</p>
         )}
         {last && (
           <p className="text-xs text-muted-foreground mt-1">
@@ -116,10 +123,15 @@ const MailSyncPanel = () => {
           </p>
         )}
       </div>
+      <Button size="sm" variant="secondary" onClick={testConnection} disabled={testing}>
+        <PlugZap className={`h-4 w-4 mr-1.5 ${testing ? "animate-pulse" : ""}`} />
+        Probar conexión
+      </Button>
       <Button size="sm" variant="outline" onClick={sync} disabled={busy || !ready}>
         <RefreshCw className={`h-4 w-4 mr-1.5 ${busy ? "animate-spin" : ""}`} />
         Sincronizar correo
       </Button>
+
     </div>
   );
 };
