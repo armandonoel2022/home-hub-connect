@@ -2,17 +2,18 @@ import { useEffect, useState } from "react";
 import { ticketsApi, type TicketMailStatus, type TicketMailSyncResult } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Mail, RefreshCw, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Mail, RefreshCw, AlertTriangle, CheckCircle2, PlugZap } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 /**
  * Panel de sincronización del buzón tecnologia@safeone.com.do.
  * Visible sólo para el equipo de Tecnología: permite forzar la lectura del
- * correo y ver el estado de la conexión IMAP/SMTP.
+ * correo, probar la conexión IMAP/SMTP y ver el diagnóstico exacto.
  */
 const MailSyncPanel = () => {
   const [status, setStatus] = useState<TicketMailStatus | null>(null);
   const [busy, setBusy] = useState(false);
+  const [testing, setTesting] = useState(false);
   const [last, setLast] = useState<TicketMailSyncResult | null>(null);
 
   const loadStatus = async () => {
@@ -26,6 +27,27 @@ const MailSyncPanel = () => {
   };
 
   useEffect(() => { void loadStatus(); }, []);
+
+  const testConnection = async () => {
+    setTesting(true);
+    try {
+      const r = await ticketsApi.mailTest();
+      toast({
+        title: r.ok ? "Conexión correcta" : "Fallo la conexión",
+        description: `SMTP ${r.smtp ? "OK" : "falla"} · IMAP ${r.imap ? "OK" : "falla"}${r.message ? ` — ${r.message}` : ""}`,
+        variant: r.ok ? "default" : "destructive",
+      });
+      await loadStatus();
+    } catch (e) {
+      toast({
+        title: "Error de prueba",
+        description: e instanceof Error ? e.message : "No se pudo probar la conexión",
+        variant: "destructive",
+      });
+    } finally {
+      setTesting(false);
+    }
+  };
 
   const sync = async () => {
     setBusy(true);
@@ -55,6 +77,7 @@ const MailSyncPanel = () => {
 
   const ready = status.configured && status.dependencies;
 
+
   return (
     <div className="rounded-lg border border-border bg-card p-4 flex flex-wrap items-center gap-3">
       <Mail className="h-5 w-5 text-primary" />
@@ -76,14 +99,21 @@ const MailSyncPanel = () => {
           {status.polling ? `revisión cada ${status.pollMinutes} min` : "sin revisión automática"}
         </p>
         {!status.dependencies && (
+          <div className="text-xs text-destructive mt-1 space-y-0.5">
+            <p>No se pudieron cargar los módulos de correo en el servidor (Node {status.node}).</p>
+            <p className="font-mono break-all">{status.dependenciesError}</p>
+            <p className="text-muted-foreground">
+              Instálalos en la MISMA carpeta donde corre el API (backend): cd C:\intranet-nueva\backend && npm install imapflow@1 mailparser nodemailer@6 — luego reinicia el servicio.
+            </p>
+          </div>
+        )}
+        {status.dependencies && !status.hasPassword && (
           <p className="text-xs text-destructive mt-1">
-            Falta instalar dependencias en el servidor: npm install imapflow mailparser nodemailer
+            Falta IT_MAIL_PASS en backend/.env (contraseña del buzón).
           </p>
         )}
-        {!status.configured && status.dependencies && (
-          <p className="text-xs text-destructive mt-1">
-            Configura IT_MAIL_* en backend/.env (usuario y contraseña del buzón).
-          </p>
+        {status.dependencies && status.hasPassword && !status.enabled && (
+          <p className="text-xs text-destructive mt-1">IT_MAIL_ENABLED está en false.</p>
         )}
         {last && (
           <p className="text-xs text-muted-foreground mt-1">
@@ -93,10 +123,15 @@ const MailSyncPanel = () => {
           </p>
         )}
       </div>
+      <Button size="sm" variant="secondary" onClick={testConnection} disabled={testing}>
+        <PlugZap className={`h-4 w-4 mr-1.5 ${testing ? "animate-pulse" : ""}`} />
+        Probar conexión
+      </Button>
       <Button size="sm" variant="outline" onClick={sync} disabled={busy || !ready}>
         <RefreshCw className={`h-4 w-4 mr-1.5 ${busy ? "animate-spin" : ""}`} />
         Sincronizar correo
       </Button>
+
     </div>
   );
 };
