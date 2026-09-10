@@ -2,17 +2,18 @@ import { useEffect, useState } from "react";
 import { ticketsApi, type TicketMailStatus, type TicketMailSyncResult } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Mail, RefreshCw, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Mail, RefreshCw, AlertTriangle, CheckCircle2, PlugZap } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 /**
  * Panel de sincronización del buzón tecnologia@safeone.com.do.
  * Visible sólo para el equipo de Tecnología: permite forzar la lectura del
- * correo y ver el estado de la conexión IMAP/SMTP.
+ * correo, probar la conexión IMAP/SMTP y ver el diagnóstico exacto.
  */
 const MailSyncPanel = () => {
   const [status, setStatus] = useState<TicketMailStatus | null>(null);
   const [busy, setBusy] = useState(false);
+  const [testing, setTesting] = useState(false);
   const [last, setLast] = useState<TicketMailSyncResult | null>(null);
 
   const loadStatus = async () => {
@@ -26,6 +27,27 @@ const MailSyncPanel = () => {
   };
 
   useEffect(() => { void loadStatus(); }, []);
+
+  const testConnection = async () => {
+    setTesting(true);
+    try {
+      const r = await ticketsApi.mailTest();
+      toast({
+        title: r.ok ? "Conexión correcta" : "Fallo la conexión",
+        description: `SMTP ${r.smtp ? "OK" : "falla"} · IMAP ${r.imap ? "OK" : "falla"}${r.message ? ` — ${r.message}` : ""}`,
+        variant: r.ok ? "default" : "destructive",
+      });
+      await loadStatus();
+    } catch (e) {
+      toast({
+        title: "Error de prueba",
+        description: e instanceof Error ? e.message : "No se pudo probar la conexión",
+        variant: "destructive",
+      });
+    } finally {
+      setTesting(false);
+    }
+  };
 
   const sync = async () => {
     setBusy(true);
@@ -54,6 +76,7 @@ const MailSyncPanel = () => {
   if (!status) return null;
 
   const ready = status.configured && status.dependencies;
+
 
   return (
     <div className="rounded-lg border border-border bg-card p-4 flex flex-wrap items-center gap-3">
