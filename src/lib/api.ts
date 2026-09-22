@@ -1255,6 +1255,8 @@ export interface GeneralPayslip {
   codigo: string | null;
   cedula: string | null;
   puesto: string | null;
+  /** OID del pago en GENERAL (disponible en Mi Nómina para el desglose completo). */
+  pagoOid?: number | null;
   fechaPago: string | null;
   periodo: number | null;
   mes: number | null;
@@ -2120,5 +2122,15 @@ export const myPayrollApi = {
   payslips: (p?: { ano: number; mes: number; periodo: number }) =>
     apiFetch<MyPayrollPayslipsResponse>(
       `/my-payroll/payslips${p ? `?ano=${p.ano}&mes=${p.mes}&periodo=${p.periodo}` : ""}`
+    ),
+  /** Historial de pagos (sólo empleados dentro de tu alcance). */
+  payments: (codigo?: string) =>
+    apiFetch<GeneralEmployeePayment[]>(
+      `/my-payroll/payments${codigo ? `?codigo=${encodeURIComponent(codigo)}` : ""}`
+    ),
+  /** Desglose completo de un pago, con todos los conceptos (incluye seguros). */
+  paymentDetail: (codigo: string, pagoOid: number) =>
+    apiFetch<GeneralPaymentDetail>(
+      `/my-payroll/payment-detail?codigo=${encodeURIComponent(codigo)}&pagoOid=${pagoOid}`
     ),
 };
