@@ -198,97 +198,104 @@ ORDER BY p.Ano DESC, p.Mes DESC, p.Periodo DESC`);
  * (1 = ingreso, 0 = deducción), igual que el desglose de RRHH → Nómina.
  */
 
-// ─── Comprobantes de pago dentro del alcance ───
+// ─── Comprobantes de pago dentro del alcance (todos los conceptos reales) ───
 router.get('/payslips', auth, async (req, res) => {
   const int = (v) => (v == null || v === '' ? null : Number.parseInt(String(v), 10));
   const ano = int(req.query.ano), mes = int(req.query.mes), periodo = int(req.query.periodo);
   const usarPeriodo = Number.isFinite(ano) && Number.isFinite(mes) && Number.isFinite(periodo);
-  const brackets = (arr) => arr.map((c) => `[${c}]`).join(', ');
-  const sumOf = (arr) => arr.map((c) => `ISNULL([${c}], 0)`).join(' + ');
 
   try {
     const s = await resolveScope(req);
     if (s.level === 'none') {
       return res.json({
         level: s.level, count: 0, items: [],
-        conceptos: { ingresos: PAYSLIP_INCOME, deducciones: PAYSLIP_DEDUCTIONS },
+        conceptos: { ingresos: [], deducciones: [] },
         totals: { devengado: 0, deducciones: 0, neto: 0 },
         message: 'No se encontró tu registro de empleado en GENERAL (verifica cédula o código).',
       });
     }
     const where = scopeClause(s);
 
-    const fuente = usarPeriodo
-      ? `DatosPago AS (
-  SELECT e.NombreCompleto AS Empleado, e.Codigo, e.Cedula, e.Puesto,
-         c.Descripcion AS Concepto,
-         IIF(c.Tipo = 1, pd.Calculado, -pd.Calculado) AS Monto,
-         p.Fecha AS FechaPago, p.Periodo, p.Mes, p.Ano, p.Nomina
-  FROM Empleado e
-  INNER JOIN PagoD pd ON pd.Empleado = e.OID
-  INNER JOIN PagoConcepto pc ON pd.PagoConcepto = pc.OID
-  INNER JOIN Pago p ON pc.Pago = p.OID
-  INNER JOIN Concepto c ON pc.Concepto = c.OID
-  WHERE e.Estatus = 0 AND e.GCRecord IS NULL AND p.GCRecord IS NULL AND pd.Calculado > 0
-    AND ${where}
-    AND p.Ano = ${ano} AND p.Mes = ${mes} AND p.Periodo = ${periodo}
-)`
-      : `UltimoPagoPorEmpleado AS (
-  SELECT pd.Empleado, MAX(p.Fecha) AS UltimaFechaPago, MAX(p.OID) AS UltimoPagoOID
+    const text = usarPeriodo
+      ? `SELECT e.NombreCompleto AS Empleado, e.Codigo, e.Cedula, e.Puesto,
+       p.OID AS PagoOID, p.Fecha AS FechaPago, p.Periodo, p.Mes, p.Ano, p.Nomina,
+       c.Descripcion AS Concepto, c.Tipo, pd.Calculado
+FROM Empleado e
+INNER JOIN PagoD pd ON pd.Empleado = e.OID
+INNER JOIN PagoConcepto pc ON pd.PagoConcepto = pc.OID
+INNER JOIN Pago p ON pc.Pago = p.OID
+INNER JOIN Concepto c ON pc.Concepto = c.OID
+WHERE e.Estatus = 0 AND e.GCRecord IS NULL AND p.GCRecord IS NULL AND pd.Calculado > 0
+  AND ${where}
+  AND p.Ano = ${ano} AND p.Mes = ${mes} AND p.Periodo = ${periodo}
+ORDER BY e.NombreCompleto, c.Tipo DESC, c.Descripcion`
+      : `WITH UltimoPagoPorEmpleado AS (
+  SELECT pd.Empleado, MAX(p.OID) AS UltimoPagoOID
   FROM PagoD pd
   INNER JOIN PagoConcepto pc ON pd.PagoConcepto = pc.OID
   INNER JOIN Pago p ON pc.Pago = p.OID
   WHERE pd.Calculado > 0 AND p.GCRecord IS NULL
   GROUP BY pd.Empleado
-),
-DatosPago AS (
-  SELECT e.NombreCompleto AS Empleado, e.Codigo, e.Cedula, e.Puesto,
-         c.Descripcion AS Concepto,
-         IIF(c.Tipo = 1, pd.Calculado, -pd.Calculado) AS Monto,
-         p.Fecha AS FechaPago, p.Periodo, p.Mes, p.Ano, p.Nomina
-  FROM Empleado e
-  LEFT JOIN UltimoPagoPorEmpleado uppe ON e.OID = uppe.Empleado
-  LEFT JOIN PagoD pd ON pd.Empleado = e.OID AND pd.Pago = uppe.UltimoPagoOID
-  LEFT JOIN PagoConcepto pc ON pd.PagoConcepto = pc.OID
-  LEFT JOIN Pago p ON pc.Pago = p.OID
-  LEFT JOIN Concepto c ON pc.Concepto = c.OID
-  WHERE e.Estatus = 0 AND e.GCRecord IS NULL AND pd.Calculado > 0
-    AND ${where}
-)`;
-
-    const text = `
-WITH ${fuente}
-SELECT Empleado, Codigo, Cedula, Puesto, FechaPago, Periodo, Mes, Ano, Nomina,
-  ${PAYSLIP_INCOME.map((c) => `ISNULL([${c}], 0) AS [${c}]`).join(',\n  ')},
-  ${PAYSLIP_DEDUCTIONS.map((c) => `ISNULL([${c}], 0) AS [${c}]`).join(',\n  ')},
-  ${sumOf(PAYSLIP_INCOME)} AS TotalDevengado,
-  ${sumOf(PAYSLIP_DEDUCTIONS)} AS TotalDeducciones
-FROM DatosPago
-PIVOT (SUM(Monto) FOR Concepto IN (${brackets([...PAYSLIP_INCOME, ...PAYSLIP_DEDUCTIONS])})) AS PivotTable
-ORDER BY Empleado`;
+)
+SELECT e.NombreCompleto AS Empleado, e.Codigo, e.Cedula, e.Puesto,
+       p.OID AS PagoOID, p.Fecha AS FechaPago, p.Periodo, p.Mes, p.Ano, p.Nomina,
+       c.Descripcion AS Concepto, c.Tipo, pd.Calculado
+FROM Empleado e
+INNER JOIN UltimoPagoPorEmpleado uppe ON e.OID = uppe.Empleado
+INNER JOIN PagoD pd ON pd.Empleado = e.OID AND pd.Pago = uppe.UltimoPagoOID
+INNER JOIN PagoConcepto pc ON pd.PagoConcepto = pc.OID
+INNER JOIN Pago p ON pc.Pago = p.OID
+INNER JOIN Concepto c ON pc.Concepto = c.OID
+WHERE e.Estatus = 0 AND e.GCRecord IS NULL AND p.GCRecord IS NULL AND pd.Calculado > 0
+  AND ${where}
+ORDER BY e.NombreCompleto, c.Tipo DESC, c.Descripcion`;
 
     const rows = await sql.query(text);
-    const num = (v) => round2(v);
-    const items = rows.map((r) => {
-      const ingresos = {}; const deducciones = {};
-      PAYSLIP_INCOME.forEach((c) => { ingresos[c] = num(r[c]); });
-      PAYSLIP_DEDUCTIONS.forEach((c) => { deducciones[c] = Math.abs(num(r[c])); });
-      const totalDevengado = num(r.TotalDevengado);
-      const totalDeducciones = Math.abs(num(r.TotalDeducciones));
-      return {
-        empleado: cleanStr(r.Empleado),
-        codigo: cleanStr(r.Codigo),
-        cedula: cleanStr(r.Cedula),
-        fechaPago: r.FechaPago || null,
-        periodo: r.Periodo ?? null,
-        mes: r.Mes ?? null,
-        ano: r.Ano ?? null,
-        nomina: r.Nomina ?? null,
-        ingresos, deducciones,
-        totalDevengado, totalDeducciones,
-        neto: round2(totalDevengado - totalDeducciones),
-      };
-    });
+
+    const byEmp = new Map();
+    const setIngresos = new Set();
+    const setDeducciones = new Set();
+
+    for (const r of rows) {
+      const key = `${r.Codigo ?? ''}-${r.PagoOID}`;
+      if (!byEmp.has(key)) {
+        byEmp.set(key, {
+          empleado: cleanStr(r.Empleado),
+          codigo: cleanStr(r.Codigo),
+          cedula: cleanStr(r.Cedula),
+          puesto: typeof r.Puesto === 'number' ? null : cleanStr(r.Puesto),
+          pagoOid: Number(r.PagoOID) || null,
+          fechaPago: r.FechaPago || null,
+          periodo: r.Periodo ?? null,
+          mes: r.Mes ?? null,
+          ano: r.Ano ?? null,
+          nomina: r.Nomina ?? null,
+          ingresos: {},
+          deducciones: {},
+          totalDevengado: 0,
+          totalDeducciones: 0,
+          neto: 0,
+        });
+      }
+      const it = byEmp.get(key);
+      const concepto = cleanStr(r.Concepto) || 'Otro';
+      const monto = Math.abs(round2(r.Calculado));
+      if (Number(r.Tipo) === 1) {
+        it.ingresos[concepto] = round2((it.ingresos[concepto] || 0) + monto);
+        it.totalDevengado = round2(it.totalDevengado + monto);
+        setIngresos.add(concepto);
+      } else {
+        it.deducciones[concepto] = round2((it.deducciones[concepto] || 0) + monto);
+        it.totalDeducciones = round2(it.totalDeducciones + monto);
+        setDeducciones.add(concepto);
+      }
+    }
+
+    const items = [...byEmp.values()].map((i) => ({
+      ...i,
+      neto: round2(i.totalDevengado - i.totalDeducciones),
+    })).sort((a, b) => String(a.empleado).localeCompare(String(b.empleado), 'es'));
+
     const totals = items.reduce((a, i) => ({
       devengado: a.devengado + i.totalDevengado,
       deducciones: a.deducciones + i.totalDeducciones,
@@ -299,13 +306,105 @@ ORDER BY Empleado`;
       level: s.level,
       deptNombre: s.deptNombre,
       count: items.length,
-      conceptos: { ingresos: PAYSLIP_INCOME, deducciones: PAYSLIP_DEDUCTIONS },
+      conceptos: {
+        ingresos: [...setIngresos].sort((a, b) => a.localeCompare(b, 'es')),
+        deducciones: [...setDeducciones].sort((a, b) => a.localeCompare(b, 'es')),
+      },
       totals: {
         devengado: round2(totals.devengado),
         deducciones: round2(totals.deducciones),
         neto: round2(totals.neto),
       },
       items,
+    });
+  } catch (e) { res.status(502).json({ message: e.message }); }
+});
+
+/** ¿El código de empleado está dentro del alcance del usuario? */
+async function codeInScope(scope, codigo) {
+  const cod = digits(codigo);
+  if (!cod) return false;
+  const rows = await sql.query(
+    `SELECT TOP 1 e.OID FROM Empleado e
+     WHERE e.GCRecord IS NULL AND e.Codigo = ${Number(cod)} AND ${scopeClause(scope)}`
+  );
+  return rows.length > 0;
+}
+
+// ─── Historial de pagos de un empleado dentro del alcance ───
+router.get('/payments', auth, async (req, res) => {
+  try {
+    const s = await resolveScope(req);
+    if (s.level === 'none') return res.json([]);
+    const cod = digits(req.query.codigo) || digits(s.empleado?.Codigo);
+    if (!cod || !(await codeInScope(s, cod))) {
+      return res.status(403).json({ message: 'Fuera de tu alcance de nómina.' });
+    }
+    const rows = await sql.query(`
+SELECT p.OID AS PagoOID, p.Fecha, p.Periodo, p.Mes, p.Ano, p.Nomina,
+  SUM(IIF(c.Tipo = 1, pd.Calculado, 0)) AS TotalDevengado,
+  SUM(IIF(c.Tipo = 0, pd.Calculado, 0)) AS TotalDeducciones,
+  SUM(IIF(c.Tipo = 1, pd.Calculado, -pd.Calculado)) AS Neto,
+  COUNT(DISTINCT pd.OID) AS Conceptos
+FROM PagoD pd
+INNER JOIN PagoConcepto pc ON pd.PagoConcepto = pc.OID
+INNER JOIN Pago p ON pc.Pago = p.OID
+INNER JOIN Concepto c ON pc.Concepto = c.OID
+INNER JOIN Empleado e ON pd.Empleado = e.OID
+WHERE e.Codigo = ${Number(cod)} AND p.GCRecord IS NULL AND pd.Calculado > 0
+GROUP BY p.OID, p.Fecha, p.Periodo, p.Mes, p.Ano, p.Nomina
+ORDER BY p.Ano DESC, p.Mes DESC, p.Periodo DESC`);
+    res.json(rows.map((r) => ({
+      pagoOid: Number(r.PagoOID), fecha: r.Fecha || null,
+      periodo: r.Periodo ?? null, mes: r.Mes ?? null, ano: r.Ano ?? null, nomina: r.Nomina ?? null,
+      descripcion: r.Periodo === 1 ? 'Quincena 1 (1-15)' : 'Quincena 2 (16-fin)',
+      totalDevengado: round2(Number(r.TotalDevengado) || 0),
+      totalDeducciones: round2(Number(r.TotalDeducciones) || 0),
+      neto: round2(Number(r.Neto) || 0),
+      conceptos: Number(r.Conceptos) || 0,
+    })));
+  } catch (e) { res.status(502).json({ message: e.message }); }
+});
+
+// ─── Desglose completo de un pago dentro del alcance ───
+router.get('/payment-detail', auth, async (req, res) => {
+  const pagoOid = Number.parseInt(String(req.query.pagoOid), 10);
+  try {
+    const s = await resolveScope(req);
+    if (s.level === 'none') return res.status(403).json({ message: 'Sin alcance de nómina.' });
+    const cod = digits(req.query.codigo) || digits(s.empleado?.Codigo);
+    if (!cod || !Number.isFinite(pagoOid)) return res.status(400).json({ message: 'codigo y pagoOid requeridos' });
+    if (!(await codeInScope(s, cod))) return res.status(403).json({ message: 'Fuera de tu alcance de nómina.' });
+
+    const rows = await sql.query(`
+SELECT e.NombreCompleto AS Empleado, e.Codigo, e.Cedula, e.Puesto,
+  c.Descripcion AS Concepto, c.Tipo, pd.Valor, pd.Calculado, pd.Comentario,
+  p.Fecha, p.Periodo, p.Mes, p.Ano, p.Nomina
+FROM PagoD pd
+INNER JOIN PagoConcepto pc ON pd.PagoConcepto = pc.OID
+INNER JOIN Pago p ON pc.Pago = p.OID
+INNER JOIN Concepto c ON pc.Concepto = c.OID
+INNER JOIN Empleado e ON pd.Empleado = e.OID
+WHERE e.Codigo = ${Number(cod)} AND p.OID = ${pagoOid} AND p.GCRecord IS NULL AND pd.Calculado > 0
+ORDER BY c.Tipo DESC, c.Descripcion`);
+    const first = rows[0] || {};
+    const lineas = rows.map((r) => ({
+      concepto: cleanStr(r.Concepto),
+      tipo: Number(r.Tipo),
+      valor: Number(r.Valor) || 0,
+      calculado: round2(Number(r.Calculado) || 0),
+      monto: round2(Number(r.Tipo) === 1 ? Number(r.Calculado) || 0 : -(Number(r.Calculado) || 0)),
+      comentario: cleanStr(r.Comentario),
+    }));
+    const devengado = round2(lineas.filter((l) => l.tipo === 1).reduce((a, l) => a + l.calculado, 0));
+    const deducciones = round2(lineas.filter((l) => l.tipo !== 1).reduce((a, l) => a + l.calculado, 0));
+    res.json({
+      empleado: cleanStr(first.Empleado), codigo: cleanStr(first.Codigo), cedula: cleanStr(first.Cedula),
+      puesto: typeof first.Puesto === 'number' ? null : cleanStr(first.Puesto),
+      fecha: first.Fecha || null, periodo: first.Periodo ?? null, mes: first.Mes ?? null,
+      ano: first.Ano ?? null, nomina: first.Nomina ?? null,
+      lineas, totalDevengado: devengado, totalDeducciones: deducciones,
+      neto: round2(devengado - deducciones),
     });
   } catch (e) { res.status(502).json({ message: e.message }); }
 });
