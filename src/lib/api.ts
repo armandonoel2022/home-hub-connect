@@ -1255,6 +1255,8 @@ export interface GeneralPayslip {
   codigo: string | null;
   cedula: string | null;
   puesto: string | null;
+  /** OID del pago en GENERAL (disponible en Mi Nómina para el desglose completo). */
+  pagoOid?: number | null;
   fechaPago: string | null;
   periodo: number | null;
   mes: number | null;
