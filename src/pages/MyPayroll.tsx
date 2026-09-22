@@ -128,8 +128,13 @@ const MyPayroll = () => {
   const printPayslip = async (item: GeneralPayslip) => {
     setPrinting(true);
     try {
+      // Preferimos el desglose real del pago (todos los conceptos, incluidos seguros).
+      let detail: GeneralPaymentDetail | null = null;
+      if (item.pagoOid && item.codigo) {
+        try { detail = await myPayrollApi.paymentDetail(item.codigo, item.pagoOid); } catch { detail = null; }
+      }
       await generateGeneralPayslipPDF(
-        toPaymentDetail(item),
+        detail || toPaymentDetail(item),
         {
           nombre: item.empleado || "—",
           codigo: item.codigo,
