@@ -2121,4 +2121,14 @@ export const myPayrollApi = {
     apiFetch<MyPayrollPayslipsResponse>(
       `/my-payroll/payslips${p ? `?ano=${p.ano}&mes=${p.mes}&periodo=${p.periodo}` : ""}`
     ),
+  /** Historial de pagos (sólo empleados dentro de tu alcance). */
+  payments: (codigo?: string) =>
+    apiFetch<GeneralEmployeePayment[]>(
+      `/my-payroll/payments${codigo ? `?codigo=${encodeURIComponent(codigo)}` : ""}`
+    ),
+  /** Desglose completo de un pago, con todos los conceptos (incluye seguros). */
+  paymentDetail: (codigo: string, pagoOid: number) =>
+    apiFetch<GeneralPaymentDetail>(
+      `/my-payroll/payment-detail?codigo=${encodeURIComponent(codigo)}&pagoOid=${pagoOid}`
+    ),
 };
