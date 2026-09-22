@@ -192,12 +192,11 @@ ORDER BY p.Ano DESC, p.Mes DESC, p.Periodo DESC`);
   } catch (e) { res.status(502).json({ message: e.message }); }
 });
 
-const PAYSLIP_INCOME = [
-  'Salario', 'Horas Normales', 'Horas Extras', 'Horas Nocturnas', 'Horas Disponibles',
-  'Horas Vacaciones', 'Horas por Novedad', 'Novedades Digitadas', 'Horas Extras Digitado',
-  'Horas Nocturnas Digitada', 'Incentivo', 'Almuerzo Digitado', 'Dias Feriados Digitado',
-];
-const PAYSLIP_DEDUCTIONS = ['AFP', 'SFS', 'ISR', 'Comida', 'Prestamo', 'Avance Efectivo', 'Percapita', 'Uniforme'];
+/**
+ * Conceptos DINÁMICOS: no se usa una lista fija (antes faltaban seguros y otros
+ * conceptos). Se leen todos los conceptos reales del pago desde Concepto.Tipo
+ * (1 = ingreso, 0 = deducción), igual que el desglose de RRHH → Nómina.
+ */
 
 // ─── Comprobantes de pago dentro del alcance ───
 router.get('/payslips', auth, async (req, res) => {
