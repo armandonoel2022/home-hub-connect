@@ -50,6 +50,8 @@ const TicketsPage = () => {
     title: "", description: "", category: "" as TicketCategory | "", priority: "Media" as TicketPriority,
     department: user?.department || "", requestedForId: "",
   });
+  const [extName, setExtName] = useState("");
+  const [extEmail, setExtEmail] = useState("");
 
   const isOwner = isTicketsOwner(user) || isITSuper(user);
   const canManage = !!user?.isAdmin || isOwner || isTicketAgent(user, settings);
