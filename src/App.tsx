@@ -79,6 +79,7 @@ import NotFound from "./pages/NotFound";
 import RouteGuard from "@/components/RouteGuard";
 import AnnouncementOverlay from "@/components/AnnouncementOverlay";
 import SurveyOverlay from "@/components/SurveyOverlay";
+import TicketOverlay from "@/components/tickets/TicketOverlay";
 import SurveyPublic from "./pages/SurveyPublic";
 import AssetLookup from "./pages/AssetLookup";
 
@@ -339,6 +340,7 @@ const App = () => {
                 <DeviceRegisterOverlay />
                 <AnnouncementOverlay />
                 <SurveyOverlay />
+                <TicketOverlay />
                 
               </ChatProvider>
             </NotificationProvider>
