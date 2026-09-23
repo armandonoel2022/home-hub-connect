@@ -57,7 +57,7 @@ const MailSyncPanel = () => {
       toast({
         title: r.ok ? "Buzón sincronizado" : "No se pudo sincronizar",
         description: r.ok
-          ? `${r.created?.length || 0} tickets nuevos · ${r.replies?.length || 0} respuestas`
+          ? `${r.created?.length || 0} tickets nuevos · ${r.replies?.length || 0} respuestas${r.message ? ` — ${r.message}` : ""}`
           : r.message,
         variant: r.ok ? "default" : "destructive",
       });

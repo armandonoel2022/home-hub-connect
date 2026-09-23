@@ -227,16 +227,45 @@ async function syncInbox({ limit = 25 } = {}) {
 
   const created = [];
   const replies = [];
-  await client.connect();
-  const lock = await client.getMailboxLock('INBOX');
   try {
+    await client.connect();
+  } catch (e) {
+    return { ok: false, message: `No se pudo conectar al buzón (${c.imapHost}:${c.imapPort}): ${e.message}`, at: new Date().toISOString() };
+  }
+
+  const errors = [];
+  let lock;
+  try {
+    lock = await client.getMailboxLock('INBOX');
+  } catch (e) {
+    await client.logout().catch(() => {});
+    return { ok: false, message: `No se pudo abrir INBOX: ${e.message}`, at: new Date().toISOString() };
+  }
+  try {
+    // IMPORTANTE: search() devuelve números de secuencia salvo que se pida {uid:true}.
     let uids = [];
-    try { uids = await client.search({ seen: false }) || []; } catch { uids = []; }
+    try {
+      uids = (await client.search({ seen: false }, { uid: true })) || [];
+    } catch (e) {
+      errors.push(`Búsqueda de no leídos falló (${e.message}); se usan los últimos mensajes`);
+      try {
+        uids = (await client.search({ all: true }, { uid: true })) || [];
+      } catch (e2) {
+        errors.push(`Búsqueda general falló: ${e2.message}`);
+        uids = [];
+      }
+    }
     uids = uids.slice(-limit);
 
     for (const uid of uids) {
-      const msg = await client.fetchOne(uid, { source: true }, { uid: true });
-      if (!msg) continue;
+      let msg = null;
+      try {
+        msg = await client.fetchOne(String(uid), { source: true }, { uid: true });
+      } catch (e) {
+        errors.push(`No se pudo leer el mensaje ${uid}: ${e.message}`);
+        continue;
+      }
+      if (!msg || !msg.source) continue;
       const mail = await d.simpleParser(msg.source);
       const fromAddr = mail.from?.value?.[0]?.address || '';
       const fromName = mail.from?.value?.[0]?.name || fromAddr;
@@ -246,7 +275,7 @@ async function syncInbox({ limit = 25 } = {}) {
 
       // Ignora correos enviados por el propio buzón (evita bucles con los acuses).
       if (fromAddr.toLowerCase() === c.user.toLowerCase()) {
-        await client.messageFlagsAdd(uid, ['\\Seen'], { uid: true });
+        await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true }).catch(() => {});
         continue;
       }
 
@@ -296,14 +325,26 @@ async function syncInbox({ limit = 25 } = {}) {
         try { await notifyTicketCreated(ticket); } catch { /* el acuse no debe bloquear */ }
       }
 
-      await client.messageFlagsAdd(uid, ['\\Seen'], { uid: true });
+      await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true }).catch((e) => {
+        errors.push(`No se pudo marcar como leído ${uid}: ${e.message}`);
+      });
     }
+  } catch (e) {
+    errors.push(e.message);
   } finally {
-    lock.release();
+    try { lock.release(); } catch { /* noop */ }
     await client.logout().catch(() => {});
   }
 
-  return { ok: true, created, replies, count: created.length + replies.length, at: new Date().toISOString() };
+  return {
+    ok: true,
+    created,
+    replies,
+    count: created.length + replies.length,
+    warnings: errors,
+    message: errors.length ? errors.join(' | ') : undefined,
+    at: new Date().toISOString(),
+  };
 }
 
 // ─── Estado y polling automático ───
