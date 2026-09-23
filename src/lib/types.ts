@@ -314,15 +314,18 @@ export interface IntranetUser {
 }
 
 export const TICKET_CATEGORIES: TicketCategory[] = [
-  "Red",
-  "Asignación de Equipos (Nuevos)",
-  "Asignación de Equipos (Existentes)",
-  "Movimientos de Equipos",
-  "Instalación de Software",
-  "Impresión",
-  "Asignación de Flotas",
-  "Problemas con Datos de Flota",
-  "Otros",
+  "Impresora",
+  "Redes",
+  "Mover equipo",
+  "Configurar laptop",
+  "Carpeta de red",
+  "Alta de usuario (RRHH)",
+  "Baja de usuario (RRHH)",
+  "Correo",
+  "Software / Intranet",
+  "Hardware",
+  "Flotilla",
+  "Soporte General",
 ];
 
 export const SLA_MAP: Record<TicketPriority, number> = {
