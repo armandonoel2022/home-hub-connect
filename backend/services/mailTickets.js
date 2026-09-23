@@ -325,14 +325,26 @@ async function syncInbox({ limit = 25 } = {}) {
         try { await notifyTicketCreated(ticket); } catch { /* el acuse no debe bloquear */ }
       }
 
-      await client.messageFlagsAdd(uid, ['\\Seen'], { uid: true });
+      await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true }).catch((e) => {
+        errors.push(`No se pudo marcar como leído ${uid}: ${e.message}`);
+      });
     }
+  } catch (e) {
+    errors.push(e.message);
   } finally {
-    lock.release();
+    try { lock.release(); } catch { /* noop */ }
     await client.logout().catch(() => {});
   }
 
-  return { ok: true, created, replies, count: created.length + replies.length, at: new Date().toISOString() };
+  return {
+    ok: true,
+    created,
+    replies,
+    count: created.length + replies.length,
+    warnings: errors,
+    message: errors.length ? errors.join(' | ') : undefined,
+    at: new Date().toISOString(),
+  };
 }
 
 // ─── Estado y polling automático ───
