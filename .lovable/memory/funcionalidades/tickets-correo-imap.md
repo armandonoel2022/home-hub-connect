@@ -15,3 +15,10 @@ Flujo bidireccional (`backend/services/mailTickets.js`):
 - Salida: acuse al crear, notificación al cambiar de estado y `POST /api/tickets/:id/reply` para responder desde la intranet.
 - Polling automático cada `IT_MAIL_POLL_MINUTES` (5 por defecto) + botón "Sincronizar correo" en Tickets IT (`MailSyncPanel`, visible sólo para Tecnología).
 - Búsqueda IMAP por UID (`search({seen:false},{uid:true})`) con fallback `{all:true}`; errores reportados como warnings detallados.
+
+Flujo de estados (2026-09-23): Recibido por Tecnología → Asignado a: <técnico> (por defecto Armando Noel, anoel@) → En Progreso → En Espera (razón obligatoria) → Cerrado - Resuelto / Cerrado - No Resuelto (notas obligatorias).
+- Correos al usuario SOLO: Recibido (al crear), En Espera y Cerrado. Nunca pedir que responda al correo (crearía tickets nuevos).
+- Rebotes/auto-respuestas (mailer-daemon, "Mail delivery failed") se ignoran.
+- Overlays exclusivos: soporte (técnico asignado) y solicitante (cambios de sus tickets).
+- anoel@ tiene Dashboard (semana/mes/trimestre/año, exportable) y designa técnicos (`ticket-settings.json`).
+- Tipos con ícono: Impresora, Redes, Mover equipo, Configurar laptop, Carpeta de red, Alta/Baja de usuario (RRHH), etc.
