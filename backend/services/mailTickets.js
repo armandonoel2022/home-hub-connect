@@ -275,7 +275,7 @@ async function syncInbox({ limit = 25 } = {}) {
 
       // Ignora correos enviados por el propio buzón (evita bucles con los acuses).
       if (fromAddr.toLowerCase() === c.user.toLowerCase()) {
-        await client.messageFlagsAdd(uid, ['\\Seen'], { uid: true });
+        await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true }).catch(() => {});
         continue;
       }
 
