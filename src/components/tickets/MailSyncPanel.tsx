@@ -6,7 +6,7 @@ import { Mail, RefreshCw, AlertTriangle, CheckCircle2, PlugZap } from "lucide-re
 import { toast } from "@/hooks/use-toast";
 
 /**
- * Panel de sincronización del buzón tecnologia@safeone.com.do.
+ * Panel de sincronización del buzón ticketsit@safeone.com.do.
  * Visible sólo para el equipo de Tecnología: permite forzar la lectura del
  * correo, probar la conexión IMAP/SMTP y ver el diagnóstico exacto.
  */
