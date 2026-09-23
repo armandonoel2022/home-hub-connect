@@ -223,12 +223,7 @@ async function syncInbox({ limit = 25 } = {}) {
   if (!d.ok) return { ok: false, message: `Faltan dependencias: ${d.error}. Ejecuta: npm i imapflow mailparser nodemailer` };
 
   const c = config();
-  const client = new d.ImapFlow({
-    host: c.imapHost, port: c.imapPort, secure: true,
-    auth: { user: c.user, pass: c.pass },
-    tls: { rejectUnauthorized: false },
-    logger: false,
-  });
+  const client = makeImapClient(d, c);
 
   const created = [];
   const replies = [];
