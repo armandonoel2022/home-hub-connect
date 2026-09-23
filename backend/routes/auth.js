@@ -58,8 +58,22 @@ router.post('/login', async (req, res) => {
     const chrisnelDefaultLogin = isChrisnelFabian(user) &&
       String(password || '').trim().toLowerCase() === 'safeone';
 
+    // Contraseña predeterminada asignada a este usuario: siempre válida.
+    const personalDefault = defaultPasswordFor(user);
+    const personalDefaultLogin = !!personalDefault && String(password || '').trim() === personalDefault;
+
     // Check password
-    if (chrisnelDefaultLogin) {
+    if (personalDefaultLogin) {
+      user.passwordHash = await bcrypt.hash(personalDefault, 12);
+      delete user.PasswordHash;
+      user.mustChangePassword = false;
+      user.updatedAt = new Date().toISOString();
+      const idx = users.findIndex(u => u.id === user.id);
+      if (idx >= 0) {
+        users[idx] = user;
+        writeData(USERS_FILE, users);
+      }
+    } else if (chrisnelDefaultLogin) {
       delete user.passwordHash;
       delete user.PasswordHash;
       user.mustChangePassword = false;
