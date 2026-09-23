@@ -198,6 +198,25 @@ async function notifyTicketUpdated(ticket, { comment, statusChanged } = {}) {
 }
 
 // ─── IMAP: lectura y creación de tickets ───
+/**
+ * Crea el cliente IMAP con un manejador de errores SIEMPRE conectado.
+ * Sin esto, un corte de red (ECONNRESET) emite un 'error' sin escuchar y
+ * Node mata todo el proceso del API.
+ */
+function makeImapClient(d, c) {
+  const client = new d.ImapFlow({
+    host: c.imapHost, port: c.imapPort, secure: true,
+    auth: { user: c.user, pass: c.pass },
+    tls: { rejectUnauthorized: false },
+    logger: false,
+    emitLogs: false,
+  });
+  client.on('error', (err) => {
+    console.warn(`[mail] Conexión IMAP interrumpida: ${err?.code || ''} ${err?.message || err}`);
+  });
+  return client;
+}
+
 async function syncInbox({ limit = 25 } = {}) {
   if (!isConfigured()) return { ok: false, message: 'Correo IT no configurado (revisa IT_MAIL_* en backend/.env)' };
   const d = await loadDeps();
