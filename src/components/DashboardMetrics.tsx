@@ -28,7 +28,7 @@ const DashboardMetrics = () => {
       hiringRequestsApi.getAll().catch(() => []),
     ]).then(([tickets, purchases, hiring]) => {
       setMetrics({
-        ticketsOpen: tickets.filter((t: any) => t.status === "Abierto" || t.status === "En Progreso").length,
+        ticketsOpen: tickets.filter((t: any) => !/cerrad|resuelt/i.test(String(t.status || ""))).length,
         ticketsTotal: tickets.length,
         purchasesPending: purchases.filter((p: any) => p.status === "Pendiente" || p.status === "pending").length,
         purchasesTotal: purchases.length,

@@ -189,6 +189,14 @@ export const ticketsApi = {
       `/tickets/${id}/reply`,
       { method: "POST", body: JSON.stringify({ message }) }
     ),
+  /** Técnicos designados por anoel@safeone.com.do */
+  getSettings: () =>
+    apiFetch<{ agents: { id?: string; email: string; name: string }[] }>("/tickets/settings"),
+  saveSettings: (data: { agents: { id?: string; email: string; name: string }[] }) =>
+    apiFetch<{ agents: { id?: string; email: string; name: string }[] }>("/tickets/settings", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
 };
 
 export interface TicketMailTestResult {

@@ -36,9 +36,10 @@ function config() {
     imapPort: Number(env('IT_IMAP_PORT', 993)),
     smtpHost: env('IT_SMTP_HOST', 'mail.safeone.com.do'),
     smtpPort: Number(env('IT_SMTP_PORT', 465)),
-    pollMinutes: Number(env('IT_MAIL_POLL_MINUTES', 5)),
+    pollMinutes: Number(env('IT_MAIL_POLL_MINUTES', 1)),
     department: env('IT_MAIL_DEPARTMENT', 'Tecnología y Monitoreo'),
     assignee: env('IT_MAIL_ASSIGNEE', 'Armando Noel'),
+    assigneeEmail: env('IT_MAIL_ASSIGNEE_EMAIL', 'anoel@safeone.com.do'),
   };
 }
 
@@ -105,12 +106,28 @@ function detectPriority(text) {
 
 function detectCategory(text) {
   const t = String(text || '').toLowerCase();
-  if (/(impres|toner|scanner|escáner)/.test(t)) return 'Impresoras';
+  if (/(dar de alta|alta de usuario|nuevo usuario|nuevo empleado|crear usuario|crear cuenta|ingreso de personal)/.test(t)) return 'Alta de usuario (RRHH)';
+  if (/(dar de baja|baja de usuario|desactivar usuario|desvincula|renuncia|cancelar cuenta|salida de personal)/.test(t)) return 'Baja de usuario (RRHH)';
+  if (/(impres|toner|tóner|scanner|escáner|escaner)/.test(t)) return 'Impresora';
+  if (/(carpeta de red|carpeta compartida|unidad de red|mapear|acceso a carpeta)/.test(t)) return 'Carpeta de red';
+  if (/(mover|mudar|traslad|reubicar|cambiar de lugar)/.test(t)) return 'Mover equipo';
+  if (/(laptop|portátil|portatil)/.test(t)) return 'Configurar laptop';
   if (/(correo|outlook|email|buzón|buzon)/.test(t)) return 'Correo';
-  if (/(red|internet|wifi|vpn|cableado)/.test(t)) return 'Redes';
-  if (/(laptop|computadora|pc|monitor|teclado|mouse|equipo)/.test(t)) return 'Hardware';
-  if (/(sistema|intranet|aplicación|aplicacion|software|licencia)/.test(t)) return 'Software';
+  if (/(red|internet|wifi|wi-fi|vpn|cableado|conexión|conexion)/.test(t)) return 'Redes';
+  if (/(sistema|intranet|aplicación|aplicacion|software|licencia|programa)/.test(t)) return 'Software / Intranet';
+  if (/(computadora|pc|monitor|teclado|mouse|equipo)/.test(t)) return 'Hardware';
   return 'Soporte General';
+}
+
+/** Rebotes y respuestas automáticas: nunca deben crear tickets. */
+function isAutomated(mail, fromAddr, subject) {
+  const f = String(fromAddr || '').toLowerCase();
+  const s = String(subject || '').toLowerCase();
+  if (/(mailer-daemon|postmaster|no-?reply|noreply|bounce)/.test(f)) return true;
+  if (/(mail delivery (failed|system)|undeliverable|delivery status notification|returned mail|failure notice|respuesta automática|automatic reply|out of office|fuera de la oficina)/.test(s)) return true;
+  const h = mail.headers;
+  const auto = h && typeof h.get === 'function' ? String(h.get('auto-submitted') || '') : '';
+  return !!auto && auto.toLowerCase() !== 'no';
 }
 
 const stripRe = (s) => String(s || '').replace(/^\s*((re|rv|fwd|fw)\s*:\s*)+/i, '').trim();
@@ -149,7 +166,8 @@ function wrapHtml(title, bodyHtml) {
     ${bodyHtml}
   </div>
   <div style="padding:12px 18px;background:#f4f4f5;font-size:12px;color:#6b7280">
-    Responde a este correo para agregar información al ticket. Mantén la referencia del asunto.
+    Puedes dar seguimiento a tu ticket en la Intranet SafeOne → Tickets IT. Te avisaremos por correo cuando cambie de estado.
+    Para una nueva solicitud, envía un correo nuevo; no respondas a este mensaje.
   </div>
 </div>`;
 }
@@ -172,8 +190,9 @@ async function notifyTicketCreated(ticket) {
   return sendMail({
     to: ticket.requesterEmail,
     subject: subjectFor(ticket, 'Ticket recibido'),
-    html: wrapHtml('Hemos recibido tu solicitud', `
+    html: wrapHtml('Recibido por el Departamento de Tecnología', `
       <p>Hola ${ticket.createdBy || ''}, tu solicitud fue registrada como <b>${ticket.id}</b>.</p>
+      <p>Estado: <b>Recibido por Tecnología</b></p>
       <table style="font-size:14px;border-collapse:collapse">
         <tr><td style="padding:4px 10px 4px 0;color:#6b7280">Asunto</td><td>${ticket.title}</td></tr>
         <tr><td style="padding:4px 10px 4px 0;color:#6b7280">Categoría</td><td>${ticket.category}</td></tr>
@@ -183,17 +202,22 @@ async function notifyTicketCreated(ticket) {
   });
 }
 
-async function notifyTicketUpdated(ticket, { comment, statusChanged } = {}) {
+async function notifyTicketUpdated(ticket, { comment } = {}) {
   if (!ticket?.requesterEmail) return { sent: false, reason: 'Ticket sin correo del solicitante' };
-  const closed = /cerrad|resuelt/i.test(String(ticket.status || ''));
-  const title = closed ? 'Tu ticket fue cerrado' : 'Actualización de tu ticket';
+  const status = String(ticket.status || '');
+  const closed = /cerrad|resuelt/i.test(status);
+  const onHold = /espera/i.test(status);
+  const unresolved = /no resuelt/i.test(status);
+  const title = closed ? (unresolved ? 'Tu ticket fue cerrado (no resuelto)' : 'Tu ticket fue cerrado') : onHold ? 'Tu ticket está en espera' : 'Actualización de tu ticket';
+  const note = closed ? ticket.closingNotes : onHold ? ticket.holdReason : null;
   return sendMail({
     to: ticket.requesterEmail,
-    subject: subjectFor(ticket, closed ? 'Ticket cerrado' : 'Actualización'),
+    subject: subjectFor(ticket, closed ? 'Ticket cerrado' : onHold ? 'Ticket en espera' : 'Actualización'),
     html: wrapHtml(title, `
       <p>Ticket <b>${ticket.id}</b> — ${ticket.title}</p>
-      ${statusChanged ? `<p>Nuevo estado: <b>${ticket.status}</b></p>` : ''}
-      ${comment ? `<p style="background:#f9fafb;border-left:3px solid #d4af37;padding:8px 12px">${comment}</p>` : ''}`),
+      <p>Estado: <b>${status}</b>${ticket.assignedTo ? ` · Atendido por <b>${ticket.assignedTo}</b>` : ''}</p>
+      ${note ? `<p style="background:#f9fafb;border-left:3px solid #d4af37;padding:8px 12px"><b>${closed ? 'Notas del encargado' : 'Acción requerida / motivo'}:</b><br>${String(note).replace(/</g, '&lt;')}</p>` : ''}
+      ${comment ? `<p style="background:#f9fafb;border-left:3px solid #d4af37;padding:8px 12px">${String(comment).replace(/</g, '&lt;')}</p>` : ''}`),
   });
 }
 
@@ -279,6 +303,11 @@ async function syncInbox({ limit = 25 } = {}) {
         continue;
       }
 
+      if (isAutomated(mail, fromAddr, mail.subject)) {
+        await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true }).catch(() => {});
+        continue;
+      }
+
       const tickets = readData(TICKETS_FILE) || [];
       const ref = ticketRefFrom(mail.subject);
       const existing = ref ? tickets.find((t) => String(t.id).toUpperCase() === ref) : null;
@@ -305,10 +334,12 @@ async function syncInbox({ limit = 25 } = {}) {
           description: body.slice(0, 8000),
           category: detectCategory(`${subject} ${body}`),
           priority,
-          status: 'Abierto',
+          status: 'Recibido por Tecnología',
           createdBy: fromName,
           requesterEmail: fromAddr,
           assignedTo: c.assignee,
+          assignedToEmail: c.assigneeEmail,
+          history: [{ status: 'Recibido por Tecnología', at: now.toISOString(), by: 'Correo' }],
           department: c.department,
           createdAt: now.toISOString(),
           updatedAt: now.toISOString(),

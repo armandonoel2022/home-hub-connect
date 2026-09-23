@@ -85,7 +85,9 @@ export function useTickets() {
     queryKey: ["tickets"],
     queryFn: () => (apiMode ? ticketsApi.getAll() : Promise.resolve(localData)),
     initialData: apiMode ? undefined : localData,
-    staleTime: apiMode ? 30_000 : Infinity,
+    staleTime: apiMode ? 20_000 : Infinity,
+    // Refresca solo para que los tickets que llegan por correo aparezcan sin pulsar "Sincronizar"
+    refetchInterval: apiMode ? 30_000 : false,
   });
 
   const createMutation = useMutation({
