@@ -355,9 +355,13 @@ async function startPolling() {
     if (!d.ok) console.warn('[mail] dependencias no disponibles:', d.error);
     return false;
   }
+  let running = false;
   const run = async () => {
+    if (running) return; // evita solapar sincronizaciones lentas
+    running = true;
     try { _last = await syncInbox(); }
     catch (e) { _last = { ok: false, message: e.message, at: new Date().toISOString() }; }
+    finally { running = false; }
   };
   _timer = setInterval(run, c.pollMinutes * 60 * 1000);
   run();
