@@ -50,6 +50,8 @@ const TicketsPage = () => {
     title: "", description: "", category: "" as TicketCategory | "", priority: "Media" as TicketPriority,
     department: user?.department || "", requestedForId: "",
   });
+  const [extName, setExtName] = useState("");
+  const [extEmail, setExtEmail] = useState("");
 
   const isOwner = isTicketsOwner(user) || isITSuper(user);
   const canManage = !!user?.isAdmin || isOwner || isTicketAgent(user, settings);
@@ -72,24 +74,33 @@ const TicketsPage = () => {
 
   const handleCreate = async () => {
     if (!form.title || !form.category || !form.department) return;
+    const external = form.requestedForId === "__external";
+    if (external && (!extName.trim() || !/^\S+@\S+\.\S+$/.test(extEmail.trim()))) {
+      window.alert("Indica el nombre y un correo válido de la persona.");
+      return;
+    }
     const now = new Date().toISOString();
     const slaHours = SLA_MAP[form.priority];
-    const requestedFor = form.requestedForId ? allUsers.find((u) => u.id === form.requestedForId) : null;
-    const requester = requestedFor || user;
+    const requestedFor = form.requestedForId && !external ? allUsers.find((u) => u.id === form.requestedForId) : null;
+    const requester = external
+      ? { fullName: extName.trim(), id: undefined, email: extEmail.trim() }
+      : (requestedFor || user);
     try {
       await createTicket({
         title: form.title, description: form.description, category: form.category as TicketCategory,
         priority: form.priority, status: "Recibido por Tecnología",
         createdBy: requester?.fullName || "Usuario", createdById: requester?.id,
         requesterEmail: requester?.email,
+        ...(requester?.id !== user?.id ? { openedBy: user?.fullName } : {}),
         assignedTo: DEFAULT_ASSIGNEE.name, assignedToEmail: DEFAULT_ASSIGNEE.email,
         department: form.department, createdAt: now, updatedAt: now, slaHours,
         slaDeadline: new Date(Date.now() + slaHours * 3600000).toISOString(),
         attachments: [], comments: [],
         history: [{ status: "Recibido por Tecnología", at: now, by: user?.fullName || "Intranet" }],
         source: "intranet",
-      });
+      } as Omit<Ticket, "id">);
       setShowCreate(false);
+      setExtName(""); setExtEmail("");
       setForm({ title: "", description: "", category: "", priority: "Media", department: user?.department || "", requestedForId: "" });
     } catch (error) {
       console.error("Error creando ticket:", error);
@@ -274,17 +285,27 @@ const TicketsPage = () => {
                 </div>
                 {canManage && (
                   <div>
-                    <label className="text-sm font-medium text-card-foreground block mb-1.5">Solicitar a nombre de</label>
+                    <label className="text-sm font-medium text-card-foreground block mb-1.5">Nuevo ticket para</label>
                     <select value={form.requestedForId} className={inputCls}
                       onChange={(e) => {
                         const su = allUsers.find((u) => u.id === e.target.value);
                         setForm({ ...form, requestedForId: e.target.value, department: su?.department || form.department });
                       }}>
                       <option value="">Yo mismo ({user?.fullName})</option>
+                      <option value="__external">Otra persona (no es usuario de la intranet)</option>
                       {allUsers.filter((u) => u.id !== user?.id).map((u) => (
                         <option key={u.id} value={u.id}>{u.fullName} — {u.department}</option>
                       ))}
                     </select>
+                    {form.requestedForId === "__external" && (
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        <input type="text" placeholder="Nombre completo *" value={extName} onChange={(e) => setExtName(e.target.value)} className={inputCls} />
+                        <input type="email" placeholder="Correo *" value={extEmail} onChange={(e) => setExtEmail(e.target.value)} className={inputCls} />
+                      </div>
+                    )}
+                    {form.requestedForId && (
+                      <p className="text-xs text-muted-foreground mt-1">Los correos del ticket se enviarán a esta persona.</p>
+                    )}
                   </div>
                 )}
                 <div>
