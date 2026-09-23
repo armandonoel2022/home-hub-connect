@@ -35,6 +35,24 @@ router.post('/mail/sync', auth, async (req, res) => {
   } catch (e) { res.status(502).json({ message: e.message }); }
 });
 
+// ─── Técnicos designados (solo anoel@safeone.com.do / TI) ───
+const SETTINGS_FILE = 'ticket-settings.json';
+const OWNER_EMAILS = ['anoel@safeone.com.do', 'tecnologia@safeone.com.do'];
+router.get('/settings', auth, (req, res) => {
+  const s = readData(SETTINGS_FILE);
+  res.json(s && !Array.isArray(s) ? s : { agents: [] });
+});
+router.put('/settings', auth, (req, res) => {
+  const email = String(req.user?.email || '').toLowerCase();
+  if (!OWNER_EMAILS.includes(email)) return res.status(403).json({ message: 'Solo el responsable de Tecnología puede designar técnicos' });
+  const agents = (Array.isArray(req.body?.agents) ? req.body.agents : [])
+    .filter((a) => a && a.email)
+    .map((a) => ({ id: a.id ? String(a.id) : undefined, email: String(a.email).trim(), name: String(a.name || a.email).trim() }));
+  const data = { agents, updatedAt: new Date().toISOString(), updatedBy: email };
+  writeData(SETTINGS_FILE, data);
+  res.json(data);
+});
+
 // Responder al solicitante por correo (queda registrado como comentario)
 router.post('/:id/reply', auth, async (req, res) => {
   const { message } = req.body || {};
@@ -73,9 +91,11 @@ router.use((req, res, next) => {
   res.json = (body) => {
     if (body && body.id && body.requesterEmail) {
       const statusChanged = !!prev && prev.status !== body.status;
+      // Correos al usuario: solo "Recibido", "En Espera" y cierre.
+      const notifiable = /espera|cerrad|resuelt/i.test(String(body.status || ''));
       const p = isCreate
         ? mail.notifyTicketCreated(body)
-        : (statusChanged ? mail.notifyTicketUpdated(body, { statusChanged: true }) : null);
+        : (statusChanged && notifiable ? mail.notifyTicketUpdated(body, { statusChanged: true }) : null);
       if (p) Promise.resolve(p).catch(() => {});
     }
     return json(body);
