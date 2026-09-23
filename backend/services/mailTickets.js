@@ -1,7 +1,7 @@
 /**
  * Integración de correo (IMAP + SMTP) para los Tickets de IT.
  *
- * Buzón: tecnologia@safeone.com.do
+ * Buzón: ticketsit@safeone.com.do
  *   IMAP  mail.safeone.com.do:993 (SSL)
  *   SMTP  mail.safeone.com.do:465 (SSL)
  *
@@ -30,7 +30,7 @@ const env = (k, d) => {
 function config() {
   return {
     enabled: String(env('IT_MAIL_ENABLED', 'true')).toLowerCase() !== 'false',
-    user: env('IT_MAIL_USER', 'tecnologia@safeone.com.do'),
+    user: env('IT_MAIL_USER', 'ticketsit@safeone.com.do'),
     pass: env('IT_MAIL_PASS', ''),
     imapHost: env('IT_IMAP_HOST', 'mail.safeone.com.do'),
     imapPort: Number(env('IT_IMAP_PORT', 993)),
