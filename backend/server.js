@@ -7,6 +7,16 @@ const { ensureDirs } = require('./config/fileStorage');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// ─── Red de seguridad: el API nunca debe morir por un error suelto ───
+// (p. ej. ECONNRESET del buzón IMAP o de SQL Server)
+process.on('uncaughtException', (err) => {
+  console.error(`⚠️  Excepción no controlada (${err?.code || 'sin código'}): ${err?.message}`);
+  if (err?.stack) console.error(err.stack);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('⚠️  Promesa rechazada sin manejar:', reason?.message || reason);
+});
+
 // Ensure data directories exist
 ensureDirs();
 

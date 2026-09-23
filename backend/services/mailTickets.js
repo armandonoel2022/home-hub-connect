@@ -198,18 +198,32 @@ async function notifyTicketUpdated(ticket, { comment, statusChanged } = {}) {
 }
 
 // ─── IMAP: lectura y creación de tickets ───
+/**
+ * Crea el cliente IMAP con un manejador de errores SIEMPRE conectado.
+ * Sin esto, un corte de red (ECONNRESET) emite un 'error' sin escuchar y
+ * Node mata todo el proceso del API.
+ */
+function makeImapClient(d, c) {
+  const client = new d.ImapFlow({
+    host: c.imapHost, port: c.imapPort, secure: true,
+    auth: { user: c.user, pass: c.pass },
+    tls: { rejectUnauthorized: false },
+    logger: false,
+    emitLogs: false,
+  });
+  client.on('error', (err) => {
+    console.warn(`[mail] Conexión IMAP interrumpida: ${err?.code || ''} ${err?.message || err}`);
+  });
+  return client;
+}
+
 async function syncInbox({ limit = 25 } = {}) {
   if (!isConfigured()) return { ok: false, message: 'Correo IT no configurado (revisa IT_MAIL_* en backend/.env)' };
   const d = await loadDeps();
   if (!d.ok) return { ok: false, message: `Faltan dependencias: ${d.error}. Ejecuta: npm i imapflow mailparser nodemailer` };
 
   const c = config();
-  const client = new d.ImapFlow({
-    host: c.imapHost, port: c.imapPort, secure: true,
-    auth: { user: c.user, pass: c.pass },
-    tls: { rejectUnauthorized: false },
-    logger: false,
-  });
+  const client = makeImapClient(d, c);
 
   const created = [];
   const replies = [];
@@ -326,11 +340,7 @@ async function testConnection() {
   try { await (await transport()).verify(); out.smtp = true; }
   catch (e) { out.errors.push(`SMTP: ${e.message}`); }
   try {
-    const client = new d.ImapFlow({
-      host: c.imapHost, port: c.imapPort, secure: true,
-      auth: { user: c.user, pass: c.pass },
-      tls: { rejectUnauthorized: false }, logger: false,
-    });
+    const client = makeImapClient(d, c);
     await client.connect();
     await client.logout().catch(() => {});
     out.imap = true;
@@ -345,9 +355,13 @@ async function startPolling() {
     if (!d.ok) console.warn('[mail] dependencias no disponibles:', d.error);
     return false;
   }
+  let running = false;
   const run = async () => {
+    if (running) return; // evita solapar sincronizaciones lentas
+    running = true;
     try { _last = await syncInbox(); }
     catch (e) { _last = { ok: false, message: e.message, at: new Date().toISOString() }; }
+    finally { running = false; }
   };
   _timer = setInterval(run, c.pollMinutes * 60 * 1000);
   run();
