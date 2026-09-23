@@ -10,7 +10,7 @@
  */
 const express = require('express');
 const auth = require('../middleware/auth');
-const { readData, writeData } = require('../config/database');
+const { readData, writeData, generateId } = require('../config/database');
 const { createCrudRoutes } = require('../helpers/crud');
 const mail = require('../services/mailTickets');
 
@@ -78,29 +78,55 @@ router.post('/:id/reply', auth, async (req, res) => {
 });
 
 // ─── Notificaciones automáticas sobre el CRUD ───
-router.use((req, res, next) => {
-  const isCreate = req.method === 'POST' && req.path === '/';
-  const isUpdate = req.method === 'PUT';
-  if (!isCreate && !isUpdate) return next();
+/** Resuelve el correo del solicitante (campo propio o usuario de la intranet). */
+function resolveRequesterEmail(t) {
+  if (t.requesterEmail) return t.requesterEmail;
+  const users = readData('users.json') || [];
+  const u = users.find((x) => (t.createdById && x.id === t.createdById) ||
+    (t.createdBy && String(x.fullName || x.name || '').toLowerCase() === String(t.createdBy).toLowerCase()));
+  return u?.email || null;
+}
 
-  const prev = isUpdate
-    ? (readData(TICKETS_FILE) || []).find((t) => `/${t.id}` === req.path)
-    : null;
+// Crear ticket (acuse "Recibido" al solicitante)
+router.post('/', auth, (req, res) => {
+  const tickets = readData(TICKETS_FILE) || [];
+  const now = new Date().toISOString();
+  const ticket = { ...req.body, id: generateId('TK', tickets), createdAt: req.body?.createdAt || now, updatedAt: now };
+  ticket.requesterEmail = resolveRequesterEmail(ticket) || undefined;
+  tickets.push(ticket);
+  writeData(TICKETS_FILE, tickets);
+  res.status(201).json(ticket);
+  if (ticket.requesterEmail) {
+    mail.notifyTicketCreated(ticket)
+      .then((r) => console.log(`[mail] Acuse ${ticket.id} → ${ticket.requesterEmail}:`, r?.sent ? 'enviado' : r?.reason))
+      .catch((e) => console.warn(`[mail] Acuse ${ticket.id} falló: ${e.message}`));
+  }
+});
 
-  const json = res.json.bind(res);
-  res.json = (body) => {
-    if (body && body.id && body.requesterEmail) {
-      const statusChanged = !!prev && prev.status !== body.status;
-      // Correos al usuario: solo "Recibido", "En Espera" y cierre.
-      const notifiable = /espera|cerrad|resuelt/i.test(String(body.status || ''));
-      const p = isCreate
-        ? mail.notifyTicketCreated(body)
-        : (statusChanged && notifiable ? mail.notifyTicketUpdated(body, { statusChanged: true }) : null);
-      if (p) Promise.resolve(p).catch(() => {});
+// Actualizar ticket (correo en "En Espera" y en cierre)
+router.put('/:id', auth, async (req, res) => {
+  const tickets = readData(TICKETS_FILE) || [];
+  const idx = tickets.findIndex((t) => t.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ message: 'No encontrado' });
+  const prev = tickets[idx];
+  const next = { ...prev, ...req.body, updatedAt: new Date().toISOString() };
+  next.requesterEmail = resolveRequesterEmail(next) || undefined;
+  tickets[idx] = next;
+  writeData(TICKETS_FILE, tickets);
+
+  const statusChanged = prev.status !== next.status;
+  const notifiable = /espera|cerrad|resuelt/i.test(String(next.status || ''));
+  let mailResult = null;
+  if (statusChanged && notifiable) {
+    if (!next.requesterEmail) {
+      mailResult = { sent: false, reason: 'El ticket no tiene correo del solicitante' };
+    } else {
+      try { mailResult = await mail.notifyTicketUpdated(next); }
+      catch (e) { mailResult = { sent: false, reason: e.message }; }
     }
-    return json(body);
-  };
-  next();
+    console.log(`[mail] ${next.id} "${next.status}" → ${next.requesterEmail || '(sin correo)'}:`, mailResult.sent ? 'enviado' : mailResult.reason);
+  }
+  res.json(mailResult ? { ...next, _mail: mailResult } : next);
 });
 
 router.use('/', createCrudRoutes(TICKETS_FILE, 'TK'));
