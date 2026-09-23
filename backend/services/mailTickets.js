@@ -340,11 +340,7 @@ async function testConnection() {
   try { await (await transport()).verify(); out.smtp = true; }
   catch (e) { out.errors.push(`SMTP: ${e.message}`); }
   try {
-    const client = new d.ImapFlow({
-      host: c.imapHost, port: c.imapPort, secure: true,
-      auth: { user: c.user, pass: c.pass },
-      tls: { rejectUnauthorized: false }, logger: false,
-    });
+    const client = makeImapClient(d, c);
     await client.connect();
     await client.logout().catch(() => {});
     out.imap = true;
