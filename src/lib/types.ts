@@ -1,4 +1,17 @@
 export type TicketCategory =
+  | "Impresora"
+  | "Redes"
+  | "Mover equipo"
+  | "Configurar laptop"
+  | "Carpeta de red"
+  | "Alta de usuario (RRHH)"
+  | "Baja de usuario (RRHH)"
+  | "Correo"
+  | "Software / Intranet"
+  | "Hardware"
+  | "Flotilla"
+  | "Soporte General"
+  // Categorías anteriores (tickets existentes)
   | "Red"
   | "Asignación de Equipos (Nuevos)"
   | "Asignación de Equipos (Existentes)"
@@ -7,10 +20,28 @@ export type TicketCategory =
   | "Impresión"
   | "Asignación de Flotas"
   | "Problemas con Datos de Flota"
-  | "Otros";
+  | "Otros"
+  | (string & {});
 
 export type TicketPriority = "Baja" | "Media" | "Alta" | "Crítica";
-export type TicketStatus = "Abierto" | "En Progreso" | "En Espera" | "Resuelto" | "Cerrado";
+export type TicketStatus =
+  | "Recibido por Tecnología"
+  | "Asignado"
+  | "En Progreso"
+  | "En Espera"
+  | "Cerrado - Resuelto"
+  | "Cerrado - No Resuelto"
+  // Estados anteriores (se normalizan al mostrarse)
+  | "Abierto"
+  | "Resuelto"
+  | "Cerrado";
+
+export interface TicketHistoryEntry {
+  status: TicketStatus;
+  at: string;
+  by: string;
+  note?: string;
+}
 
 export interface Ticket {
   id: string;
@@ -21,8 +52,10 @@ export interface Ticket {
   status: TicketStatus;
   createdBy: string;
   createdById?: string; // user ID of creator
+  requesterEmail?: string;
   assignedTo?: string; // department or person assigned
   assignedToId?: string; // user ID assigned
+  assignedToEmail?: string;
   department: string;
   createdAt: string;
   updatedAt: string;
@@ -30,6 +63,11 @@ export interface Ticket {
   slaDeadline: string;
   attachments: string[];
   comments?: TicketComment[];
+  holdReason?: string;
+  closingNotes?: string;
+  closedAt?: string;
+  history?: TicketHistoryEntry[];
+  source?: string;
 }
 
 export interface TicketComment {
@@ -38,6 +76,7 @@ export interface TicketComment {
   userName: string;
   content: string;
   timestamp: string;
+  source?: string;
 }
 
 export type EquipmentType =
