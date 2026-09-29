@@ -15,6 +15,31 @@ export const MOTIVOS = ["Incumplimiento de horario", "Solicitud del cliente", "R
 export const ESTADOS: OpsEstado[] = ["Borrador", "Enviada a RRHH", "En revisión", "En reclutamiento", "Candidato propuesto", "Cubierta satisfactoriamente", "Cerrada sin cobertura", "Cancelada por Operaciones"];
 export const CLOSED: OpsEstado[] = ["Cubierta satisfactoriamente", "Cerrada sin cobertura", "Cancelada por Operaciones"];
 export const SLA_HORAS: Record<OpsPrioridad, number> = { Crítica: 24, Alta: 72, Normal: 168 };
+export type SlaMatrix = Record<OpsReqTipo, Record<OpsPrioridad, number>>;
+/** Plazos sugeridos de compromiso de RRHH (horas). Editables por Administración y RRHH. */
+export const DEFAULT_SLA_MATRIX: SlaMatrix = {
+  Sustitución: { Crítica: 24, Alta: 48, Normal: 72 },
+  Ingreso: { Crítica: 72, Alta: 120, Normal: 168 },
+  Salida: { Crítica: 48, Alta: 72, Normal: 120 },
+  Uniformes: { Crítica: 24, Alta: 72, Normal: 168 },
+};
+export const slaFor = (m: SlaMatrix, tipo: OpsReqTipo, p: OpsPrioridad) => m?.[tipo]?.[p] ?? DEFAULT_SLA_MATRIX[tipo]?.[p] ?? SLA_HORAS[p];
+export function fmtHoras(h: number) { return h % 24 === 0 ? `${h / 24} ${h === 24 ? "día" : "días"}` : `${h} h`; }
+const LS_SLA = "safeone_ops_hr_sla";
+const mergeMatrix = (m: any): SlaMatrix => Object.fromEntries(TIPOS.map(t => [t, { ...DEFAULT_SLA_MATRIX[t], ...(m?.[t] || {}) }])) as SlaMatrix;
+export interface SlaInfo { matrix: SlaMatrix; updatedAt: string | null; updatedBy: string }
+export async function getSlaMatrix(): Promise<SlaInfo> {
+  if (isApiConfigured()) { const r = await opsHrRequestsApi.sla(); return { matrix: mergeMatrix(r.matrix), updatedAt: r.updatedAt, updatedBy: r.updatedBy }; }
+  try { const r = JSON.parse(localStorage.getItem(LS_SLA) || "null"); return { matrix: mergeMatrix(r?.matrix), updatedAt: r?.updatedAt || null, updatedBy: r?.updatedBy || "" }; } catch { return { matrix: DEFAULT_SLA_MATRIX, updatedAt: null, updatedBy: "" }; }
+}
+export async function saveSlaMatrix(matrix: SlaMatrix, by: string): Promise<SlaInfo> {
+  if (isApiConfigured()) { const r = await opsHrRequestsApi.saveSla(matrix, by); return { matrix: mergeMatrix(r.matrix), updatedAt: r.updatedAt, updatedBy: r.updatedBy }; }
+  const info = { matrix, updatedAt: new Date().toISOString(), updatedBy: by };
+  localStorage.setItem(LS_SLA, JSON.stringify(info)); return info;
+}
+function localSla(tipo: OpsReqTipo, p: OpsPrioridad) {
+  try { return slaFor(mergeMatrix(JSON.parse(localStorage.getItem(LS_SLA) || "null")?.matrix), tipo, p); } catch { return slaFor(DEFAULT_SLA_MATRIX, tipo, p); }
+}
 
 export const UNIFORM_CATEGORIES = [
   "Camisas mangas largas", "Camisas mangas cortas", "T-shirts", "Holster (funda o pistolera)",
@@ -130,7 +155,7 @@ export async function createRequest(data: Partial<OpsHrRequest>): Promise<OpsHrR
   const list = readLS<OpsHrRequest>(LS);
   const max = list.reduce((m, r) => Math.max(m, Number(r.id.replace(/\D/g, "")) || 0), 0);
   const now = new Date();
-  const slaHoras = SLA_HORAS[data.prioridad as OpsPrioridad] || 168;
+  const slaHoras = localSla(data.tipo as OpsReqTipo, (data.prioridad as OpsPrioridad) || "Normal");
   const r = {
     ...data, id: `OPS-RRHH-${String(max + 1).padStart(6, "0")}`, slaHoras,
     fechaCreacion: now.toISOString(),
@@ -151,13 +176,18 @@ export async function updateRequest(id: string, patch: Partial<OpsHrRequest> & {
   const next = { ...prev, ...p } as OpsHrRequest;
   if (p.estado && p.estado !== prev.estado) {
     next.historialEstados = [...prev.historialEstados, { fecha: now, usuario: _usuario || "", anterior: prev.estado, nuevo: p.estado, nota: _nota }];
-    if (prev.estado === "Borrador") { next.fechaEnvio = now; next.fechaLimiteSLA = new Date(Date.now() + SLA_HORAS[next.prioridad] * 3600e3).toISOString(); }
+    if (prev.estado === "Borrador") { next.fechaEnvio = now; next.slaHoras = localSla(next.tipo, next.prioridad); next.fechaLimiteSLA = new Date(Date.now() + next.slaHoras * 3600e3).toISOString(); }
     if (!next.primerMovimientoRRHH && prev.estado === "Enviada a RRHH") next.primerMovimientoRRHH = now;
     if (CLOSED.includes(p.estado)) next.fechaCierre = now;
   }
   list[i] = next;
   localStorage.setItem(LS, JSON.stringify(list));
   return next;
+}
+
+export async function deleteRequest(id: string, motivo: string) {
+  if (isApiConfigured()) return opsHrRequestsApi.remove(id, motivo);
+  localStorage.setItem(LS, JSON.stringify(readLS<OpsHrRequest>(LS).filter(r => r.id !== id)));
 }
 
 export interface OpsTemplate { id: string; nombre: string; tipo: OpsReqTipo; tipoVacante: OpsVacante; prioridad: OpsPrioridad; motivoBaja?: string; notas?: string }
