@@ -24,6 +24,15 @@ router.put('/templates/all', auth, (req, res) => {
   writeData(TPL_FILE, req.body); res.json({ ok: true });
 });
 
+router.get('/settings/all', auth, (req, res) => res.json(mail.getSettings()));
+router.put('/settings/all', auth, (req, res) => {
+  const list = Array.isArray(req.body?.rrhhRecipients) ? req.body.rrhhRecipients : null;
+  if (!list) return res.status(400).json({ message: 'Se esperaba rrhhRecipients[]' });
+  const clean = [...new Set(list.map((e) => String(e).trim().toLowerCase()).filter((e) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)))];
+  mail.saveSettings({ rrhhRecipients: clean, updatedAt: new Date().toISOString(), updatedBy: req.body.updatedBy || '' });
+  res.json(mail.getSettings());
+});
+
 router.post('/mail/sync', auth, async (req, res) => res.json(await mail.syncReplies()));
 router.post('/mail/summary', auth, async (req, res) => res.json(await mail.dailySummary(true)));
 router.get('/mail/status', auth, (req, res) => res.json({ configured: mail.isConfigured(), user: mail.config().user }));

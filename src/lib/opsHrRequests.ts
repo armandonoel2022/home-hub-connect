@@ -151,3 +151,14 @@ export async function saveTemplates(list: OpsTemplate[]) {
   if (isApiConfigured()) return opsHrRequestsApi.saveTemplates(list);
   localStorage.setItem(LS_TPL, JSON.stringify(list));
 }
+
+export const DEFAULT_RRHH_RECIPIENTS = ["daguasvivas@safeone.com.do", "alira@safeone.com.do", "nperez@safeone.com.do", "abrito@safeone.com.do"];
+const LS_SET = "safeone_ops_hr_recipients";
+export async function getRrhhRecipients(): Promise<string[]> {
+  if (isApiConfigured()) return (await opsHrRequestsApi.settings()).rrhhRecipients;
+  try { return JSON.parse(localStorage.getItem(LS_SET) || "null") || DEFAULT_RRHH_RECIPIENTS; } catch { return DEFAULT_RRHH_RECIPIENTS; }
+}
+export async function saveRrhhRecipients(list: string[], by: string): Promise<string[]> {
+  if (isApiConfigured()) return (await opsHrRequestsApi.saveSettings({ rrhhRecipients: list, updatedBy: by })).rrhhRecipients;
+  localStorage.setItem(LS_SET, JSON.stringify(list)); return list;
+}
