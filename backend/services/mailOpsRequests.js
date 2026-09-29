@@ -9,7 +9,7 @@
  *   OPS_IMAP_HOST / OPS_IMAP_PORT / OPS_SMTP_HOST / OPS_SMTP_PORT (por defecto los mismos de IT)
  *   INTRANET_URL=https://intranet.safeone.com.do
  */
-const { readData, writeData } = require('../config/database');
+const { readData, writeData, generateId } = require('../config/database');
 const { loadDeps } = require('./mailTickets');
 
 const FILE = 'ops-hr-requests.json';
@@ -52,7 +52,7 @@ async function transport() {
 }
 
 async function sendMail({ to, subject, html, urgent }) {
-  if (!isConfigured()) return { sent: false, reason: 'Correo no configurado: falta OPS_MAIL_PASS (o IT_MAIL_PASS) en el .env del servidor' };
+  if (!isConfigured()) return { sent: false, reason: 'Correo no configurado: falta OPS_MAIL_USER / OPS_MAIL_PASS en el .env del servidor' };
   const c = config();
   const list = [...new Set([c.shared ? null : c.user, ...(to || [])].filter(Boolean).map((e) => e.toLowerCase()))];
   try {
@@ -160,7 +160,7 @@ async function syncReplies() {
   const d = await loadDeps();
   if (!d.ok) return { ok: false, message: d.error };
   const c = config();
-  const client = new d.ImapFlow({ host: c.imapHost, port: c.imapPort, secure: true, auth: { user: c.user, pass: c.pass }, tls: { rejectUnauthorized: false }, logger: false });
+  const client = makeImapClient(d, c);
   client.on('error', (e) => console.warn(`[ops-mail] IMAP: ${e?.message || e}`));
   let added = 0;
   try {
@@ -238,7 +238,7 @@ async function slaAlerts() {
 }
 
 function start() {
-  if (!isConfigured()) { console.log('[ops-mail] Deshabilitado (falta OPS_MAIL_PASS o IT_MAIL_PASS en .env)'); return; }
+  if (!isConfigured()) { console.log('[ops-mail] Deshabilitado (falta OPS_MAIL_USER / OPS_MAIL_PASS en .env)'); return; }
   const c = config();
   console.log(`[ops-mail] Enviando desde ${c.user}${c.shared ? ' (buzón compartido con Tickets IT)' : ''}`);
   let running = false;
