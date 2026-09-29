@@ -10,6 +10,29 @@ const router = express.Router();
 const FILE = mail.FILE;
 const TPL_FILE = 'ops-hr-templates.json';
 const SLA = { Crítica: 24, Alta: 72, Normal: 168 };
+const TYPES = ['Ingreso', 'Salida', 'Sustitución', 'Uniformes'];
+const UNIFORM_CATEGORIES = [
+  'Camisas mangas largas', 'Camisas mangas cortas', 'T-shirts', 'Holster (funda o pistolera)',
+  'Pantalones tipo Cargo con bolsillos laterales', 'Pantalones', 'Zapatos', 'Botas tipo militar',
+  'Gorras', 'Correas', 'Jackets', 'Linternas', 'Otros',
+];
+
+function validateRequest(body) {
+  if (!TYPES.includes(body.tipo)) return 'Tipo de solicitud no válido';
+  for (const key of ['clienteId', 'localidadId', 'puestoId', 'turnoId']) {
+    if (!String(body[key] || '').trim()) return 'La ubicación Cliente → Localidad → Puesto → Turno es obligatoria';
+  }
+  if (body.tipo !== 'Uniformes') return null;
+  if (!String(body.uniformRecipientName || '').trim() || String(body.uniformRecipientName).length > 120) return 'Indique el agente que recibirá el uniforme';
+  if (!Array.isArray(body.uniformItems) || !body.uniformItems.length || body.uniformItems.length > UNIFORM_CATEGORIES.length) return 'Seleccione al menos una prenda válida';
+  for (const item of body.uniformItems) {
+    if (!UNIFORM_CATEGORIES.includes(item?.category)) return 'La solicitud contiene una categoría de uniforme no válida';
+    if (!Number.isInteger(item?.quantity) || item.quantity < 1 || item.quantity > 50) return 'Cada prenda debe tener una cantidad entre 1 y 50';
+    if (String(item?.size || '').length > 10) return 'La talla indicada no es válida';
+    if (item.category === 'Otros' && (!String(item.customDescription || '').trim() || String(item.customDescription).length > 120)) return 'Describa la indumentaria seleccionada como Otros';
+  }
+  return null;
+}
 
 function nextId(list) {
   const max = list.reduce((m, r) => Math.max(m, Number(String(r.id).replace(/\D/g, '')) || 0), 0);
@@ -50,6 +73,8 @@ router.post('/', auth, async (req, res) => {
   const list = readData(FILE);
   const now = new Date();
   const b = req.body || {};
+  const validationError = validateRequest(b);
+  if (validationError) return res.status(400).json({ message: validationError });
   const slaHoras = SLA[b.prioridad] || SLA.Normal;
   const r = {
     ...b,
