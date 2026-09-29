@@ -77,7 +77,7 @@ function wrap(r, title, body) {
   const c = config();
   const link = `${c.intranetUrl.replace(/\/$/, '')}/rrhh/operaciones?id=${encodeURIComponent(r.id)}`;
   const row = (k, v) => (v ? `<tr><td style="padding:4px 12px 4px 0;color:#6b7280">${k}</td><td>${esc(v)}</td></tr>` : '');
-  const uniformItems = Array.isArray(r.uniformItems) ? r.uniformItems.map((item) => `${item.quantity} × ${item.category === 'Otros' ? item.customDescription : item.category}${item.size ? ` · talla ${item.size}` : ''}`).join('<br>') : '';
+  const uniformItems = Array.isArray(r.uniformItems) ? r.uniformItems.map((item) => `${item.quantity} × ${item.category === 'Otros' ? item.customDescription : item.category}${item.size ? ` · talla ${item.size}` : ''}`).join('; ') : '';
   return `<div style="font-family:Segoe UI,Arial,sans-serif;color:#1f2430">
   <div style="background:#1f2430;color:#d4af37;padding:14px 18px;font-size:16px;font-weight:600">SafeOne · Operaciones → RRHH</div>
   <div style="padding:18px">

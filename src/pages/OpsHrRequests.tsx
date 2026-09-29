@@ -382,11 +382,23 @@ export default function OpsHrRequests() {
                       {agents.length > 0 && <div className="sm:col-span-2 text-xs text-muted-foreground">{agents.map(a => a.name).join(" · ")}</div>}
                     </div>
                   )}
-                  <div className="grid sm:grid-cols-3 gap-3">
+                  <div className={`grid gap-3 ${isUniform ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
                     <div><Label>Tipo</Label><Select value={form.tipo} onValueChange={v => setForm({ ...form, tipo: v as OpsReqTipo })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{TIPOS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
-                    <div><Label>Tipo de vacante</Label><Select value={form.tipoVacante} onValueChange={v => setForm({ ...form, tipoVacante: v as OpsVacante })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{VACANTES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
+                    {!isUniform && <div><Label>Tipo de vacante</Label><Select value={form.tipoVacante} onValueChange={v => setForm({ ...form, tipoVacante: v as OpsVacante })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{VACANTES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>}
                     <div><Label>Prioridad (SLA {SLA_HORAS[form.prioridad]}h)</Label><Select value={form.prioridad} onValueChange={v => setForm({ ...form, prioridad: v as OpsPrioridad })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{PRIORIDADES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
                   </div>
+                  {isUniform && (
+                    <>
+                      <div className="rounded-md border border-operations-border bg-operations-soft/40 p-4">
+                        <div className="flex items-center justify-between gap-3"><div><Label>Agente que recibirá el uniforme *</Label><p className="mt-1 text-xs text-muted-foreground">Seleccione el agente asignado al puesto o escríbalo manualmente.</p></div>
+                          {agents.length > 0 && <Button type="button" variant="link" size="sm" onClick={() => setForm({ ...form, uniformRecipientManual: !form.uniformRecipientManual, uniformRecipientId: "" })}>{form.uniformRecipientManual ? "Elegir de la lista" : "Escribir manualmente"}</Button>}
+                        </div>
+                        {form.uniformRecipientManual || !agents.length ? <div className="mt-3 grid gap-2 sm:grid-cols-2"><Input maxLength={120} placeholder="Nombre completo *" value={form.uniformRecipientName} onChange={e => setForm({ ...form, uniformRecipientName: e.target.value })} /><Input maxLength={40} placeholder="Código / cédula (opcional)" value={form.uniformRecipientCode} onChange={e => setForm({ ...form, uniformRecipientCode: e.target.value })} /></div>
+                          : <Select value={form.uniformRecipientId} onValueChange={v => setForm({ ...form, uniformRecipientId: v })}><SelectTrigger className="mt-3 bg-card"><SelectValue placeholder="Seleccione el agente" /></SelectTrigger><SelectContent>{agents.map(agent => <SelectItem key={agent.id} value={agent.id}>{agent.name}{agent.employeeCode ? ` (${agent.employeeCode})` : ""}</SelectItem>)}</SelectContent></Select>}
+                      </div>
+                      <UniformItemPicker value={form.uniformItems} onChange={uniformItems => setForm({ ...form, uniformItems })} />
+                    </>
+                  )}
                   {needsOut && (
                     <div className="grid sm:grid-cols-3 gap-3">
                       <div>
@@ -408,15 +420,15 @@ export default function OpsHrRequests() {
                       {form.motivoBaja === "Otro" && <div className="sm:col-span-3"><Label>Comentario del motivo *</Label><Textarea value={form.motivoComentario} onChange={e => setForm({ ...form, motivoComentario: e.target.value })} /></div>}
                     </div>
                   )}
-                  <div className="grid sm:grid-cols-2 gap-3">
+                  {!isUniform && <div className="grid sm:grid-cols-2 gap-3">
                     <div><Label>Agente propuesto (opcional)</Label><Select value={form.agentePropuestoId || "none"} onValueChange={v => setForm({ ...form, agentePropuestoId: v === "none" ? "" : v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Ninguno</SelectItem>{(personnel as any[]).filter(p => p.status === "Activo").slice(0, 500).map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent></Select></div>
                     {!needsOut && <div><Label>Fecha efectiva</Label><Input type="date" value={form.fechaEfectiva} onChange={e => setForm({ ...form, fechaEfectiva: e.target.value })} /></div>}
-                  </div>
+                  </div>}
                   <div className="flex items-center gap-2"><Switch checked={form.requiereCoberturaUrgente} onCheckedChange={v => setForm({ ...form, requiereCoberturaUrgente: v })} /><Label>Requiere cobertura urgente (correo de alta prioridad)</Label></div>
-                  <div className="rounded-md border border-border p-3 space-y-2">
+                  {!isUniform && <div className="rounded-md border border-border p-3 space-y-2">
                     <div className="flex items-center gap-2"><Switch checked={form.notificarCliente} onCheckedChange={v => setForm({ ...form, notificarCliente: v })} /><Label>Notificar al cliente por correo cuando concluya el cambio / sustitución</Label></div>
                     {form.notificarCliente && <div className="grid sm:grid-cols-2 gap-2 items-end"><div><Label>Correo del cliente</Label><Input type="email" value={form.clienteEmail} onChange={e => setForm({ ...form, clienteEmail: e.target.value })} placeholder="correo@cliente.com" /></div><p className="text-xs text-muted-foreground">Tomado de gSafeOne (Cliente.Email). Se envía solo al marcar la solicitud como "Cubierta satisfactoriamente".</p></div>}
-                  </div>
+                  </div>}
                   <div><Label>Notas</Label><Textarea value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })} /></div>
                   <div><Label className="flex items-center gap-1"><Paperclip className="h-4 w-4" />Evidencia (recomendado, máx. 5 MB c/u)</Label>
                     <Input type="file" multiple onChange={async e => {
@@ -477,11 +489,12 @@ function DetailDialog({ r, canManage, isOwner, userName, userEmail, onClose, onU
           <TabsContent value="resumen" className="space-y-2 text-sm">
             {r.requiereCoberturaUrgente && <div className="rounded bg-destructive/10 text-destructive p-2 font-medium">Requiere cobertura urgente</div>}
             <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1">
-              {[["Tipo", `${r.tipo} · ${r.tipoVacante}`], ["Prioridad", `${r.prioridad} (${r.slaHoras}h)`], ["Cliente", r.clienteNombre], ["Localidad", r.localidadNombre], ["Puesto", r.puestoNombre], ["Turno", r.turnoNombre],
-                ["Supervisor", r.supervisorResponsable], ["Agente saliente", r.agenteSalienteNombre], ["Motivo", [r.motivoBaja, r.motivoComentario].filter(Boolean).join(" — ")], ["Agente propuesto", r.agentePropuestoNombre], ["Notificar cliente", r.notificarCliente ? `${r.clienteEmail}${r.clienteNotificadoEn ? ` · enviado ${fmt(r.clienteNotificadoEn)}` : " · pendiente al cierre"}` : "No"],
+              {[["Tipo", r.tipo === "Uniformes" ? r.tipo : `${r.tipo} · ${r.tipoVacante}`], ["Prioridad", `${r.prioridad} (${r.slaHoras}h)`], ["Cliente", r.clienteNombre], ["Localidad", r.localidadNombre], ["Puesto", r.puestoNombre], ["Turno", r.turnoNombre],
+                ["Supervisor", r.supervisorResponsable], ["Agente saliente", r.agenteSalienteNombre], ["Motivo", [r.motivoBaja, r.motivoComentario].filter(Boolean).join(" — ")], ["Agente propuesto", r.agentePropuestoNombre], ["Agente destinatario", r.uniformRecipientName ? `${r.uniformRecipientName}${r.uniformRecipientCode ? ` (${r.uniformRecipientCode})` : ""}` : ""], ["Notificar cliente", r.notificarCliente ? `${r.clienteEmail}${r.clienteNotificadoEn ? ` · enviado ${fmt(r.clienteNotificadoEn)}` : " · pendiente al cierre"}` : "No"],
                 ["Fecha efectiva", r.fechaEfectiva], ["Límite SLA", fmt(r.fechaLimiteSLA)], ["Responsable actual", r.responsableActual], ["RRHH asignado", r.rrhhAsignado], ["Creado por", `${r.creadoPor} · ${fmt(r.fechaCreacion)}`], ["Cierre", r.fechaCierre ? `${fmt(r.fechaCierre)} — ${r.cierreComentario || ""}` : ""]]
                 .filter(([, v]) => v).map(([k, v]) => <div key={k}><span className="text-muted-foreground">{k}:</span> {v}</div>)}
             </div>
+            {r.tipo === "Uniformes" && r.uniformItems?.length ? <div className="mt-4 rounded-md border border-operations-border bg-operations-soft/40 p-3"><div className="mb-2 text-xs font-semibold uppercase text-operations">Prendas solicitadas</div><div className="grid gap-2 sm:grid-cols-2">{r.uniformItems.map(item => <div key={item.id} className="rounded border border-border bg-card px-3 py-2"><span className="font-semibold">{item.quantity} × {item.category === "Otros" ? item.customDescription : item.category}</span>{item.size && <span className="text-muted-foreground"> · talla {item.size}</span>}</div>)}</div></div> : null}
             {(r as any).notas && <p className="rounded bg-muted/40 p-2">{(r as any).notas}</p>}
           </TabsContent>
           <TabsContent value="timeline">
