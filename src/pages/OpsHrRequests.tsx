@@ -63,6 +63,8 @@ export default function OpsHrRequests() {
   const [templates, setTemplates] = useState<OpsTemplate[]>([]);
   const [form, setForm] = useState(emptyForm());
   const [detailId, setDetailId] = useState<string | null>(params.get("id"));
+  const urlId = params.get("id");
+  useEffect(() => { if (urlId) setDetailId(urlId); }, [urlId]);
   const [search, setSearch] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [f, setF] = useState({ cliente: ALL, localidad: ALL, turno: ALL, vacante: ALL, prioridad: ALL, estado: ALL, creador: ALL, desde: "", hasta: "" });

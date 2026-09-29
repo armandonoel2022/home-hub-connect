@@ -77,7 +77,8 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
       localStorage.removeItem("safeone_token");
       localStorage.removeItem("safeone_user");
       if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-        window.location.href = "/login";
+        const back = window.location.pathname + window.location.search;
+        window.location.href = back && back !== "/" ? `/login?redirect=${encodeURIComponent(back)}` : "/login";
       }
     }
     throw new Error(err.message || "No autorizado");

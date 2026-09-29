@@ -210,7 +210,9 @@ function ProtectedRoutes() {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    const back = window.location.pathname + window.location.search;
+    const target = back && back !== "/" ? `/login?redirect=${encodeURIComponent(back)}` : "/login";
+    return <Navigate to={target} replace />;
   }
 
   const birthdayUsers = enrichedBirthday.length ? enrichedBirthday : baseBirthday;
