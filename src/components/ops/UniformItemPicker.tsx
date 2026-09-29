@@ -36,7 +36,6 @@ interface Props {
 
 export default function UniformItemPicker({ value, onChange }: Props) {
   const add = (category: OpsUniformCategory) => {
-    if (value.some(item => item.category === category)) return;
     onChange([...value, {
       id: `uniform-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       category,
@@ -46,6 +45,7 @@ export default function UniformItemPicker({ value, onChange }: Props) {
     }]);
   };
 
+  const countFor = (category: OpsUniformCategory) => value.filter(item => item.category === category).length;
   const update = (id: string, patch: Partial<OpsUniformItem>) => onChange(value.map(item => item.id === id ? { ...item, ...patch } : item));
   const remove = (id: string) => onChange(value.filter(item => item.id !== id));
 
@@ -53,24 +53,26 @@ export default function UniformItemPicker({ value, onChange }: Props) {
     <section className="space-y-4 rounded-md border border-operations-border bg-muted/20 p-4" aria-labelledby="uniform-heading">
       <div>
         <h3 id="uniform-heading" className="text-sm font-semibold">Indumentaria solicitada</h3>
-        <p className="mt-1 text-xs text-muted-foreground">Seleccione una o varias categorías. Luego indique talla y cantidad.</p>
+        <p className="mt-1 text-xs text-muted-foreground">Toque una categoría para agregar una prenda. Tóquela de nuevo para pedir la misma prenda en otra talla o más unidades.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
         {UNIFORM_CATEGORIES.map(category => {
           const Icon = iconFor(category);
-          const selected = value.some(item => item.category === category);
+          const count = countFor(category);
           return (
             <Button
               key={category}
               type="button"
               variant="outline"
-              aria-pressed={selected}
-              className={`h-24 whitespace-normal px-2 py-3 flex-col gap-2 text-center text-xs leading-tight ${selected ? "border-operations bg-operations-soft text-operations" : "bg-card"}`}
-              onClick={() => selected ? remove(value.find(item => item.category === category)?.id || "") : add(category)}
+              className={`relative h-24 whitespace-normal px-2 py-3 flex-col gap-2 text-center text-xs leading-tight ${count > 0 ? "border-operations bg-operations-soft text-operations" : "bg-card"}`}
+              onClick={() => add(category)}
             >
               <Icon className="h-6 w-6 shrink-0" />
               <span>{category}</span>
+              {count > 0 && (
+                <span className="absolute right-1.5 top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-operations px-1 text-[10px] font-bold text-primary-foreground" aria-label={`${count} en la solicitud`}>{count}</span>
+              )}
             </Button>
           );
         })}
