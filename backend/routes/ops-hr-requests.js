@@ -87,6 +87,15 @@ router.put('/:id', auth, async (req, res) => {
     const last = (next.comentarios || []).slice(-1)[0];
     next._mail = await mail.notify(next, event, { nota: _nota, comentario: event === 'comment' ? last?.texto : undefined, autor: last?.autor });
   }
+  if (event === 'status' && next.estado === 'Cubierta satisfactoriamente' && next.notificarCliente && !next.clienteNotificadoEn) {
+    const cm = await mail.notifyClient(next).catch((e) => ({ sent: false, reason: e.message }));
+    if (cm && cm.sent !== false) {
+      next.clienteNotificadoEn = new Date().toISOString();
+      const l2 = readData(FILE); const i2 = l2.findIndex((x) => x.id === next.id);
+      if (i2 >= 0) { l2[i2].clienteNotificadoEn = next.clienteNotificadoEn; writeData(FILE, l2); }
+    }
+    next._mailCliente = cm;
+  }
   res.json(next);
 });
 

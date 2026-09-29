@@ -410,7 +410,7 @@ function DetailDialog({ r, canManage, isOwner, userName, userEmail, onClose, onU
             {r.requiereCoberturaUrgente && <div className="rounded bg-destructive/10 text-destructive p-2 font-medium">Requiere cobertura urgente</div>}
             <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1">
               {[["Tipo", `${r.tipo} · ${r.tipoVacante}`], ["Prioridad", `${r.prioridad} (${r.slaHoras}h)`], ["Cliente", r.clienteNombre], ["Localidad", r.localidadNombre], ["Puesto", r.puestoNombre], ["Turno", r.turnoNombre],
-                ["Supervisor", r.supervisorResponsable], ["Agente saliente", r.agenteSalienteNombre], ["Motivo", [r.motivoBaja, r.motivoComentario].filter(Boolean).join(" — ")], ["Agente propuesto", r.agentePropuestoNombre],
+                ["Supervisor", r.supervisorResponsable], ["Agente saliente", r.agenteSalienteNombre], ["Motivo", [r.motivoBaja, r.motivoComentario].filter(Boolean).join(" — ")], ["Agente propuesto", r.agentePropuestoNombre], ["Notificar cliente", r.notificarCliente ? `${r.clienteEmail}${r.clienteNotificadoEn ? ` · enviado ${fmt(r.clienteNotificadoEn)}` : " · pendiente al cierre"}` : "No"],
                 ["Fecha efectiva", r.fechaEfectiva], ["Límite SLA", fmt(r.fechaLimiteSLA)], ["Responsable actual", r.responsableActual], ["RRHH asignado", r.rrhhAsignado], ["Creado por", `${r.creadoPor} · ${fmt(r.fechaCreacion)}`], ["Cierre", r.fechaCierre ? `${fmt(r.fechaCierre)} — ${r.cierreComentario || ""}` : ""]]
                 .filter(([, v]) => v).map(([k, v]) => <div key={k}><span className="text-muted-foreground">{k}:</span> {v}</div>)}
             </div>
