@@ -12,7 +12,7 @@ import Navbar from "@/components/Navbar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useArmedPersonnel } from "@/hooks/useApiHooks";
 import {
-  TIPOS, VACANTES, PRIORIDADES, MOTIVOS, ESTADOS, CLOSED, SLA_HORAS, ESTADO_STYLE, UNIFORM_CATEGORIES,
+  TIPOS, VACANTES, PRIORIDADES, MOTIVOS, ESTADOS, CLOSED, DEFAULT_SLA_MATRIX, slaFor, fmtHoras, getSlaMatrix, saveSlaMatrix, deleteRequest, type SlaMatrix, ESTADO_STYLE, UNIFORM_CATEGORIES,
   opsRolesFor, rrhhTeam, semaforo, listRequests, createRequest, updateRequest, listTemplates, saveTemplates, getRrhhRecipients, saveRrhhRecipients,
   type OpsHrRequest, type OpsEstado, type OpsTemplate, type OpsReqTipo, type OpsVacante, type OpsPrioridad, type OpsUniformItem,
 } from "@/lib/opsHrRequests";
@@ -29,11 +29,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, LayoutDashboard, ListChecks, FolderOpen, Users, FileSpreadsheet, FileText, Copy, Send, Save, Mail, Paperclip, CheckCircle2, AlertTriangle, Search, Clock3, CircleCheck, SlidersHorizontal, ChevronRight, RefreshCw, Shirt, UserRoundCog } from "lucide-react";
+import { ArrowLeft, Plus, LayoutDashboard, ListChecks, FolderOpen, Users, FileSpreadsheet, FileText, Copy, Send, Save, Mail, Paperclip, CheckCircle2, AlertTriangle, Search, Clock3, CircleCheck, SlidersHorizontal, ChevronRight, RefreshCw, Shirt, UserRoundCog, Trash2, Timer } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend, CartesianGrid } from "recharts";
 import { z } from "zod";
 
-type View = "dashboard" | "nueva" | "mias" | "todas" | "plantillas" | "destinatarios";
+type View = "dashboard" | "nueva" | "mias" | "todas" | "plantillas" | "destinatarios" | "plazos";
 const ALL = "__all";
 const SEM: Record<string, string> = { verde: "bg-green-500", amarillo: "bg-amber-400", rojo: "bg-destructive", gris: "bg-muted-foreground/40" };
 const CHART = ["hsl(var(--primary))", "hsl(var(--accent-foreground))", "hsl(var(--destructive))", "hsl(var(--muted-foreground))"];
@@ -66,6 +66,8 @@ export default function OpsHrRequests() {
   const [items, setItems] = useState<OpsHrRequest[]>([]);
   const [templates, setTemplates] = useState<OpsTemplate[]>([]);
   const [form, setForm] = useState(emptyForm());
+  const [slaMatrix, setSlaMatrix] = useState<SlaMatrix>(DEFAULT_SLA_MATRIX);
+  useEffect(() => { getSlaMatrix().then(i => setSlaMatrix(i.matrix)).catch(() => {}); }, [view]);
   const [requestKind, setRequestKind] = useState<"personal" | "uniformes" | null>(null);
   const [detailId, setDetailId] = useState<string | null>(params.get("id"));
   const urlId = params.get("id");
@@ -239,6 +241,7 @@ export default function OpsHrRequests() {
     { k: "todas", label: "Todas las solicitudes", icon: Users, show: canSeeAll },
     { k: "plantillas", label: "Plantillas", icon: FolderOpen, show: true },
     { k: "destinatarios", label: "Destinatarios RRHH", icon: Mail, show: true },
+    { k: "plazos", label: "Compromiso RRHH", icon: Timer, show: true },
   ];
 
   const List = ({ list }: { list: OpsHrRequest[] }) => (
@@ -427,7 +430,7 @@ export default function OpsHrRequests() {
                   <div className={`grid gap-3 ${isUniform ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
                     <div><Label>{isUniform ? "Solicitud" : "Movimiento"}</Label>{isUniform ? <div className="flex h-10 items-center rounded-md border border-input bg-muted/30 px-3 text-sm font-medium">Uniformes</div> : <Select value={form.tipo} onValueChange={v => setForm({ ...form, tipo: v as OpsReqTipo })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{TIPOS.filter(t => t !== "Uniformes").map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select>}</div>
                     {!isUniform && <div><Label>Tipo de vacante</Label><Select value={form.tipoVacante} onValueChange={v => setForm({ ...form, tipoVacante: v as OpsVacante })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{VACANTES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>}
-                    <div><Label>Prioridad (SLA {SLA_HORAS[form.prioridad]}h)</Label><Select value={form.prioridad} onValueChange={v => setForm({ ...form, prioridad: v as OpsPrioridad })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{PRIORIDADES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
+                    <div><Label>Prioridad (RRHH: {fmtHoras(slaFor(slaMatrix, form.tipo, form.prioridad))})</Label><Select value={form.prioridad} onValueChange={v => setForm({ ...form, prioridad: v as OpsPrioridad })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{PRIORIDADES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
                   </div>
                   {isUniform && (
                     <>
@@ -489,26 +492,30 @@ export default function OpsHrRequests() {
               </div>
             )}
 
+            {view === "plazos" && <div className="p-5 sm:p-7"><SlaView canEdit={canManage} userName={user?.fullName || ""} onSaved={setSlaMatrix} /></div>}
             {view === "destinatarios" && <div className="p-5 sm:p-7"><RecipientsView canEdit={canManage} userName={user?.fullName || ""} /></div>}
             {view === "plantillas" && <div className="p-5 sm:p-7"><TemplatesView templates={templates} canEdit={roles.has("admin") || roles.has("coordinador") || roles.has("rrhh")} onSave={async l => { await saveTemplates(l); setTemplates(l); toast({ title: "Plantillas guardadas" }); }} /></div>}
           </div>
         </section>
       </div>
 
-      {detail && <DetailDialog r={detail} canManage={canManage} isOwner={detail.creadoPorId === user?.id} userName={user?.fullName || ""} userEmail={user?.email}
+      {detail && <DetailDialog r={detail} canManage={canManage} canDelete={!!user?.isAdmin}
+        onDelete={async (motivo) => { try { await deleteRequest(detail.id, motivo); setItems(items.filter(x => x.id !== detail.id)); setDetailId(null); if (params.get("id")) setParams({}); toast({ title: `Solicitud ${detail.id} eliminada`, description: "Quedó registrada en el historial de auditoría." }); } catch (e: any) { toast({ title: "No se pudo eliminar", description: e?.message, variant: "destructive" }); } }} isOwner={detail.creadoPorId === user?.id} userName={user?.fullName || ""} userEmail={user?.email}
         onClose={() => { setDetailId(null); if (params.get("id")) setParams({}); }} onDuplicate={() => duplicate(detail)}
         onUpdate={async (patch) => { const n = await updateRequest(detail.id, patch); setItems(items.map(x => (x.id === n.id ? n : x))); if (n._mail && !n._mail.sent) toast({ title: "Correo no enviado", description: n._mail.reason, variant: "destructive" }); }} />}
     </AppLayout>
   );
 }
 
-function DetailDialog({ r, canManage, isOwner, userName, userEmail, onClose, onUpdate, onDuplicate }: {
-  r: OpsHrRequest; canManage: boolean; isOwner: boolean; userName: string; userEmail?: string;
+function DetailDialog({ r, canManage, canDelete, onDelete, isOwner, userName, userEmail, onClose, onUpdate, onDuplicate }: {
+  r: OpsHrRequest; canManage: boolean; canDelete: boolean; onDelete: (motivo: string) => Promise<void>; isOwner: boolean; userName: string; userEmail?: string;
   onClose: () => void; onUpdate: (p: any) => Promise<void>; onDuplicate: () => void;
 }) {
   const [next, setNext] = useState<OpsEstado | "">("");
   const [nota, setNota] = useState("");
   const [msg, setMsg] = useState("");
+  const [delOpen, setDelOpen] = useState(false);
+  const [delMotivo, setDelMotivo] = useState("");
   const allowed: OpsEstado[] = canManage
     ? ESTADOS.filter(e => e !== "Borrador" && e !== r.estado && e !== "Cancelada por Operaciones")
     : isOwner ? (r.estado === "Borrador" ? ["Enviada a RRHH", "Cancelada por Operaciones"] : CLOSED.includes(r.estado) ? [] : ["Cancelada por Operaciones"]) : [];
@@ -579,7 +586,18 @@ function DetailDialog({ r, canManage, isOwner, userName, userEmail, onClose, onU
             {next === "Cerrada sin cobertura" && <p className="text-xs text-amber-600">Confirmación: se cerrará la solicitud sin haber cubierto la vacante.</p>}
           </div>
         )}
+        {canDelete && delOpen && (
+          <div className="border border-destructive/40 bg-destructive/5 rounded-md p-3 space-y-2">
+            <Label className="text-destructive">Eliminar {r.id} definitivamente</Label>
+            <Textarea placeholder="Justificación obligatoria (ej.: solicitud de prueba, creada por error)" value={delMotivo} onChange={e => setDelMotivo(e.target.value)} maxLength={500} />
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" size="sm" onClick={() => { setDelOpen(false); setDelMotivo(""); }}>Cancelar</Button>
+              <Button variant="destructive" size="sm" disabled={delMotivo.trim().length < 5} onClick={() => onDelete(delMotivo.trim())}><Trash2 className="h-4 w-4 mr-1" />Confirmar eliminación</Button>
+            </div>
+          </div>
+        )}
         <DialogFooter className="gap-2">
+          {canDelete && !delOpen && <Button variant="ghost" className="text-destructive sm:mr-auto" onClick={() => setDelOpen(true)}><Trash2 className="h-4 w-4 mr-1" />Eliminar</Button>}
           <Button variant="outline" onClick={onDuplicate}><Copy className="h-4 w-4 mr-1" />Duplicar (otro turno)</Button>
           {allowed.length > 0 && <Button disabled={!next || (needNote && !nota.trim())} onClick={apply}>Aplicar</Button>}
         </DialogFooter>
@@ -652,6 +670,47 @@ function RecipientsView({ canEdit, userName }: { canEdit: boolean; userName: str
             <Button onClick={add}><Plus className="h-4 w-4 mr-1" />Incluir</Button>
           </div>
         ) : <p className="text-xs text-muted-foreground">Solo RRHH o administradores pueden modificar esta lista.</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
+function SlaView({ canEdit, userName, onSaved }: { canEdit: boolean; userName: string; onSaved: (m: SlaMatrix) => void }) {
+  const { toast } = useToast();
+  const [m, setM] = useState<SlaMatrix>(DEFAULT_SLA_MATRIX);
+  const [meta, setMeta] = useState<{ updatedAt: string | null; updatedBy: string }>({ updatedAt: null, updatedBy: "" });
+  const [saving, setSaving] = useState(false);
+  useEffect(() => { getSlaMatrix().then(i => { setM(i.matrix); setMeta(i); }).catch(() => {}); }, []);
+  const rows: { t: OpsReqTipo; label: string }[] = [
+    { t: "Sustitución", label: "Sustitución de agente" },
+    { t: "Ingreso", label: "Ingreso (nuevo puesto/vacante)" },
+    { t: "Salida", label: "Salida con reemplazo" },
+    { t: "Uniformes", label: "Entrega de uniformes" },
+  ];
+  const save = async () => {
+    setSaving(true);
+    try { const i = await saveSlaMatrix(m, userName); setM(i.matrix); setMeta(i); onSaved(i.matrix); toast({ title: "Plazos de compromiso guardados", description: "Aplican a las solicitudes nuevas." }); }
+    catch (e: any) { toast({ title: "No se pudo guardar", description: e?.message, variant: "destructive" }); }
+    finally { setSaving(false); }
+  };
+  return (
+    <Card><CardHeader><CardTitle className="text-base">Compromiso de RRHH para conseguir personal</CardTitle>
+      <p className="text-sm text-muted-foreground">Tiempo máximo, en horas, que RRHH se compromete a cumplir desde que recibe la solicitud. Define el semáforo y las alertas de vencimiento. {!canEdit && "Solo Administración y RRHH pueden modificarlos."}</p>
+    </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="overflow-x-auto"><table className="w-full text-sm">
+          <thead><tr className="text-left text-muted-foreground"><th className="p-2">Movimiento</th>{PRIORIDADES.slice().reverse().map(p => <th key={p} className="p-2">{p}</th>)}</tr></thead>
+          <tbody>{rows.map(({ t, label }) => <tr key={t} className="border-t border-border">
+            <td className="p-2 font-medium">{label}</td>
+            {PRIORIDADES.slice().reverse().map(p => <td key={p} className="p-2"><div className="flex items-center gap-2">
+              <Input type="number" min={1} max={2160} className="w-24" disabled={!canEdit} value={m[t][p]} onChange={e => setM({ ...m, [t]: { ...m[t], [p]: Math.max(1, Number(e.target.value) || 1) } })} />
+              <span className="text-xs text-muted-foreground whitespace-nowrap">{fmtHoras(m[t][p])}</span></div></td>)}
+          </tr>)}</tbody>
+        </table></div>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-xs text-muted-foreground">{meta.updatedAt ? `Última actualización: ${new Date(meta.updatedAt).toLocaleString("es-DO")}${meta.updatedBy ? ` · ${meta.updatedBy}` : ""}` : "Valores sugeridos — pendientes de acordar con RRHH."}</span>
+          {canEdit && <div className="flex gap-2"><Button variant="outline" onClick={() => setM(DEFAULT_SLA_MATRIX)}>Restaurar sugeridos</Button><Button onClick={save} disabled={saving}><Save className="h-4 w-4 mr-1" />Guardar plazos</Button></div>}
+        </div>
       </CardContent>
     </Card>
   );
