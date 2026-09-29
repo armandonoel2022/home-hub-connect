@@ -7,7 +7,7 @@ import { useArmedPersonnel } from "@/hooks/useApiHooks";
 import { getClients, getLocationsByClient, getPostsByLocation } from "@/lib/opsExpediente";
 import {
   TIPOS, VACANTES, PRIORIDADES, MOTIVOS, ESTADOS, CLOSED, SLA_HORAS, ESTADO_STYLE,
-  opsRolesFor, rrhhTeam, semaforo, listRequests, createRequest, updateRequest, listTemplates, saveTemplates,
+  opsRolesFor, rrhhTeam, semaforo, listRequests, createRequest, updateRequest, listTemplates, saveTemplates, getRrhhRecipients, saveRrhhRecipients,
   type OpsHrRequest, type OpsEstado, type OpsTemplate, type OpsReqTipo, type OpsVacante, type OpsPrioridad,
 } from "@/lib/opsHrRequests";
 import { exportToExcel, exportToPDF } from "@/lib/exportUtils";
@@ -26,7 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, LayoutDashboard, ListChecks, FolderOpen, Users, FileSpreadsheet, FileText, Copy, Send, Save, Mail, Paperclip, CheckCircle2, AlertTriangle } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend, CartesianGrid } from "recharts";
 
-type View = "dashboard" | "nueva" | "mias" | "todas" | "plantillas";
+type View = "dashboard" | "nueva" | "mias" | "todas" | "plantillas" | "destinatarios";
 const ALL = "__all";
 const SEM: Record<string, string> = { verde: "bg-green-500", amarillo: "bg-amber-400", rojo: "bg-destructive", gris: "bg-muted-foreground/40" };
 const CHART = ["hsl(var(--primary))", "hsl(var(--accent-foreground))", "hsl(var(--destructive))", "hsl(var(--muted-foreground))"];
@@ -154,6 +154,7 @@ export default function OpsHrRequests() {
     { k: "mias", label: "Mis solicitudes", icon: ListChecks, show: true },
     { k: "todas", label: "Todas las solicitudes", icon: Users, show: canSeeAll },
     { k: "plantillas", label: "Plantillas", icon: FolderOpen, show: true },
+    { k: "destinatarios", label: "Destinatarios RRHH", icon: Mail, show: true },
   ];
 
   const List = ({ list }: { list: OpsHrRequest[] }) => (
@@ -328,6 +329,7 @@ export default function OpsHrRequests() {
               </Card>
             )}
 
+            {view === "destinatarios" && <RecipientsView canEdit={canManage} userName={user?.fullName || ""} />}
             {view === "plantillas" && <TemplatesView templates={templates} canEdit={roles.has("admin") || roles.has("coordinador") || roles.has("rrhh")} onSave={async l => { await saveTemplates(l); setTemplates(l); toast({ title: "Plantillas guardadas" }); }} />}
           </div>
         </div>
@@ -448,6 +450,47 @@ function TemplatesView({ templates, canEdit, onSave }: { templates: OpsTemplate[
             <Button disabled={!t.nombre.trim()} onClick={() => { onSave([...templates, { ...t, id: `TPL-${Date.now()}` }]); setT({ ...t, nombre: "", notas: "" }); }}><Plus className="h-4 w-4 mr-1" />Agregar</Button>
           </div>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function RecipientsView({ canEdit, userName }: { canEdit: boolean; userName: string }) {
+  const { allUsers } = useAuth();
+  const { toast } = useToast();
+  const [list, setList] = useState<string[]>([]);
+  const [email, setEmail] = useState("");
+  useEffect(() => { getRrhhRecipients().then(setList).catch(() => {}); }, []);
+  const save = async (next: string[]) => {
+    try { setList(await saveRrhhRecipients(next, userName)); toast({ title: "Lista de destinatarios actualizada" }); }
+    catch (e: any) { toast({ title: "No se pudo guardar", description: e.message, variant: "destructive" }); }
+  };
+  const add = () => {
+    const e = email.trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) return toast({ title: "Correo no válido", variant: "destructive" });
+    if (list.includes(e)) return setEmail("");
+    save([...list, e]); setEmail("");
+  };
+  const nameOf = (e: string) => allUsers.find(u => u.email?.toLowerCase() === e)?.fullName;
+  return (
+    <Card><CardHeader><CardTitle className="text-base">Destinatarios de RRHH</CardTitle>
+      <p className="text-sm text-muted-foreground">Estas personas reciben un correo con cada solicitud nueva, cambio de estado, comentario y el resumen diario. El creador de la solicitud y requerimientos.operaciones@ siempre reciben copia.</p>
+    </CardHeader>
+      <CardContent className="space-y-3">
+        {list.map(e => (
+          <div key={e} className="flex items-center justify-between border border-border rounded p-2 text-sm">
+            <div><b>{nameOf(e) || e}</b>{nameOf(e) && <span className="text-muted-foreground"> · {e}</span>}</div>
+            {canEdit && <Button size="sm" variant="ghost" onClick={() => save(list.filter(x => x !== e))}>Excluir</Button>}
+          </div>
+        ))}
+        {!list.length && <p className="text-sm text-amber-600">No hay nadie de RRHH en la lista; solo recibirá correo el creador.</p>}
+        {canEdit ? (
+          <div className="flex gap-2 border-t border-border pt-3">
+            <Input list="ops-users" value={email} onChange={e => setEmail(e.target.value)} placeholder="correo@safeone.com.do" onKeyDown={e => e.key === "Enter" && add()} />
+            <datalist id="ops-users">{allUsers.filter(u => u.email).map(u => <option key={u.id} value={u.email}>{u.fullName}</option>)}</datalist>
+            <Button onClick={add}><Plus className="h-4 w-4 mr-1" />Incluir</Button>
+          </div>
+        ) : <p className="text-xs text-muted-foreground">Solo RRHH o administradores pueden modificar esta lista.</p>}
       </CardContent>
     </Card>
   );

@@ -89,8 +89,16 @@ function wrap(r, title, body) {
 </div>`;
 }
 
+const SETTINGS_FILE = 'ops-hr-settings.json';
+const DEFAULT_RRHH = ['daguasvivas@safeone.com.do', 'alira@safeone.com.do', 'nperez@safeone.com.do', 'abrito@safeone.com.do'];
+function getSettings() {
+  const s = readData(SETTINGS_FILE);
+  const obj = Array.isArray(s) ? s[0] : s;
+  return { rrhhRecipients: obj && Array.isArray(obj.rrhhRecipients) ? obj.rrhhRecipients : DEFAULT_RRHH };
+}
+function saveSettings(obj) { writeData(SETTINGS_FILE, [obj]); }
 function recipients(r) {
-  return [r.creadoPorEmail, r.supervisorEmail, r.rrhhAsignadoEmail].filter(Boolean);
+  return [r.creadoPorEmail, r.supervisorEmail, r.rrhhAsignadoEmail, ...getSettings().rrhhRecipients].filter(Boolean);
 }
 
 async function notify(r, event, extra = {}) {
@@ -160,7 +168,7 @@ async function dailySummary(force = false) {
   const rows = open.map((r) => `<tr><td>${esc(r.id)}</td><td>${esc(r.estado)}</td><td>${esc(r.tipo)}</td><td>${esc(place(r))}</td><td>${esc(r.prioridad)}</td><td>${r.fechaLimiteSLA ? new Date(r.fechaLimiteSLA).toLocaleString('es-DO') : ''}</td></tr>`).join('');
   const html = `<div style="font-family:Segoe UI,Arial,sans-serif"><h2>Pendientes del día — ${key}</h2><p>${open.length} solicitud(es) abiertas.</p>
     <table border="1" cellpadding="6" style="border-collapse:collapse;font-size:13px"><tr><th>ID</th><th>Estado</th><th>Tipo</th><th>Ubicación</th><th>Prioridad</th><th>Límite SLA</th></tr>${rows}</table></div>`;
-  return sendMail({ to: [], subject: `Resumen diario Operaciones → RRHH (${open.length} pendientes)`, html });
+  return sendMail({ to: getSettings().rrhhRecipients, subject: `Resumen diario Operaciones → RRHH (${open.length} pendientes)`, html });
 }
 
 function start() {
@@ -174,4 +182,4 @@ function start() {
   console.log('[ops-mail] Activo (respuestas cada 2 min, resumen diario 8:00)');
 }
 
-module.exports = { config, isConfigured, notify, syncReplies, dailySummary, start, FILE };
+module.exports = { getSettings, saveSettings, DEFAULT_RRHH, config, isConfigured, notify, syncReplies, dailySummary, start, FILE };
