@@ -16,10 +16,15 @@ const FILE = 'ops-hr-requests.json';
 const env = (k, d) => (process.env[k] !== undefined && process.env[k] !== '' ? process.env[k] : d);
 
 function config() {
+  // Si no hay buzón propio de Operaciones (OPS_MAIL_PASS), se reutiliza el buzón
+  // de Tickets IT (IT_MAIL_USER/IT_MAIL_PASS), que ya funciona en el servidor.
+  const own = !!env('OPS_MAIL_PASS', '');
+  const shared = !own && !!env('IT_MAIL_PASS', '');
   return {
     enabled: String(env('OPS_MAIL_ENABLED', 'true')).toLowerCase() !== 'false',
-    user: env('OPS_MAIL_USER', 'requerimientos.operaciones@safeone.com.do'),
-    pass: env('OPS_MAIL_PASS', ''),
+    shared,
+    user: own ? env('OPS_MAIL_USER', 'requerimientos.operaciones@safeone.com.do') : shared ? env('IT_MAIL_USER', 'ticketsit@safeone.com.do') : '',
+    pass: own ? env('OPS_MAIL_PASS', '') : shared ? env('IT_MAIL_PASS', '') : '',
     imapHost: env('OPS_IMAP_HOST', env('IT_IMAP_HOST', 'mail.safeone.com.do')),
     imapPort: Number(env('OPS_IMAP_PORT', env('IT_IMAP_PORT', 993))),
     smtpHost: env('OPS_SMTP_HOST', env('IT_SMTP_HOST', 'mail.safeone.com.do')),
