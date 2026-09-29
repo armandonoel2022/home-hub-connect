@@ -16,10 +16,15 @@ const FILE = 'ops-hr-requests.json';
 const env = (k, d) => (process.env[k] !== undefined && process.env[k] !== '' ? process.env[k] : d);
 
 function config() {
+  // Si no hay buzón propio de Operaciones (OPS_MAIL_PASS), se reutiliza el buzón
+  // de Tickets IT (IT_MAIL_USER/IT_MAIL_PASS), que ya funciona en el servidor.
+  const own = !!env('OPS_MAIL_PASS', '');
+  const shared = !own && !!env('IT_MAIL_PASS', '');
   return {
     enabled: String(env('OPS_MAIL_ENABLED', 'true')).toLowerCase() !== 'false',
-    user: env('OPS_MAIL_USER', 'requerimientos.operaciones@safeone.com.do'),
-    pass: env('OPS_MAIL_PASS', ''),
+    shared,
+    user: own ? env('OPS_MAIL_USER', 'requerimientos.operaciones@safeone.com.do') : shared ? env('IT_MAIL_USER', 'ticketsit@safeone.com.do') : '',
+    pass: own ? env('OPS_MAIL_PASS', '') : shared ? env('IT_MAIL_PASS', '') : '',
     imapHost: env('OPS_IMAP_HOST', env('IT_IMAP_HOST', 'mail.safeone.com.do')),
     imapPort: Number(env('OPS_IMAP_PORT', env('IT_IMAP_PORT', 993))),
     smtpHost: env('OPS_SMTP_HOST', env('IT_SMTP_HOST', 'mail.safeone.com.do')),
@@ -45,9 +50,9 @@ async function transport() {
 }
 
 async function sendMail({ to, subject, html, urgent }) {
-  if (!isConfigured()) return { sent: false, reason: 'Correo de Operaciones no configurado (OPS_MAIL_PASS)' };
+  if (!isConfigured()) return { sent: false, reason: 'Correo no configurado: falta OPS_MAIL_PASS (o IT_MAIL_PASS) en el .env del servidor' };
   const c = config();
-  const list = [...new Set([c.user, ...(to || [])].filter(Boolean).map((e) => e.toLowerCase()))];
+  const list = [...new Set([c.shared ? null : c.user, ...(to || [])].filter(Boolean).map((e) => e.toLowerCase()))];
   try {
     const info = await (await transport()).sendMail({
       from: `"SafeOne Operaciones → RRHH" <${c.user}>`,
@@ -129,8 +134,27 @@ async function notifyClient(r) {
 }
 
 // ─── Respuestas por correo → comentarios ───
+// Agrega un correo ya parseado como comentario si su asunto trae [OPS-RRHH-xxxxxx].
+// Lo usa también el buzón de Tickets IT cuando ambos módulos comparten buzón.
+function addReplyFromMail(mail) {
+  const from = mail.from?.value?.[0] || {};
+  const m = String(mail.subject || '').match(/\[(OPS-RRHH-\d+)\]/i);
+  if (!m) return false;
+  const list = readData(FILE);
+  const r = list.find((x) => String(x.id).toUpperCase() === m[1].toUpperCase());
+  if (!r) return true;
+  const text = String(mail.text || '').split(/\n\s*(?:El .+escribió:|On .+wrote:|-----Original|De:\s)/i)[0].trim().slice(0, 4000);
+  if (!text) return true;
+  r.comentarios = r.comentarios || [];
+  r.comentarios.push({ id: `CMT-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, autor: from.name || from.address, autorEmail: from.address, texto: text, fecha: new Date().toISOString(), origen: 'correo' });
+  r.updatedAt = new Date().toISOString();
+  writeData(FILE, list);
+  return true;
+}
+
 async function syncReplies() {
   if (!isConfigured()) return { ok: false, message: 'No configurado' };
+  if (config().shared) return { ok: true, added: 0, message: 'Buzón compartido con Tickets IT: las respuestas se procesan allí' };
   const d = await loadDeps();
   if (!d.ok) return { ok: false, message: d.error };
   const c = config();
@@ -150,17 +174,7 @@ async function syncReplies() {
           const mail = await d.simpleParser(msg.source);
           const from = mail.from?.value?.[0] || {};
           if ((from.address || '').toLowerCase() === c.user.toLowerCase()) continue;
-          const m = String(mail.subject || '').match(/\[(OPS-RRHH-\d+)\]/i);
-          if (!m) continue;
-          const list = readData(FILE);
-          const r = list.find((x) => x.id.toUpperCase() === m[1].toUpperCase());
-          if (!r) continue;
-          const text = String(mail.text || '').split(/\n\s*(?:El .+escribió:|On .+wrote:|-----Original|De:\s)/i)[0].trim().slice(0, 4000);
-          if (!text) continue;
-          r.comentarios = r.comentarios || [];
-          r.comentarios.push({ id: `CMT-${Date.now()}-${added}`, autor: from.name || from.address, autorEmail: from.address, texto: text, fecha: new Date().toISOString(), origen: 'correo' });
-          r.updatedAt = new Date().toISOString();
-          writeData(FILE, list);
+          if (!addReplyFromMail(mail)) continue;
           added++;
         } catch (e) { console.warn(`[ops-mail] mensaje ${uid}: ${e.message}`); }
       }
@@ -222,7 +236,9 @@ async function slaAlerts() {
 }
 
 function start() {
-  if (!isConfigured()) { console.log('[ops-mail] Deshabilitado (falta OPS_MAIL_PASS en .env)'); return; }
+  if (!isConfigured()) { console.log('[ops-mail] Deshabilitado (falta OPS_MAIL_PASS o IT_MAIL_PASS en .env)'); return; }
+  const c = config();
+  console.log(`[ops-mail] Enviando desde ${c.user}${c.shared ? ' (buzón compartido con Tickets IT)' : ''}`);
   let running = false;
   setInterval(async () => {
     if (running) return; running = true;
@@ -232,4 +248,4 @@ function start() {
   console.log('[ops-mail] Activo (respuestas cada 2 min, alertas SLA, resumen diario 8:00)');
 }
 
-module.exports = { getSettings, saveSettings, DEFAULT_RRHH, config, isConfigured, notify, notifyClient, syncReplies, dailySummary, slaAlerts, start, FILE };
+module.exports = { getSettings, saveSettings, DEFAULT_RRHH, config, isConfigured, notify, notifyClient, syncReplies, addReplyFromMail, dailySummary, slaAlerts, start, FILE };
