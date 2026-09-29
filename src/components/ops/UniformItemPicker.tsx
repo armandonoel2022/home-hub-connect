@@ -71,7 +71,7 @@ export default function UniformItemPicker({ value, onChange }: Props) {
               <Icon className="h-6 w-6 shrink-0" />
               <span>{category}</span>
               {count > 0 && (
-                <span className="absolute right-1.5 top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-operations px-1 text-[10px] font-bold text-primary-foreground" aria-label={`${count} en la solicitud`}>{count}</span>
+                <span className="absolute right-1.5 top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-operations px-1 text-[10px] font-bold text-operations-foreground" aria-label={`${count} en la solicitud`}>{count}</span>
               )}
             </Button>
           );
