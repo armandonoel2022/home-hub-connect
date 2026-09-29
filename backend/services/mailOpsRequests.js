@@ -266,6 +266,9 @@ async function trackedSend(args) {
   return r;
 }
 
+syncReplies = trackedSync;
+sendMail = trackedSend;
+
 async function status() {
   const c = config();
   const d = await loadDeps();
@@ -291,6 +294,6 @@ async function testConnection() {
 
 module.exports = {
   getSettings, saveSettings, DEFAULT_RRHH, config, isConfigured, notify, notifyClient,
-  syncReplies: trackedSync, addReplyFromMail, dailySummary, slaAlerts,
-  start: () => { start(); _polling = isConfigured(); }, FILE, status, testConnection, sendMail: trackedSend,
+  syncReplies, addReplyFromMail, dailySummary, slaAlerts,
+  start: () => { start(); _polling = isConfigured(); }, FILE, status, testConnection, sendMail,
 };
