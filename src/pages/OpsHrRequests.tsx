@@ -1,4 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
+import "@fontsource/sora/600.css";
+import "@fontsource/sora/700.css";
+import "@fontsource/manrope/400.css";
+import "@fontsource/manrope/500.css";
+import "@fontsource/manrope/600.css";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import Navbar from "@/components/Navbar";
@@ -22,7 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, LayoutDashboard, ListChecks, FolderOpen, Users, FileSpreadsheet, FileText, Copy, Send, Save, Mail, Paperclip, CheckCircle2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Plus, LayoutDashboard, ListChecks, FolderOpen, Users, FileSpreadsheet, FileText, Copy, Send, Save, Mail, Paperclip, CheckCircle2, AlertTriangle, Search, Clock3, CircleCheck, SlidersHorizontal, ChevronRight, RefreshCw } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend, CartesianGrid } from "recharts";
 
 type View = "dashboard" | "nueva" | "mias" | "todas" | "plantillas" | "destinatarios";
@@ -56,6 +61,8 @@ export default function OpsHrRequests() {
   const [templates, setTemplates] = useState<OpsTemplate[]>([]);
   const [form, setForm] = useState(emptyForm());
   const [detailId, setDetailId] = useState<string | null>(params.get("id"));
+  const [search, setSearch] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
   const [f, setF] = useState({ cliente: ALL, localidad: ALL, turno: ALL, vacante: ALL, prioridad: ALL, estado: ALL, creador: ALL, desde: "", hasta: "" });
 
   const reload = async () => { try { setItems(await listRequests()); } catch (e: any) { toast({ title: "No se pudieron cargar las solicitudes", description: e.message, variant: "destructive" }); } };
@@ -145,8 +152,9 @@ export default function OpsHrRequests() {
     (f.turno === ALL || r.turnoNombre === f.turno) && (f.vacante === ALL || r.tipoVacante === f.vacante) &&
     (f.prioridad === ALL || r.prioridad === f.prioridad) && (f.estado === ALL || r.estado === f.estado) &&
     (f.creador === ALL || r.creadoPor === f.creador) &&
-    (!f.desde || r.fechaCreacion.slice(0, 10) >= f.desde) && (!f.hasta || r.fechaCreacion.slice(0, 10) <= f.hasta)
-  ), [scoped, f]);
+    (!f.desde || r.fechaCreacion.slice(0, 10) >= f.desde) && (!f.hasta || r.fechaCreacion.slice(0, 10) <= f.hasta) &&
+    (!search.trim() || [r.id, r.tipo, r.clienteNombre, r.localidadNombre, r.puestoNombre, r.creadoPor].some(v => String(v || "").toLowerCase().includes(search.trim().toLowerCase())))
+  ), [scoped, f, search]);
   const uniq = (k: keyof OpsHrRequest) => [...new Set(scoped.map(r => String(r[k] || "")).filter(Boolean))].sort();
 
   const kpi = useMemo(() => {
@@ -190,9 +198,9 @@ export default function OpsHrRequests() {
   ];
 
   const List = ({ list }: { list: OpsHrRequest[] }) => (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
-        <CardTitle className="text-base">{list.length} solicitud(es)</CardTitle>
+    <Card className="overflow-hidden border-operations-border shadow-sm">
+      <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 px-5 py-4 border-b bg-muted/20">
+        <div><CardTitle className="text-base">Solicitudes</CardTitle><p className="text-xs text-muted-foreground mt-1">{list.length} resultados según los filtros aplicados</p></div>
         <div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={() => exportToExcel({ title: "Solicitudes Operaciones → RRHH", columns: cols, data: exportData(list), filename: "solicitudes-operaciones" })}><FileSpreadsheet className="h-4 w-4 mr-1" />Excel</Button>
           <Button size="sm" variant="outline" onClick={() => exportToPDF({ title: "Solicitudes Operaciones → RRHH", columns: cols, data: exportData(list), filename: "solicitudes-operaciones" })}><FileText className="h-4 w-4 mr-1" />PDF</Button>
@@ -200,23 +208,22 @@ export default function OpsHrRequests() {
       </CardHeader>
       <CardContent className="p-0 overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-muted/50 text-left text-xs text-muted-foreground">
-            <tr><th className="p-2">SLA</th><th className="p-2">ID</th><th className="p-2">Estado</th><th className="p-2">Tipo</th><th className="p-2">Cliente / Puesto</th><th className="p-2 hidden md:table-cell">Turno</th><th className="p-2">Prioridad</th><th className="p-2 hidden lg:table-cell">Creado</th></tr>
+          <thead className="bg-muted/40 text-left text-xs text-muted-foreground uppercase">
+            <tr><th className="px-5 py-3">SLA</th><th className="px-3 py-3">Solicitud</th><th className="px-3 py-3">Estado</th><th className="px-3 py-3">Movimiento</th><th className="px-3 py-3">Cliente / Puesto</th><th className="px-3 py-3 hidden lg:table-cell">Creado</th><th className="px-5 py-3 text-right">Abrir</th></tr>
           </thead>
           <tbody>
             {list.map(r => (
-              <tr key={r.id} className="border-t border-border hover:bg-muted/40 cursor-pointer" onClick={() => setDetailId(r.id)}>
-                <td className="p-2"><span className={`inline-block h-3 w-3 rounded-full ${SEM[semaforo(r)]}`} /></td>
-                <td className="p-2 font-mono text-xs">{r.id}{r.requiereCoberturaUrgente && <AlertTriangle className="inline h-3 w-3 ml-1 text-destructive" />}</td>
-                <td className="p-2"><span className={`px-2 py-0.5 rounded text-xs font-medium ${ESTADO_STYLE[r.estado]}`}>{r.estado}</span></td>
-                <td className="p-2">{r.tipo}<div className="text-xs text-muted-foreground">{r.tipoVacante}</div></td>
-                <td className="p-2">{r.clienteNombre}<div className="text-xs text-muted-foreground">{r.localidadNombre} · {r.puestoNombre}</div></td>
-                <td className="p-2 hidden md:table-cell text-xs">{r.turnoNombre}</td>
-                <td className="p-2"><Badge variant={r.prioridad === "Crítica" ? "destructive" : "outline"}>{r.prioridad}</Badge></td>
-                <td className="p-2 hidden lg:table-cell text-xs">{fmt(r.fechaCreacion)}<div className="text-muted-foreground">{r.creadoPor}</div></td>
+              <tr key={r.id} className="border-t border-border hover:bg-operations-soft/60 cursor-pointer transition-colors" onClick={() => setDetailId(r.id)}>
+                <td className="px-5 py-4"><span className={`inline-block h-2.5 w-2.5 rounded-full ring-4 ring-muted ${SEM[semaforo(r)]}`} /></td>
+                <td className="px-3 py-4 font-mono text-xs font-semibold">{r.id}{r.requiereCoberturaUrgente && <AlertTriangle className="inline h-3 w-3 ml-1 text-destructive" />}</td>
+                <td className="px-3 py-4"><span className={`px-2 py-1 rounded text-xs font-medium ${ESTADO_STYLE[r.estado]}`}>{r.estado}</span></td>
+                <td className="px-3 py-4 text-sm font-medium">{r.tipo}<div className="text-xs font-normal text-muted-foreground">{r.tipoVacante} · {r.prioridad}</div></td>
+                <td className="px-3 py-4 text-sm font-medium">{r.clienteNombre}<div className="text-xs font-normal text-muted-foreground">{r.localidadNombre} · {r.puestoNombre} · {r.turnoNombre}</div></td>
+                <td className="px-3 py-4 hidden lg:table-cell text-xs">{fmt(r.fechaCreacion)}<div className="text-muted-foreground">{r.creadoPor}</div></td>
+                <td className="px-5 py-4 text-right"><ChevronRight className="h-4 w-4 ml-auto text-muted-foreground" /></td>
               </tr>
             ))}
-            {!list.length && <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Sin solicitudes</td></tr>}
+            {!list.length && <tr><td colSpan={7} className="p-10 text-center text-muted-foreground">No hay solicitudes que coincidan con la búsqueda.</td></tr>}
           </tbody>
         </table>
       </CardContent>
@@ -225,12 +232,12 @@ export default function OpsHrRequests() {
 
   const FSel = ({ k, label, opts }: { k: keyof typeof f; label: string; opts: string[] }) => (
     <Select value={f[k]} onValueChange={v => setF({ ...f, [k]: v })}>
-      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={label} /></SelectTrigger>
+      <SelectTrigger className="h-10 text-xs bg-card"><SelectValue placeholder={label} /></SelectTrigger>
       <SelectContent><SelectItem value={ALL}>{label}: todos</SelectItem>{opts.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
     </Select>
   );
   const Filters = () => (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2">
+    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2 p-4 bg-muted/30 border-y border-operations-border">
       <FSel k="cliente" label="Cliente" opts={uniq("clienteNombre")} />
       <FSel k="localidad" label="Localidad" opts={uniq("localidadNombre")} />
       <FSel k="turno" label="Turno" opts={uniq("turnoNombre")} />
@@ -238,13 +245,13 @@ export default function OpsHrRequests() {
       <FSel k="prioridad" label="Prioridad" opts={PRIORIDADES} />
       <FSel k="estado" label="Estado" opts={ESTADOS} />
       <FSel k="creador" label="Creador" opts={uniq("creadoPor")} />
-      <Input type="date" className="h-8 text-xs" value={f.desde} onChange={e => setF({ ...f, desde: e.target.value })} />
-      <Input type="date" className="h-8 text-xs" value={f.hasta} onChange={e => setF({ ...f, hasta: e.target.value })} />
+      <Input aria-label="Fecha desde" type="date" className="h-10 text-xs bg-card" value={f.desde} onChange={e => setF({ ...f, desde: e.target.value })} />
+      <Input aria-label="Fecha hasta" type="date" className="h-10 text-xs bg-card" value={f.hasta} onChange={e => setF({ ...f, hasta: e.target.value })} />
     </div>
   );
 
-  const Kpi = ({ label, value, tone = "" }: { label: string; value: any; tone?: string }) => (
-    <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">{label}</div><div className={`text-2xl font-bold ${tone}`}>{value}</div></CardContent></Card>
+  const Kpi = ({ label, value, tone = "", icon: Icon }: { label: string; value: any; tone?: string; icon: any }) => (
+    <Card className="border-operations-border shadow-sm"><CardContent className="p-5 flex items-center gap-4"><span className="h-11 w-11 rounded-md bg-operations-soft text-operations flex items-center justify-center"><Icon className="h-5 w-5" /></span><div><div className="text-xs font-medium text-muted-foreground">{label}</div><div className={`text-2xl font-bold ${tone}`}>{value}</div></div></CardContent></Card>
   );
 
   return (
