@@ -1,4 +1,4 @@
-import { Flashlight, Footprints, HardHat, Minus, Plus, Shirt, ShoppingBag, Trash2 } from "lucide-react";
+import { Flashlight, Footprints, HardHat, Minus, Plus, PlusCircle, Shirt, ShoppingBag, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
