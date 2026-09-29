@@ -2142,3 +2142,16 @@ export const myPayrollApi = {
       `/my-payroll/payment-detail?codigo=${encodeURIComponent(codigo)}&pagoOid=${pagoOid}`
     ),
 };
+
+// ─── Operaciones → RRHH (solicitudes de personal) ───
+export const opsHrRequestsApi = {
+  list: () => apiFetch<any[]>("/ops-hr-requests"),
+  create: (data: any) => apiFetch<any>("/ops-hr-requests", { method: "POST", body: JSON.stringify(data) }),
+  update: (id: string, data: any) => apiFetch<any>(`/ops-hr-requests/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  remove: (id: string) => apiFetch<void>(`/ops-hr-requests/${id}`, { method: "DELETE" }),
+  templates: () => apiFetch<any[]>("/ops-hr-requests/templates/all"),
+  saveTemplates: (list: any[]) => apiFetch<any>("/ops-hr-requests/templates/all", { method: "PUT", body: JSON.stringify(list) }),
+  syncMail: () => apiFetch<any>("/ops-hr-requests/mail/sync", { method: "POST" }),
+  sendSummary: () => apiFetch<any>("/ops-hr-requests/mail/summary", { method: "POST" }),
+  mailStatus: () => apiFetch<{ configured: boolean; user: string }>("/ops-hr-requests/mail/status"),
+};
