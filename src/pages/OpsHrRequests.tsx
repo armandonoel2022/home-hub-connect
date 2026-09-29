@@ -29,7 +29,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, LayoutDashboard, ListChecks, FolderOpen, Users, FileSpreadsheet, FileText, Copy, Send, Save, Mail, Paperclip, CheckCircle2, AlertTriangle, Search, Clock3, CircleCheck, SlidersHorizontal, ChevronRight, RefreshCw } from "lucide-react";
+import { ArrowLeft, Plus, LayoutDashboard, ListChecks, FolderOpen, Users, FileSpreadsheet, FileText, Copy, Send, Save, Mail, Paperclip, CheckCircle2, AlertTriangle, Search, Clock3, CircleCheck, SlidersHorizontal, ChevronRight, RefreshCw, Shirt, UserRoundCog } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend, CartesianGrid } from "recharts";
 import { z } from "zod";
 
@@ -66,6 +66,7 @@ export default function OpsHrRequests() {
   const [items, setItems] = useState<OpsHrRequest[]>([]);
   const [templates, setTemplates] = useState<OpsTemplate[]>([]);
   const [form, setForm] = useState(emptyForm());
+  const [requestKind, setRequestKind] = useState<"personal" | "uniformes" | null>(null);
   const [detailId, setDetailId] = useState<string | null>(params.get("id"));
   const urlId = params.get("id");
   useEffect(() => { if (urlId) setDetailId(urlId); }, [urlId]);
@@ -126,6 +127,17 @@ export default function OpsHrRequests() {
   const isUniform = form.tipo === "Uniformes";
   const needsOut = form.tipo === "Salida" || form.tipo === "Sustitución";
 
+  const openNewRequest = () => {
+    setForm(emptyForm());
+    setRequestKind(null);
+    setView("nueva");
+  };
+
+  const chooseRequestKind = (kind: "personal" | "uniformes") => {
+    setForm({ ...emptyForm(), tipo: kind === "uniformes" ? "Uniformes" : "Ingreso" });
+    setRequestKind(kind);
+  };
+
   const submit = async (estado: OpsEstado) => {
     if (!user) return;
     if (!client || !loc || !post || !turno) return toast({ title: "Complete Cliente → Localidad → Puesto → Turno", variant: "destructive" });
@@ -172,6 +184,7 @@ export default function OpsHrRequests() {
 
   const duplicate = (r: OpsHrRequest) => {
     setForm({ ...emptyForm(), tipo: r.tipo, tipoVacante: r.tipoVacante, prioridad: r.prioridad, clienteId: r.clienteId, localidadId: r.localidadId, puestoId: r.puestoId, turnoId: "", notificarCliente: !!r.notificarCliente, clienteEmail: r.clienteEmail || "", motivoBaja: r.motivoBaja || "", requiereCoberturaUrgente: r.requiereCoberturaUrgente, uniformItems: (r.uniformItems || []).map(item => ({ ...item, id: `uniform-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` })) });
+    setRequestKind(r.tipo === "Uniformes" ? "uniformes" : "personal");
     setDetailId(null); setView("nueva");
     toast({ title: "Solicitud duplicada", description: "Seleccione un turno distinto y envíe." });
   };
@@ -303,13 +316,13 @@ export default function OpsHrRequests() {
               {canManage && isApiConfigured() && (
                 <Button size="sm" variant="outline" onClick={async () => { const r = await opsHrRequestsApi.syncMail(); toast({ title: r.ok ? `Correo revisado (${r.added} respuesta(s))` : "Error de correo", description: r.message }); reload(); }}><RefreshCw className="h-4 w-4" />Revisar respuestas</Button>
               )}
-              <Button className="bg-operations text-operations-foreground hover:bg-operations/90" onClick={() => setView("nueva")}><Plus className="h-4 w-4" />Nueva solicitud</Button>
+              <Button className="bg-operations text-operations-foreground hover:bg-operations/90" onClick={openNewRequest}><Plus className="h-4 w-4" />Nueva solicitud</Button>
             </div>
           </header>
 
           <nav className="px-2 sm:px-1 flex gap-1 overflow-x-auto border-y border-operations-border bg-muted/20" aria-label="Secciones de solicitudes">
             {nav.filter(n => n.show).map(n => (
-              <Button key={n.k} variant="ghost" className={`rounded-none border-b-2 h-12 justify-start whitespace-nowrap ${view === n.k ? "border-operations text-operations bg-operations-soft/70" : "border-transparent text-muted-foreground"}`} onClick={() => setView(n.k)}><n.icon className="h-4 w-4" />{n.label}</Button>
+               <Button key={n.k} variant="ghost" className={`rounded-none border-b-2 h-12 justify-start whitespace-nowrap ${view === n.k ? "border-operations text-operations bg-operations-soft/70" : "border-transparent text-muted-foreground"}`} onClick={() => n.k === "nueva" ? openNewRequest() : setView(n.k)}><n.icon className="h-4 w-4" />{n.label}</Button>
             ))}
           </nav>
 
@@ -360,11 +373,40 @@ export default function OpsHrRequests() {
             {view === "todas" && canSeeAll && (<div className="p-5 sm:p-7 space-y-4"><Filters /><List list={filtered} /></div>)}
 
             {view === "nueva" && (
-              <div className="p-5 sm:p-7"><Card className="border-operations-border shadow-sm"><CardHeader className="border-b bg-muted/20"><CardTitle className="text-lg">Nueva solicitud a RRHH</CardTitle><p className="text-sm text-muted-foreground">Seleccione primero la ubicación contratada y luego complete la solicitud.</p></CardHeader>
+              <div className="p-5 sm:p-7">
+                {!requestKind ? (
+                  <section className="mx-auto max-w-4xl space-y-5" aria-labelledby="request-kind-heading">
+                    <div>
+                      <h2 id="request-kind-heading" className="text-xl font-bold">¿Qué necesita solicitar a RRHH?</h2>
+                      <p className="mt-1 text-sm text-muted-foreground">Elija una opción para abrir el formulario correspondiente.</p>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <Button type="button" variant="outline" className="h-auto min-h-44 items-start justify-start whitespace-normal border-operations-border bg-card p-6 text-left hover:border-operations hover:bg-operations-soft/50" onClick={() => chooseRequestKind("personal")}>
+                        <span className="flex w-full flex-col items-start gap-4">
+                          <span className="flex h-12 w-12 items-center justify-center rounded-md bg-operations-soft text-operations"><UserRoundCog className="h-6 w-6" /></span>
+                          <span><span className="block text-lg font-bold text-foreground">Movimiento de personal</span><span className="mt-1 block text-sm font-normal text-muted-foreground">Solicitar ingresos, salidas o sustituciones en un puesto.</span></span>
+                          <span className="flex items-center gap-1 text-sm font-semibold text-operations">Continuar <ChevronRight className="h-4 w-4" /></span>
+                        </span>
+                      </Button>
+                      <Button type="button" variant="outline" className="h-auto min-h-44 items-start justify-start whitespace-normal border-operations-border bg-card p-6 text-left hover:border-operations hover:bg-operations-soft/50" onClick={() => chooseRequestKind("uniformes")}>
+                        <span className="flex w-full flex-col items-start gap-4">
+                          <span className="flex h-12 w-12 items-center justify-center rounded-md bg-operations-soft text-operations"><Shirt className="h-6 w-6" /></span>
+                          <span><span className="block text-lg font-bold text-foreground">Solicitud de uniformes</span><span className="mt-1 block text-sm font-normal text-muted-foreground">Pedir prendas, calzado, equipos y otras indumentarias.</span></span>
+                          <span className="flex items-center gap-1 text-sm font-semibold text-operations">Continuar <ChevronRight className="h-4 w-4" /></span>
+                        </span>
+                      </Button>
+                    </div>
+                  </section>
+                ) : <Card className="border-operations-border shadow-sm"><CardHeader className="border-b bg-muted/20">
+                  <div className="flex items-start gap-3">
+                    <Button type="button" variant="ghost" size="icon" className="shrink-0" aria-label="Cambiar tipo de solicitud" onClick={() => setRequestKind(null)}><ArrowLeft className="h-4 w-4" /></Button>
+                    <div><CardTitle className="text-lg">{requestKind === "uniformes" ? "Solicitud de uniformes" : "Movimiento de personal"}</CardTitle><p className="mt-1 text-sm text-muted-foreground">Seleccione primero la ubicación contratada y luego complete la solicitud.</p></div>
+                  </div>
+                </CardHeader>
                 <CardContent className="space-y-4">
                   {templates.length > 0 && (
                     <div className="flex flex-wrap gap-2 items-center"><span className="text-xs text-muted-foreground">Plantillas:</span>
-                      {templates.map(t => <Button key={t.id} size="sm" variant="outline" onClick={() => setForm({ ...form, tipo: t.tipo, tipoVacante: t.tipoVacante, prioridad: t.prioridad, motivoBaja: t.motivoBaja || "", notas: t.notas || "" })}>{t.nombre}</Button>)}
+                      {templates.filter(t => requestKind === "uniformes" ? t.tipo === "Uniformes" : t.tipo !== "Uniformes").map(t => <Button key={t.id} size="sm" variant="outline" onClick={() => setForm({ ...form, tipo: t.tipo, tipoVacante: t.tipoVacante, prioridad: t.prioridad, motivoBaja: t.motivoBaja || "", notas: t.notas || "" })}>{t.nombre}</Button>)}
                     </div>
                   )}
                   {!sqlTree && !sqlError && <p className="text-sm text-muted-foreground">Cargando clientes desde gSafeOne…</p>}
@@ -383,7 +425,7 @@ export default function OpsHrRequests() {
                     </div>
                   )}
                   <div className={`grid gap-3 ${isUniform ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
-                    <div><Label>Tipo</Label><Select value={form.tipo} onValueChange={v => setForm({ ...form, tipo: v as OpsReqTipo })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{TIPOS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
+                    <div><Label>{isUniform ? "Solicitud" : "Movimiento"}</Label>{isUniform ? <div className="flex h-10 items-center rounded-md border border-input bg-muted/30 px-3 text-sm font-medium">Uniformes</div> : <Select value={form.tipo} onValueChange={v => setForm({ ...form, tipo: v as OpsReqTipo })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{TIPOS.filter(t => t !== "Uniformes").map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select>}</div>
                     {!isUniform && <div><Label>Tipo de vacante</Label><Select value={form.tipoVacante} onValueChange={v => setForm({ ...form, tipoVacante: v as OpsVacante })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{VACANTES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>}
                     <div><Label>Prioridad (SLA {SLA_HORAS[form.prioridad]}h)</Label><Select value={form.prioridad} onValueChange={v => setForm({ ...form, prioridad: v as OpsPrioridad })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{PRIORIDADES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
                   </div>
@@ -443,7 +485,8 @@ export default function OpsHrRequests() {
                     <Button onClick={() => submit("Enviada a RRHH")}><Send className="h-4 w-4 mr-1" />Enviar a RRHH</Button>
                   </div>
                 </CardContent>
-              </Card></div>
+              </Card>}
+              </div>
             )}
 
             {view === "destinatarios" && <div className="p-5 sm:p-7"><RecipientsView canEdit={canManage} userName={user?.fullName || ""} /></div>}
