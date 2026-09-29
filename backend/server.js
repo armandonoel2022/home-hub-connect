@@ -113,6 +113,8 @@ app.use('/api/vacations', require('./routes/vacations'));
 app.use('/api/visitors', require('./routes/visitors'));
 app.use('/api/mercantile-registry', require('./routes/mercantile-registry'));
 app.use('/api/client-documents', require('./routes/client-documents'));
+app.use('/api/ops-hr-requests', require('./routes/ops-hr-requests'));
+try { require('./services/mailOpsRequests').start(); } catch (e) { console.warn('[ops-mail]', e.message); }
 
 // Health check
 app.get('/api/health', (req, res) => res.json({

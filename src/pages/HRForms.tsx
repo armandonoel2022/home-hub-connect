@@ -506,6 +506,11 @@ const HRForms = () => {
                   : "Seleccione un formulario"}
               </p>
             </div>
+            {!activeForm && (
+              <Button variant="outline" onClick={() => navigate("/rrhh/operaciones")}>
+                Operaciones
+              </Button>
+            )}
           </div>
 
           {/* Tab navigation */}
