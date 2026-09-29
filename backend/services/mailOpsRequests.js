@@ -104,9 +104,9 @@ const DEFAULT_RRHH = ['daguasvivas@safeone.com.do', 'alira@safeone.com.do', 'npe
 function getSettings() {
   const s = readData(SETTINGS_FILE);
   const obj = Array.isArray(s) ? s[0] : s;
-  return { rrhhRecipients: obj && Array.isArray(obj.rrhhRecipients) ? obj.rrhhRecipients : DEFAULT_RRHH };
+  return { ...(obj || {}), rrhhRecipients: obj && Array.isArray(obj.rrhhRecipients) ? obj.rrhhRecipients : DEFAULT_RRHH };
 }
-function saveSettings(obj) { writeData(SETTINGS_FILE, [obj]); }
+function saveSettings(obj) { writeData(SETTINGS_FILE, [{ ...getSettings(), ...obj }]); }
 function recipients(r) {
   return [r.creadoPorEmail, r.supervisorEmail, r.rrhhAsignadoEmail, ...getSettings().rrhhRecipients].filter(Boolean);
 }
