@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Open+Sans:wght@400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -53,6 +51,10 @@
     --charcoal-light: 220 12% 28%;
     --charcoal-dark: 220 18% 10%;
     --surface-elevated: 0 0% 100%;
+    --operations: 207 64% 34%;
+    --operations-foreground: 0 0% 100%;
+    --operations-soft: 207 55% 95%;
+    --operations-border: 210 24% 90%;
 
     --font-heading: 'Montserrat', sans-serif;
     --font-body: 'Open Sans', sans-serif;
@@ -86,6 +88,18 @@
     --input: 220 15% 22%;
     --ring: 42 100% 50%;
   }
+}
+
+.ops-workspace {
+  font-family: 'Manrope', sans-serif;
+}
+
+.ops-workspace h1,
+.ops-workspace h2,
+.ops-workspace h3,
+.ops-workspace h4 {
+  font-family: 'Sora', sans-serif;
+  letter-spacing: 0;
 }
 
 @layer base {

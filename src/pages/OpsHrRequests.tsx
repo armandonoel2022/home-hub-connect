@@ -1,4 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
+import "@fontsource/sora/600.css";
+import "@fontsource/sora/700.css";
+import "@fontsource/manrope/400.css";
+import "@fontsource/manrope/500.css";
+import "@fontsource/manrope/600.css";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import Navbar from "@/components/Navbar";
@@ -22,7 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, LayoutDashboard, ListChecks, FolderOpen, Users, FileSpreadsheet, FileText, Copy, Send, Save, Mail, Paperclip, CheckCircle2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Plus, LayoutDashboard, ListChecks, FolderOpen, Users, FileSpreadsheet, FileText, Copy, Send, Save, Mail, Paperclip, CheckCircle2, AlertTriangle, Search, Clock3, CircleCheck, SlidersHorizontal, ChevronRight, RefreshCw } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend, CartesianGrid } from "recharts";
 
 type View = "dashboard" | "nueva" | "mias" | "todas" | "plantillas" | "destinatarios";
@@ -56,6 +61,8 @@ export default function OpsHrRequests() {
   const [templates, setTemplates] = useState<OpsTemplate[]>([]);
   const [form, setForm] = useState(emptyForm());
   const [detailId, setDetailId] = useState<string | null>(params.get("id"));
+  const [search, setSearch] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
   const [f, setF] = useState({ cliente: ALL, localidad: ALL, turno: ALL, vacante: ALL, prioridad: ALL, estado: ALL, creador: ALL, desde: "", hasta: "" });
 
   const reload = async () => { try { setItems(await listRequests()); } catch (e: any) { toast({ title: "No se pudieron cargar las solicitudes", description: e.message, variant: "destructive" }); } };
@@ -145,8 +152,9 @@ export default function OpsHrRequests() {
     (f.turno === ALL || r.turnoNombre === f.turno) && (f.vacante === ALL || r.tipoVacante === f.vacante) &&
     (f.prioridad === ALL || r.prioridad === f.prioridad) && (f.estado === ALL || r.estado === f.estado) &&
     (f.creador === ALL || r.creadoPor === f.creador) &&
-    (!f.desde || r.fechaCreacion.slice(0, 10) >= f.desde) && (!f.hasta || r.fechaCreacion.slice(0, 10) <= f.hasta)
-  ), [scoped, f]);
+    (!f.desde || r.fechaCreacion.slice(0, 10) >= f.desde) && (!f.hasta || r.fechaCreacion.slice(0, 10) <= f.hasta) &&
+    (!search.trim() || [r.id, r.tipo, r.clienteNombre, r.localidadNombre, r.puestoNombre, r.creadoPor].some(v => String(v || "").toLowerCase().includes(search.trim().toLowerCase())))
+  ), [scoped, f, search]);
   const uniq = (k: keyof OpsHrRequest) => [...new Set(scoped.map(r => String(r[k] || "")).filter(Boolean))].sort();
 
   const kpi = useMemo(() => {
@@ -190,9 +198,9 @@ export default function OpsHrRequests() {
   ];
 
   const List = ({ list }: { list: OpsHrRequest[] }) => (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
-        <CardTitle className="text-base">{list.length} solicitud(es)</CardTitle>
+    <Card className="overflow-hidden border-operations-border shadow-sm">
+      <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 px-5 py-4 border-b bg-muted/20">
+        <div><CardTitle className="text-base">Solicitudes</CardTitle><p className="text-xs text-muted-foreground mt-1">{list.length} resultados según los filtros aplicados</p></div>
         <div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={() => exportToExcel({ title: "Solicitudes Operaciones → RRHH", columns: cols, data: exportData(list), filename: "solicitudes-operaciones" })}><FileSpreadsheet className="h-4 w-4 mr-1" />Excel</Button>
           <Button size="sm" variant="outline" onClick={() => exportToPDF({ title: "Solicitudes Operaciones → RRHH", columns: cols, data: exportData(list), filename: "solicitudes-operaciones" })}><FileText className="h-4 w-4 mr-1" />PDF</Button>
@@ -200,23 +208,22 @@ export default function OpsHrRequests() {
       </CardHeader>
       <CardContent className="p-0 overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-muted/50 text-left text-xs text-muted-foreground">
-            <tr><th className="p-2">SLA</th><th className="p-2">ID</th><th className="p-2">Estado</th><th className="p-2">Tipo</th><th className="p-2">Cliente / Puesto</th><th className="p-2 hidden md:table-cell">Turno</th><th className="p-2">Prioridad</th><th className="p-2 hidden lg:table-cell">Creado</th></tr>
+          <thead className="bg-muted/40 text-left text-xs text-muted-foreground uppercase">
+            <tr><th className="px-5 py-3">SLA</th><th className="px-3 py-3">Solicitud</th><th className="px-3 py-3">Estado</th><th className="px-3 py-3">Movimiento</th><th className="px-3 py-3">Cliente / Puesto</th><th className="px-3 py-3 hidden lg:table-cell">Creado</th><th className="px-5 py-3 text-right">Abrir</th></tr>
           </thead>
           <tbody>
             {list.map(r => (
-              <tr key={r.id} className="border-t border-border hover:bg-muted/40 cursor-pointer" onClick={() => setDetailId(r.id)}>
-                <td className="p-2"><span className={`inline-block h-3 w-3 rounded-full ${SEM[semaforo(r)]}`} /></td>
-                <td className="p-2 font-mono text-xs">{r.id}{r.requiereCoberturaUrgente && <AlertTriangle className="inline h-3 w-3 ml-1 text-destructive" />}</td>
-                <td className="p-2"><span className={`px-2 py-0.5 rounded text-xs font-medium ${ESTADO_STYLE[r.estado]}`}>{r.estado}</span></td>
-                <td className="p-2">{r.tipo}<div className="text-xs text-muted-foreground">{r.tipoVacante}</div></td>
-                <td className="p-2">{r.clienteNombre}<div className="text-xs text-muted-foreground">{r.localidadNombre} · {r.puestoNombre}</div></td>
-                <td className="p-2 hidden md:table-cell text-xs">{r.turnoNombre}</td>
-                <td className="p-2"><Badge variant={r.prioridad === "Crítica" ? "destructive" : "outline"}>{r.prioridad}</Badge></td>
-                <td className="p-2 hidden lg:table-cell text-xs">{fmt(r.fechaCreacion)}<div className="text-muted-foreground">{r.creadoPor}</div></td>
+              <tr key={r.id} className="border-t border-border hover:bg-operations-soft/60 cursor-pointer transition-colors" onClick={() => setDetailId(r.id)}>
+                <td className="px-5 py-4"><span className={`inline-block h-2.5 w-2.5 rounded-full ring-4 ring-muted ${SEM[semaforo(r)]}`} /></td>
+                <td className="px-3 py-4 font-mono text-xs font-semibold">{r.id}{r.requiereCoberturaUrgente && <AlertTriangle className="inline h-3 w-3 ml-1 text-destructive" />}</td>
+                <td className="px-3 py-4"><span className={`px-2 py-1 rounded text-xs font-medium ${ESTADO_STYLE[r.estado]}`}>{r.estado}</span></td>
+                <td className="px-3 py-4 text-sm font-medium">{r.tipo}<div className="text-xs font-normal text-muted-foreground">{r.tipoVacante} · {r.prioridad}</div></td>
+                <td className="px-3 py-4 text-sm font-medium">{r.clienteNombre}<div className="text-xs font-normal text-muted-foreground">{r.localidadNombre} · {r.puestoNombre} · {r.turnoNombre}</div></td>
+                <td className="px-3 py-4 hidden lg:table-cell text-xs">{fmt(r.fechaCreacion)}<div className="text-muted-foreground">{r.creadoPor}</div></td>
+                <td className="px-5 py-4 text-right"><ChevronRight className="h-4 w-4 ml-auto text-muted-foreground" /></td>
               </tr>
             ))}
-            {!list.length && <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Sin solicitudes</td></tr>}
+            {!list.length && <tr><td colSpan={7} className="p-10 text-center text-muted-foreground">No hay solicitudes que coincidan con la búsqueda.</td></tr>}
           </tbody>
         </table>
       </CardContent>
@@ -225,12 +232,12 @@ export default function OpsHrRequests() {
 
   const FSel = ({ k, label, opts }: { k: keyof typeof f; label: string; opts: string[] }) => (
     <Select value={f[k]} onValueChange={v => setF({ ...f, [k]: v })}>
-      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={label} /></SelectTrigger>
+      <SelectTrigger className="h-10 text-xs bg-card"><SelectValue placeholder={label} /></SelectTrigger>
       <SelectContent><SelectItem value={ALL}>{label}: todos</SelectItem>{opts.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
     </Select>
   );
   const Filters = () => (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2">
+    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2 p-4 bg-muted/30 border-y border-operations-border">
       <FSel k="cliente" label="Cliente" opts={uniq("clienteNombre")} />
       <FSel k="localidad" label="Localidad" opts={uniq("localidadNombre")} />
       <FSel k="turno" label="Turno" opts={uniq("turnoNombre")} />
@@ -238,52 +245,69 @@ export default function OpsHrRequests() {
       <FSel k="prioridad" label="Prioridad" opts={PRIORIDADES} />
       <FSel k="estado" label="Estado" opts={ESTADOS} />
       <FSel k="creador" label="Creador" opts={uniq("creadoPor")} />
-      <Input type="date" className="h-8 text-xs" value={f.desde} onChange={e => setF({ ...f, desde: e.target.value })} />
-      <Input type="date" className="h-8 text-xs" value={f.hasta} onChange={e => setF({ ...f, hasta: e.target.value })} />
+      <Input aria-label="Fecha desde" type="date" className="h-10 text-xs bg-card" value={f.desde} onChange={e => setF({ ...f, desde: e.target.value })} />
+      <Input aria-label="Fecha hasta" type="date" className="h-10 text-xs bg-card" value={f.hasta} onChange={e => setF({ ...f, hasta: e.target.value })} />
     </div>
   );
 
-  const Kpi = ({ label, value, tone = "" }: { label: string; value: any; tone?: string }) => (
-    <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">{label}</div><div className={`text-2xl font-bold ${tone}`}>{value}</div></CardContent></Card>
+  const Kpi = ({ label, value, tone = "", icon: Icon }: { label: string; value: any; tone?: string; icon: any }) => (
+    <Card className="border-operations-border shadow-sm"><CardContent className="p-5 flex items-center gap-4"><span className="h-11 w-11 rounded-md bg-operations-soft text-operations flex items-center justify-center"><Icon className="h-5 w-5" /></span><div><div className="text-xs font-medium text-muted-foreground">{label}</div><div className={`text-2xl font-bold ${tone}`}>{value}</div></div></CardContent></Card>
   );
 
   return (
     <AppLayout>
       <Navbar />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 w-full">
-        <div className="flex items-center gap-3 mb-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/rrhh/formularios")}><ArrowLeft className="h-5 w-5" /></Button>
-          <div className="flex-1">
-            <h1 className="text-2xl font-heading font-bold">Solicitudes a RRHH — Operaciones</h1>
-            <p className="text-sm text-muted-foreground">Ingresos, salidas y sustituciones de personal por cliente, puesto y turno.</p>
-          </div>
-          {canManage && isApiConfigured() && (
-            <Button size="sm" variant="outline" onClick={async () => { const r = await opsHrRequestsApi.syncMail(); toast({ title: r.ok ? `Correo revisado (${r.added} respuesta(s))` : "Error de correo", description: r.message }); reload(); }}><Mail className="h-4 w-4 mr-1" />Revisar respuestas</Button>
-          )}
-        </div>
+      <div className="ops-workspace max-w-[1480px] mx-auto px-3 sm:px-6 py-5 w-full">
+        <section>
+          <header className="px-2 sm:px-1 pb-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="flex items-start gap-3 min-w-0">
+              <Button variant="ghost" size="icon" className="shrink-0" aria-label="Volver a Solicitudes a RRHH" onClick={() => navigate("/rrhh/formularios")}><ArrowLeft className="h-5 w-5" /></Button>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1"><span>Operaciones</span><ChevronRight className="h-3 w-3" /><span className="text-operations font-semibold">Solicitudes a RRHH</span></div>
+                <h1 className="text-2xl sm:text-3xl font-bold">Centro de gestión</h1>
+                <p className="text-sm text-muted-foreground mt-1">Ingresos, salidas y sustituciones por cliente, puesto y turno.</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 pl-12 lg:pl-0">
+              {canManage && isApiConfigured() && (
+                <Button size="sm" variant="outline" onClick={async () => { const r = await opsHrRequestsApi.syncMail(); toast({ title: r.ok ? `Correo revisado (${r.added} respuesta(s))` : "Error de correo", description: r.message }); reload(); }}><RefreshCw className="h-4 w-4" />Revisar respuestas</Button>
+              )}
+              <Button className="bg-operations text-operations-foreground hover:bg-operations/90" onClick={() => setView("nueva")}><Plus className="h-4 w-4" />Nueva solicitud</Button>
+            </div>
+          </header>
 
-        <div className="flex flex-col md:flex-row gap-4">
-          <nav className="md:w-52 flex md:flex-col gap-1 overflow-x-auto shrink-0">
+          <nav className="px-2 sm:px-1 flex gap-1 overflow-x-auto border-y border-operations-border bg-muted/20" aria-label="Secciones de solicitudes">
             {nav.filter(n => n.show).map(n => (
-              <Button key={n.k} variant={view === n.k ? "default" : "ghost"} className="justify-start whitespace-nowrap" onClick={() => setView(n.k)}><n.icon className="h-4 w-4 mr-2" />{n.label}</Button>
+              <Button key={n.k} variant="ghost" className={`rounded-none border-b-2 h-12 justify-start whitespace-nowrap ${view === n.k ? "border-operations text-operations bg-operations-soft/70" : "border-transparent text-muted-foreground"}`} onClick={() => setView(n.k)}><n.icon className="h-4 w-4" />{n.label}</Button>
             ))}
           </nav>
 
-          <div className="flex-1 min-w-0 space-y-4">
+          <div className="min-w-0">
             {view === "dashboard" && (<>
-              <Filters />
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <Kpi label="Total abiertas" value={kpi.open} />
-                <Kpi label="Cubiertas satisfactoriamente" value={kpi.covered} tone="text-green-600" />
-                <Kpi label="Cerradas sin cobertura" value={kpi.uncovered} tone="text-amber-600" />
-                <Kpi label="% Cumplimiento SLA" value={kpi.sla} />
-                <Kpi label="Prom. respuesta RRHH (h)" value={kpi.resp} />
-                <Kpi label="Prom. cierre (h)" value={kpi.close} />
-                <Card className="col-span-2"><CardContent className="p-4"><div className="text-xs text-muted-foreground mb-2">Pendientes por estado</div>
-                  <div className="flex flex-wrap gap-2">{kpi.byState.map(s => <span key={s.name} className={`px-2 py-1 rounded text-xs ${ESTADO_STYLE[s.name as OpsEstado]}`}>{s.name}: <b>{s.value}</b></span>)}{!kpi.byState.length && <span className="text-sm text-muted-foreground">Nada pendiente</span>}</div>
-                </CardContent></Card>
+              <div className="p-5 sm:p-7 space-y-5">
+              <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+                <Kpi label="Solicitudes abiertas" value={kpi.open} icon={ListChecks} />
+                <Kpi label="Cubiertas" value={kpi.covered} tone="text-green-600" icon={CircleCheck} />
+                <Kpi label="Sin cobertura" value={kpi.uncovered} tone="text-amber-600" icon={AlertTriangle} />
+                <Kpi label="Cumplimiento SLA" value={kpi.sla} icon={Clock3} />
               </div>
-              <div className="grid lg:grid-cols-2 gap-4">
+              <div className="border border-operations-border rounded-lg overflow-hidden">
+                <div className="p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-muted/20">
+                  <div className="relative flex-1 max-w-xl"><Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" /><Input className="pl-9 bg-card" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por ID, cliente, puesto, tipo o creador..." /></div>
+                  <div className="flex flex-wrap gap-2">
+                    <Select value={f.estado} onValueChange={v => setF({ ...f, estado: v })}><SelectTrigger className="w-[190px] bg-card"><SelectValue placeholder="Todos los estados" /></SelectTrigger><SelectContent><SelectItem value={ALL}>Todos los estados</SelectItem>{ESTADOS.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}</SelectContent></Select>
+                    <Button variant="outline" aria-expanded={showFilters} onClick={() => setShowFilters(!showFilters)}><SlidersHorizontal className="h-4 w-4" />Más filtros</Button>
+                  </div>
+                </div>
+                {showFilters && <Filters />}
+                <List list={filtered} />
+              </div>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <Kpi label="Prom. respuesta RRHH" value={kpi.resp === "—" ? "—" : `${kpi.resp} h`} icon={Clock3} />
+                <Kpi label="Prom. de cierre" value={kpi.close === "—" ? "—" : `${kpi.close} h`} icon={CircleCheck} />
+                <Card className="col-span-2 border-operations-border shadow-sm"><CardContent className="p-5"><div className="text-xs font-medium text-muted-foreground mb-3">Pendientes por estado</div><div className="flex flex-wrap gap-2">{kpi.byState.map(s => <span key={s.name} className={`px-2 py-1 rounded text-xs ${ESTADO_STYLE[s.name as OpsEstado]}`}>{s.name}: <b>{s.value}</b></span>)}{!kpi.byState.length && <span className="text-sm text-muted-foreground">Nada pendiente</span>}</div></CardContent></Card>
+              </div>
+              <div className="grid lg:grid-cols-2 gap-4 pt-2">
                 <Card><CardHeader><CardTitle className="text-sm">Clientes/puestos con más rotación</CardTitle></CardHeader><CardContent className="h-64">
                   <ResponsiveContainer><BarChart data={kpi.rotation} layout="vertical"><XAxis type="number" allowDecimals={false} /><YAxis type="category" dataKey="name" width={150} tick={{ fontSize: 10 }} /><Tooltip /><Bar dataKey="value" fill={CHART[0]} /></BarChart></ResponsiveContainer>
                 </CardContent></Card>
@@ -297,15 +321,14 @@ export default function OpsHrRequests() {
                   <ResponsiveContainer><PieChart><Pie data={kpi.vacantes} dataKey="value" nameKey="name" outerRadius={80} label>{kpi.vacantes.map((_, i) => <Cell key={i} fill={CHART[i % CHART.length]} />)}</Pie><Tooltip /><Legend /></PieChart></ResponsiveContainer>
                 </CardContent></Card>
               </div>
-              <div className="flex justify-end"><Button onClick={() => setView("nueva")}><Plus className="h-4 w-4 mr-1" />Nueva solicitud</Button></div>
-              <List list={filtered} />
+              </div>
             </>)}
 
-            {view === "mias" && <List list={items.filter(r => r.creadoPorId === user?.id)} />}
-            {view === "todas" && canSeeAll && (<><Filters /><List list={filtered} /></>)}
+            {view === "mias" && <div className="p-5 sm:p-7"><List list={items.filter(r => r.creadoPorId === user?.id)} /></div>}
+            {view === "todas" && canSeeAll && (<div className="p-5 sm:p-7 space-y-4"><Filters /><List list={filtered} /></div>)}
 
             {view === "nueva" && (
-              <Card><CardHeader><CardTitle className="text-base">Nueva solicitud de personal</CardTitle></CardHeader>
+              <div className="p-5 sm:p-7"><Card className="border-operations-border shadow-sm"><CardHeader className="border-b bg-muted/20"><CardTitle className="text-lg">Nueva solicitud de personal</CardTitle><p className="text-sm text-muted-foreground">Seleccione primero la ubicación contratada y luego complete el movimiento.</p></CardHeader>
                 <CardContent className="space-y-4">
                   {templates.length > 0 && (
                     <div className="flex flex-wrap gap-2 items-center"><span className="text-xs text-muted-foreground">Plantillas:</span>
@@ -363,13 +386,13 @@ export default function OpsHrRequests() {
                     <Button onClick={() => submit("Enviada a RRHH")}><Send className="h-4 w-4 mr-1" />Enviar a RRHH</Button>
                   </div>
                 </CardContent>
-              </Card>
+              </Card></div>
             )}
 
-            {view === "destinatarios" && <RecipientsView canEdit={canManage} userName={user?.fullName || ""} />}
-            {view === "plantillas" && <TemplatesView templates={templates} canEdit={roles.has("admin") || roles.has("coordinador") || roles.has("rrhh")} onSave={async l => { await saveTemplates(l); setTemplates(l); toast({ title: "Plantillas guardadas" }); }} />}
+            {view === "destinatarios" && <div className="p-5 sm:p-7"><RecipientsView canEdit={canManage} userName={user?.fullName || ""} /></div>}
+            {view === "plantillas" && <div className="p-5 sm:p-7"><TemplatesView templates={templates} canEdit={roles.has("admin") || roles.has("coordinador") || roles.has("rrhh")} onSave={async l => { await saveTemplates(l); setTemplates(l); toast({ title: "Plantillas guardadas" }); }} /></div>}
           </div>
-        </div>
+        </section>
       </div>
 
       {detail && <DetailDialog r={detail} canManage={canManage} isOwner={detail.creadoPorId === user?.id} userName={user?.fullName || ""} userEmail={user?.email}
