@@ -12,7 +12,7 @@ import Navbar from "@/components/Navbar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useArmedPersonnel } from "@/hooks/useApiHooks";
 import {
-  TIPOS, VACANTES, PRIORIDADES, MOTIVOS, ESTADOS, CLOSED, SLA_HORAS, ESTADO_STYLE,
+  TIPOS, VACANTES, PRIORIDADES, MOTIVOS, ESTADOS, CLOSED, SLA_HORAS, ESTADO_STYLE, UNIFORM_CATEGORIES,
   opsRolesFor, rrhhTeam, semaforo, listRequests, createRequest, updateRequest, listTemplates, saveTemplates, getRrhhRecipients, saveRrhhRecipients,
   type OpsHrRequest, type OpsEstado, type OpsTemplate, type OpsReqTipo, type OpsVacante, type OpsPrioridad, type OpsUniformItem,
 } from "@/lib/opsHrRequests";
@@ -134,9 +134,9 @@ export default function OpsHrRequests() {
       const uniformSchema = z.object({
         recipient: z.string().trim().min(2, "Indique el agente que recibirá el uniforme").max(120),
         items: z.array(z.object({
-          id: z.string().max(80), category: z.string().min(2).max(80), quantity: z.number().int().min(1).max(50),
+          id: z.string().max(80), category: z.enum(UNIFORM_CATEGORIES), quantity: z.number().int().min(1).max(50),
           size: z.string().max(10).optional(), customDescription: z.string().trim().max(120).optional(),
-        }).refine(item => item.category !== "Otros" || !!item.customDescription, "Describa la indumentaria seleccionada como Otros")).min(1, "Seleccione al menos una prenda"),
+        }).refine(item => item.category !== "Otros" || !!item.customDescription?.trim(), "Describa la indumentaria seleccionada como Otros")).min(1, "Seleccione al menos una prenda"),
       });
       const assigned = agents.find(agent => agent.id === form.uniformRecipientId);
       const recipient = form.uniformRecipientManual || !agents.length ? form.uniformRecipientName : assigned?.name || "";
@@ -552,7 +552,7 @@ function TemplatesView({ templates, canEdit, onSave }: { templates: OpsTemplate[
       <CardContent className="space-y-4">
         {templates.map(x => (
           <div key={x.id} className="flex items-center justify-between border border-border rounded p-2 text-sm">
-            <div><b>{x.nombre}</b> <span className="text-muted-foreground">· {x.tipo} · {x.tipoVacante} · {x.prioridad}{x.motivoBaja ? ` · ${x.motivoBaja}` : ""}</span></div>
+            <div><b>{x.nombre}</b> <span className="text-muted-foreground">· {x.tipo}{x.tipo === "Uniformes" ? "" : ` · ${x.tipoVacante}`} · {x.prioridad}{x.motivoBaja ? ` · ${x.motivoBaja}` : ""}</span></div>
             {canEdit && <Button size="sm" variant="ghost" onClick={() => onSave(templates.filter(y => y.id !== x.id))}>Eliminar</Button>}
           </div>
         ))}
@@ -561,7 +561,7 @@ function TemplatesView({ templates, canEdit, onSave }: { templates: OpsTemplate[
           <div className="grid sm:grid-cols-5 gap-2 items-end border-t border-border pt-3">
             <div className="sm:col-span-2"><Label>Nombre</Label><Input value={t.nombre} onChange={e => setT({ ...t, nombre: e.target.value })} placeholder="Ej. Sustitución por renuncia" /></div>
             <div><Label>Tipo</Label><Select value={t.tipo} onValueChange={v => setT({ ...t, tipo: v as OpsReqTipo })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{TIPOS.map(x => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent></Select></div>
-            <div><Label>Vacante</Label><Select value={t.tipoVacante} onValueChange={v => setT({ ...t, tipoVacante: v as OpsVacante })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{VACANTES.map(x => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent></Select></div>
+            {t.tipo !== "Uniformes" ? <div><Label>Vacante</Label><Select value={t.tipoVacante} onValueChange={v => setT({ ...t, tipoVacante: v as OpsVacante })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{VACANTES.map(x => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent></Select></div> : <div className="hidden sm:block" />}
             <div><Label>Prioridad</Label><Select value={t.prioridad} onValueChange={v => setT({ ...t, prioridad: v as OpsPrioridad })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{PRIORIDADES.map(x => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent></Select></div>
             <div className="sm:col-span-2"><Label>Motivo</Label><Select value={t.motivoBaja || "none"} onValueChange={v => setT({ ...t, motivoBaja: v === "none" ? "" : v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">—</SelectItem>{MOTIVOS.map(x => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent></Select></div>
             <div className="sm:col-span-2"><Label>Notas</Label><Input value={t.notas} onChange={e => setT({ ...t, notas: e.target.value })} /></div>
