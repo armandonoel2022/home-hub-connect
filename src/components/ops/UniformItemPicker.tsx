@@ -84,7 +84,7 @@ export default function UniformItemPicker({ value, onChange }: Props) {
           {value.map(item => {
             const Icon = iconFor(item.category);
             return (
-              <div key={item.id} className="grid gap-2 rounded-md border border-border bg-card p-3 sm:grid-cols-[minmax(180px,1fr)_140px_130px_40px] sm:items-end">
+              <div key={item.id} className="grid gap-2 rounded-md border border-border bg-card p-3 sm:grid-cols-[minmax(180px,1fr)_140px_130px_80px] sm:items-end">
                 <div className="min-w-0">
                   <Label className="flex items-center gap-2 text-xs"><Icon className="h-4 w-4 text-operations" />Prenda</Label>
                   <div className="mt-2 text-sm font-semibold">{item.category}</div>
@@ -115,7 +115,10 @@ export default function UniformItemPicker({ value, onChange }: Props) {
                     <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" aria-label={`Aumentar cantidad de ${item.category}`} onClick={() => update(item.id, { quantity: Math.min(50, item.quantity + 1) })}><Plus className="h-3.5 w-3.5" /></Button>
                   </div>
                 </div>
-                <Button type="button" variant="ghost" size="icon" className="text-destructive" aria-label={`Quitar ${item.category}`} onClick={() => remove(item.id)}><Trash2 className="h-4 w-4" /></Button>
+                <div className="flex items-center justify-end gap-1">
+                  <Button type="button" variant="ghost" size="icon" className="text-operations" aria-label={`Agregar otra ${item.category} con la misma talla`} onClick={() => add(item.category)}><PlusCircle className="h-4 w-4" /></Button>
+                  <Button type="button" variant="ghost" size="icon" className="text-destructive" aria-label={`Quitar ${item.category}`} onClick={() => remove(item.id)}><Trash2 className="h-4 w-4" /></Button>
+                </div>
               </div>
             );
           })}
