@@ -4,14 +4,13 @@ import AppLayout from "@/components/AppLayout";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useArmedPersonnel } from "@/hooks/useApiHooks";
-import { getClients, getLocationsByClient, getPostsByLocation } from "@/lib/opsExpediente";
 import {
   TIPOS, VACANTES, PRIORIDADES, MOTIVOS, ESTADOS, CLOSED, SLA_HORAS, ESTADO_STYLE,
   opsRolesFor, rrhhTeam, semaforo, listRequests, createRequest, updateRequest, listTemplates, saveTemplates, getRrhhRecipients, saveRrhhRecipients,
   type OpsHrRequest, type OpsEstado, type OpsTemplate, type OpsReqTipo, type OpsVacante, type OpsPrioridad,
 } from "@/lib/opsHrRequests";
 import { exportToExcel, exportToPDF } from "@/lib/exportUtils";
-import { isApiConfigured, opsHrRequestsApi } from "@/lib/api";
+import { isApiConfigured, opsHrRequestsApi, generalSqlApi, type GeneralContrato } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +37,7 @@ const emptyForm = () => ({
   clienteId: "", localidadId: "", puestoId: "", turnoId: "",
   agenteSalienteId: "", agentePropuestoId: "", motivoBaja: "", motivoComentario: "",
   fechaEfectiva: new Date().toISOString().slice(0, 10), requiereCoberturaUrgente: false, notas: "",
+  notificarCliente: false, clienteEmail: "",
   adjuntos: [] as OpsHrRequest["adjuntos"],
 });
 
@@ -61,20 +61,51 @@ export default function OpsHrRequests() {
   const reload = async () => { try { setItems(await listRequests()); } catch (e: any) { toast({ title: "No se pudieron cargar las solicitudes", description: e.message, variant: "destructive" }); } };
   useEffect(() => { reload(); listTemplates().then(setTemplates).catch(() => {}); const t = setInterval(reload, 30000); return () => clearInterval(t); }, []);
 
-  // ─── Cascada ───
-  const clients = useMemo(() => getClients().sort((a, b) => a.nombre.localeCompare(b.nombre)), []);
-  const locations = useMemo(() => (form.clienteId ? getLocationsByClient(form.clienteId) : []), [form.clienteId]);
-  const posts = useMemo(() => (form.localidadId ? getPostsByLocation(form.localidadId) : []), [form.localidadId]);
-  const post = posts.find(p => p.id === form.puestoId);
+  // ─── Cascada: fuente viva gSafeOne (tabla Cliente → Localidad → Puesto → Horario) ───
+  type HTurno = { id: string; nombre: string; horario: string };
+  type HPost = { id: string; nombre: string; turnos: HTurno[]; vigilantes: { id: string; name: string; employeeCode: string }[] };
+  type HLoc = { id: string; nombre: string; posts: HPost[] };
+  type HClient = { id: string; nombre: string; email: string; contacto: string; locs: HLoc[] };
+  const [sqlTree, setSqlTree] = useState<HClient[] | null>(null);
+  const [sqlError, setSqlError] = useState<string>("");
+  useEffect(() => {
+    generalSqlApi.contrato().then((c: GeneralContrato) => {
+      setSqlTree(c.clientes.filter(cl => !cl.inactivo).map(cl => ({
+        id: `sql-${cl.oid}`, nombre: (cl.nombre || "").trim(), email: (cl.email || "").trim(), contacto: (cl.contacto || "").trim(),
+        locs: cl.localidades.map((l, li) => ({
+          id: `sql-${cl.oid}-${l.oid ?? li}`, nombre: l.nombre || "Sin nombre",
+          posts: l.puestos.map((p, pi) => {
+            const turnos = new Map<string, HTurno>(); const vig = new Map<string, { id: string; name: string; employeeCode: string }>();
+            p.horarios.forEach(h => h.detalles.forEach(d => {
+              const horario = d.horaDesde && d.horaHasta ? `${d.horaDesde} - ${d.horaHasta}` : `${d.horas}h`;
+              const nombre = d.tanda || `${d.horas}h`; const k = `${nombre}|${horario}`;
+              if (!turnos.has(k)) turnos.set(k, { id: k, nombre, horario });
+              if (d.vigilanteOID && d.vigilante) vig.set(String(d.vigilanteOID), { id: `sqlv-${d.vigilanteOID}`, name: d.vigilante.trim(), employeeCode: String(d.vigilanteCodigo ?? "") });
+            }));
+            if (!turnos.size) turnos.set("general", { id: "general", nombre: "General", horario: "" });
+            return { id: `sql-${cl.oid}-${l.oid ?? li}-${p.oid ?? pi}`, nombre: p.referencia || `Puesto ${pi + 1}`, turnos: [...turnos.values()], vigilantes: [...vig.values()] };
+          }),
+        })),
+      })).sort((a, b) => a.nombre.localeCompare(b.nombre)));
+    }).catch((e: any) => setSqlError(e?.message || "Sin conexión a gSafeOne"));
+  }, []);
+  const clients = sqlTree || [];
   const client = clients.find(c => c.id === form.clienteId);
+  const locations = client?.locs || [];
   const loc = locations.find(l => l.id === form.localidadId);
+  const posts = loc?.posts || [];
+  const post = posts.find(p => p.id === form.puestoId);
   const turno = post?.turnos.find(t => t.id === form.turnoId);
   const agents = useMemo(() => {
-    if (!client) return [];
+    if (!client) return [] as any[];
     const cn = client.nombre.toLowerCase();
-    return (personnel as any[]).filter(p => p.status === "Activo" && String(p.client || "").toLowerCase() === cn &&
-      (!post || [post.nombre, loc?.nombre].some(n => n && String(p.location || "").toLowerCase().includes(n.toLowerCase()))));
-  }, [personnel, client, post, loc]);
+    const fromSql = (post?.vigilantes || []).map(v => {
+      const match = (personnel as any[]).find(p => String(p.employeeCode) === v.employeeCode);
+      return { ...v, supervisor: match?.supervisor };
+    });
+    if (fromSql.length) return fromSql;
+    return (personnel as any[]).filter(p => p.status === "Activo" && String(p.client || "").toLowerCase() === cn);
+  }, [personnel, client, post]);
   const supervisorName = agents.find(a => a.supervisor)?.supervisor || "";
   const supervisorUser = allUsers.find(u => supervisorName && u.fullName.toLowerCase() === supervisorName.toLowerCase());
   const needsOut = form.tipo !== "Ingreso";
@@ -82,6 +113,7 @@ export default function OpsHrRequests() {
   const submit = async (estado: OpsEstado) => {
     if (!user) return;
     if (!client || !loc || !post || !turno) return toast({ title: "Complete Cliente → Localidad → Puesto → Turno", variant: "destructive" });
+    if (form.notificarCliente && !/^\S+@\S+\.\S+$/.test(form.clienteEmail)) return toast({ title: "Indique un correo válido del cliente", variant: "destructive" });
     if (needsOut && (!form.agenteSalienteId || !form.motivoBaja || !form.fechaEfectiva)) return toast({ title: "Agente saliente, motivo y fecha efectiva son obligatorios", variant: "destructive" });
     if (form.motivoBaja === "Otro" && !form.motivoComentario.trim()) return toast({ title: "Explique el motivo 'Otro'", variant: "destructive" });
     const out = agents.find(a => a.id === form.agenteSalienteId);
@@ -101,7 +133,7 @@ export default function OpsHrRequests() {
   };
 
   const duplicate = (r: OpsHrRequest) => {
-    setForm({ ...emptyForm(), tipo: r.tipo, tipoVacante: r.tipoVacante, prioridad: r.prioridad, clienteId: r.clienteId, localidadId: r.localidadId, puestoId: r.puestoId, turnoId: "", motivoBaja: r.motivoBaja || "", requiereCoberturaUrgente: r.requiereCoberturaUrgente });
+    setForm({ ...emptyForm(), tipo: r.tipo, tipoVacante: r.tipoVacante, prioridad: r.prioridad, clienteId: r.clienteId, localidadId: r.localidadId, puestoId: r.puestoId, turnoId: "", notificarCliente: !!r.notificarCliente, clienteEmail: r.clienteEmail || "", motivoBaja: r.motivoBaja || "", requiereCoberturaUrgente: r.requiereCoberturaUrgente });
     setDetailId(null); setView("nueva");
     toast({ title: "Solicitud duplicada", description: "Seleccione un turno distinto y envíe." });
   };
@@ -280,9 +312,10 @@ export default function OpsHrRequests() {
                       {templates.map(t => <Button key={t.id} size="sm" variant="outline" onClick={() => setForm({ ...form, tipo: t.tipo, tipoVacante: t.tipoVacante, prioridad: t.prioridad, motivoBaja: t.motivoBaja || "", notas: t.notas || "" })}>{t.nombre}</Button>)}
                     </div>
                   )}
-                  {!clients.length && <p className="text-sm text-amber-600">No hay clientes cargados en Expediente de Clientes. Ábralo una vez para sincronizarlos.</p>}
+                  {!sqlTree && !sqlError && <p className="text-sm text-muted-foreground">Cargando clientes desde gSafeOne…</p>}
+                  {sqlError && <p className="text-sm text-destructive">No se pudo leer la tabla Cliente de gSafeOne: {sqlError}</p>}
                   <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    <div><Label>Cliente</Label><Select value={form.clienteId} onValueChange={v => setForm({ ...form, clienteId: v, localidadId: "", puestoId: "", turnoId: "", agenteSalienteId: "" })}><SelectTrigger><SelectValue placeholder="Seleccione" /></SelectTrigger><SelectContent>{clients.map(c => <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>)}</SelectContent></Select></div>
+                    <div><Label>Cliente</Label><Select value={form.clienteId} onValueChange={v => setForm({ ...form, clienteId: v, localidadId: "", puestoId: "", turnoId: "", agenteSalienteId: "", clienteEmail: clients.find(c => c.id === v)?.email || "" })}><SelectTrigger><SelectValue placeholder="Seleccione" /></SelectTrigger><SelectContent>{clients.map(c => <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>)}</SelectContent></Select></div>
                     <div><Label>Localidad</Label><Select disabled={!form.clienteId} value={form.localidadId} onValueChange={v => setForm({ ...form, localidadId: v, puestoId: "", turnoId: "" })}><SelectTrigger><SelectValue placeholder="Seleccione" /></SelectTrigger><SelectContent>{locations.map(l => <SelectItem key={l.id} value={l.id}>{l.nombre}</SelectItem>)}</SelectContent></Select></div>
                     <div><Label>Puesto</Label><Select disabled={!form.localidadId} value={form.puestoId} onValueChange={v => { const p = posts.find(x => x.id === v); setForm({ ...form, puestoId: v, turnoId: p?.turnos.length === 1 ? p.turnos[0].id : "" }); }}><SelectTrigger><SelectValue placeholder="Seleccione" /></SelectTrigger><SelectContent>{posts.map(p => <SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>)}</SelectContent></Select></div>
                     <div><Label>Turno</Label><Select disabled={!post} value={form.turnoId} onValueChange={v => setForm({ ...form, turnoId: v })}><SelectTrigger><SelectValue placeholder="Seleccione" /></SelectTrigger><SelectContent>{post?.turnos.map(t => <SelectItem key={t.id} value={t.id}>{t.nombre} {t.horario}</SelectItem>)}</SelectContent></Select></div>
@@ -312,6 +345,10 @@ export default function OpsHrRequests() {
                     {!needsOut && <div><Label>Fecha efectiva</Label><Input type="date" value={form.fechaEfectiva} onChange={e => setForm({ ...form, fechaEfectiva: e.target.value })} /></div>}
                   </div>
                   <div className="flex items-center gap-2"><Switch checked={form.requiereCoberturaUrgente} onCheckedChange={v => setForm({ ...form, requiereCoberturaUrgente: v })} /><Label>Requiere cobertura urgente (correo de alta prioridad)</Label></div>
+                  <div className="rounded-md border border-border p-3 space-y-2">
+                    <div className="flex items-center gap-2"><Switch checked={form.notificarCliente} onCheckedChange={v => setForm({ ...form, notificarCliente: v })} /><Label>Notificar al cliente por correo cuando concluya el cambio / sustitución</Label></div>
+                    {form.notificarCliente && <div className="grid sm:grid-cols-2 gap-2 items-end"><div><Label>Correo del cliente</Label><Input type="email" value={form.clienteEmail} onChange={e => setForm({ ...form, clienteEmail: e.target.value })} placeholder="correo@cliente.com" /></div><p className="text-xs text-muted-foreground">Tomado de gSafeOne (Cliente.Email). Se envía solo al marcar la solicitud como "Cubierta satisfactoriamente".</p></div>}
+                  </div>
                   <div><Label>Notas</Label><Textarea value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })} /></div>
                   <div><Label className="flex items-center gap-1"><Paperclip className="h-4 w-4" />Evidencia (recomendado, máx. 5 MB c/u)</Label>
                     <Input type="file" multiple onChange={async e => {
@@ -373,7 +410,7 @@ function DetailDialog({ r, canManage, isOwner, userName, userEmail, onClose, onU
             {r.requiereCoberturaUrgente && <div className="rounded bg-destructive/10 text-destructive p-2 font-medium">Requiere cobertura urgente</div>}
             <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1">
               {[["Tipo", `${r.tipo} · ${r.tipoVacante}`], ["Prioridad", `${r.prioridad} (${r.slaHoras}h)`], ["Cliente", r.clienteNombre], ["Localidad", r.localidadNombre], ["Puesto", r.puestoNombre], ["Turno", r.turnoNombre],
-                ["Supervisor", r.supervisorResponsable], ["Agente saliente", r.agenteSalienteNombre], ["Motivo", [r.motivoBaja, r.motivoComentario].filter(Boolean).join(" — ")], ["Agente propuesto", r.agentePropuestoNombre],
+                ["Supervisor", r.supervisorResponsable], ["Agente saliente", r.agenteSalienteNombre], ["Motivo", [r.motivoBaja, r.motivoComentario].filter(Boolean).join(" — ")], ["Agente propuesto", r.agentePropuestoNombre], ["Notificar cliente", r.notificarCliente ? `${r.clienteEmail}${r.clienteNotificadoEn ? ` · enviado ${fmt(r.clienteNotificadoEn)}` : " · pendiente al cierre"}` : "No"],
                 ["Fecha efectiva", r.fechaEfectiva], ["Límite SLA", fmt(r.fechaLimiteSLA)], ["Responsable actual", r.responsableActual], ["RRHH asignado", r.rrhhAsignado], ["Creado por", `${r.creadoPor} · ${fmt(r.fechaCreacion)}`], ["Cierre", r.fechaCierre ? `${fmt(r.fechaCierre)} — ${r.cierreComentario || ""}` : ""]]
                 .filter(([, v]) => v).map(([k, v]) => <div key={k}><span className="text-muted-foreground">{k}:</span> {v}</div>)}
             </div>

@@ -46,6 +46,7 @@ export interface OpsHrRequest {
   fechaEfectiva: string;
   prioridad: OpsPrioridad;
   requiereCoberturaUrgente: boolean;
+  notificarCliente?: boolean; clienteEmail?: string; clienteNotificadoEn?: string;
   estado: OpsEstado;
   responsableActualId?: string; responsableActual?: string;
   rrhhAsignado?: string; rrhhAsignadoEmail?: string;

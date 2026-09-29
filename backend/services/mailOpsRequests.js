@@ -111,6 +111,23 @@ async function notify(r, event, extra = {}) {
   return sendMail({ to: recipients(r), subject: subjectFor(r), html: wrap(r, title, body), urgent: r.requiereCoberturaUrgente });
 }
 
+// ─── Aviso al CLIENTE al concluir el cambio/sustitución (opcional) ───
+async function notifyClient(r) {
+  if (!r.notificarCliente || !r.clienteEmail) return null;
+  const accion = r.tipo === 'Ingreso' ? 'la incorporación de personal' : r.tipo === 'Salida' ? 'el retiro de personal' : 'la sustitución de personal';
+  const html = `<div style="font-family:Segoe UI,Arial,sans-serif;color:#1f2937;max-width:640px">
+    <h2 style="color:#1f2937;border-bottom:3px solid #d4af37;padding-bottom:6px">SafeOne — Notificación de servicio</h2>
+    <p>Estimado cliente <b>${esc(r.clienteNombre)}</b>:</p>
+    <p>Le informamos que hemos completado ${accion} en su servicio:</p>
+    <table cellpadding="6" style="font-size:14px"><tr><td><b>Localidad</b></td><td>${esc(r.localidadNombre)}</td></tr>
+    <tr><td><b>Puesto</b></td><td>${esc(r.puestoNombre)}</td></tr><tr><td><b>Turno</b></td><td>${esc(r.turnoNombre)}</td></tr>
+    <tr><td><b>Fecha efectiva</b></td><td>${esc(r.fechaEfectiva || '')}</td></tr>
+    ${r.agentePropuestoNombre ? `<tr><td><b>Agente asignado</b></td><td>${esc(r.agentePropuestoNombre)}</td></tr>` : ''}</table>
+    <p>Para cualquier inquietud, puede responder a este correo o contactar a su supervisor asignado.</p>
+    <p>Atentamente,<br/><b>Departamento de Operaciones — SafeOne</b></p></div>`;
+  return sendMail({ to: [r.clienteEmail], subject: `SafeOne — Actualización de personal en ${r.localidadNombre || r.clienteNombre}`, html });
+}
+
 // ─── Respuestas por correo → comentarios ───
 async function syncReplies() {
   if (!isConfigured()) return { ok: false, message: 'No configurado' };
@@ -215,4 +232,4 @@ function start() {
   console.log('[ops-mail] Activo (respuestas cada 2 min, alertas SLA, resumen diario 8:00)');
 }
 
-module.exports = { getSettings, saveSettings, DEFAULT_RRHH, config, isConfigured, notify, syncReplies, dailySummary, slaAlerts, start, FILE };
+module.exports = { getSettings, saveSettings, DEFAULT_RRHH, config, isConfigured, notify, notifyClient, syncReplies, dailySummary, slaAlerts, start, FILE };
