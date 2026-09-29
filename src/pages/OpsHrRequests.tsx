@@ -41,6 +41,7 @@ const emptyForm = () => ({
   tipo: "Ingreso" as OpsReqTipo, tipoVacante: "Fijo" as OpsVacante, prioridad: "Normal" as OpsPrioridad,
   clienteId: "", localidadId: "", puestoId: "", turnoId: "",
   agenteSalienteId: "", agentePropuestoId: "", motivoBaja: "", motivoComentario: "",
+  agenteManual: false, agenteManualNombre: "", agenteManualCodigo: "",
   fechaEfectiva: new Date().toISOString().slice(0, 10), requiereCoberturaUrgente: false, notas: "",
   notificarCliente: false, clienteEmail: "",
   adjuntos: [] as OpsHrRequest["adjuntos"],
@@ -121,16 +122,21 @@ export default function OpsHrRequests() {
     if (!user) return;
     if (!client || !loc || !post || !turno) return toast({ title: "Complete Cliente → Localidad → Puesto → Turno", variant: "destructive" });
     if (form.notificarCliente && !/^\S+@\S+\.\S+$/.test(form.clienteEmail)) return toast({ title: "Indique un correo válido del cliente", variant: "destructive" });
-    if (needsOut && (!form.agenteSalienteId || !form.motivoBaja || !form.fechaEfectiva)) return toast({ title: "Agente saliente, motivo y fecha efectiva son obligatorios", variant: "destructive" });
+    const manualOut = form.agenteManual || !agents.length;
+    const hasOut = manualOut ? !!form.agenteManualNombre.trim() : !!form.agenteSalienteId;
+    if (needsOut && (!hasOut || !form.motivoBaja || !form.fechaEfectiva)) return toast({ title: "Agente saliente, motivo y fecha efectiva son obligatorios", variant: "destructive" });
     if (form.motivoBaja === "Otro" && !form.motivoComentario.trim()) return toast({ title: "Explique el motivo 'Otro'", variant: "destructive" });
-    const out = agents.find(a => a.id === form.agenteSalienteId);
+    const out = manualOut ? null : agents.find(a => a.id === form.agenteSalienteId);
+    const outName = manualOut ? `${form.agenteManualNombre.trim()}${form.agenteManualCodigo.trim() ? ` (${form.agenteManualCodigo.trim()})` : ""} · ingresado manualmente` : out?.name;
     const prop = (personnel as any[]).find(a => a.id === form.agentePropuestoId);
     const rrhh = rrhhTeam(allUsers)[0];
+    const { agenteManual: _m, agenteManualNombre: _n, agenteManualCodigo: _c, ...formData } = form;
     const r = await createRequest({
-      ...form, estado,
+      ...formData, estado,
+      agenteSalienteId: manualOut ? "" : form.agenteSalienteId,
       clienteNombre: client.nombre, localidadNombre: loc.nombre, puestoNombre: post.nombre, turnoNombre: `${turno.nombre}${turno.horario ? ` (${turno.horario})` : ""}`,
       supervisorResponsable: supervisorName, supervisorEmail: supervisorUser?.email,
-      agenteSalienteNombre: out?.name, agentePropuestoNombre: prop?.name,
+      agenteSalienteNombre: needsOut ? outName : undefined, agentePropuestoNombre: prop?.name,
       rrhhAsignado: rrhh?.fullName, rrhhAsignadoEmail: rrhh?.email,
       responsableActual: estado === "Borrador" ? user.fullName : rrhh?.fullName || "RRHH",
       creadoPor: user.fullName, creadoPorId: user.id, creadoPorEmail: user.email,
@@ -357,7 +363,20 @@ export default function OpsHrRequests() {
                   </div>
                   {needsOut && (
                     <div className="grid sm:grid-cols-3 gap-3">
-                      <div><Label>Agente saliente *</Label><Select value={form.agenteSalienteId} onValueChange={v => setForm({ ...form, agenteSalienteId: v })}><SelectTrigger><SelectValue placeholder={agents.length ? "Seleccione" : "Sin agentes en este puesto"} /></SelectTrigger><SelectContent>{agents.map(a => <SelectItem key={a.id} value={a.id}>{a.name} ({a.employeeCode})</SelectItem>)}</SelectContent></Select></div>
+                      <div>
+                        <div className="flex items-center justify-between"><Label>Agente saliente *</Label>
+                          <button type="button" className="text-xs text-primary underline" onClick={() => setForm({ ...form, agenteManual: !form.agenteManual, agenteSalienteId: "" })}>{form.agenteManual || !agents.length ? "" : "Escribir manualmente"}{form.agenteManual && agents.length ? "Elegir de la lista" : ""}</button>
+                        </div>
+                        {form.agenteManual || !agents.length ? (
+                          <div className="space-y-1">
+                            <Input placeholder="Nombre del agente actual" value={form.agenteManualNombre} onChange={e => setForm({ ...form, agenteManualNombre: e.target.value })} />
+                            <Input placeholder="Código / cédula (opcional)" value={form.agenteManualCodigo} onChange={e => setForm({ ...form, agenteManualCodigo: e.target.value })} />
+                            {!agents.length && <p className="text-xs text-muted-foreground">No hay agentes registrados en este puesto; escríbalo manualmente.</p>}
+                          </div>
+                        ) : (
+                          <Select value={form.agenteSalienteId} onValueChange={v => setForm({ ...form, agenteSalienteId: v })}><SelectTrigger><SelectValue placeholder="Seleccione" /></SelectTrigger><SelectContent>{agents.map(a => <SelectItem key={a.id} value={a.id}>{a.name} ({a.employeeCode})</SelectItem>)}</SelectContent></Select>
+                        )}
+                      </div>
                       <div><Label>Motivo *</Label><Select value={form.motivoBaja} onValueChange={v => setForm({ ...form, motivoBaja: v })}><SelectTrigger><SelectValue placeholder="Seleccione" /></SelectTrigger><SelectContent>{MOTIVOS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select></div>
                       <div><Label>Fecha efectiva *</Label><Input type="date" value={form.fechaEfectiva} onChange={e => setForm({ ...form, fechaEfectiva: e.target.value })} /></div>
                       {form.motivoBaja === "Otro" && <div className="sm:col-span-3"><Label>Comentario del motivo *</Label><Textarea value={form.motivoComentario} onChange={e => setForm({ ...form, motivoComentario: e.target.value })} /></div>}
