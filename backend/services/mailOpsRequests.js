@@ -16,24 +16,26 @@ const FILE = 'ops-hr-requests.json';
 const env = (k, d) => (process.env[k] !== undefined && process.env[k] !== '' ? process.env[k] : d);
 
 function config() {
-  // Si no hay buzón propio de Operaciones (OPS_MAIL_PASS), se reutiliza el buzón
-  // de Tickets IT (IT_MAIL_USER/IT_MAIL_PASS), que ya funciona en el servidor.
-  const own = !!env('OPS_MAIL_PASS', '');
-  const shared = !own && !!env('IT_MAIL_PASS', '');
+  // Buzón EXCLUSIVO de Operaciones. Nunca reutiliza el buzón de Tickets IT.
   return {
     enabled: String(env('OPS_MAIL_ENABLED', 'true')).toLowerCase() !== 'false',
-    shared,
-    user: own ? env('OPS_MAIL_USER', 'requerimientos.operaciones@safeone.com.do') : shared ? env('IT_MAIL_USER', 'ticketsit@safeone.com.do') : '',
-    pass: own ? env('OPS_MAIL_PASS', '') : shared ? env('IT_MAIL_PASS', '') : '',
-    imapHost: env('OPS_IMAP_HOST', env('IT_IMAP_HOST', 'mail.safeone.com.do')),
-    imapPort: Number(env('OPS_IMAP_PORT', env('IT_IMAP_PORT', 993))),
-    smtpHost: env('OPS_SMTP_HOST', env('IT_SMTP_HOST', 'mail.safeone.com.do')),
-    smtpPort: Number(env('OPS_SMTP_PORT', env('IT_SMTP_PORT', 465))),
+    shared: false,
+    user: env('OPS_MAIL_USER', ''),
+    pass: env('OPS_MAIL_PASS', ''),
+    imapHost: env('OPS_IMAP_HOST', 'mail.safeone.com.do'),
+    imapPort: Number(env('OPS_IMAP_PORT', 993)),
+    smtpHost: env('OPS_SMTP_HOST', 'mail.safeone.com.do'),
+    smtpPort: Number(env('OPS_SMTP_PORT', 465)),
     intranetUrl: env('INTRANET_URL', 'https://intranet.safeone.com.do'),
     summaryHour: Number(env('OPS_SUMMARY_HOUR', 8)),
   };
 }
-const isConfigured = () => { const c = config(); return !!(c.enabled && c.user && c.pass); };
+const isConfigured = () => { const c = config(); return !!(c.enabled && c.user && c.pass && c.imapHost && c.smtpHost); };
+function makeImapClient(d, c) {
+  const client = new d.ImapFlow({ host: c.imapHost, port: c.imapPort, secure: true, auth: { user: c.user, pass: c.pass }, tls: { rejectUnauthorized: false }, logger: false, emitLogs: false });
+  client.on('error', (err) => console.warn(`[ops-mail] Conexión IMAP interrumpida: ${err?.code || ''} ${err?.message || err}`));
+  return client;
+}
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
 
 let _transport = null;
