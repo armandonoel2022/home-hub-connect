@@ -7,13 +7,14 @@ import "@fontsource/manrope/600.css";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import OpsMailStatusPanel from "@/components/ops/OpsMailStatusPanel";
+import UniformItemPicker from "@/components/ops/UniformItemPicker";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useArmedPersonnel } from "@/hooks/useApiHooks";
 import {
   TIPOS, VACANTES, PRIORIDADES, MOTIVOS, ESTADOS, CLOSED, SLA_HORAS, ESTADO_STYLE,
   opsRolesFor, rrhhTeam, semaforo, listRequests, createRequest, updateRequest, listTemplates, saveTemplates, getRrhhRecipients, saveRrhhRecipients,
-  type OpsHrRequest, type OpsEstado, type OpsTemplate, type OpsReqTipo, type OpsVacante, type OpsPrioridad,
+  type OpsHrRequest, type OpsEstado, type OpsTemplate, type OpsReqTipo, type OpsVacante, type OpsPrioridad, type OpsUniformItem,
 } from "@/lib/opsHrRequests";
 import { exportToExcel, exportToPDF } from "@/lib/exportUtils";
 import { isApiConfigured, opsHrRequestsApi, generalSqlApi, type GeneralContrato } from "@/lib/api";
@@ -30,6 +31,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, LayoutDashboard, ListChecks, FolderOpen, Users, FileSpreadsheet, FileText, Copy, Send, Save, Mail, Paperclip, CheckCircle2, AlertTriangle, Search, Clock3, CircleCheck, SlidersHorizontal, ChevronRight, RefreshCw } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend, CartesianGrid } from "recharts";
+import { z } from "zod";
 
 type View = "dashboard" | "nueva" | "mias" | "todas" | "plantillas" | "destinatarios";
 const ALL = "__all";
@@ -43,6 +45,8 @@ const emptyForm = () => ({
   clienteId: "", localidadId: "", puestoId: "", turnoId: "",
   agenteSalienteId: "", agentePropuestoId: "", motivoBaja: "", motivoComentario: "",
   agenteManual: false, agenteManualNombre: "", agenteManualCodigo: "",
+  uniformRecipientId: "", uniformRecipientManual: false, uniformRecipientName: "", uniformRecipientCode: "",
+  uniformItems: [] as OpsUniformItem[],
   fechaEfectiva: new Date().toISOString().slice(0, 10), requiereCoberturaUrgente: false, notas: "",
   notificarCliente: false, clienteEmail: "",
   adjuntos: [] as OpsHrRequest["adjuntos"],
@@ -119,12 +123,26 @@ export default function OpsHrRequests() {
   }, [personnel, client, post]);
   const supervisorName = agents.find(a => a.supervisor)?.supervisor || "";
   const supervisorUser = allUsers.find(u => supervisorName && u.fullName.toLowerCase() === supervisorName.toLowerCase());
-  const needsOut = form.tipo !== "Ingreso";
+  const isUniform = form.tipo === "Uniformes";
+  const needsOut = form.tipo === "Salida" || form.tipo === "Sustitución";
 
   const submit = async (estado: OpsEstado) => {
     if (!user) return;
     if (!client || !loc || !post || !turno) return toast({ title: "Complete Cliente → Localidad → Puesto → Turno", variant: "destructive" });
     if (form.notificarCliente && !/^\S+@\S+\.\S+$/.test(form.clienteEmail)) return toast({ title: "Indique un correo válido del cliente", variant: "destructive" });
+    if (isUniform) {
+      const uniformSchema = z.object({
+        recipient: z.string().trim().min(2, "Indique el agente que recibirá el uniforme").max(120),
+        items: z.array(z.object({
+          id: z.string().max(80), category: z.string().min(2).max(80), quantity: z.number().int().min(1).max(50),
+          size: z.string().max(10).optional(), customDescription: z.string().trim().max(120).optional(),
+        }).refine(item => item.category !== "Otros" || !!item.customDescription, "Describa la indumentaria seleccionada como Otros")).min(1, "Seleccione al menos una prenda"),
+      });
+      const assigned = agents.find(agent => agent.id === form.uniformRecipientId);
+      const recipient = form.uniformRecipientManual || !agents.length ? form.uniformRecipientName : assigned?.name || "";
+      const result = uniformSchema.safeParse({ recipient, items: form.uniformItems });
+      if (!result.success) return toast({ title: "Complete la solicitud de uniformes", description: result.error.issues[0]?.message, variant: "destructive" });
+    }
     const manualOut = form.agenteManual || !agents.length;
     const hasOut = manualOut ? !!form.agenteManualNombre.trim() : !!form.agenteSalienteId;
     if (needsOut && (!hasOut || !form.motivoBaja || !form.fechaEfectiva)) return toast({ title: "Agente saliente, motivo y fecha efectiva son obligatorios", variant: "destructive" });
@@ -132,11 +150,15 @@ export default function OpsHrRequests() {
     const out = manualOut ? null : agents.find(a => a.id === form.agenteSalienteId);
     const outName = manualOut ? `${form.agenteManualNombre.trim()}${form.agenteManualCodigo.trim() ? ` (${form.agenteManualCodigo.trim()})` : ""} · ingresado manualmente` : out?.name;
     const prop = (personnel as any[]).find(a => a.id === form.agentePropuestoId);
+    const uniformAssigned = agents.find(a => a.id === form.uniformRecipientId);
+    const uniformRecipientName = form.uniformRecipientManual || !agents.length ? form.uniformRecipientName.trim() : uniformAssigned?.name;
+    const uniformRecipientCode = form.uniformRecipientManual || !agents.length ? form.uniformRecipientCode.trim() : uniformAssigned?.employeeCode;
     const rrhh = rrhhTeam(allUsers)[0];
-    const { agenteManual: _m, agenteManualNombre: _n, agenteManualCodigo: _c, ...formData } = form;
+    const { agenteManual: _m, agenteManualNombre: _n, agenteManualCodigo: _c, uniformRecipientManual: _urm, uniformRecipientName: _urn, uniformRecipientCode: _urc, ...formData } = form;
     const r = await createRequest({
       ...formData, estado,
       agenteSalienteId: manualOut ? "" : form.agenteSalienteId,
+      uniformRecipientId: isUniform ? form.uniformRecipientId : undefined, uniformRecipientName: isUniform ? uniformRecipientName : undefined, uniformRecipientCode: isUniform ? uniformRecipientCode : undefined, uniformItems: isUniform ? form.uniformItems : undefined,
       clienteNombre: client.nombre, localidadNombre: loc.nombre, puestoNombre: post.nombre, turnoNombre: `${turno.nombre}${turno.horario ? ` (${turno.horario})` : ""}`,
       supervisorResponsable: supervisorName, supervisorEmail: supervisorUser?.email,
       agenteSalienteNombre: needsOut ? outName : undefined, agentePropuestoNombre: prop?.name,
@@ -149,7 +171,7 @@ export default function OpsHrRequests() {
   };
 
   const duplicate = (r: OpsHrRequest) => {
-    setForm({ ...emptyForm(), tipo: r.tipo, tipoVacante: r.tipoVacante, prioridad: r.prioridad, clienteId: r.clienteId, localidadId: r.localidadId, puestoId: r.puestoId, turnoId: "", notificarCliente: !!r.notificarCliente, clienteEmail: r.clienteEmail || "", motivoBaja: r.motivoBaja || "", requiereCoberturaUrgente: r.requiereCoberturaUrgente });
+    setForm({ ...emptyForm(), tipo: r.tipo, tipoVacante: r.tipoVacante, prioridad: r.prioridad, clienteId: r.clienteId, localidadId: r.localidadId, puestoId: r.puestoId, turnoId: "", notificarCliente: !!r.notificarCliente, clienteEmail: r.clienteEmail || "", motivoBaja: r.motivoBaja || "", requiereCoberturaUrgente: r.requiereCoberturaUrgente, uniformItems: (r.uniformItems || []).map(item => ({ ...item, id: `uniform-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` })) });
     setDetailId(null); setView("nueva");
     toast({ title: "Solicitud duplicada", description: "Seleccione un turno distinto y envíe." });
   };
@@ -176,7 +198,7 @@ export default function OpsHrRequests() {
     const avg = (a: number[]) => (a.length ? hrs(a.reduce((s, x) => s + x, 0) / a.length) : "—");
     const count = (fn: (r: OpsHrRequest) => string | undefined, list = sent) => Object.entries(list.reduce((m, r) => { const k = fn(r); if (k) m[k] = (m[k] || 0) + 1; return m; }, {} as Record<string, number>)).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
     const months: Record<string, any> = {};
-    sent.forEach(r => { const m = r.fechaCreacion.slice(0, 7); months[m] = months[m] || { mes: m, Ingreso: 0, Salida: 0, Sustitución: 0 }; months[m][r.tipo]++; });
+    sent.forEach(r => { const m = r.fechaCreacion.slice(0, 7); months[m] = months[m] || { mes: m, Ingreso: 0, Salida: 0, Sustitución: 0, Uniformes: 0 }; months[m][r.tipo]++; });
     return {
       open: open.length, byState: count(r => (CLOSED.includes(r.estado) ? undefined : r.estado)),
       covered: sent.filter(r => r.estado === "Cubierta satisfactoriamente").length,
@@ -274,7 +296,7 @@ export default function OpsHrRequests() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1"><span>Operaciones</span><ChevronRight className="h-3 w-3" /><span className="text-operations font-semibold">Solicitudes a RRHH</span></div>
                 <h1 className="text-2xl sm:text-3xl font-bold">Centro de gestión</h1>
-                <p className="text-sm text-muted-foreground mt-1">Ingresos, salidas y sustituciones por cliente, puesto y turno.</p>
+                <p className="text-sm text-muted-foreground mt-1">Personal y uniformes por cliente, puesto y turno.</p>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2 pl-12 lg:pl-0">
@@ -338,7 +360,7 @@ export default function OpsHrRequests() {
             {view === "todas" && canSeeAll && (<div className="p-5 sm:p-7 space-y-4"><Filters /><List list={filtered} /></div>)}
 
             {view === "nueva" && (
-              <div className="p-5 sm:p-7"><Card className="border-operations-border shadow-sm"><CardHeader className="border-b bg-muted/20"><CardTitle className="text-lg">Nueva solicitud de personal</CardTitle><p className="text-sm text-muted-foreground">Seleccione primero la ubicación contratada y luego complete el movimiento.</p></CardHeader>
+              <div className="p-5 sm:p-7"><Card className="border-operations-border shadow-sm"><CardHeader className="border-b bg-muted/20"><CardTitle className="text-lg">Nueva solicitud a RRHH</CardTitle><p className="text-sm text-muted-foreground">Seleccione primero la ubicación contratada y luego complete la solicitud.</p></CardHeader>
                 <CardContent className="space-y-4">
                   {templates.length > 0 && (
                     <div className="flex flex-wrap gap-2 items-center"><span className="text-xs text-muted-foreground">Plantillas:</span>
