@@ -6,7 +6,7 @@
     "role": "admin",
     "department": "Operaciones",
     "activo": true,
-    "mustChangePassword": true,
+    "mustChangePassword": false,
     "passwordHash": "$2a$10$0kvdCHsGo/9f0bpitaLhuureHwTdat2juI8O/LyUFlUdmxJQTudpW"
   }
 ]
