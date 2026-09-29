@@ -303,6 +303,13 @@ async function syncInbox({ limit = 25 } = {}) {
         continue;
       }
 
+      // Respuestas a solicitudes Operaciones → RRHH (buzón compartido): no crear ticket.
+      if (/\[OPS-RRHH-\d+\]/i.test(String(mail.subject || ''))) {
+        try { require('./mailOpsRequests').addReplyFromMail(mail); } catch (e) { console.warn(`[mail] OPS-RRHH: ${e.message}`); }
+        await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true }).catch(() => {});
+        continue;
+      }
+
       if (isAutomated(mail, fromAddr, mail.subject)) {
         await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true }).catch(() => {});
         continue;
