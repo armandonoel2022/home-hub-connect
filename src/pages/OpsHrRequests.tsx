@@ -257,40 +257,57 @@ export default function OpsHrRequests() {
   return (
     <AppLayout>
       <Navbar />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 w-full">
-        <div className="flex items-center gap-3 mb-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/rrhh/formularios")}><ArrowLeft className="h-5 w-5" /></Button>
-          <div className="flex-1">
-            <h1 className="text-2xl font-heading font-bold">Solicitudes a RRHH — Operaciones</h1>
-            <p className="text-sm text-muted-foreground">Ingresos, salidas y sustituciones de personal por cliente, puesto y turno.</p>
-          </div>
-          {canManage && isApiConfigured() && (
-            <Button size="sm" variant="outline" onClick={async () => { const r = await opsHrRequestsApi.syncMail(); toast({ title: r.ok ? `Correo revisado (${r.added} respuesta(s))` : "Error de correo", description: r.message }); reload(); }}><Mail className="h-4 w-4 mr-1" />Revisar respuestas</Button>
-          )}
-        </div>
+      <div className="ops-workspace max-w-[1480px] mx-auto px-3 sm:px-6 py-5 w-full">
+        <section className="bg-card border border-operations-border rounded-lg shadow-sm overflow-hidden">
+          <header className="px-5 sm:px-7 py-5 border-b border-operations-border flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="flex items-start gap-3 min-w-0">
+              <Button variant="ghost" size="icon" className="shrink-0" aria-label="Volver a Solicitudes a RRHH" onClick={() => navigate("/rrhh/formularios")}><ArrowLeft className="h-5 w-5" /></Button>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1"><span>Operaciones</span><ChevronRight className="h-3 w-3" /><span className="text-operations font-semibold">Solicitudes a RRHH</span></div>
+                <h1 className="text-2xl sm:text-3xl font-bold">Centro de gestión</h1>
+                <p className="text-sm text-muted-foreground mt-1">Ingresos, salidas y sustituciones por cliente, puesto y turno.</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 pl-12 lg:pl-0">
+              {canManage && isApiConfigured() && (
+                <Button size="sm" variant="outline" onClick={async () => { const r = await opsHrRequestsApi.syncMail(); toast({ title: r.ok ? `Correo revisado (${r.added} respuesta(s))` : "Error de correo", description: r.message }); reload(); }}><RefreshCw className="h-4 w-4" />Revisar respuestas</Button>
+              )}
+              <Button className="bg-operations text-operations-foreground hover:bg-operations/90" onClick={() => setView("nueva")}><Plus className="h-4 w-4" />Nueva solicitud</Button>
+            </div>
+          </header>
 
-        <div className="flex flex-col md:flex-row gap-4">
-          <nav className="md:w-52 flex md:flex-col gap-1 overflow-x-auto shrink-0">
+          <nav className="px-4 sm:px-7 flex gap-1 overflow-x-auto border-b border-operations-border bg-muted/20" aria-label="Secciones de solicitudes">
             {nav.filter(n => n.show).map(n => (
-              <Button key={n.k} variant={view === n.k ? "default" : "ghost"} className="justify-start whitespace-nowrap" onClick={() => setView(n.k)}><n.icon className="h-4 w-4 mr-2" />{n.label}</Button>
+              <Button key={n.k} variant="ghost" className={`rounded-none border-b-2 h-12 justify-start whitespace-nowrap ${view === n.k ? "border-operations text-operations bg-operations-soft/70" : "border-transparent text-muted-foreground"}`} onClick={() => setView(n.k)}><n.icon className="h-4 w-4" />{n.label}</Button>
             ))}
           </nav>
 
-          <div className="flex-1 min-w-0 space-y-4">
+          <div className="min-w-0">
             {view === "dashboard" && (<>
-              <Filters />
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <Kpi label="Total abiertas" value={kpi.open} />
-                <Kpi label="Cubiertas satisfactoriamente" value={kpi.covered} tone="text-green-600" />
-                <Kpi label="Cerradas sin cobertura" value={kpi.uncovered} tone="text-amber-600" />
-                <Kpi label="% Cumplimiento SLA" value={kpi.sla} />
-                <Kpi label="Prom. respuesta RRHH (h)" value={kpi.resp} />
-                <Kpi label="Prom. cierre (h)" value={kpi.close} />
-                <Card className="col-span-2"><CardContent className="p-4"><div className="text-xs text-muted-foreground mb-2">Pendientes por estado</div>
-                  <div className="flex flex-wrap gap-2">{kpi.byState.map(s => <span key={s.name} className={`px-2 py-1 rounded text-xs ${ESTADO_STYLE[s.name as OpsEstado]}`}>{s.name}: <b>{s.value}</b></span>)}{!kpi.byState.length && <span className="text-sm text-muted-foreground">Nada pendiente</span>}</div>
-                </CardContent></Card>
+              <div className="p-5 sm:p-7 space-y-5">
+              <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+                <Kpi label="Solicitudes abiertas" value={kpi.open} icon={ListChecks} />
+                <Kpi label="Cubiertas" value={kpi.covered} tone="text-green-600" icon={CircleCheck} />
+                <Kpi label="Sin cobertura" value={kpi.uncovered} tone="text-amber-600" icon={AlertTriangle} />
+                <Kpi label="Cumplimiento SLA" value={kpi.sla} icon={Clock3} />
               </div>
-              <div className="grid lg:grid-cols-2 gap-4">
+              <div className="border border-operations-border rounded-lg overflow-hidden">
+                <div className="p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-muted/20">
+                  <div className="relative flex-1 max-w-xl"><Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" /><Input className="pl-9 bg-card" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por ID, cliente, puesto, tipo o creador..." /></div>
+                  <div className="flex flex-wrap gap-2">
+                    <Select value={f.estado} onValueChange={v => setF({ ...f, estado: v })}><SelectTrigger className="w-[190px] bg-card"><SelectValue placeholder="Todos los estados" /></SelectTrigger><SelectContent><SelectItem value={ALL}>Todos los estados</SelectItem>{ESTADOS.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}</SelectContent></Select>
+                    <Button variant="outline" aria-expanded={showFilters} onClick={() => setShowFilters(!showFilters)}><SlidersHorizontal className="h-4 w-4" />Más filtros</Button>
+                  </div>
+                </div>
+                {showFilters && <Filters />}
+                <List list={filtered} />
+              </div>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <Kpi label="Prom. respuesta RRHH" value={kpi.resp === "—" ? "—" : `${kpi.resp} h`} icon={Clock3} />
+                <Kpi label="Prom. de cierre" value={kpi.close === "—" ? "—" : `${kpi.close} h`} icon={CircleCheck} />
+                <Card className="col-span-2 border-operations-border shadow-sm"><CardContent className="p-5"><div className="text-xs font-medium text-muted-foreground mb-3">Pendientes por estado</div><div className="flex flex-wrap gap-2">{kpi.byState.map(s => <span key={s.name} className={`px-2 py-1 rounded text-xs ${ESTADO_STYLE[s.name as OpsEstado]}`}>{s.name}: <b>{s.value}</b></span>)}{!kpi.byState.length && <span className="text-sm text-muted-foreground">Nada pendiente</span>}</div></CardContent></Card>
+              </div>
+              <div className="grid lg:grid-cols-2 gap-4 pt-2">
                 <Card><CardHeader><CardTitle className="text-sm">Clientes/puestos con más rotación</CardTitle></CardHeader><CardContent className="h-64">
                   <ResponsiveContainer><BarChart data={kpi.rotation} layout="vertical"><XAxis type="number" allowDecimals={false} /><YAxis type="category" dataKey="name" width={150} tick={{ fontSize: 10 }} /><Tooltip /><Bar dataKey="value" fill={CHART[0]} /></BarChart></ResponsiveContainer>
                 </CardContent></Card>
@@ -304,15 +321,14 @@ export default function OpsHrRequests() {
                   <ResponsiveContainer><PieChart><Pie data={kpi.vacantes} dataKey="value" nameKey="name" outerRadius={80} label>{kpi.vacantes.map((_, i) => <Cell key={i} fill={CHART[i % CHART.length]} />)}</Pie><Tooltip /><Legend /></PieChart></ResponsiveContainer>
                 </CardContent></Card>
               </div>
-              <div className="flex justify-end"><Button onClick={() => setView("nueva")}><Plus className="h-4 w-4 mr-1" />Nueva solicitud</Button></div>
-              <List list={filtered} />
+              </div>
             </>)}
 
-            {view === "mias" && <List list={items.filter(r => r.creadoPorId === user?.id)} />}
-            {view === "todas" && canSeeAll && (<><Filters /><List list={filtered} /></>)}
+            {view === "mias" && <div className="p-5 sm:p-7"><List list={items.filter(r => r.creadoPorId === user?.id)} /></div>}
+            {view === "todas" && canSeeAll && (<div className="p-5 sm:p-7 space-y-4"><Filters /><List list={filtered} /></div>)}
 
             {view === "nueva" && (
-              <Card><CardHeader><CardTitle className="text-base">Nueva solicitud de personal</CardTitle></CardHeader>
+              <div className="p-5 sm:p-7"><Card className="border-operations-border shadow-sm"><CardHeader className="border-b bg-muted/20"><CardTitle className="text-lg">Nueva solicitud de personal</CardTitle><p className="text-sm text-muted-foreground">Seleccione primero la ubicación contratada y luego complete el movimiento.</p></CardHeader>
                 <CardContent className="space-y-4">
                   {templates.length > 0 && (
                     <div className="flex flex-wrap gap-2 items-center"><span className="text-xs text-muted-foreground">Plantillas:</span>
@@ -370,13 +386,13 @@ export default function OpsHrRequests() {
                     <Button onClick={() => submit("Enviada a RRHH")}><Send className="h-4 w-4 mr-1" />Enviar a RRHH</Button>
                   </div>
                 </CardContent>
-              </Card>
+              </Card></div>
             )}
 
-            {view === "destinatarios" && <RecipientsView canEdit={canManage} userName={user?.fullName || ""} />}
-            {view === "plantillas" && <TemplatesView templates={templates} canEdit={roles.has("admin") || roles.has("coordinador") || roles.has("rrhh")} onSave={async l => { await saveTemplates(l); setTemplates(l); toast({ title: "Plantillas guardadas" }); }} />}
+            {view === "destinatarios" && <div className="p-5 sm:p-7"><RecipientsView canEdit={canManage} userName={user?.fullName || ""} /></div>}
+            {view === "plantillas" && <div className="p-5 sm:p-7"><TemplatesView templates={templates} canEdit={roles.has("admin") || roles.has("coordinador") || roles.has("rrhh")} onSave={async l => { await saveTemplates(l); setTemplates(l); toast({ title: "Plantillas guardadas" }); }} /></div>}
           </div>
-        </div>
+        </section>
       </div>
 
       {detail && <DetailDialog r={detail} canManage={canManage} isOwner={detail.creadoPorId === user?.id} userName={user?.fullName || ""} userEmail={user?.email}
