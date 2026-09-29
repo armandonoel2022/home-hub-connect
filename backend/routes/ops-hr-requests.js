@@ -33,9 +33,18 @@ router.put('/settings/all', auth, (req, res) => {
   res.json(mail.getSettings());
 });
 
+const isMailAdmin = (req) => String(req.user?.email || '').toLowerCase() === 'anoel@safeone.com.do';
 router.post('/mail/sync', auth, async (req, res) => res.json(await mail.syncReplies()));
 router.post('/mail/summary', auth, async (req, res) => res.json(await mail.dailySummary(true)));
 router.get('/mail/status', auth, (req, res) => res.json({ configured: mail.isConfigured(), user: mail.config().user }));
+router.get('/mail/admin-status', auth, async (req, res) => {
+  if (!isMailAdmin(req)) return res.status(403).json({ message: 'Solo el administrador de correo' });
+  res.json(await mail.status());
+});
+router.post('/mail/test', auth, async (req, res) => {
+  if (!isMailAdmin(req)) return res.status(403).json({ message: 'Solo el administrador de correo' });
+  res.json(await mail.testConnection());
+});
 
 router.post('/', auth, async (req, res) => {
   const list = readData(FILE);
