@@ -379,7 +379,7 @@ function DetailDialog({ r, canManage, isOwner, userName, userEmail, onClose, onU
           </TabsContent>
           <TabsContent value="timeline">
             <ol className="space-y-2">
-              {ESTADOS.filter(e => e !== "Borrador").slice(0, 5).concat(CLOSED.includes(r.estado) ? [r.estado] : ["Cubierta satisfactoriamente"]).map((e, i) => {
+              {(ESTADOS.filter(e => e !== "Borrador").slice(0, 5) as OpsEstado[]).concat(CLOSED.includes(r.estado) ? [r.estado] : ["Cubierta satisfactoriamente"]).map((e, i) => {
                 const h = r.historialEstados?.find(x => x.nuevo === e);
                 const done = !!h || ESTADOS.indexOf(e) <= stepIdx;
                 return <li key={e + i} className="flex items-center gap-3"><CheckCircle2 className={`h-5 w-5 ${done ? "text-primary" : "text-muted-foreground/40"}`} /><div className={done ? "" : "text-muted-foreground"}><div className="font-medium text-sm">{e}</div>{h && <div className="text-xs text-muted-foreground">{fmt(h.fecha)} · {h.usuario}</div>}</div></li>;
