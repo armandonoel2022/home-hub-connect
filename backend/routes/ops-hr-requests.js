@@ -101,6 +101,8 @@ router.put('/:id', auth, async (req, res) => {
   const { _event, _usuario, _nota, ...patch } = req.body || {};
   const now = new Date().toISOString();
   const next = { ...prev, ...patch, updatedAt: now };
+  const validationError = validateRequest(next);
+  if (validationError) return res.status(400).json({ message: validationError });
   let event = null;
   if (patch.estado && patch.estado !== prev.estado) {
     event = 'status';

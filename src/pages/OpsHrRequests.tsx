@@ -248,7 +248,7 @@ export default function OpsHrRequests() {
                 <td className="px-5 py-4"><span className={`inline-block h-2.5 w-2.5 rounded-full ring-4 ring-muted ${SEM[semaforo(r)]}`} /></td>
                 <td className="px-3 py-4 font-mono text-xs font-semibold">{r.id}{r.requiereCoberturaUrgente && <AlertTriangle className="inline h-3 w-3 ml-1 text-destructive" />}</td>
                 <td className="px-3 py-4"><span className={`px-2 py-1 rounded text-xs font-medium ${ESTADO_STYLE[r.estado]}`}>{r.estado}</span></td>
-                <td className="px-3 py-4 text-sm font-medium">{r.tipo}<div className="text-xs font-normal text-muted-foreground">{r.tipoVacante} · {r.prioridad}</div></td>
+                <td className="px-3 py-4 text-sm font-medium">{r.tipo}<div className="text-xs font-normal text-muted-foreground">{r.tipo === "Uniformes" ? `${r.uniformItems?.length || 0} categoría(s)` : r.tipoVacante} · {r.prioridad}</div></td>
                 <td className="px-3 py-4 text-sm font-medium">{r.clienteNombre}<div className="text-xs font-normal text-muted-foreground">{r.localidadNombre} · {r.puestoNombre} · {r.turnoNombre}</div></td>
                 <td className="px-3 py-4 hidden lg:table-cell text-xs">{fmt(r.fechaCreacion)}<div className="text-muted-foreground">{r.creadoPor}</div></td>
                 <td className="px-5 py-4 text-right"><ChevronRight className="h-4 w-4 ml-auto text-muted-foreground" /></td>
