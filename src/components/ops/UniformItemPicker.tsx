@@ -80,6 +80,7 @@ export default function UniformItemPicker({ value, onChange }: Props) {
 
       {value.length > 0 && (
         <div className="space-y-2" aria-live="polite">
+          <div className="flex items-center justify-between text-xs text-muted-foreground"><span>{value.length} prenda(s) en la solicitud</span><span className="font-semibold text-operations">Total: {value.reduce((sum, item) => sum + item.quantity, 0)} unidad(es)</span></div>
           {value.map(item => {
             const Icon = iconFor(item.category);
             return (
