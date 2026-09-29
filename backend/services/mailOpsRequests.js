@@ -171,15 +171,48 @@ async function dailySummary(force = false) {
   return sendMail({ to: getSettings().rrhhRecipients, subject: `Resumen diario Operaciones → RRHH (${open.length} pendientes)`, html });
 }
 
+// ─── Alertas de SLA: aviso al 80% del tiempo y al vencer ───
+async function slaAlerts() {
+  const list = readData(FILE);
+  const now = Date.now();
+  let sent = 0, changed = false;
+  for (const r of list) {
+    if (CLOSED.includes(r.estado) || !r.fechaLimiteSLA) continue;
+    const due = new Date(r.fechaLimiteSLA).getTime();
+    const total = (r.slaHoras || 0) * 3600e3;
+    if (!due || !total) continue;
+    // Si la fecha límite cambió (p. ej. cambio de prioridad), reiniciar avisos
+    if (r._slaAlertFor !== r.fechaLimiteSLA) { r._slaAlertFor = r.fechaLimiteSLA; r._slaWarned = false; r._slaExpired = false; changed = true; }
+    const remainingH = Math.max(0, Math.round((due - now) / 36e5 * 10) / 10);
+    let title = '', body = '';
+    if (now >= due && !r._slaExpired) {
+      title = `⛔ SLA VENCIDO — solicitud ${r.prioridad}`;
+      body = `<p style="background:#fef2f2;border-left:3px solid #dc2626;padding:8px 12px;margin-top:12px">El límite de atención venció el <b>${new Date(due).toLocaleString('es-DO')}</b> y la solicitud sigue en estado <b>${esc(r.estado)}</b>. Favor priorizar su cobertura.</p>`;
+      r._slaExpired = true; r._slaWarned = true;
+    } else if (now < due && now >= due - total * 0.2 && !r._slaWarned) {
+      title = `⚠️ SLA por vencer — quedan ${remainingH} h`;
+      body = `<p style="background:#fffbeb;border-left:3px solid #d97706;padding:8px 12px;margin-top:12px">Esta solicitud ha consumido el 80% de su tiempo de atención. Límite: <b>${new Date(due).toLocaleString('es-DO')}</b>. Estado actual: <b>${esc(r.estado)}</b>.</p>`;
+      r._slaWarned = true;
+    } else continue;
+    changed = true;
+    r.historial = r.historial || [];
+    r.historial.push({ fecha: new Date().toISOString(), usuario: 'Sistema', accion: title.replace(/^[^\wÁ-ú]+/, '') });
+    try { await sendMail({ to: recipients(r), subject: `${subjectFor(r)} — ${r._slaExpired ? 'SLA VENCIDO' : 'SLA por vencer'}`, html: wrap(r, title, body), urgent: true }); sent++; }
+    catch (e) { console.warn(`[ops-mail] SLA ${r.id}: ${e.message}`); }
+  }
+  if (changed) writeData(FILE, list);
+  return { ok: true, sent };
+}
+
 function start() {
   if (!isConfigured()) { console.log('[ops-mail] Deshabilitado (falta OPS_MAIL_PASS en .env)'); return; }
   let running = false;
   setInterval(async () => {
     if (running) return; running = true;
-    try { await syncReplies(); await dailySummary(); } catch (e) { console.warn(`[ops-mail] ${e.message}`); }
+    try { await syncReplies(); await slaAlerts(); await dailySummary(); } catch (e) { console.warn(`[ops-mail] ${e.message}`); }
     running = false;
   }, 2 * 60 * 1000);
-  console.log('[ops-mail] Activo (respuestas cada 2 min, resumen diario 8:00)');
+  console.log('[ops-mail] Activo (respuestas cada 2 min, alertas SLA, resumen diario 8:00)');
 }
 
-module.exports = { getSettings, saveSettings, DEFAULT_RRHH, config, isConfigured, notify, syncReplies, dailySummary, start, FILE };
+module.exports = { getSettings, saveSettings, DEFAULT_RRHH, config, isConfigured, notify, syncReplies, dailySummary, slaAlerts, start, FILE };
