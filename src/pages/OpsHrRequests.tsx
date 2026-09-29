@@ -258,8 +258,8 @@ export default function OpsHrRequests() {
     <AppLayout>
       <Navbar />
       <div className="ops-workspace max-w-[1480px] mx-auto px-3 sm:px-6 py-5 w-full">
-        <section className="bg-card border border-operations-border rounded-lg shadow-sm overflow-hidden">
-          <header className="px-5 sm:px-7 py-5 border-b border-operations-border flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <section>
+          <header className="px-2 sm:px-1 pb-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="flex items-start gap-3 min-w-0">
               <Button variant="ghost" size="icon" className="shrink-0" aria-label="Volver a Solicitudes a RRHH" onClick={() => navigate("/rrhh/formularios")}><ArrowLeft className="h-5 w-5" /></Button>
               <div className="min-w-0">
@@ -276,7 +276,7 @@ export default function OpsHrRequests() {
             </div>
           </header>
 
-          <nav className="px-4 sm:px-7 flex gap-1 overflow-x-auto border-b border-operations-border bg-muted/20" aria-label="Secciones de solicitudes">
+          <nav className="px-2 sm:px-1 flex gap-1 overflow-x-auto border-y border-operations-border bg-muted/20" aria-label="Secciones de solicitudes">
             {nav.filter(n => n.show).map(n => (
               <Button key={n.k} variant="ghost" className={`rounded-none border-b-2 h-12 justify-start whitespace-nowrap ${view === n.k ? "border-operations text-operations bg-operations-soft/70" : "border-transparent text-muted-foreground"}`} onClick={() => setView(n.k)}><n.icon className="h-4 w-4" />{n.label}</Button>
             ))}
