@@ -9,31 +9,33 @@
  *   OPS_IMAP_HOST / OPS_IMAP_PORT / OPS_SMTP_HOST / OPS_SMTP_PORT (por defecto los mismos de IT)
  *   INTRANET_URL=https://intranet.safeone.com.do
  */
-const { readData, writeData } = require('../config/database');
+const { readData, writeData, generateId } = require('../config/database');
 const { loadDeps } = require('./mailTickets');
 
 const FILE = 'ops-hr-requests.json';
 const env = (k, d) => (process.env[k] !== undefined && process.env[k] !== '' ? process.env[k] : d);
 
 function config() {
-  // Si no hay buzón propio de Operaciones (OPS_MAIL_PASS), se reutiliza el buzón
-  // de Tickets IT (IT_MAIL_USER/IT_MAIL_PASS), que ya funciona en el servidor.
-  const own = !!env('OPS_MAIL_PASS', '');
-  const shared = !own && !!env('IT_MAIL_PASS', '');
+  // Buzón EXCLUSIVO de Operaciones. Nunca reutiliza el buzón de Tickets IT.
   return {
     enabled: String(env('OPS_MAIL_ENABLED', 'true')).toLowerCase() !== 'false',
-    shared,
-    user: own ? env('OPS_MAIL_USER', 'requerimientos.operaciones@safeone.com.do') : shared ? env('IT_MAIL_USER', 'ticketsit@safeone.com.do') : '',
-    pass: own ? env('OPS_MAIL_PASS', '') : shared ? env('IT_MAIL_PASS', '') : '',
-    imapHost: env('OPS_IMAP_HOST', env('IT_IMAP_HOST', 'mail.safeone.com.do')),
-    imapPort: Number(env('OPS_IMAP_PORT', env('IT_IMAP_PORT', 993))),
-    smtpHost: env('OPS_SMTP_HOST', env('IT_SMTP_HOST', 'mail.safeone.com.do')),
-    smtpPort: Number(env('OPS_SMTP_PORT', env('IT_SMTP_PORT', 465))),
+    shared: false,
+    user: env('OPS_MAIL_USER', ''),
+    pass: env('OPS_MAIL_PASS', ''),
+    imapHost: env('OPS_IMAP_HOST', 'mail.safeone.com.do'),
+    imapPort: Number(env('OPS_IMAP_PORT', 993)),
+    smtpHost: env('OPS_SMTP_HOST', 'mail.safeone.com.do'),
+    smtpPort: Number(env('OPS_SMTP_PORT', 465)),
     intranetUrl: env('INTRANET_URL', 'https://intranet.safeone.com.do'),
     summaryHour: Number(env('OPS_SUMMARY_HOUR', 8)),
   };
 }
-const isConfigured = () => { const c = config(); return !!(c.enabled && c.user && c.pass); };
+const isConfigured = () => { const c = config(); return !!(c.enabled && c.user && c.pass && c.imapHost && c.smtpHost); };
+function makeImapClient(d, c) {
+  const client = new d.ImapFlow({ host: c.imapHost, port: c.imapPort, secure: true, auth: { user: c.user, pass: c.pass }, tls: { rejectUnauthorized: false }, logger: false, emitLogs: false });
+  client.on('error', (err) => console.warn(`[ops-mail] Conexión IMAP interrumpida: ${err?.code || ''} ${err?.message || err}`));
+  return client;
+}
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
 
 let _transport = null;
@@ -50,7 +52,7 @@ async function transport() {
 }
 
 async function sendMail({ to, subject, html, urgent }) {
-  if (!isConfigured()) return { sent: false, reason: 'Correo no configurado: falta OPS_MAIL_PASS (o IT_MAIL_PASS) en el .env del servidor' };
+  if (!isConfigured()) return { sent: false, reason: 'Correo no configurado: falta OPS_MAIL_USER / OPS_MAIL_PASS en el .env del servidor' };
   const c = config();
   const list = [...new Set([c.shared ? null : c.user, ...(to || [])].filter(Boolean).map((e) => e.toLowerCase()))];
   try {
@@ -158,7 +160,7 @@ async function syncReplies() {
   const d = await loadDeps();
   if (!d.ok) return { ok: false, message: d.error };
   const c = config();
-  const client = new d.ImapFlow({ host: c.imapHost, port: c.imapPort, secure: true, auth: { user: c.user, pass: c.pass }, tls: { rejectUnauthorized: false }, logger: false });
+  const client = makeImapClient(d, c);
   client.on('error', (e) => console.warn(`[ops-mail] IMAP: ${e?.message || e}`));
   let added = 0;
   try {
@@ -236,7 +238,7 @@ async function slaAlerts() {
 }
 
 function start() {
-  if (!isConfigured()) { console.log('[ops-mail] Deshabilitado (falta OPS_MAIL_PASS o IT_MAIL_PASS en .env)'); return; }
+  if (!isConfigured()) { console.log('[ops-mail] Deshabilitado (falta OPS_MAIL_USER / OPS_MAIL_PASS en .env)'); return; }
   const c = config();
   console.log(`[ops-mail] Enviando desde ${c.user}${c.shared ? ' (buzón compartido con Tickets IT)' : ''}`);
   let running = false;
