@@ -7,13 +7,14 @@ import "@fontsource/manrope/600.css";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import OpsMailStatusPanel from "@/components/ops/OpsMailStatusPanel";
+import UniformItemPicker from "@/components/ops/UniformItemPicker";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useArmedPersonnel } from "@/hooks/useApiHooks";
 import {
-  TIPOS, VACANTES, PRIORIDADES, MOTIVOS, ESTADOS, CLOSED, SLA_HORAS, ESTADO_STYLE,
+  TIPOS, VACANTES, PRIORIDADES, MOTIVOS, ESTADOS, CLOSED, SLA_HORAS, ESTADO_STYLE, UNIFORM_CATEGORIES,
   opsRolesFor, rrhhTeam, semaforo, listRequests, createRequest, updateRequest, listTemplates, saveTemplates, getRrhhRecipients, saveRrhhRecipients,
-  type OpsHrRequest, type OpsEstado, type OpsTemplate, type OpsReqTipo, type OpsVacante, type OpsPrioridad,
+  type OpsHrRequest, type OpsEstado, type OpsTemplate, type OpsReqTipo, type OpsVacante, type OpsPrioridad, type OpsUniformItem,
 } from "@/lib/opsHrRequests";
 import { exportToExcel, exportToPDF } from "@/lib/exportUtils";
 import { isApiConfigured, opsHrRequestsApi, generalSqlApi, type GeneralContrato } from "@/lib/api";
@@ -30,6 +31,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, LayoutDashboard, ListChecks, FolderOpen, Users, FileSpreadsheet, FileText, Copy, Send, Save, Mail, Paperclip, CheckCircle2, AlertTriangle, Search, Clock3, CircleCheck, SlidersHorizontal, ChevronRight, RefreshCw } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend, CartesianGrid } from "recharts";
+import { z } from "zod";
 
 type View = "dashboard" | "nueva" | "mias" | "todas" | "plantillas" | "destinatarios";
 const ALL = "__all";
@@ -43,6 +45,8 @@ const emptyForm = () => ({
   clienteId: "", localidadId: "", puestoId: "", turnoId: "",
   agenteSalienteId: "", agentePropuestoId: "", motivoBaja: "", motivoComentario: "",
   agenteManual: false, agenteManualNombre: "", agenteManualCodigo: "",
+  uniformRecipientId: "", uniformRecipientManual: false, uniformRecipientName: "", uniformRecipientCode: "",
+  uniformItems: [] as OpsUniformItem[],
   fechaEfectiva: new Date().toISOString().slice(0, 10), requiereCoberturaUrgente: false, notas: "",
   notificarCliente: false, clienteEmail: "",
   adjuntos: [] as OpsHrRequest["adjuntos"],
@@ -119,12 +123,26 @@ export default function OpsHrRequests() {
   }, [personnel, client, post]);
   const supervisorName = agents.find(a => a.supervisor)?.supervisor || "";
   const supervisorUser = allUsers.find(u => supervisorName && u.fullName.toLowerCase() === supervisorName.toLowerCase());
-  const needsOut = form.tipo !== "Ingreso";
+  const isUniform = form.tipo === "Uniformes";
+  const needsOut = form.tipo === "Salida" || form.tipo === "Sustitución";
 
   const submit = async (estado: OpsEstado) => {
     if (!user) return;
     if (!client || !loc || !post || !turno) return toast({ title: "Complete Cliente → Localidad → Puesto → Turno", variant: "destructive" });
     if (form.notificarCliente && !/^\S+@\S+\.\S+$/.test(form.clienteEmail)) return toast({ title: "Indique un correo válido del cliente", variant: "destructive" });
+    if (isUniform) {
+      const uniformSchema = z.object({
+        recipient: z.string().trim().min(2, "Indique el agente que recibirá el uniforme").max(120),
+        items: z.array(z.object({
+          id: z.string().max(80), category: z.enum(UNIFORM_CATEGORIES), quantity: z.number().int().min(1).max(50),
+          size: z.string().max(10).optional(), customDescription: z.string().trim().max(120).optional(),
+        }).refine(item => item.category !== "Otros" || !!item.customDescription?.trim(), "Describa la indumentaria seleccionada como Otros")).min(1, "Seleccione al menos una prenda"),
+      });
+      const assigned = agents.find(agent => agent.id === form.uniformRecipientId);
+      const recipient = form.uniformRecipientManual || !agents.length ? form.uniformRecipientName : assigned?.name || "";
+      const result = uniformSchema.safeParse({ recipient, items: form.uniformItems });
+      if (!result.success) return toast({ title: "Complete la solicitud de uniformes", description: result.error.issues[0]?.message, variant: "destructive" });
+    }
     const manualOut = form.agenteManual || !agents.length;
     const hasOut = manualOut ? !!form.agenteManualNombre.trim() : !!form.agenteSalienteId;
     if (needsOut && (!hasOut || !form.motivoBaja || !form.fechaEfectiva)) return toast({ title: "Agente saliente, motivo y fecha efectiva son obligatorios", variant: "destructive" });
@@ -132,11 +150,15 @@ export default function OpsHrRequests() {
     const out = manualOut ? null : agents.find(a => a.id === form.agenteSalienteId);
     const outName = manualOut ? `${form.agenteManualNombre.trim()}${form.agenteManualCodigo.trim() ? ` (${form.agenteManualCodigo.trim()})` : ""} · ingresado manualmente` : out?.name;
     const prop = (personnel as any[]).find(a => a.id === form.agentePropuestoId);
+    const uniformAssigned = agents.find(a => a.id === form.uniformRecipientId);
+    const uniformRecipientName = form.uniformRecipientManual || !agents.length ? form.uniformRecipientName.trim() : uniformAssigned?.name;
+    const uniformRecipientCode = form.uniformRecipientManual || !agents.length ? form.uniformRecipientCode.trim() : uniformAssigned?.employeeCode;
     const rrhh = rrhhTeam(allUsers)[0];
-    const { agenteManual: _m, agenteManualNombre: _n, agenteManualCodigo: _c, ...formData } = form;
+    const { agenteManual: _m, agenteManualNombre: _n, agenteManualCodigo: _c, uniformRecipientManual: _urm, uniformRecipientName: _urn, uniformRecipientCode: _urc, ...formData } = form;
     const r = await createRequest({
       ...formData, estado,
       agenteSalienteId: manualOut ? "" : form.agenteSalienteId,
+      uniformRecipientId: isUniform ? form.uniformRecipientId : undefined, uniformRecipientName: isUniform ? uniformRecipientName : undefined, uniformRecipientCode: isUniform ? uniformRecipientCode : undefined, uniformItems: isUniform ? form.uniformItems : undefined,
       clienteNombre: client.nombre, localidadNombre: loc.nombre, puestoNombre: post.nombre, turnoNombre: `${turno.nombre}${turno.horario ? ` (${turno.horario})` : ""}`,
       supervisorResponsable: supervisorName, supervisorEmail: supervisorUser?.email,
       agenteSalienteNombre: needsOut ? outName : undefined, agentePropuestoNombre: prop?.name,
@@ -149,7 +171,7 @@ export default function OpsHrRequests() {
   };
 
   const duplicate = (r: OpsHrRequest) => {
-    setForm({ ...emptyForm(), tipo: r.tipo, tipoVacante: r.tipoVacante, prioridad: r.prioridad, clienteId: r.clienteId, localidadId: r.localidadId, puestoId: r.puestoId, turnoId: "", notificarCliente: !!r.notificarCliente, clienteEmail: r.clienteEmail || "", motivoBaja: r.motivoBaja || "", requiereCoberturaUrgente: r.requiereCoberturaUrgente });
+    setForm({ ...emptyForm(), tipo: r.tipo, tipoVacante: r.tipoVacante, prioridad: r.prioridad, clienteId: r.clienteId, localidadId: r.localidadId, puestoId: r.puestoId, turnoId: "", notificarCliente: !!r.notificarCliente, clienteEmail: r.clienteEmail || "", motivoBaja: r.motivoBaja || "", requiereCoberturaUrgente: r.requiereCoberturaUrgente, uniformItems: (r.uniformItems || []).map(item => ({ ...item, id: `uniform-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` })) });
     setDetailId(null); setView("nueva");
     toast({ title: "Solicitud duplicada", description: "Seleccione un turno distinto y envíe." });
   };
@@ -176,7 +198,7 @@ export default function OpsHrRequests() {
     const avg = (a: number[]) => (a.length ? hrs(a.reduce((s, x) => s + x, 0) / a.length) : "—");
     const count = (fn: (r: OpsHrRequest) => string | undefined, list = sent) => Object.entries(list.reduce((m, r) => { const k = fn(r); if (k) m[k] = (m[k] || 0) + 1; return m; }, {} as Record<string, number>)).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
     const months: Record<string, any> = {};
-    sent.forEach(r => { const m = r.fechaCreacion.slice(0, 7); months[m] = months[m] || { mes: m, Ingreso: 0, Salida: 0, Sustitución: 0 }; months[m][r.tipo]++; });
+    sent.forEach(r => { const m = r.fechaCreacion.slice(0, 7); months[m] = months[m] || { mes: m, Ingreso: 0, Salida: 0, Sustitución: 0, Uniformes: 0 }; months[m][r.tipo]++; });
     return {
       open: open.length, byState: count(r => (CLOSED.includes(r.estado) ? undefined : r.estado)),
       covered: sent.filter(r => r.estado === "Cubierta satisfactoriamente").length,
@@ -226,7 +248,7 @@ export default function OpsHrRequests() {
                 <td className="px-5 py-4"><span className={`inline-block h-2.5 w-2.5 rounded-full ring-4 ring-muted ${SEM[semaforo(r)]}`} /></td>
                 <td className="px-3 py-4 font-mono text-xs font-semibold">{r.id}{r.requiereCoberturaUrgente && <AlertTriangle className="inline h-3 w-3 ml-1 text-destructive" />}</td>
                 <td className="px-3 py-4"><span className={`px-2 py-1 rounded text-xs font-medium ${ESTADO_STYLE[r.estado]}`}>{r.estado}</span></td>
-                <td className="px-3 py-4 text-sm font-medium">{r.tipo}<div className="text-xs font-normal text-muted-foreground">{r.tipoVacante} · {r.prioridad}</div></td>
+                <td className="px-3 py-4 text-sm font-medium">{r.tipo}<div className="text-xs font-normal text-muted-foreground">{r.tipo === "Uniformes" ? `${r.uniformItems?.length || 0} categoría(s)` : r.tipoVacante} · {r.prioridad}</div></td>
                 <td className="px-3 py-4 text-sm font-medium">{r.clienteNombre}<div className="text-xs font-normal text-muted-foreground">{r.localidadNombre} · {r.puestoNombre} · {r.turnoNombre}</div></td>
                 <td className="px-3 py-4 hidden lg:table-cell text-xs">{fmt(r.fechaCreacion)}<div className="text-muted-foreground">{r.creadoPor}</div></td>
                 <td className="px-5 py-4 text-right"><ChevronRight className="h-4 w-4 ml-auto text-muted-foreground" /></td>
@@ -274,7 +296,7 @@ export default function OpsHrRequests() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1"><span>Operaciones</span><ChevronRight className="h-3 w-3" /><span className="text-operations font-semibold">Solicitudes a RRHH</span></div>
                 <h1 className="text-2xl sm:text-3xl font-bold">Centro de gestión</h1>
-                <p className="text-sm text-muted-foreground mt-1">Ingresos, salidas y sustituciones por cliente, puesto y turno.</p>
+                <p className="text-sm text-muted-foreground mt-1">Personal y uniformes por cliente, puesto y turno.</p>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2 pl-12 lg:pl-0">
@@ -338,7 +360,7 @@ export default function OpsHrRequests() {
             {view === "todas" && canSeeAll && (<div className="p-5 sm:p-7 space-y-4"><Filters /><List list={filtered} /></div>)}
 
             {view === "nueva" && (
-              <div className="p-5 sm:p-7"><Card className="border-operations-border shadow-sm"><CardHeader className="border-b bg-muted/20"><CardTitle className="text-lg">Nueva solicitud de personal</CardTitle><p className="text-sm text-muted-foreground">Seleccione primero la ubicación contratada y luego complete el movimiento.</p></CardHeader>
+              <div className="p-5 sm:p-7"><Card className="border-operations-border shadow-sm"><CardHeader className="border-b bg-muted/20"><CardTitle className="text-lg">Nueva solicitud a RRHH</CardTitle><p className="text-sm text-muted-foreground">Seleccione primero la ubicación contratada y luego complete la solicitud.</p></CardHeader>
                 <CardContent className="space-y-4">
                   {templates.length > 0 && (
                     <div className="flex flex-wrap gap-2 items-center"><span className="text-xs text-muted-foreground">Plantillas:</span>
@@ -360,11 +382,23 @@ export default function OpsHrRequests() {
                       {agents.length > 0 && <div className="sm:col-span-2 text-xs text-muted-foreground">{agents.map(a => a.name).join(" · ")}</div>}
                     </div>
                   )}
-                  <div className="grid sm:grid-cols-3 gap-3">
+                  <div className={`grid gap-3 ${isUniform ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
                     <div><Label>Tipo</Label><Select value={form.tipo} onValueChange={v => setForm({ ...form, tipo: v as OpsReqTipo })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{TIPOS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
-                    <div><Label>Tipo de vacante</Label><Select value={form.tipoVacante} onValueChange={v => setForm({ ...form, tipoVacante: v as OpsVacante })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{VACANTES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
+                    {!isUniform && <div><Label>Tipo de vacante</Label><Select value={form.tipoVacante} onValueChange={v => setForm({ ...form, tipoVacante: v as OpsVacante })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{VACANTES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>}
                     <div><Label>Prioridad (SLA {SLA_HORAS[form.prioridad]}h)</Label><Select value={form.prioridad} onValueChange={v => setForm({ ...form, prioridad: v as OpsPrioridad })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{PRIORIDADES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
                   </div>
+                  {isUniform && (
+                    <>
+                      <div className="rounded-md border border-operations-border bg-operations-soft/40 p-4">
+                        <div className="flex items-center justify-between gap-3"><div><Label>Agente que recibirá el uniforme *</Label><p className="mt-1 text-xs text-muted-foreground">Seleccione el agente asignado al puesto o escríbalo manualmente.</p></div>
+                          {agents.length > 0 && <Button type="button" variant="link" size="sm" onClick={() => setForm({ ...form, uniformRecipientManual: !form.uniformRecipientManual, uniformRecipientId: "" })}>{form.uniformRecipientManual ? "Elegir de la lista" : "Escribir manualmente"}</Button>}
+                        </div>
+                        {form.uniformRecipientManual || !agents.length ? <div className="mt-3 grid gap-2 sm:grid-cols-2"><Input maxLength={120} placeholder="Nombre completo *" value={form.uniformRecipientName} onChange={e => setForm({ ...form, uniformRecipientName: e.target.value })} /><Input maxLength={40} placeholder="Código / cédula (opcional)" value={form.uniformRecipientCode} onChange={e => setForm({ ...form, uniformRecipientCode: e.target.value })} /></div>
+                          : <Select value={form.uniformRecipientId} onValueChange={v => setForm({ ...form, uniformRecipientId: v })}><SelectTrigger className="mt-3 bg-card"><SelectValue placeholder="Seleccione el agente" /></SelectTrigger><SelectContent>{agents.map(agent => <SelectItem key={agent.id} value={agent.id}>{agent.name}{agent.employeeCode ? ` (${agent.employeeCode})` : ""}</SelectItem>)}</SelectContent></Select>}
+                      </div>
+                      <UniformItemPicker value={form.uniformItems} onChange={uniformItems => setForm({ ...form, uniformItems })} />
+                    </>
+                  )}
                   {needsOut && (
                     <div className="grid sm:grid-cols-3 gap-3">
                       <div>
@@ -386,15 +420,15 @@ export default function OpsHrRequests() {
                       {form.motivoBaja === "Otro" && <div className="sm:col-span-3"><Label>Comentario del motivo *</Label><Textarea value={form.motivoComentario} onChange={e => setForm({ ...form, motivoComentario: e.target.value })} /></div>}
                     </div>
                   )}
-                  <div className="grid sm:grid-cols-2 gap-3">
+                  {!isUniform && <div className="grid sm:grid-cols-2 gap-3">
                     <div><Label>Agente propuesto (opcional)</Label><Select value={form.agentePropuestoId || "none"} onValueChange={v => setForm({ ...form, agentePropuestoId: v === "none" ? "" : v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Ninguno</SelectItem>{(personnel as any[]).filter(p => p.status === "Activo").slice(0, 500).map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent></Select></div>
                     {!needsOut && <div><Label>Fecha efectiva</Label><Input type="date" value={form.fechaEfectiva} onChange={e => setForm({ ...form, fechaEfectiva: e.target.value })} /></div>}
-                  </div>
+                  </div>}
                   <div className="flex items-center gap-2"><Switch checked={form.requiereCoberturaUrgente} onCheckedChange={v => setForm({ ...form, requiereCoberturaUrgente: v })} /><Label>Requiere cobertura urgente (correo de alta prioridad)</Label></div>
-                  <div className="rounded-md border border-border p-3 space-y-2">
+                  {!isUniform && <div className="rounded-md border border-border p-3 space-y-2">
                     <div className="flex items-center gap-2"><Switch checked={form.notificarCliente} onCheckedChange={v => setForm({ ...form, notificarCliente: v })} /><Label>Notificar al cliente por correo cuando concluya el cambio / sustitución</Label></div>
                     {form.notificarCliente && <div className="grid sm:grid-cols-2 gap-2 items-end"><div><Label>Correo del cliente</Label><Input type="email" value={form.clienteEmail} onChange={e => setForm({ ...form, clienteEmail: e.target.value })} placeholder="correo@cliente.com" /></div><p className="text-xs text-muted-foreground">Tomado de gSafeOne (Cliente.Email). Se envía solo al marcar la solicitud como "Cubierta satisfactoriamente".</p></div>}
-                  </div>
+                  </div>}
                   <div><Label>Notas</Label><Textarea value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })} /></div>
                   <div><Label className="flex items-center gap-1"><Paperclip className="h-4 w-4" />Evidencia (recomendado, máx. 5 MB c/u)</Label>
                     <Input type="file" multiple onChange={async e => {
@@ -455,11 +489,12 @@ function DetailDialog({ r, canManage, isOwner, userName, userEmail, onClose, onU
           <TabsContent value="resumen" className="space-y-2 text-sm">
             {r.requiereCoberturaUrgente && <div className="rounded bg-destructive/10 text-destructive p-2 font-medium">Requiere cobertura urgente</div>}
             <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1">
-              {[["Tipo", `${r.tipo} · ${r.tipoVacante}`], ["Prioridad", `${r.prioridad} (${r.slaHoras}h)`], ["Cliente", r.clienteNombre], ["Localidad", r.localidadNombre], ["Puesto", r.puestoNombre], ["Turno", r.turnoNombre],
-                ["Supervisor", r.supervisorResponsable], ["Agente saliente", r.agenteSalienteNombre], ["Motivo", [r.motivoBaja, r.motivoComentario].filter(Boolean).join(" — ")], ["Agente propuesto", r.agentePropuestoNombre], ["Notificar cliente", r.notificarCliente ? `${r.clienteEmail}${r.clienteNotificadoEn ? ` · enviado ${fmt(r.clienteNotificadoEn)}` : " · pendiente al cierre"}` : "No"],
+              {[["Tipo", r.tipo === "Uniformes" ? r.tipo : `${r.tipo} · ${r.tipoVacante}`], ["Prioridad", `${r.prioridad} (${r.slaHoras}h)`], ["Cliente", r.clienteNombre], ["Localidad", r.localidadNombre], ["Puesto", r.puestoNombre], ["Turno", r.turnoNombre],
+                ["Supervisor", r.supervisorResponsable], ["Agente saliente", r.agenteSalienteNombre], ["Motivo", [r.motivoBaja, r.motivoComentario].filter(Boolean).join(" — ")], ["Agente propuesto", r.agentePropuestoNombre], ["Agente destinatario", r.uniformRecipientName ? `${r.uniformRecipientName}${r.uniformRecipientCode ? ` (${r.uniformRecipientCode})` : ""}` : ""], ["Notificar cliente", r.notificarCliente ? `${r.clienteEmail}${r.clienteNotificadoEn ? ` · enviado ${fmt(r.clienteNotificadoEn)}` : " · pendiente al cierre"}` : "No"],
                 ["Fecha efectiva", r.fechaEfectiva], ["Límite SLA", fmt(r.fechaLimiteSLA)], ["Responsable actual", r.responsableActual], ["RRHH asignado", r.rrhhAsignado], ["Creado por", `${r.creadoPor} · ${fmt(r.fechaCreacion)}`], ["Cierre", r.fechaCierre ? `${fmt(r.fechaCierre)} — ${r.cierreComentario || ""}` : ""]]
                 .filter(([, v]) => v).map(([k, v]) => <div key={k}><span className="text-muted-foreground">{k}:</span> {v}</div>)}
             </div>
+            {r.tipo === "Uniformes" && r.uniformItems?.length ? <div className="mt-4 rounded-md border border-operations-border bg-operations-soft/40 p-3"><div className="mb-2 text-xs font-semibold uppercase text-operations">Prendas solicitadas</div><div className="grid gap-2 sm:grid-cols-2">{r.uniformItems.map(item => <div key={item.id} className="rounded border border-border bg-card px-3 py-2"><span className="font-semibold">{item.quantity} × {item.category === "Otros" ? item.customDescription : item.category}</span>{item.size && <span className="text-muted-foreground"> · talla {item.size}</span>}</div>)}</div></div> : null}
             {(r as any).notas && <p className="rounded bg-muted/40 p-2">{(r as any).notas}</p>}
           </TabsContent>
           <TabsContent value="timeline">
@@ -517,7 +552,7 @@ function TemplatesView({ templates, canEdit, onSave }: { templates: OpsTemplate[
       <CardContent className="space-y-4">
         {templates.map(x => (
           <div key={x.id} className="flex items-center justify-between border border-border rounded p-2 text-sm">
-            <div><b>{x.nombre}</b> <span className="text-muted-foreground">· {x.tipo} · {x.tipoVacante} · {x.prioridad}{x.motivoBaja ? ` · ${x.motivoBaja}` : ""}</span></div>
+            <div><b>{x.nombre}</b> <span className="text-muted-foreground">· {x.tipo}{x.tipo === "Uniformes" ? "" : ` · ${x.tipoVacante}`} · {x.prioridad}{x.motivoBaja ? ` · ${x.motivoBaja}` : ""}</span></div>
             {canEdit && <Button size="sm" variant="ghost" onClick={() => onSave(templates.filter(y => y.id !== x.id))}>Eliminar</Button>}
           </div>
         ))}
@@ -526,7 +561,7 @@ function TemplatesView({ templates, canEdit, onSave }: { templates: OpsTemplate[
           <div className="grid sm:grid-cols-5 gap-2 items-end border-t border-border pt-3">
             <div className="sm:col-span-2"><Label>Nombre</Label><Input value={t.nombre} onChange={e => setT({ ...t, nombre: e.target.value })} placeholder="Ej. Sustitución por renuncia" /></div>
             <div><Label>Tipo</Label><Select value={t.tipo} onValueChange={v => setT({ ...t, tipo: v as OpsReqTipo })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{TIPOS.map(x => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent></Select></div>
-            <div><Label>Vacante</Label><Select value={t.tipoVacante} onValueChange={v => setT({ ...t, tipoVacante: v as OpsVacante })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{VACANTES.map(x => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent></Select></div>
+            {t.tipo !== "Uniformes" ? <div><Label>Vacante</Label><Select value={t.tipoVacante} onValueChange={v => setT({ ...t, tipoVacante: v as OpsVacante })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{VACANTES.map(x => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent></Select></div> : <div className="hidden sm:block" />}
             <div><Label>Prioridad</Label><Select value={t.prioridad} onValueChange={v => setT({ ...t, prioridad: v as OpsPrioridad })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{PRIORIDADES.map(x => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent></Select></div>
             <div className="sm:col-span-2"><Label>Motivo</Label><Select value={t.motivoBaja || "none"} onValueChange={v => setT({ ...t, motivoBaja: v === "none" ? "" : v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">—</SelectItem>{MOTIVOS.map(x => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent></Select></div>
             <div className="sm:col-span-2"><Label>Notas</Label><Input value={t.notas} onChange={e => setT({ ...t, notas: e.target.value })} /></div>

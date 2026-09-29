@@ -2,3 +2,5 @@
 - [Documentos por Cliente](mem://funcionalidades/documentos-cliente) — Botón Subir por documento/formulario, archivos en backend/data/uploads/clientes, borrado con justificación
 - [Acceso a Nómina](mem://auth/acceso-nomina) — Nómina completa solo RRHH + Aurelio/Samuel/Armando/Chrisnel; líderes ven su departamento; resto solo su propia información
 - [Tickets IT por correo](mem://funcionalidades/tickets-correo-imap) — Buzón ticketsit@safeone.com.do IMAP 993 / SMTP 465, tickets desde correo y acuses automáticos
+
+- [Solicitudes de Uniformes](mem://funcionalidades/solicitudes-uniformes-operaciones) — Tipo Uniformes en OPS-RRHH, categorías, tallas, cantidades y agente destinatario

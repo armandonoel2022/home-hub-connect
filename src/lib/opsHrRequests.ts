@@ -1,20 +1,35 @@
 import { isApiConfigured, opsHrRequestsApi } from "@/lib/api";
 import type { IntranetUser } from "@/lib/types";
 
-export type OpsReqTipo = "Ingreso" | "Salida" | "Sustitución";
+export type OpsReqTipo = "Ingreso" | "Salida" | "Sustitución" | "Uniformes";
 export type OpsVacante = "Fijo" | "Disponible" | "Cubre Libre";
 export type OpsPrioridad = "Normal" | "Alta" | "Crítica";
 export type OpsEstado =
   | "Borrador" | "Enviada a RRHH" | "En revisión" | "En reclutamiento" | "Candidato propuesto"
   | "Cubierta satisfactoriamente" | "Cerrada sin cobertura" | "Cancelada por Operaciones";
 
-export const TIPOS: OpsReqTipo[] = ["Ingreso", "Salida", "Sustitución"];
+export const TIPOS: OpsReqTipo[] = ["Ingreso", "Salida", "Sustitución", "Uniformes"];
 export const VACANTES: OpsVacante[] = ["Fijo", "Disponible", "Cubre Libre"];
 export const PRIORIDADES: OpsPrioridad[] = ["Normal", "Alta", "Crítica"];
 export const MOTIVOS = ["Incumplimiento de horario", "Solicitud del cliente", "Renuncia", "Abandono de puesto", "Suspensión", "Falta grave", "Otro"];
 export const ESTADOS: OpsEstado[] = ["Borrador", "Enviada a RRHH", "En revisión", "En reclutamiento", "Candidato propuesto", "Cubierta satisfactoriamente", "Cerrada sin cobertura", "Cancelada por Operaciones"];
 export const CLOSED: OpsEstado[] = ["Cubierta satisfactoriamente", "Cerrada sin cobertura", "Cancelada por Operaciones"];
 export const SLA_HORAS: Record<OpsPrioridad, number> = { Crítica: 24, Alta: 72, Normal: 168 };
+
+export const UNIFORM_CATEGORIES = [
+  "Camisas mangas largas", "Camisas mangas cortas", "T-shirts", "Holster (funda o pistolera)",
+  "Pantalones tipo Cargo con bolsillos laterales", "Pantalones", "Zapatos", "Botas tipo militar",
+  "Gorras", "Correas", "Jackets", "Linternas", "Otros",
+] as const;
+export const UNIFORM_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "XXXL", "28", "30", "32", "34", "36", "38", "40", "42", "44"] as const;
+export type OpsUniformCategory = typeof UNIFORM_CATEGORIES[number];
+export interface OpsUniformItem {
+  id: string;
+  category: OpsUniformCategory;
+  quantity: number;
+  size?: string;
+  customDescription?: string;
+}
 
 export const ESTADO_STYLE: Record<OpsEstado, string> = {
   Borrador: "bg-muted text-muted-foreground",
@@ -42,6 +57,8 @@ export interface OpsHrRequest {
   supervisorResponsable: string; supervisorEmail?: string;
   agenteSalienteId?: string; agenteSalienteNombre?: string;
   agentePropuestoId?: string; agentePropuestoNombre?: string;
+  uniformRecipientId?: string; uniformRecipientName?: string; uniformRecipientCode?: string;
+  uniformItems?: OpsUniformItem[];
   motivoBaja?: string; motivoComentario?: string;
   fechaEfectiva: string;
   prioridad: OpsPrioridad;

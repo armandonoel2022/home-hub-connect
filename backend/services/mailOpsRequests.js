@@ -77,15 +77,18 @@ function wrap(r, title, body) {
   const c = config();
   const link = `${c.intranetUrl.replace(/\/$/, '')}/rrhh/operaciones?id=${encodeURIComponent(r.id)}`;
   const row = (k, v) => (v ? `<tr><td style="padding:4px 12px 4px 0;color:#6b7280">${k}</td><td>${esc(v)}</td></tr>` : '');
+  const uniformItems = Array.isArray(r.uniformItems) ? r.uniformItems.map((item) => `${item.quantity} × ${item.category === 'Otros' ? item.customDescription : item.category}${item.size ? ` · talla ${item.size}` : ''}`).join('; ') : '';
   return `<div style="font-family:Segoe UI,Arial,sans-serif;color:#1f2430">
   <div style="background:#1f2430;color:#d4af37;padding:14px 18px;font-size:16px;font-weight:600">SafeOne · Operaciones → RRHH</div>
   <div style="padding:18px">
     <h2 style="margin:0 0 12px;font-size:17px">${esc(title)}</h2>
     ${r.requiereCoberturaUrgente ? '<p style="background:#fee2e2;color:#991b1b;padding:8px 12px;font-weight:600">⚠ Requiere cobertura urgente</p>' : ''}
     <table style="font-size:14px;border-collapse:collapse">
-      ${row('Solicitud', r.id)}${row('Estado', r.estado)}${row('Tipo', `${r.tipo} · ${r.tipoVacante}`)}
+      ${row('Solicitud', r.id)}${row('Estado', r.estado)}${row('Tipo', r.tipo === 'Uniformes' ? r.tipo : `${r.tipo} · ${r.tipoVacante}`)}
       ${row('Cliente', r.clienteNombre)}${row('Localidad', r.localidadNombre)}${row('Puesto', r.puestoNombre)}${row('Turno', r.turnoNombre)}
       ${row('Supervisor', r.supervisorResponsable)}${row('Agente saliente', r.agenteSalienteNombre)}${row('Motivo', r.motivoBaja)}
+      ${row('Agente destinatario', r.uniformRecipientName ? `${r.uniformRecipientName}${r.uniformRecipientCode ? ` (${r.uniformRecipientCode})` : ''}` : '')}
+      ${row('Prendas', uniformItems)}
       ${row('Fecha efectiva', r.fechaEfectiva)}${row('Prioridad', r.prioridad)}${row('Límite SLA', r.fechaLimiteSLA ? new Date(r.fechaLimiteSLA).toLocaleString('es-DO') : '')}
       ${row('Creado por', r.creadoPor)}
     </table>
