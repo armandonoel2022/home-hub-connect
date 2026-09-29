@@ -195,8 +195,8 @@ async function slaAlerts() {
       r._slaWarned = true;
     } else continue;
     changed = true;
-    r.historial = r.historial || [];
-    r.historial.push({ fecha: new Date().toISOString(), usuario: 'Sistema', accion: title.replace(/^[^\wÁ-ú]+/, '') });
+    r.historialEstados = r.historialEstados || [];
+    r.historialEstados.push({ fecha: new Date().toISOString(), usuario: 'Sistema', anterior: r.estado, nuevo: r.estado, nota: r._slaExpired ? 'Alerta: SLA vencido' : 'Alerta: SLA por vencer (80%)' });
     try { await sendMail({ to: recipients(r), subject: `${subjectFor(r)} — ${r._slaExpired ? 'SLA VENCIDO' : 'SLA por vencer'}`, html: wrap(r, title, body), urgent: true }); sent++; }
     catch (e) { console.warn(`[ops-mail] SLA ${r.id}: ${e.message}`); }
   }
