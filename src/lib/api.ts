@@ -2154,6 +2154,8 @@ export const opsHrRequestsApi = {
   syncMail: () => apiFetch<any>("/ops-hr-requests/mail/sync", { method: "POST" }),
   sendSummary: () => apiFetch<any>("/ops-hr-requests/mail/summary", { method: "POST" }),
   mailStatus: () => apiFetch<{ configured: boolean; user: string }>("/ops-hr-requests/mail/status"),
+  mailAdminStatus: () => apiFetch<any>("/ops-hr-requests/mail/admin-status"),
+  mailTest: () => apiFetch<{ ok: boolean; smtp: boolean; imap: boolean; message?: string }>("/ops-hr-requests/mail/test", { method: "POST" }),
   settings: () => apiFetch<{ rrhhRecipients: string[] }>("/ops-hr-requests/settings/all"),
   saveSettings: (data: { rrhhRecipients: string[]; updatedBy?: string }) => apiFetch<{ rrhhRecipients: string[] }>("/ops-hr-requests/settings/all", { method: "PUT", body: JSON.stringify(data) }),
 };

@@ -6,6 +6,7 @@ import "@fontsource/manrope/500.css";
 import "@fontsource/manrope/600.css";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
+import OpsMailStatusPanel from "@/components/ops/OpsMailStatusPanel";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useArmedPersonnel } from "@/hooks/useApiHooks";
@@ -291,6 +292,7 @@ export default function OpsHrRequests() {
           <div className="min-w-0">
             {view === "dashboard" && (<>
               <div className="p-5 sm:p-7 space-y-5">
+              <OpsMailStatusPanel />
               <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
                 <Kpi label="Solicitudes abiertas" value={kpi.open} icon={ListChecks} />
                 <Kpi label="Cubiertas" value={kpi.covered} tone="text-green-600" icon={CircleCheck} />

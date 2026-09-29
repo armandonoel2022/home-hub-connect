@@ -250,4 +250,50 @@ function start() {
   console.log('[ops-mail] Activo (respuestas cada 2 min, alertas SLA, resumen diario 8:00)');
 }
 
-module.exports = { getSettings, saveSettings, DEFAULT_RRHH, config, isConfigured, notify, notifyClient, syncReplies, addReplyFromMail, dailySummary, slaAlerts, start, FILE };
+let _lastSync = null;
+let _lastSend = null;
+let _polling = false;
+const _origSync = syncReplies;
+async function trackedSync() {
+  const r = await _origSync();
+  _lastSync = { ...r, at: new Date().toISOString() };
+  return r;
+}
+const _origSend = sendMail;
+async function trackedSend(args) {
+  const r = await _origSend(args);
+  _lastSend = { ok: !!r.sent, subject: args?.subject, message: r.reason || '', at: new Date().toISOString() };
+  return r;
+}
+
+syncReplies = trackedSync;
+sendMail = trackedSend;
+
+async function status() {
+  const c = config();
+  const d = await loadDeps();
+  return {
+    user: c.user || '(sin configurar)', enabled: c.enabled, hasPassword: !!c.pass,
+    configured: isConfigured(), dependencies: !!d.ok, dependenciesError: d.ok ? '' : d.error,
+    imap: `${c.imapHost}:${c.imapPort}`, smtp: `${c.smtpHost}:${c.smtpPort}`,
+    polling: _polling, pollMinutes: 2, lastSync: _lastSync, lastSend: _lastSend, node: process.version,
+  };
+}
+
+async function testConnection() {
+  const c = config();
+  if (!isConfigured()) return { ok: false, smtp: false, imap: false, message: 'Falta OPS_MAIL_USER / OPS_MAIL_PASS en el .env' };
+  const d = await loadDeps();
+  if (!d.ok) return { ok: false, smtp: false, imap: false, message: d.error };
+  let smtp = false, imap = false; const errs = [];
+  try { await (await transport()).verify(); smtp = true; } catch (e) { _transport = null; errs.push(`SMTP: ${e.message}`); }
+  const client = makeImapClient(d, c);
+  try { await client.connect(); imap = true; await client.logout().catch(() => {}); } catch (e) { errs.push(`IMAP: ${e.message}`); }
+  return { ok: smtp && imap, smtp, imap, message: errs.join(' · ') };
+}
+
+module.exports = {
+  getSettings, saveSettings, DEFAULT_RRHH, config, isConfigured, notify, notifyClient,
+  syncReplies, addReplyFromMail, dailySummary, slaAlerts,
+  start: () => { start(); _polling = isConfigured(); }, FILE, status, testConnection, sendMail,
+};
