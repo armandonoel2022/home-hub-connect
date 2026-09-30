@@ -350,7 +350,7 @@ const MyPayroll = () => {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base">
-                Personal de mi departamento ({items.length})
+                {data?.level === "team" ? "Personal que se reporta a mí" : "Personal de mi departamento"} ({items.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="overflow-x-auto">
