@@ -43,6 +43,39 @@ function isFullAccess(user) {
   return /recursos humanos|rrhh/.test(norm(user.department));
 }
 
+const nameKey = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+
+// Identidades confirmadas (cuando el usuario de la intranet no tiene cédula/código cargado).
+const KNOWN_IDENTITIES = [
+  { names: ['ramon santiago santana cabrera', 'ramon santana'], codigo: '4124', cedula: '22400262808' },
+  { names: ['perla nicole gonzalez nin', 'perla gonzalez'], codigo: '3760', cedula: '40242245922' },
+];
+// Supervisión directa por código de empleado (jefe → subordinados), además de reportsTo en users.json.
+const DIRECT_REPORTS = {
+  '4124': ['3760'], // Ramón Santana → Perla González
+};
+
+function knownIdentity(user) {
+  const n = nameKey(user?.fullName);
+  return KNOWN_IDENTITIES.find((k) => k.names.some((x) => n === x || (n && n.startsWith(x)))) || null;
+}
+
+/** Códigos de empleados que se reportan directamente al usuario. */
+function directReportCodes(user, empCodigo) {
+  const out = new Set(DIRECT_REPORTS[digits(empCodigo)] || []);
+  const users = readData(USERS_FILE) || [];
+  users.filter((u) => u.reportsTo && u.reportsTo === user.id && u.employeeStatus !== 'Inactivo').forEach((u) => {
+    const c = digits(u.employeeCode) || knownIdentity(u)?.codigo;
+    if (c) out.add(c);
+  });
+  try {
+    const emps = readData('employees.json') || [];
+    emps.filter((e) => digits(e.reportsToCode) && digits(e.reportsToCode) === digits(empCodigo)).forEach((e) => out.add(digits(e.employeeCode)));
+  } catch { /* ignore */ }
+  out.delete(digits(empCodigo));
+  return [...out].filter(Boolean);
+}
+
 function loadUser(req) {
   const users = readData(USERS_FILE) || [];
   return (
@@ -55,7 +88,8 @@ function loadUser(req) {
 /** Localiza el registro Empleado del usuario: cédula → código de empleado. */
 async function findEmpleado(user) {
   if (!user) return null;
-  const ced = digits(user.cedula);
+  const known = knownIdentity(user);
+  const ced = digits(user.cedula) || known?.cedula;
   if (ced) {
     const rows = await sql.query(
       `SELECT TOP 1 OID, Codigo, NombreCompleto, Nombre1, Apellido1, Cedula, Departamento, Puesto, Estatus
@@ -65,7 +99,7 @@ async function findEmpleado(user) {
     );
     if (rows.length) return rows[0];
   }
-  const cod = digits(user.employeeCode);
+  const cod = digits(user.employeeCode) || known?.codigo;
   if (cod) {
     const rows = await sql.query(
       `SELECT TOP 1 OID, Codigo, NombreCompleto, Nombre1, Apellido1, Cedula, Departamento, Puesto, Estatus
@@ -73,6 +107,16 @@ async function findEmpleado(user) {
       { cod: Number(cod) }
     );
     if (rows.length) return rows[0];
+  }
+  // Último recurso: nombre completo exacto (único) en gSafeOne
+  const n = nameKey(user.fullName);
+  if (n && n.split(' ').length >= 3) {
+    const rows = await sql.query(
+      `SELECT TOP 2 OID, Codigo, NombreCompleto, Nombre1, Apellido1, Cedula, Departamento, Puesto, Estatus
+       FROM Empleado WHERE GCRecord IS NULL AND Estatus = 0 AND LOWER(LTRIM(RTRIM(NombreCompleto))) COLLATE Latin1_General_CI_AI = @n`,
+      { n }
+    );
+    if (rows.length === 1) return rows[0];
   }
   return null;
 }
@@ -103,9 +147,11 @@ async function resolveScope(req) {
   }
   const deptOID = emp.Departamento == null ? null : Number(emp.Departamento);
   const leader = !!user.isDepartmentLeader || isFullAccess(user);
+  const reports = directReportCodes(user, emp.Codigo);
   return {
     user,
-    level: leader && deptOID != null ? 'dept' : 'self',
+    reports,
+    level: leader && deptOID != null ? 'dept' : reports.length ? 'team' : 'self',
     empleado: emp,
     deptOID,
     deptNombre: await deptName(deptOID),
@@ -116,7 +162,10 @@ async function resolveScope(req) {
 /** Cláusula SQL (sobre alias `e` de Empleado) según el alcance. */
 function scopeClause(scope, alias = 'e') {
   if (scope.level === 'full') return '1 = 1';
-  if (scope.level === 'dept') return `${alias}.Departamento = ${Number(scope.deptOID)}`;
+  const extra = (scope.reports || []).map(Number).filter(Number.isFinite);
+  const extraSql = extra.length ? ` OR ${alias}.Codigo IN (${extra.join(',')})` : '';
+  if (scope.level === 'dept') return `(${alias}.Departamento = ${Number(scope.deptOID)}${extraSql})`;
+  if (scope.level === 'team') return `(${alias}.OID = ${Number(scope.empleado.OID)}${extraSql})`;
   if (scope.level === 'self') return `${alias}.OID = ${Number(scope.empleado.OID)}`;
   return '1 = 0';
 }
