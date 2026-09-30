@@ -7,6 +7,9 @@ import {
   usersApi,
   getFileUrl,
   isApiConfigured,
+  generalSqlApi,
+  photoSyncApi,
+  type GeneralActiveEmployee,
   type MyPayrollScope,
   type MyPayrollPeriod,
   type MyPayrollPayslipsResponse,
@@ -24,7 +27,7 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Wallet, ShieldCheck, Users, User, AlertTriangle, RefreshCw, Printer } from "lucide-react";
+import { Wallet, ShieldCheck, Users, User, AlertTriangle, RefreshCw, Printer, Upload, X } from "lucide-react";
 import { periodLabel, payDateLabel, generateGeneralPayslipPDF } from "@/lib/generalPayslipPdf";
 
 const money = (n: number) =>
@@ -129,37 +132,66 @@ const MyPayroll = () => {
     );
   }, [data, scope]);
 
-  const norm = (v?: string | null) =>
-    String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
   const resolvePhoto = (url?: string | null) =>
     !url ? null : url.startsWith("/photos") || url.startsWith("/uploads") ? getFileUrl(url) : url;
 
-  /** Busca foto y datos del empleado igual que el Directorio de RRHH (JSON local + usuarios intranet). */
-  const lookupEmployee = async (item: GeneralPayslip) => {
+  // ─── Datos del empleado: SIEMPRE por código de empleado o cédula (nunca por nombre) ───
+  const [dir, setDir] = useState<{ local: any[]; users: any[]; active: GeneralActiveEmployee[]; photos: Record<string, { photoUrl: string }> }>({ local: [], users: [], active: [], photos: {} });
+  const [foundPhotos, setFoundPhotos] = useState<Record<string, string | null>>({});
+  useEffect(() => {
+    if (!isApiConfigured()) return;
+    Promise.all([
+      employeesApi.getAll().catch(() => [] as any[]),
+      usersApi.getAll().catch(() => [] as any[]),
+      generalSqlApi.employeesActive().then(r => r.items).catch(() => [] as GeneralActiveEmployee[]),
+      employeesApi.photoOverrides().catch(() => ({})),
+    ]).then(([local, users, active, photos]) => setDir({ local: local || [], users: users || [], active: active || [], photos: photos || {} }));
+  }, []);
+
+  const keyOf = (i: GeneralPayslip) => String(i.codigo || digits(i.cedula) || i.empleado);
+  const infoFor = (i: GeneralPayslip) => {
+    const code = String(i.codigo || "").trim();
+    const ced = digits(i.cedula);
+    const match = (c?: any, d?: any) => (code && String(c ?? "").trim() === code) || (ced && digits(d) === ced);
+    const l: any = dir.local.find(e => match(e.employeeCode, e.cedula));
+    const a = dir.active.find(e => match(e.codigo, e.cedula));
+    const u: any = dir.users.find(x => match(x.employeeCode, x.cedula));
+    const override = (code && dir.photos[code]?.photoUrl) || null;
+    return {
+      photoUrl: override || resolvePhoto(l?.photoUrl || l?.photo || u?.photoUrl) || foundPhotos[keyOf(i)] || null,
+      puesto: i.puesto || a?.puesto || l?.position || null,
+      departamento: a?.departamento || l?.department || scope?.deptNombre || null,
+      categoria: l?.category || null,
+      nomina: l?.payrollType || i.nomina || null,
+      fechaIngreso: a?.fechaIngreso || l?.hireDate || null,
+      estatus: a?.estatus || l?.status || null,
+    };
+  };
+
+  // Último recurso: buscar en carpetas de fotos por código/cédula
+  useEffect(() => {
+    if (!selected || !isApiConfigured()) return;
+    const k = keyOf(selected);
+    if (k in foundPhotos || infoFor(selected).photoUrl) return;
+    photoSyncApi.find("", { employeeCode: selected.codigo || undefined, cedula: selected.cedula || undefined })
+      .then((r: any) => setFoundPhotos(p => ({ ...p, [k]: r?.match?.url ? resolvePhoto(r.match.url) : null })))
+      .catch(() => setFoundPhotos(p => ({ ...p, [k]: null })));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected, dir]);
+
+  const canUploadPhoto = String(user?.email || "").toLowerCase() === "anoel@safeone.com.do";
+  const [uploading, setUploading] = useState(false);
+  const uploadPhoto = async (i: GeneralPayslip, file: File) => {
+    if (!i.codigo) return;
+    if (file.size > 2_000_000) { alert("La imagen debe pesar menos de 2 MB"); return; }
+    setUploading(true);
     try {
-      const [local, users] = await Promise.all([
-        employeesApi.getAll().catch(() => [] as any[]),
-        isApiConfigured() ? usersApi.getAll().catch(() => [] as any[]) : Promise.resolve([] as any[]),
-      ]);
-      const code = String(item.codigo || "").trim();
-      const ced = digits(item.cedula);
-      const name = norm(item.empleado);
-      const l: any = (local || []).find((e: any) =>
-        (code && String(e.employeeCode || "").trim() === code) ||
-        (ced && digits(e.cedula) === ced) ||
-        (name && norm(e.fullName) === name));
-      const u: any = (users || []).find((x: any) => name && norm(x.fullName) === name);
-      return {
-        photoUrl: resolvePhoto(l?.photoUrl || l?.photo || u?.photoUrl),
-        puesto: l?.position || u?.position || null,
-        categoria: l?.category || null,
-        nomina: l?.payrollType || null,
-        fechaIngreso: l?.hireDate || null,
-        estatus: l?.status || null,
-      };
-    } catch {
-      return {};
-    }
+      const dataUrl = await new Promise<string>((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result as string); fr.onerror = rej; fr.readAsDataURL(file); });
+      const saved = await employeesApi.uploadPhoto(String(i.codigo), dataUrl, i.cedula || undefined);
+      setDir(d => ({ ...d, photos: { ...d.photos, [String(i.codigo)]: { photoUrl: saved.photoUrl } } }));
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "No se pudo subir la foto");
+    } finally { setUploading(false); }
   };
 
   const printPayslip = async (item: GeneralPayslip) => {
@@ -170,7 +202,7 @@ const MyPayroll = () => {
       if (item.pagoOid && item.codigo) {
         try { detail = await myPayrollApi.paymentDetail(item.codigo, item.pagoOid); } catch { detail = null; }
       }
-      const extra: any = await lookupEmployee(item);
+      const extra: any = infoFor(item);
       await generateGeneralPayslipPDF(
         detail || toPaymentDetail(item),
         {
@@ -179,7 +211,6 @@ const MyPayroll = () => {
           codigo: item.codigo,
           cedula: item.cedula,
           puesto: item.puesto || extra.puesto,
-          departamento: scope?.deptNombre || null,
         },
         { open: true }
       );
@@ -200,7 +231,7 @@ const MyPayroll = () => {
 
   return (
     <AppLayout>
-      <div className="p-4 md:p-6 space-y-4 max-w-6xl mx-auto">
+      <div className="p-4 md:p-6 space-y-4 max-w-7xl mx-auto">
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
@@ -312,6 +343,8 @@ const MyPayroll = () => {
           </Card>
         )}
 
+        <div className={`grid gap-4 items-start ${selected ? "lg:grid-cols-[minmax(0,1fr)_420px]" : ""}`}>
+        <div className="min-w-0 space-y-4">
         {!loading && multi && items.length > 0 && (
           <Card>
             <CardHeader className="pb-2">
@@ -334,10 +367,17 @@ const MyPayroll = () => {
                   {items.map((i) => (
                     <TableRow
                       key={`${i.codigo}-${i.ano}-${i.mes}-${i.periodo}`}
-                      className="cursor-pointer"
+                      className={`cursor-pointer ${selected === i ? "bg-primary/10" : ""}`}
                       onClick={() => setSelected(i)}
                     >
-                      <TableCell className="font-medium">{i.empleado}</TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {infoFor(i).photoUrl
+                            ? <img src={infoFor(i).photoUrl!} alt="" className="h-8 w-8 rounded-full object-cover border border-border" />
+                            : <div className="h-8 w-8 rounded-full bg-muted text-[10px] flex items-center justify-center text-muted-foreground">{String(i.empleado || "").split(/\s+/).slice(0, 2).map(p => p[0]).join("")}</div>}
+                          {i.empleado}
+                        </div>
+                      </TableCell>
                       <TableCell>{i.codigo || "—"}</TableCell>
                       <TableCell className="text-right">{money(i.totalDevengado)}</TableCell>
                       <TableCell className="text-right text-destructive">
@@ -352,64 +392,79 @@ const MyPayroll = () => {
           </Card>
         )}
 
-        {!loading && selected && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">
-                Desglose · {selected.empleado} ·{" "}
-                {periodLabel(selected.periodo, selected.mes, selected.ano)}
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">
-                {payDateLabel(selected.periodo, selected.mes, selected.ano)}
-              </p>
-              <div className="pt-2">
-                <Button size="sm" variant="outline" disabled={printing} onClick={() => void printPayslip(selected)}>
-                  <Printer className="w-4 h-4 mr-1.5" /> Imprimir comprobante
-                </Button>
+        </div>
+
+        {!loading && selected && (() => {
+          const info = infoFor(selected);
+          const rows: Array<[string, string]> = [
+            ["Código", selected.codigo || "—"], ["Cédula", selected.cedula || "—"],
+            ["Puesto", info.puesto || "—"], ["Departamento", info.departamento || "—"],
+            ["Categoría", info.categoria || "—"], ["Nómina", info.nomina || "—"],
+            ["Fecha de ingreso", info.fechaIngreso ? new Date(info.fechaIngreso).toLocaleDateString("es-DO") : "—"],
+            ["Estatus", info.estatus || "—"], ["Fecha de pago", payDateLabel(selected.periodo, selected.mes, selected.ano)],
+          ];
+          return (
+          <Card className="lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto border-primary/40">
+            <CardHeader className="pb-3 space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <CardTitle className="text-base">Comprobante de pago</CardTitle>
+                  <p className="text-xs text-muted-foreground">{periodLabel(selected.periodo, selected.mes, selected.ano)}</p>
+                </div>
+                <Button size="icon" variant="ghost" aria-label="Cerrar" onClick={() => setSelected(null)}><X className="w-4 h-4" /></Button>
               </div>
+              <div className="flex gap-3 items-start">
+                <div className="shrink-0 space-y-1">
+                  {info.photoUrl
+                    ? <img src={info.photoUrl} alt={selected.empleado || ""} className="w-24 h-28 object-cover rounded border border-border" />
+                    : <div className="w-24 h-28 rounded border border-dashed border-border flex items-center justify-center text-xs text-muted-foreground">Sin foto</div>}
+                  {canUploadPhoto && selected.codigo && (
+                    <label className="flex items-center justify-center gap-1 text-xs text-primary cursor-pointer hover:underline">
+                      <Upload className="w-3 h-3" />{uploading ? "Subiendo…" : info.photoUrl ? "Cambiar foto" : "Subir foto"}
+                      <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" disabled={uploading}
+                        onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadPhoto(selected, f); e.target.value = ""; }} />
+                    </label>
+                  )}
+                </div>
+                <div className="min-w-0 text-sm">
+                  <div className="font-semibold text-foreground leading-tight mb-1">{selected.empleado}</div>
+                  <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-xs">
+                    {rows.map(([k, v]) => (<><dt key={k} className="text-muted-foreground">{k}</dt><dd key={k + "v"} className="truncate">{v}</dd></>))}
+                  </dl>
+                </div>
+              </div>
+              <Button className="w-full" disabled={printing} onClick={() => void printPayslip(selected)}>
+                <Printer className="w-4 h-4 mr-1.5" /> Descargar / Imprimir comprobante
+              </Button>
             </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
+            <CardContent className="space-y-4">
               <div>
-                <h3 className="text-sm font-semibold mb-2">Ingresos</h3>
+                <h3 className="text-sm font-semibold mb-1">Ingresos</h3>
                 <div className="space-y-1 text-sm">
-                  {Object.entries(selected.ingresos)
-                    .filter(([, v]) => v !== 0)
-                    .map(([k, v]) => (
-                      <div key={k} className="flex justify-between border-b border-border/50 py-1">
-                        <span className="text-muted-foreground">{k}</span>
-                        <span>{money(v)}</span>
-                      </div>
-                    ))}
-                  <div className="flex justify-between pt-1 font-semibold">
-                    <span>Total devengado</span>
-                    <span>{money(selected.totalDevengado)}</span>
-                  </div>
+                  {Object.entries(selected.ingresos).filter(([, v]) => v !== 0).map(([k, v]) => (
+                    <div key={k} className="flex justify-between border-b border-border/50 py-1"><span className="text-muted-foreground">{k}</span><span>{money(v)}</span></div>
+                  ))}
+                  <div className="flex justify-between pt-1 font-semibold"><span>Total devengado</span><span>{money(selected.totalDevengado)}</span></div>
                 </div>
               </div>
               <div>
-                <h3 className="text-sm font-semibold mb-2">Deducciones</h3>
+                <h3 className="text-sm font-semibold mb-1">Deducciones</h3>
                 <div className="space-y-1 text-sm">
-                  {Object.entries(selected.deducciones)
-                    .filter(([, v]) => v !== 0)
-                    .map(([k, v]) => (
-                      <div key={k} className="flex justify-between border-b border-border/50 py-1">
-                        <span className="text-muted-foreground">{k}</span>
-                        <span className="text-destructive">{money(v)}</span>
-                      </div>
-                    ))}
-                  <div className="flex justify-between pt-1 font-semibold">
-                    <span>Total deducciones</span>
-                    <span className="text-destructive">{money(selected.totalDeducciones)}</span>
-                  </div>
+                  {Object.entries(selected.deducciones).filter(([, v]) => v !== 0).map(([k, v]) => (
+                    <div key={k} className="flex justify-between border-b border-border/50 py-1"><span className="text-muted-foreground">{k}</span><span className="text-destructive">{money(v)}</span></div>
+                  ))}
+                  <div className="flex justify-between pt-1 font-semibold"><span>Total deducciones</span><span className="text-destructive">{money(selected.totalDeducciones)}</span></div>
                 </div>
               </div>
-              <div className="md:col-span-2 rounded-lg bg-muted p-3 flex justify-between items-center">
+              <div className="rounded-lg bg-muted p-3 flex justify-between items-center">
                 <span className="font-semibold">Neto a recibir</span>
                 <span className="text-xl font-bold text-primary">{money(selected.neto)}</span>
               </div>
             </CardContent>
           </Card>
-        )}
+          );
+        })()}
+        </div>
       </div>
     </AppLayout>
   );
