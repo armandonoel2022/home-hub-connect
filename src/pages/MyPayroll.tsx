@@ -3,6 +3,10 @@ import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   myPayrollApi,
+  employeesApi,
+  usersApi,
+  getFileUrl,
+  isApiConfigured,
   type MyPayrollScope,
   type MyPayrollPeriod,
   type MyPayrollPayslipsResponse,
@@ -125,6 +129,39 @@ const MyPayroll = () => {
     );
   }, [data, scope]);
 
+  const norm = (v?: string | null) =>
+    String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+  const resolvePhoto = (url?: string | null) =>
+    !url ? null : url.startsWith("/photos") || url.startsWith("/uploads") ? getFileUrl(url) : url;
+
+  /** Busca foto y datos del empleado igual que el Directorio de RRHH (JSON local + usuarios intranet). */
+  const lookupEmployee = async (item: GeneralPayslip) => {
+    try {
+      const [local, users] = await Promise.all([
+        employeesApi.getAll().catch(() => [] as any[]),
+        isApiConfigured() ? usersApi.getAll().catch(() => [] as any[]) : Promise.resolve([] as any[]),
+      ]);
+      const code = String(item.codigo || "").trim();
+      const ced = digits(item.cedula);
+      const name = norm(item.empleado);
+      const l: any = (local || []).find((e: any) =>
+        (code && String(e.employeeCode || "").trim() === code) ||
+        (ced && digits(e.cedula) === ced) ||
+        (name && norm(e.fullName) === name));
+      const u: any = (users || []).find((x: any) => name && norm(x.fullName) === name);
+      return {
+        photoUrl: resolvePhoto(l?.photoUrl || l?.photo || u?.photoUrl),
+        puesto: l?.position || u?.position || null,
+        categoria: l?.category || null,
+        nomina: l?.payrollType || null,
+        fechaIngreso: l?.hireDate || null,
+        estatus: l?.status || null,
+      };
+    } catch {
+      return {};
+    }
+  };
+
   const printPayslip = async (item: GeneralPayslip) => {
     setPrinting(true);
     try {
@@ -133,13 +170,15 @@ const MyPayroll = () => {
       if (item.pagoOid && item.codigo) {
         try { detail = await myPayrollApi.paymentDetail(item.codigo, item.pagoOid); } catch { detail = null; }
       }
+      const extra: any = await lookupEmployee(item);
       await generateGeneralPayslipPDF(
         detail || toPaymentDetail(item),
         {
+          ...extra,
           nombre: item.empleado || "—",
           codigo: item.codigo,
           cedula: item.cedula,
-          puesto: item.puesto,
+          puesto: item.puesto || extra.puesto,
           departamento: scope?.deptNombre || null,
         },
         { open: true }
