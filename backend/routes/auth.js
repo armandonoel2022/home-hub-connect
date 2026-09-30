@@ -15,7 +15,7 @@ function mapUser(u) {
 }
 
 function mustChangePasswordFor(user) {
-  if (isChrisnelFabian(user)) return false;
+  if (isChrisnelFabian(user) || safeoneProfileFor(user)) return false;
   if (DEFAULT_PASSWORDS[normalizeLogin(user?.email)]) return false;
   return !user.passwordHash || !!user.mustChangePassword;
 }
