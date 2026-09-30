@@ -762,6 +762,9 @@ export const employeesApi = {
   },
   getStats: () => apiFetch<{ total: number; byDepartment: Record<string, number>; byPayrollType: Record<string, number> }>("/employees/stats"),
   getOne: (code: string) => apiFetch<Employee>(`/employees/${encodeURIComponent(code)}`),
+  photoOverrides: () => apiFetch<Record<string, { photoUrl: string; updatedAt?: string }>>("/employees/photo-overrides/all"),
+  uploadPhoto: (code: string, photoUrl: string, cedula?: string) =>
+    apiFetch<{ photoUrl: string; updatedAt: string }>(`/employees/photo-overrides/${encodeURIComponent(code)}`, { method: "PUT", body: JSON.stringify({ photoUrl, cedula }) }),
   update: (code: string, data: Partial<Employee>) =>
     apiFetch<Employee>(`/employees/${encodeURIComponent(code)}`, { method: "PUT", body: JSON.stringify(data) }),
   create: (data: Partial<Employee>) =>

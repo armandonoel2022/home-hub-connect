@@ -61,6 +61,27 @@ router.get('/', auth, (req, res) => {
   res.json(list);
 });
 
+// ─── Fotos manuales (comprobantes / Mi Nómina) — solo anoel@safeone.com.do puede subir ───
+const PHOTO_FILE = 'employee-photo-overrides.json';
+const readPhotos = () => { const d = readData(PHOTO_FILE); return d && !Array.isArray(d) ? d : {}; };
+router.get('/photo-overrides/all', auth, (req, res) => {
+  const all = readPhotos();
+  const out = {};
+  Object.entries(all).forEach(([k, v]) => { out[k] = { photoUrl: v.photoUrl, updatedAt: v.updatedAt }; });
+  res.json(out);
+});
+router.put('/photo-overrides/:code', auth, (req, res) => {
+  if (String(req.user?.email || '').toLowerCase() !== 'anoel@safeone.com.do') return res.status(403).json({ message: 'Solo el administrador puede subir fotos' });
+  const photoUrl = String(req.body?.photoUrl || '');
+  if (!/^data:image\/(png|jpe?g|webp);base64,/.test(photoUrl) || photoUrl.length > 3_000_000) return res.status(400).json({ message: 'Imagen inválida (PNG/JPG, máx. ~2 MB)' });
+  const code = String(req.params.code).trim();
+  if (!code) return res.status(400).json({ message: 'Código requerido' });
+  const all = readPhotos();
+  all[code] = { photoUrl, cedula: String(req.body?.cedula || ''), updatedAt: new Date().toISOString(), updatedBy: req.user.email };
+  writeData(PHOTO_FILE, all);
+  res.json({ photoUrl, updatedAt: all[code].updatedAt });
+});
+
 // GET /api/employees/stats
 router.get('/stats', auth, (req, res) => {
   const list = load().filter(e => e.status === 'Activo');
