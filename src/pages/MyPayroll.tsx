@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -429,7 +429,7 @@ const MyPayroll = () => {
                 <div className="min-w-0 text-sm">
                   <div className="font-semibold text-foreground leading-tight mb-1">{selected.empleado}</div>
                   <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-xs">
-                    {rows.map(([k, v]) => (<><dt key={k} className="text-muted-foreground">{k}</dt><dd key={k + "v"} className="truncate">{v}</dd></>))}
+                    {rows.map(([k, v]) => (<Fragment key={k}><dt className="text-muted-foreground">{k}</dt><dd className="truncate">{v}</dd></Fragment>))}
                   </dl>
                 </div>
               </div>
