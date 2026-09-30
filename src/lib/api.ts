@@ -2095,7 +2095,7 @@ export interface GeneralContrato {
 }
 
 // ============= Mi Nómina (alcance propio / equipo) =============
-export type MyPayrollLevel = "full" | "dept" | "self" | "none";
+export type MyPayrollLevel = "full" | "dept" | "team" | "self" | "none";
 
 export interface MyPayrollScope {
   level: MyPayrollLevel;
