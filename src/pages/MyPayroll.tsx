@@ -64,6 +64,7 @@ const toPaymentDetail = (i: GeneralPayslip): GeneralPaymentDetail => ({
 const LEVEL_META: Record<string, { label: string; desc: string; icon: typeof User }> = {
   full: { label: "Acceso total", desc: "Puedes ver la nómina completa de la empresa.", icon: ShieldCheck },
   dept: { label: "Mi equipo", desc: "Ves tu comprobante y el del personal de tu departamento.", icon: Users },
+  team: { label: "Mi equipo", desc: "Ves tu comprobante y el del personal que se reporta a ti.", icon: Users },
   self: { label: "Sólo mi información", desc: "Ves únicamente tu propio comprobante de pago.", icon: User },
   none: { label: "Sin registro", desc: "No encontramos tu registro de empleado en GENERAL.", icon: AlertTriangle },
 };
@@ -227,7 +228,7 @@ const MyPayroll = () => {
     .filter((i) =>
       !search.trim() || String(i.empleado || "").toLowerCase().includes(search.toLowerCase())
     );
-  const multi = (data?.level === "dept" || data?.level === "full");
+  const multi = (data?.level === "dept" || data?.level === "full" || data?.level === "team");
 
   return (
     <AppLayout>
@@ -349,7 +350,7 @@ const MyPayroll = () => {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base">
-                Personal de mi departamento ({items.length})
+                {data?.level === "team" ? "Personal que se reporta a mí" : "Personal de mi departamento"} ({items.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="overflow-x-auto">

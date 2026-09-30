@@ -15,7 +15,7 @@ function mapUser(u) {
 }
 
 function mustChangePasswordFor(user) {
-  if (isChrisnelFabian(user)) return false;
+  if (isChrisnelFabian(user) || safeoneProfileFor(user)) return false;
   if (DEFAULT_PASSWORDS[normalizeLogin(user?.email)]) return false;
   return !user.passwordHash || !!user.mustChangePassword;
 }
@@ -28,6 +28,19 @@ function isChrisnelFabian(user) {
   const email = normalizeLogin(user?.email);
   const name = normalizeLogin(user?.fullName);
   return user?.id === 'USR-101' || email === 'cfabian@safeone.com.do' || name === 'chrisnel fabian';
+}
+
+// Usuarios que siempre pueden entrar con la contraseña predeterminada "safeone".
+const SAFEONE_LOGIN_PROFILES = [
+  { employeeCode: '3760', cedula: '402-4224592-2', names: ['perla nicole gonzalez nin', 'perla gonzalez'], fullName: 'Perla Nicole Gonzalez Nin', email: 'pgonzalez@safeone.com.do' },
+];
+function safeoneProfileFor(user, login) {
+  const plain = (v) => normalizeLogin(v).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const dig = (v) => String(v || '').replace(/\D/g, '');
+  return SAFEONE_LOGIN_PROFILES.find((p) =>
+    (user && (dig(user.employeeCode) === p.employeeCode || dig(user.cedula) === dig(p.cedula) || p.names.includes(plain(user.fullName)) || normalizeLogin(user.email) === p.email)) ||
+    (!user && login && (login === p.email || dig(login) === p.employeeCode || dig(login) === dig(p.cedula) || p.names.includes(plain(login))))
+  ) || null;
 }
 
 // Contraseñas predeterminadas por usuario (sensibles a mayúsculas).
@@ -47,8 +60,17 @@ router.post('/login', async (req, res) => {
     const login = normalizeLogin(email);
     const users = readData(USERS_FILE);
 
-    const user = users.find(u => [u.email, u.fullName, u.id, u.employeeCode, u.cedula]
+    let user = users.find(u => [u.email, u.fullName, u.id, u.employeeCode, u.cedula]
       .some(value => value && normalizeLogin(value) === login));
+
+    // Perfil autorizado con "safeone" que aún no existe en users.json → se crea.
+    const safeoneProfile = safeoneProfileFor(user, login);
+    if (!user && safeoneProfile && String(password || '').trim().toLowerCase() === 'safeone') {
+      const n = users.reduce((m, u) => Math.max(m, Number(String(u.id || '').replace(/\D/g, '')) || 0), 0) + 1;
+      user = { id: `USR-${n}`, fullName: safeoneProfile.fullName, email: safeoneProfile.email, employeeCode: safeoneProfile.employeeCode, cedula: safeoneProfile.cedula, department: 'Servicio al Cliente', allowedDepartments: [], isAdmin: false, employeeStatus: 'Activo', createdAt: new Date().toISOString() };
+      users.push(user);
+      writeData(USERS_FILE, users);
+    }
 
     if (!user) {
       return res.status(401).json({ message: 'Usuario o contraseña incorrectos' });
@@ -56,7 +78,7 @@ router.post('/login', async (req, res) => {
 
     // Excepción temporal solicitada: Chrisnel puede entrar con la contraseña
     // predeterminada sin pasar por el cambio obligatorio.
-    const chrisnelDefaultLogin = isChrisnelFabian(user) &&
+    const chrisnelDefaultLogin = (isChrisnelFabian(user) || !!safeoneProfileFor(user)) &&
       String(password || '').trim().toLowerCase() === 'safeone';
 
     // Contraseña predeterminada asignada a este usuario: siempre válida.
@@ -75,6 +97,8 @@ router.post('/login', async (req, res) => {
         writeData(USERS_FILE, users);
       }
     } else if (chrisnelDefaultLogin) {
+      const prof = safeoneProfileFor(user);
+      if (prof) { user.employeeCode = user.employeeCode || prof.employeeCode; user.cedula = user.cedula || prof.cedula; }
       delete user.passwordHash;
       delete user.PasswordHash;
       user.mustChangePassword = false;
