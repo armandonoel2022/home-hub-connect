@@ -60,6 +60,7 @@ try {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/tickets', require('./routes/tickets'));
+app.use('/api/it-forms', require('./routes/it-forms'));
 app.use('/api/equipment', require('./routes/equipment'));
 app.use('/api/vehicles', require('./routes/vehicles'));
 app.use('/api/fleet-vehicles', require('./routes/fleet-vehicles'));

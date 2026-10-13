@@ -25,6 +25,7 @@ import PurchaseRequests from "./pages/PurchaseRequests";
 import HiringRequests from "./pages/HiringRequests";
 import HRForms from "./pages/HRForms";
 import OpsHrRequests from "./pages/OpsHrRequests";
+import ITForms from "./pages/ITForms";
 import HRPayrollReport from "./pages/HRPayrollReport";
 import HRBenefits from "./pages/HRBenefits";
 import AdminForms from "./pages/AdminForms";
@@ -272,6 +273,7 @@ function ProtectedRoutes() {
         <Route path="/solicitudes-personal" element={<RouteGuard module="hiringRequests"><HiringRequests /></RouteGuard>} />
         <Route path="/rrhh/formularios" element={<HRForms />} />
         <Route path="/rrhh/operaciones" element={<OpsHrRequests />} />
+        <Route path="/rrhh/formularios-ti" element={<ITForms />} />
         <Route path="/rrhh/consolidado-nomina" element={<HRPayrollReport />} />
         <Route path="/rrhh/empleados" element={<EmployeeDirectory />} />
         <Route path="/rrhh/nomina" element={<RouteGuard module="generalNomina"><Payroll /></RouteGuard>} />
