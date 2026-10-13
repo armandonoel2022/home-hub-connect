@@ -581,6 +581,14 @@ const HRForms = () => {
                   </button>
                 );
               })}
+              <button onClick={() => navigate("/rrhh/formularios-ti")}
+                className="group flex items-center gap-4 p-5 rounded-xl border-2 border-dashed border-primary/50 bg-card hover:border-primary transition-all text-left">
+                <div className="p-3 rounded-xl bg-primary/10"><UserPlus className="h-6 w-6 text-primary" /></div>
+                <div>
+                  <span className="font-heading font-bold text-card-foreground group-hover:text-primary transition-colors block">Alta / Baja / Permisos de usuario (TI)</span>
+                  <span className="text-xs text-muted-foreground">Formularios F-IT-01 a F-IT-04</span>
+                </div>
+              </button>
             </div>
           )}
 
