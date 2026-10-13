@@ -2148,6 +2148,19 @@ export const myPayrollApi = {
 };
 
 // ─── Operaciones → RRHH (solicitudes de personal) ───
+export const itFormsApi = {
+  list: () => apiFetch<any[]>("/it-forms"),
+  create: (data: { codigo: string; resumen?: string; sections: { title: string; fields: { label: string; value: string }[] }[] }) =>
+    apiFetch<any>("/it-forms", { method: "POST", body: JSON.stringify(data) }),
+  completeTI: (id: string, fields: { label: string; value: string }[]) =>
+    apiFetch<any>(`/it-forms/${encodeURIComponent(id)}/ti`, { method: "PUT", body: JSON.stringify({ fields }) }),
+  documentHtml: async (id: string) => {
+    const res = await fetch(`${BASE_URL}/it-forms/${encodeURIComponent(id)}/document`, { headers: { Authorization: `Bearer ${localStorage.getItem("safeone_token") || ""}` } });
+    if (!res.ok) throw new Error("No se pudo abrir el documento");
+    return res.text();
+  },
+};
+
 export const opsHrRequestsApi = {
   list: () => apiFetch<any[]>("/ops-hr-requests"),
   create: (data: any) => apiFetch<any>("/ops-hr-requests", { method: "POST", body: JSON.stringify(data) }),
