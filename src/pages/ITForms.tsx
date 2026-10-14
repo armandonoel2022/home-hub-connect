@@ -74,7 +74,7 @@ export default function ITForms() {
         resumen: [formatValue(values[active.resumenKey]), formatValue(values.apellidos)].filter(Boolean).join(" "),
         sections: active.sections.map(s => ({ title: s.title, fields: toFields(s.fields, values) })),
       });
-      toast({ title: `Formulario ${r.id} registrado`, description: r._mail?.sent === false ? `Guardado, pero el correo no se envió: ${r._mail.reason}` : "Se envió a Tecnología desde ticketsit@safeone.com.do." });
+      toast({ title: `Formulario ${r.id} registrado${r.ticketId ? ` · Ticket ${r.ticketId}` : ""}`, description: r._mail?.sent === false ? `Guardado, pero el correo no se envió: ${r._mail.reason}` : "Se envió a Tecnología desde ticketsit@safeone.com.do." });
       setActive(null); reload();
     } catch (e: any) { toast({ title: "No se pudo enviar", description: e?.message, variant: "destructive" }); }
     finally { setSending(false); }
@@ -112,6 +112,14 @@ export default function ITForms() {
           </div>
         </div>
 
+        {!active && isIT && (
+          <div className="flex justify-end">
+            <Button variant="outline" size="sm" onClick={async () => {
+              try { const r = await itFormsApi.mailTest(); toast({ title: r.sent?.sent ? `Correo de prueba enviado a ${r.to}` : "El correo no se envió", description: r.sent?.sent ? "Revise su bandeja de entrada." : (r.sent?.reason || r.message), variant: r.sent?.sent ? undefined : "destructive" }); }
+              catch (e: any) { toast({ title: "Fallo la prueba de correo", description: e?.message, variant: "destructive" }); }
+            }}><Send className="h-4 w-4 mr-1" />Probar correo</Button>
+          </div>
+        )}
         {!active && (
           <div className="grid gap-4 sm:grid-cols-2">
             {IT_FORMS.filter(d => d.codigo !== "F-IT-04" || isIT).map(d => {
@@ -142,7 +150,8 @@ export default function ITForms() {
                   </div>
                 </section>
               ))}
-              <p className="text-xs text-muted-foreground">La sección “Uso exclusivo de TI” la completa Tecnología después de recibir el formulario.</p>
+              {active.codigo === "F-IT-04" && <p className="text-sm rounded-md border border-primary/40 bg-primary/5 p-3"><b>Nota:</b> Por ahora solo se incluyen los accesos a la red corporativa, VPN y programas que solo corren dentro de nuestro dominio safeone.local.</p>}
+              <p className="text-xs text-muted-foreground">Al enviarlo se crea automáticamente un ticket en Tickets IT. La sección “Uso exclusivo de TI” la completa Tecnología después de recibir el formulario.</p>
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setActive(null)}>Cancelar</Button>
                 <Button onClick={submit} disabled={sending}><Send className="h-4 w-4 mr-1" />{sending ? "Enviando…" : "Enviar a Tecnología"}</Button>
@@ -159,7 +168,7 @@ export default function ITForms() {
               {list.map(r => (
                 <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 border border-border rounded-lg p-3">
                   <div className="text-sm">
-                    <div className="flex items-center gap-2"><span className="font-mono text-xs">{r.id}</span><Badge variant="outline">{r.codigo}</Badge><Badge variant={r.estado === "Completado por TI" ? "default" : "secondary"}>{r.estado}</Badge></div>
+                    <div className="flex items-center gap-2"><span className="font-mono text-xs">{r.id}</span>{r.ticketId && <Badge variant="outline" className="font-mono">{r.ticketId}</Badge>}<Badge variant="outline">{r.codigo}</Badge><Badge variant={r.estado === "Completado por TI" ? "default" : "secondary"}>{r.estado}</Badge></div>
                     <div className="font-medium mt-1">{r.titulo}{r.resumen ? ` — ${r.resumen}` : ""}</div>
                     <div className="text-xs text-muted-foreground">{r.creadoPor} · {new Date(r.createdAt).toLocaleString("es-DO")}</div>
                   </div>

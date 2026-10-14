@@ -7,7 +7,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const { readData, writeData, DATA_DIR } = require('../config/database');
+const { readData, writeData, DATA_DIR, generateId } = require('../config/database');
 const auth = require('../middleware/auth');
 const mail = require('../services/mailTickets');
 
@@ -20,6 +20,46 @@ const TYPES = {
   'F-IT-03': 'Solicitud de Cambios de Permisos',
   'F-IT-04': 'Registro de Equipos en Dominio',
 };
+
+const DOMAIN_NOTE = 'Por ahora solo se incluyen los accesos a la red corporativa, VPN y programas que solo corren dentro de nuestro dominio safeone.local.';
+const TICKET_CATEGORY = { 'F-IT-01': 'Alta de usuario (RRHH)', 'F-IT-02': 'Baja de usuario (RRHH)', 'F-IT-03': 'Carpeta de red', 'F-IT-04': 'Configurar laptop' };
+
+/** Crea el ticket IT asociado al formulario (sin acuse aparte: el correo del formulario ya lo incluye). */
+function createTicket(r) {
+  const tickets = readData('tickets.json') || [];
+  const c = mail.config();
+  const now = new Date();
+  const t = {
+    id: generateId('TK', tickets),
+    title: `${r.codigo} ${TYPES[r.codigo]}${r.resumen ? ` — ${r.resumen}` : ''}`,
+    description: r.sections.flatMap((s) => s.fields).filter((f) => f.value).map((f) => `${f.label}: ${f.value}`).join('\n') +
+      (r.codigo === 'F-IT-04' ? `\n\nNota: ${DOMAIN_NOTE}` : ''),
+    category: TICKET_CATEGORY[r.codigo], priority: 'Media', status: 'Recibido por Tecnología',
+    createdBy: r.creadoPor, createdById: r.creadoPorId, requesterEmail: r.creadoPorEmail,
+    assignedTo: c.assignee || 'Armando Noel', assignedToEmail: c.assigneeEmail || 'anoel@safeone.com.do',
+    history: [{ status: 'Recibido por Tecnología', at: now.toISOString(), by: r.creadoPor }],
+    createdAt: now.toISOString(), updatedAt: now.toISOString(),
+    slaHours: mail.SLA_HOURS?.Media ?? 24, slaDeadline: new Date(now.getTime() + (mail.SLA_HOURS?.Media ?? 24) * 3600e3).toISOString(),
+    comments: r.codigo === 'F-IT-04' ? [{ id: `CM-${Date.now()}`, userName: 'Sistema', content: DOMAIN_NOTE, timestamp: now.toISOString(), source: 'intranet' }] : [],
+    source: 'formulario-ti', itFormId: r.id,
+  };
+  tickets.push(t);
+  writeData('tickets.json', tickets);
+  return t.id;
+}
+
+function closeTicket(r) {
+  if (!r.ticketId) return;
+  const tickets = readData('tickets.json') || [];
+  const t = tickets.find((x) => x.id === r.ticketId);
+  if (!t) return;
+  const now = new Date().toISOString();
+  t.status = 'Cerrado - Resuelto';
+  t.resolutionNotes = `Formulario ${r.id} completado por ${r.ti.by}.`;
+  t.history = [...(t.history || []), { status: t.status, at: now, by: r.ti.by }];
+  t.updatedAt = now;
+  writeData('tickets.json', tickets);
+}
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -56,8 +96,9 @@ table{width:100%;border-collapse:collapse;font-size:13px}td{border:1px solid #d1
 .meta{font-size:12px;color:#6b7280}.firma{margin-top:40px;display:flex;justify-content:space-between}.firma div{width:45%;border-top:1px solid #6b7280;text-align:center;font-size:12px;padding-top:4px}
 @media print{body{margin:0}}</style></head><body>
 <header><h1>SAFEONE SECURITY COMPANY</h1><h2>FORMULARIO: ${esc(r.codigo)} — ${esc(TYPES[r.codigo]).toUpperCase()}</h2>
-<div class="meta">No. ${esc(r.id)} · Registrado el ${new Date(r.createdAt).toLocaleString('es-DO')} por ${esc(r.creadoPor)} · Estado: ${esc(r.estado)}</div></header>
+<div class="meta">No. ${esc(r.id)}${r.ticketId ? ` · Ticket ${esc(r.ticketId)}` : ''} · Registrado el ${new Date(r.createdAt).toLocaleString('es-DO')} por ${esc(r.creadoPor)} · Estado: ${esc(r.estado)}</div></header>
 ${r.sections.map(block).join('')}
+${r.codigo === 'F-IT-04' ? `<p style="font-size:12px;background:#fef9e7;border:1px solid #d4af37;padding:6px 8px;margin-top:12px"><b>Nota:</b> ${esc(DOMAIN_NOTE)}</p>` : ''}
 ${r.ti ? block({ title: 'Uso exclusivo de TI', fields: r.ti.fields }) + `<p class="meta">Completado por ${esc(r.ti.by)} el ${new Date(r.ti.at).toLocaleString('es-DO')}</p>` : '<h3>Uso exclusivo de TI</h3><p class="meta">Pendiente de completar por Tecnología.</p>'}
 <div class="firma"><div>Firma del Solicitante<br>${esc(r.creadoPor)}</div><div>Responsable de TI<br>${esc(r.ti?.by || '')}</div></div>
 </body></html>`;
@@ -75,7 +116,7 @@ function mailBody(r, intro) {
   const rows = r.sections.flatMap((s) => s.fields).filter((f) => f.value)
     .map((f) => `<tr><td style="padding:3px 10px 3px 0;color:#6b7280">${esc(f.label)}</td><td>${esc(f.value)}</td></tr>`).join('');
   return `<div style="font-family:Arial,sans-serif;font-size:14px"><h3 style="color:#14213d">${esc(r.codigo)} · ${esc(TYPES[r.codigo])} (${esc(r.id)})</h3>
-<p>${intro}</p><table style="font-size:13px;border-collapse:collapse">${rows}</table>
+<p>${intro}</p>${r.ticketId ? `<p>Ticket IT asociado: <b>${esc(r.ticketId)}</b></p>` : ''}${r.codigo === 'F-IT-04' ? `<p><b>Nota:</b> ${esc(DOMAIN_NOTE)}</p>` : ''}<table style="font-size:13px;border-collapse:collapse">${rows}</table>
 <p style="color:#6b7280;font-size:12px">Documento archivado en el servidor: ${esc(r.archivo)}. No responda a este correo.</p></div>`;
 }
 
@@ -90,6 +131,17 @@ async function notify(r, subjectPrefix, intro, extraTo = []) {
 router.get('/', auth, (req, res) => {
   const all = readData(FILE) || [];
   res.json(isIT(req) ? all : all.filter((r) => r.creadoPorId === req.user.id));
+});
+
+// Prueba de correo: verifica conexión y envía un mensaje de prueba al usuario actual
+router.post('/mail/test', auth, async (req, res) => {
+  if (!isIT(req)) return res.status(403).json({ message: 'Solo Tecnología' });
+  try {
+    const conn = await mail.testConnection();
+    const to = loadUser(req)?.email || req.user.email;
+    const sent = await mail.sendMail({ to, subject: 'Prueba — Formularios de TI', html: '<p>Este es un correo de prueba de los Formularios de TI de la Intranet SafeOne.</p>' });
+    res.json({ ...conn, to, sent });
+  } catch (e) { res.status(502).json({ ok: false, message: e.message }); }
 });
 
 router.get('/:id/document', auth, (req, res) => {
@@ -114,6 +166,7 @@ router.post('/', auth, async (req, res) => {
     creadoPor: u?.fullName || req.user.email, creadoPorId: req.user.id, creadoPorEmail: u?.email || req.user.email,
     createdAt: now, updatedAt: now,
   };
+  try { r.ticketId = createTicket(r); } catch (e) { console.warn('[it-forms] ticket:', e.message); }
   r.archivo = saveDocument(r);
   list.unshift(r);
   writeData(FILE, list);
@@ -130,6 +183,7 @@ router.put('/:id/ti', auth, async (req, res) => {
   if (!sec) return res.status(400).json({ message: 'Datos de TI inválidos' });
   const u = loadUser(req);
   const r = { ...list[idx], ti: { fields: sec[0].fields, by: u?.fullName || req.user.email, at: new Date().toISOString() }, estado: 'Completado por TI', updatedAt: new Date().toISOString() };
+  try { closeTicket(r); } catch (e) { console.warn('[it-forms] cierre ticket:', e.message); }
   r.archivo = saveDocument(r);
   list[idx] = r;
   writeData(FILE, list);
