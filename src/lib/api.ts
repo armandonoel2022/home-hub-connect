@@ -2152,6 +2152,7 @@ export const itFormsApi = {
   list: () => apiFetch<any[]>("/it-forms"),
   create: (data: { codigo: string; resumen?: string; sections: { title: string; fields: { label: string; value: string }[] }[] }) =>
     apiFetch<any>("/it-forms", { method: "POST", body: JSON.stringify(data) }),
+  mailTest: () => apiFetch<{ ok?: boolean; to: string; sent: { sent: boolean; reason?: string }; message?: string }>("/it-forms/mail/test", { method: "POST" }),
   completeTI: (id: string, fields: { label: string; value: string }[]) =>
     apiFetch<any>(`/it-forms/${encodeURIComponent(id)}/ti`, { method: "PUT", body: JSON.stringify({ fields }) }),
   documentHtml: async (id: string) => {
