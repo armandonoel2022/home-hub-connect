@@ -201,6 +201,8 @@ async function dailySummary(force = false) {
   if (!force && (now.getHours() !== c.summaryHour || _lastSummary === key)) return null;
   _lastSummary = key;
   const open = readData(FILE).filter((r) => !CLOSED.includes(r.estado));
+  // No enviar el resumen cuando no hay solicitudes pendientes
+  if (open.length === 0) return { sent: false, reason: 'Sin pendientes: no se envía el resumen diario' };
   const rows = open.map((r) => `<tr><td>${esc(r.id)}</td><td>${esc(r.estado)}</td><td>${esc(r.tipo)}</td><td>${esc(place(r))}</td><td>${esc(r.prioridad)}</td><td>${r.fechaLimiteSLA ? new Date(r.fechaLimiteSLA).toLocaleString('es-DO') : ''}</td></tr>`).join('');
   const html = `<div style="font-family:Segoe UI,Arial,sans-serif"><h2>Pendientes del día — ${key}</h2><p>${open.length} solicitud(es) abiertas.</p>
     <table border="1" cellpadding="6" style="border-collapse:collapse;font-size:13px"><tr><th>ID</th><th>Estado</th><th>Tipo</th><th>Ubicación</th><th>Prioridad</th><th>Límite SLA</th></tr>${rows}</table></div>`;
