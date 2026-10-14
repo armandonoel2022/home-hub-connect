@@ -21,6 +21,7 @@ import {
   ArrowLeft, Printer, CalendarIcon, Palmtree, CalendarOff, UtensilsCrossed,
   UserX, PartyPopper, Clock, Banknote, CheckCircle2, Send, FileText,
   ThumbsUp, ThumbsDown, AlertCircle, Inbox, ClipboardList,
+  UserPlus,
 } from "lucide-react";
 import safeOneLogo from "@/assets/safeone-logo.png";
 import safeOneLetterhead from "@/assets/safeone-letterhead.png";
