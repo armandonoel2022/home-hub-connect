@@ -97,7 +97,7 @@ function renderHtml(r) {
 .form-title{text-align:center;padding:2px 8px;font-size:18px;font-weight:bold;line-height:1.35}.form-title h1,.form-title h2{font-size:18px;margin:0;color:var(--document-ink);line-height:1.35}
 .document-meta{margin:0 0 16px}
 h1{font-size:18px;margin:0}h2{font-size:15px;margin:4px 0;color:#14213d}h3{font-size:13px;background:#14213d;color:#fff;padding:6px 8px;margin:18px 0 0}
-table{width:100%;border-collapse:collapse;font-size:13px}td{border:1px solid #d1d5db;padding:6px 8px;vertical-align:top}td.l{width:38%;background:#f9fafb;font-weight:bold}
+table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px}td{border:1px solid #d1d5db;padding:6px 8px;vertical-align:top;overflow-wrap:anywhere}td.l{width:38%;background:#f9fafb;font-weight:bold}
 .meta{font-size:12px;color:#6b7280}.firma{margin-top:40px;display:flex;justify-content:space-between}.firma div{width:45%;border-top:1px solid #6b7280;text-align:center;font-size:12px;padding-top:4px}
 @page{size:A4;margin:15mm}@media print{body{margin:0;max-width:none}.form-header{break-inside:avoid}}@media screen and (max-width:480px){.form-title h1,.form-title h2{font-size:13px}.form-logo{padding:8px 4px}}
 </style></head><body>
