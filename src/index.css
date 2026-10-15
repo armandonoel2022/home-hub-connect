@@ -94,6 +94,42 @@
   font-family: 'Manrope', sans-serif;
 }
 
+/* Official document header: isolated paper tokens also preserve the logo in dark mode. */
+:root {
+  --document-paper: 0 0% 100%;
+  --document-ink: 0 0% 0%;
+}
+.it-form-header {
+  display: grid;
+  grid-template-columns: 34% minmax(0, 1fr);
+  min-height: 96px;
+  border: 1px solid hsl(var(--document-ink));
+  background: hsl(var(--document-paper));
+  color: hsl(var(--document-ink));
+  font-family: Arial, sans-serif;
+}
+.it-form-header-logo {
+  border-right: 1px solid hsl(var(--document-ink));
+  padding: 10px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+.it-form-header-logo img { width: 100%; max-width: 277px; height: auto; }
+.it-form-header-title {
+  min-width: 0;
+  padding: 4px 8px;
+  text-align: center;
+  font-size: 18px;
+  line-height: 1.35;
+  font-weight: 700;
+  overflow-wrap: break-word;
+}
+@media (max-width: 480px) {
+  .it-form-header-title { font-size: 13px; padding: 6px; }
+  .it-form-header-logo { padding: 8px 4px; }
+}
+
 .ops-workspace h1,
 .ops-workspace h2,
 .ops-workspace h3,

@@ -10,6 +10,7 @@ const path = require('path');
 const { readData, writeData, DATA_DIR, generateId } = require('../config/database');
 const auth = require('../middleware/auth');
 const mail = require('../services/mailTickets');
+const formLogo = require('../assets/safeone-form-logo.json');
 
 const router = express.Router();
 const FILE = 'it-forms.json';
@@ -89,14 +90,19 @@ function renderHtml(r) {
   const block = (s) => `<h3>${esc(s.title)}</h3><table>${s.fields.map((f) =>
     `<tr><td class="l">${esc(f.label)}</td><td>${esc(f.value) || '—'}</td></tr>`).join('')}</table>`;
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${esc(r.codigo)} ${esc(r.id)}</title>
-<style>body{font-family:Arial,sans-serif;max-width:800px;margin:24px auto;color:#1f2937}
-header{border-bottom:3px solid #d4af37;padding-bottom:8px;margin-bottom:16px}
+<style>:root{--document-paper:#fff;--document-ink:#000}body{font-family:Arial,sans-serif;max-width:800px;margin:24px auto;color:var(--document-ink);background:var(--document-paper)}
+.form-header{display:table;table-layout:fixed;width:100%;border:1px solid var(--document-ink);border-collapse:collapse;margin-bottom:10px;break-inside:avoid}
+.form-logo,.form-title{display:table-cell;vertical-align:top;height:96px;box-sizing:border-box}
+.form-logo{width:34%;border-right:1px solid var(--document-ink);padding:10px}.form-logo img{display:block;width:100%;max-width:277px;height:auto;margin:auto}
+.form-title{text-align:center;padding:2px 8px;font-size:18px;font-weight:bold;line-height:1.35}.form-title h1,.form-title h2{font-size:18px;margin:0;color:var(--document-ink);line-height:1.35}
+.document-meta{margin:0 0 16px}
 h1{font-size:18px;margin:0}h2{font-size:15px;margin:4px 0;color:#14213d}h3{font-size:13px;background:#14213d;color:#fff;padding:6px 8px;margin:18px 0 0}
 table{width:100%;border-collapse:collapse;font-size:13px}td{border:1px solid #d1d5db;padding:6px 8px;vertical-align:top}td.l{width:38%;background:#f9fafb;font-weight:bold}
 .meta{font-size:12px;color:#6b7280}.firma{margin-top:40px;display:flex;justify-content:space-between}.firma div{width:45%;border-top:1px solid #6b7280;text-align:center;font-size:12px;padding-top:4px}
-@media print{body{margin:0}}</style></head><body>
-<header><h1>SAFEONE SECURITY COMPANY</h1><h2>FORMULARIO: ${esc(r.codigo)} — ${esc(TYPES[r.codigo]).toUpperCase()}</h2>
-<div class="meta">No. ${esc(r.id)}${r.ticketId ? ` · Ticket ${esc(r.ticketId)}` : ''} · Registrado el ${new Date(r.createdAt).toLocaleString('es-DO')} por ${esc(r.creadoPor)} · Estado: ${esc(r.estado)}</div></header>
+@page{size:A4;margin:15mm}@media print{body{margin:0;max-width:none}.form-header{break-inside:avoid}}@media screen and (max-width:480px){.form-title h1,.form-title h2{font-size:13px}.form-logo{padding:8px 4px}}
+</style></head><body>
+<header class="form-header"><div class="form-logo"><img src="${formLogo.src}" alt="SafeOne Security Company"></div><div class="form-title"><h1>FORMULARIO: ${esc(r.codigo)}</h1><h2>${esc(TYPES[r.codigo]).toUpperCase()}</h2></div></header>
+<div class="meta document-meta">No. ${esc(r.id)}${r.ticketId ? ` · Ticket ${esc(r.ticketId)}` : ''} · Registrado el ${new Date(r.createdAt).toLocaleString('es-DO')} por ${esc(r.creadoPor)} · Estado: ${esc(r.estado)}</div>
 ${r.sections.map(block).join('')}
 ${r.codigo === 'F-IT-04' ? `<p style="font-size:12px;background:#fef9e7;border:1px solid #d4af37;padding:6px 8px;margin-top:12px"><b>Nota:</b> ${esc(DOMAIN_NOTE)}</p>` : ''}
 ${r.ti ? block({ title: 'Uso exclusivo de TI', fields: r.ti.fields }) + `<p class="meta">Completado por ${esc(r.ti.by)} el ${new Date(r.ti.at).toLocaleString('es-DO')}</p>` : '<h3>Uso exclusivo de TI</h3><p class="meta">Pendiente de completar por Tecnología.</p>'}
