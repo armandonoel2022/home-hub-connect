@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import Navbar from "@/components/Navbar";
+import ITFormHeader from "@/components/ITFormHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import { itFormsApi, isApiConfigured } from "@/lib/api";
 import { IT_FORMS, formatValue, type ITField, type ITFormDef } from "@/lib/itForms";
@@ -140,7 +141,7 @@ export default function ITForms() {
 
         {active && (
           <Card>
-            <CardHeader><CardTitle className="text-base">{active.codigo} · {active.titulo}</CardTitle></CardHeader>
+            <CardHeader><ITFormHeader codigo={active.codigo} /></CardHeader>
             <CardContent className="space-y-6">
               {active.sections.map(s => (
                 <section key={s.title} className="space-y-3">
