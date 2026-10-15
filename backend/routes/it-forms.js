@@ -89,7 +89,7 @@ function cleanSections(input) {
 function renderHtml(r) {
   const block = (s) => `<h3>${esc(s.title)}</h3><table>${s.fields.map((f) =>
     `<tr><td class="l">${esc(f.label)}</td><td>${esc(f.value) || '—'}</td></tr>`).join('')}</table>`;
-  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${esc(r.codigo)} ${esc(r.id)}</title>
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(r.codigo)} ${esc(r.id)}</title>
 <style>:root{--document-paper:#fff;--document-ink:#000}body{font-family:Arial,sans-serif;max-width:800px;margin:24px auto;color:var(--document-ink);background:var(--document-paper)}
 .form-header{display:table;table-layout:fixed;width:100%;border:1px solid var(--document-ink);border-collapse:collapse;margin-bottom:10px;break-inside:avoid}
 .form-logo,.form-title{display:table-cell;vertical-align:top;height:96px;box-sizing:border-box}
