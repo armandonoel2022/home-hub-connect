@@ -91,7 +91,7 @@ function renderHtml(r) {
     `<tr><td class="l">${esc(f.label)}</td><td>${esc(f.value) || '—'}</td></tr>`).join('')}</table>`;
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(r.codigo)} ${esc(r.id)}</title>
 <style>:root{--document-paper:#fff;--document-ink:#000}body{font-family:Arial,sans-serif;max-width:800px;margin:24px auto;color:var(--document-ink);background:var(--document-paper)}
-.form-header{display:table;table-layout:fixed;width:100%;border:1px solid var(--document-ink);border-collapse:collapse;margin-bottom:10px;break-inside:avoid}
+.form-header{display:table;table-layout:fixed;width:100%;box-sizing:border-box;border:1px solid var(--document-ink);border-collapse:collapse;margin-bottom:10px;break-inside:avoid}
 .form-logo,.form-title{display:table-cell;vertical-align:top;height:96px;box-sizing:border-box}
 .form-logo{width:34%;border-right:1px solid var(--document-ink);padding:10px}.form-logo img{display:block;width:100%;max-width:277px;height:auto;margin:auto}
 .form-title{text-align:center;padding:2px 8px;font-size:18px;font-weight:bold;line-height:1.35}.form-title h1,.form-title h2{font-size:18px;margin:0;color:var(--document-ink);line-height:1.35}
