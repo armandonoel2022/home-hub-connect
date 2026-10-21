@@ -77,9 +77,7 @@ function expedienteHasContent(exp) {
 }
 
 function validate(rec) {
-  if (!rec.registroMercantil && !expedienteHasContent(rec.expediente)) {
-    return 'Indique el número de Registro Mercantil o complete al menos un dato del expediente.';
-  }
+  // Registro Mercantil opcional: el expediente se guarda aunque el cliente no lo tenga.
   const dateRe = /^\d{4}-\d{2}-\d{2}$/;
   if (rec.emision && !dateRe.test(rec.emision)) return 'Fecha de emisión inválida (YYYY-MM-DD).';
   if (rec.vence && !dateRe.test(rec.vence)) return 'Fecha de vencimiento inválida (YYYY-MM-DD).';

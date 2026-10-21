@@ -79,9 +79,8 @@ export async function loadStore(): Promise<MercantileStore> {
 }
 
 export function validarRegistro(rec: Partial<MercantileRecord>): string | null {
-  if (!rec.registroMercantil?.trim() && !dossierHasContent(rec.expediente as any)) {
-    return "Indique el número de Registro Mercantil o complete al menos un dato del expediente.";
-  }
+  // El número de Registro Mercantil es opcional: muchos clientes (personas físicas,
+  // instituciones) no lo tienen y el expediente debe poder guardarse igual.
   const re = /^\d{4}-\d{2}-\d{2}$/;
   if (rec.emision && !re.test(rec.emision)) return "Fecha de emisión inválida (YYYY-MM-DD).";
   if (rec.vence && !re.test(rec.vence)) return "Fecha de vencimiento inválida (YYYY-MM-DD).";
