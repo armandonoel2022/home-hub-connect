@@ -43,22 +43,16 @@ export interface PartnerForm {
   formato: string;
 }
 
-const asset = (a: { url: string; original_filename: string }) => ({
-  url: a.url,
-  filename: a.original_filename,
-  formato: (a.original_filename.split(".").pop() || "").toUpperCase(),
-});
-
 export const PARTNER_FORMS: PartnerForm[] = [
-  { code: "F-ADM-01", nombre: "Acuerdo de Confidencialidad a Terceros", origen: "cliente", ...asset(fAdm01) },
-  { code: "F-ADM-02", nombre: "Acuerdo de Colaboración", origen: "cliente", ...asset(fAdm02) },
-  { code: "F-ADM-05", nombre: "Declaración de Origen de Fondos", origen: "cliente", ...asset(fAdm05) },
-  { code: "F-ADM-06", nombre: "Validación de Criterios de Seguridad", origen: "cliente", ...asset(fAdm06) },
-  { code: "F-ADM-07", nombre: "Registro de Datos de Asociados de Negocios", origen: "cliente", ...asset(fAdm07) },
-  { code: "F-ADM-08", nombre: "Debida Diligencia a Proveedores Tercerizados (Personas Jurídicas)", origen: "interno", ...asset(fAdm08) },
-  { code: "F-ADM-10", nombre: "Criterios de Evaluación de Asociados SafeOne", origen: "interno", ...asset(fAdm10) },
-  { code: "F-ADM-11", nombre: "Matriz de Revisión de Asociados de Negocios (Personas Jurídicas)", origen: "interno", ...asset(fAdm11) },
-  { code: "F-ADM-12", nombre: "Evaluación de Riesgo — Criterios de Seguridad de Asociados", origen: "interno", ...asset(fAdm12) },
+  { code: "F-ADM-01", nombre: "Acuerdo de Confidencialidad a Terceros", origen: "cliente", ...fAdm01 },
+  { code: "F-ADM-02", nombre: "Acuerdo de Colaboración", origen: "cliente", ...fAdm02 },
+  { code: "F-ADM-05", nombre: "Declaración de Origen de Fondos", origen: "cliente", ...fAdm05 },
+  { code: "F-ADM-06", nombre: "Validación de Criterios de Seguridad", origen: "cliente", ...fAdm06 },
+  { code: "F-ADM-07", nombre: "Registro de Datos de Asociados de Negocios", origen: "cliente", ...fAdm07 },
+  { code: "F-ADM-08", nombre: "Debida Diligencia a Proveedores Tercerizados (Personas Jurídicas)", origen: "interno", ...fAdm08 },
+  { code: "F-ADM-10", nombre: "Criterios de Evaluación de Asociados SafeOne", origen: "interno", ...fAdm10 },
+  { code: "F-ADM-11", nombre: "Matriz de Revisión de Asociados de Negocios (Personas Jurídicas)", origen: "interno", ...fAdm11 },
+  { code: "F-ADM-12", nombre: "Evaluación de Riesgo — Criterios de Seguridad de Asociados", origen: "interno", ...fAdm12 },
 ];
 
 export const FORMS_CLIENTE = PARTNER_FORMS.filter((f) => f.origen === "cliente");
