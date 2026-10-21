@@ -12,6 +12,7 @@ import {
   type MercantileRecord,
   type MercantileStore,
 } from "@/lib/api";
+import { dossierHasContent } from "@/lib/businessPartnerForms";
 
 export const LS_KEY = "registrosMercantil";
 
@@ -78,7 +79,9 @@ export async function loadStore(): Promise<MercantileStore> {
 }
 
 export function validarRegistro(rec: Partial<MercantileRecord>): string | null {
-  if (!rec.registroMercantil?.trim() && !rec.expediente) return "El número de Registro Mercantil es obligatorio.";
+  if (!rec.registroMercantil?.trim() && !dossierHasContent(rec.expediente as any)) {
+    return "Indique el número de Registro Mercantil o complete al menos un dato del expediente.";
+  }
   const re = /^\d{4}-\d{2}-\d{2}$/;
   if (rec.emision && !re.test(rec.emision)) return "Fecha de emisión inválida (YYYY-MM-DD).";
   if (rec.vence && !re.test(rec.vence)) return "Fecha de vencimiento inválida (YYYY-MM-DD).";

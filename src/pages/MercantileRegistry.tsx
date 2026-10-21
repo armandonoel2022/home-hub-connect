@@ -360,14 +360,15 @@ function Client360Dialog({
   const estado = calcularEstado(form);
 
   async function handleSave() {
-    const err = validarRegistro(form);
+    const payload = {
+      ...form,
+      expediente: { ...dossier, updatedAt: new Date().toISOString() },
+    } as any;
+    const err = validarRegistro(payload);
     if (err) { toast({ title: "Datos inválidos", description: err, variant: "destructive" }); return; }
     setBusy(true);
     try {
-      const saved = await saveRegistro(client!.oid, {
-        ...form,
-        expediente: { ...dossier, updatedAt: new Date().toISOString() },
-      } as any);
+      const saved = await saveRegistro(client!.oid, payload);
       onSaved(client!.oid, saved);
       toast({ title: "Registro mercantil guardado", description: client!.nombre });
       onClose();

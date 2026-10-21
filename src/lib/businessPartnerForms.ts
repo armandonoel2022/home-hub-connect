@@ -8,15 +8,28 @@
  * Los archivos de los formularios se sirven como assets de la intranet para
  * que Servicio al Cliente pueda descargarlos y enviarlos al asociado.
  */
-import fAdm01 from "@/assets/asociados/f-adm-01.asset.json";
-import fAdm02 from "@/assets/asociados/f-adm-02.asset.json";
-import fAdm05 from "@/assets/asociados/f-adm-05.asset.json";
-import fAdm06 from "@/assets/asociados/f-adm-06.asset.json";
-import fAdm07 from "@/assets/asociados/f-adm-07.asset.json";
-import fAdm08 from "@/assets/asociados/f-adm-08.asset.json";
-import fAdm10 from "@/assets/asociados/f-adm-10.asset.json";
-import fAdm11 from "@/assets/asociados/f-adm-11.asset.json";
-import fAdm12 from "@/assets/asociados/f-adm-12.asset.json";
+/**
+ * Los formularios se sirven desde `public/formularios-asociados/` para que
+ * la descarga funcione también en el servidor local de la intranet (los
+ * assets `/__l5e/` solo existen en el hosting de Lovable).
+ */
+const FORMS_DIR = "/formularios-asociados";
+
+const localForm = (filename: string) => ({
+  url: `${FORMS_DIR}/${encodeURIComponent(filename)}`,
+  filename,
+  formato: (filename.split(".").pop() || "").toUpperCase(),
+});
+
+const fAdm01 = localForm("F-ADM-01_Formulario_Acuerdo_de_Confidencialidad_a_Terceros.pdf");
+const fAdm02 = localForm("F-ADM-02_Formulario_Acuerdo_de_Colaboracion.pdf");
+const fAdm05 = localForm("F-ADM-05_Formulario_Declaracion_Origen_de_Fondos.pdf");
+const fAdm06 = localForm("F-ADM-06_Formulario_validacion_criterios_seguridad_1.pdf");
+const fAdm07 = localForm("F-ADM-07_Registro_de_Datos_asociados_de_negocios.pdf");
+const fAdm08 = localForm("F-ADM-08_Formulario_de_Debida_Diligencia_a_Proveedores_de_Servicios_Tercerizados_Outsourcing_-_Personas_Jurídicas.docx");
+const fAdm10 = localForm("F-ADM-10_Formulario_criterios_de_evaluacion_asociados_Safeone.xlsx");
+const fAdm11 = localForm("F-ADM-11_Formulario_Matriz_Revision_Asociados_de_Negocios_Personas_Jurudicas.xls");
+const fAdm12 = localForm("F-ADM-12_Formulario_Evaluación_de_Riesgo_Criterios_de_Seguridad_de_Asociados_de_Negocios.xls");
 
 export type FormOrigen = "cliente" | "interno";
 
@@ -30,22 +43,16 @@ export interface PartnerForm {
   formato: string;
 }
 
-const asset = (a: { url: string; original_filename: string }) => ({
-  url: a.url,
-  filename: a.original_filename,
-  formato: (a.original_filename.split(".").pop() || "").toUpperCase(),
-});
-
 export const PARTNER_FORMS: PartnerForm[] = [
-  { code: "F-ADM-01", nombre: "Acuerdo de Confidencialidad a Terceros", origen: "cliente", ...asset(fAdm01) },
-  { code: "F-ADM-02", nombre: "Acuerdo de Colaboración", origen: "cliente", ...asset(fAdm02) },
-  { code: "F-ADM-05", nombre: "Declaración de Origen de Fondos", origen: "cliente", ...asset(fAdm05) },
-  { code: "F-ADM-06", nombre: "Validación de Criterios de Seguridad", origen: "cliente", ...asset(fAdm06) },
-  { code: "F-ADM-07", nombre: "Registro de Datos de Asociados de Negocios", origen: "cliente", ...asset(fAdm07) },
-  { code: "F-ADM-08", nombre: "Debida Diligencia a Proveedores Tercerizados (Personas Jurídicas)", origen: "interno", ...asset(fAdm08) },
-  { code: "F-ADM-10", nombre: "Criterios de Evaluación de Asociados SafeOne", origen: "interno", ...asset(fAdm10) },
-  { code: "F-ADM-11", nombre: "Matriz de Revisión de Asociados de Negocios (Personas Jurídicas)", origen: "interno", ...asset(fAdm11) },
-  { code: "F-ADM-12", nombre: "Evaluación de Riesgo — Criterios de Seguridad de Asociados", origen: "interno", ...asset(fAdm12) },
+  { code: "F-ADM-01", nombre: "Acuerdo de Confidencialidad a Terceros", origen: "cliente", ...fAdm01 },
+  { code: "F-ADM-02", nombre: "Acuerdo de Colaboración", origen: "cliente", ...fAdm02 },
+  { code: "F-ADM-05", nombre: "Declaración de Origen de Fondos", origen: "cliente", ...fAdm05 },
+  { code: "F-ADM-06", nombre: "Validación de Criterios de Seguridad", origen: "cliente", ...fAdm06 },
+  { code: "F-ADM-07", nombre: "Registro de Datos de Asociados de Negocios", origen: "cliente", ...fAdm07 },
+  { code: "F-ADM-08", nombre: "Debida Diligencia a Proveedores Tercerizados (Personas Jurídicas)", origen: "interno", ...fAdm08 },
+  { code: "F-ADM-10", nombre: "Criterios de Evaluación de Asociados SafeOne", origen: "interno", ...fAdm10 },
+  { code: "F-ADM-11", nombre: "Matriz de Revisión de Asociados de Negocios (Personas Jurídicas)", origen: "interno", ...fAdm11 },
+  { code: "F-ADM-12", nombre: "Evaluación de Riesgo — Criterios de Seguridad de Asociados", origen: "interno", ...fAdm12 },
 ];
 
 export const FORMS_CLIENTE = PARTNER_FORMS.filter((f) => f.origen === "cliente");
@@ -244,6 +251,20 @@ export function dossierEstado(p: DossierProgress): { label: string; className: s
   if (p.porcentaje >= 60) return { label: "En proceso", className: "bg-amber-500/10 text-amber-600 border-amber-500/30" };
   if (p.porcentaje > 0) return { label: "Incompleto", className: "bg-orange-500/10 text-orange-600 border-orange-500/30" };
   return { label: "Sin iniciar", className: "bg-muted text-muted-foreground border-border" };
+}
+
+/** Indica si el expediente tiene algún dato cargado (permite guardar sin Registro Mercantil). */
+export function dossierHasContent(d?: Partial<PartnerDossier> | null): boolean {
+  if (!d) return false;
+  const n = normalizeDossier(d);
+  if (Object.values(n.formularios).some((s) => s && (s.enviado || s.recibido || s.firmadoSellado || s.fecha || s.nota))) return true;
+  if (Object.values(n.documentos).some((s) => s && (s.recibido || s.noAplica || s.fecha || s.nota))) return true;
+  const g = n.georreferenciacion;
+  if (g.coordenadas || g.mapsUrl || g.verificadoPor || g.fecha || g.nota) return true;
+  if (n.ofac.length > 0) return true;
+  if (Object.values(n.info).some((v) => String(v || "").trim())) return true;
+  if (n.referencias.some((r) => r.empresa.trim() || r.contacto.trim())) return true;
+  return false;
 }
 
 export function uidRef(prefix: string): string {

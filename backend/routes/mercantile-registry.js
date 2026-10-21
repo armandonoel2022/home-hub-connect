@@ -63,8 +63,23 @@ function sanitize(body) {
   return out;
 }
 
+function expedienteHasContent(exp) {
+  if (!exp || typeof exp !== 'object') return false;
+  const vals = (o) => Object.values(o || {});
+  if (vals(exp.formularios).some((s) => s && (s.enviado || s.recibido || s.firmadoSellado || s.fecha || s.nota))) return true;
+  if (vals(exp.documentos).some((s) => s && (s.recibido || s.noAplica || s.fecha || s.nota))) return true;
+  const g = exp.georreferenciacion || {};
+  if (g.coordenadas || g.mapsUrl || g.verificadoPor || g.fecha || g.nota) return true;
+  if (Array.isArray(exp.ofac) && exp.ofac.length) return true;
+  if (vals(exp.info).some((v) => String(v || '').trim())) return true;
+  if (Array.isArray(exp.referencias) && exp.referencias.some((r) => (r.empresa || '').trim() || (r.contacto || '').trim())) return true;
+  return false;
+}
+
 function validate(rec) {
-  if (!rec.registroMercantil && !rec.expediente) return 'El número de Registro Mercantil es obligatorio.';
+  if (!rec.registroMercantil && !expedienteHasContent(rec.expediente)) {
+    return 'Indique el número de Registro Mercantil o complete al menos un dato del expediente.';
+  }
   const dateRe = /^\d{4}-\d{2}-\d{2}$/;
   if (rec.emision && !dateRe.test(rec.emision)) return 'Fecha de emisión inválida (YYYY-MM-DD).';
   if (rec.vence && !dateRe.test(rec.vence)) return 'Fecha de vencimiento inválida (YYYY-MM-DD).';
