@@ -12,6 +12,7 @@ import {
   type MercantileRecord,
   type MercantileStore,
 } from "@/lib/api";
+import { dossierHasContent } from "@/lib/businessPartnerForms";
 
 export const LS_KEY = "registrosMercantil";
 
