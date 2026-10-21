@@ -253,6 +253,20 @@ export function dossierEstado(p: DossierProgress): { label: string; className: s
   return { label: "Sin iniciar", className: "bg-muted text-muted-foreground border-border" };
 }
 
+/** Indica si el expediente tiene algún dato cargado (permite guardar sin Registro Mercantil). */
+export function dossierHasContent(d?: Partial<PartnerDossier> | null): boolean {
+  if (!d) return false;
+  const n = normalizeDossier(d);
+  if (Object.values(n.formularios).some((s) => s && (s.enviado || s.recibido || s.firmadoSellado || s.fecha || s.nota))) return true;
+  if (Object.values(n.documentos).some((s) => s && (s.recibido || s.noAplica || s.fecha || s.nota))) return true;
+  const g = n.georreferenciacion;
+  if (g.coordenadas || g.mapsUrl || g.verificadoPor || g.fecha || g.nota) return true;
+  if (n.ofac.length > 0) return true;
+  if (Object.values(n.info).some((v) => String(v || "").trim())) return true;
+  if (n.referencias.some((r) => r.empresa.trim() || r.contacto.trim())) return true;
+  return false;
+}
+
 export function uidRef(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 }
