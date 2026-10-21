@@ -8,15 +8,28 @@
  * Los archivos de los formularios se sirven como assets de la intranet para
  * que Servicio al Cliente pueda descargarlos y enviarlos al asociado.
  */
-import fAdm01 from "@/assets/asociados/f-adm-01.asset.json";
-import fAdm02 from "@/assets/asociados/f-adm-02.asset.json";
-import fAdm05 from "@/assets/asociados/f-adm-05.asset.json";
-import fAdm06 from "@/assets/asociados/f-adm-06.asset.json";
-import fAdm07 from "@/assets/asociados/f-adm-07.asset.json";
-import fAdm08 from "@/assets/asociados/f-adm-08.asset.json";
-import fAdm10 from "@/assets/asociados/f-adm-10.asset.json";
-import fAdm11 from "@/assets/asociados/f-adm-11.asset.json";
-import fAdm12 from "@/assets/asociados/f-adm-12.asset.json";
+/**
+ * Los formularios se sirven desde `public/formularios-asociados/` para que
+ * la descarga funcione también en el servidor local de la intranet (los
+ * assets `/__l5e/` solo existen en el hosting de Lovable).
+ */
+const FORMS_DIR = "/formularios-asociados";
+
+const localForm = (filename: string) => ({
+  url: `${FORMS_DIR}/${encodeURIComponent(filename)}`,
+  filename,
+  formato: (filename.split(".").pop() || "").toUpperCase(),
+});
+
+const fAdm01 = localForm("F-ADM-01_Formulario_Acuerdo_de_Confidencialidad_a_Terceros.pdf");
+const fAdm02 = localForm("F-ADM-02_Formulario_Acuerdo_de_Colaboracion.pdf");
+const fAdm05 = localForm("F-ADM-05_Formulario_Declaracion_Origen_de_Fondos.pdf");
+const fAdm06 = localForm("F-ADM-06_Formulario_validacion_criterios_seguridad_1.pdf");
+const fAdm07 = localForm("F-ADM-07_Registro_de_Datos_asociados_de_negocios.pdf");
+const fAdm08 = localForm("F-ADM-08_Formulario_de_Debida_Diligencia_a_Proveedores_de_Servicios_Tercerizados_Outsourcing_-_Personas_Jurídicas.docx");
+const fAdm10 = localForm("F-ADM-10_Formulario_criterios_de_evaluacion_asociados_Safeone.xlsx");
+const fAdm11 = localForm("F-ADM-11_Formulario_Matriz_Revision_Asociados_de_Negocios_Personas_Jurudicas.xls");
+const fAdm12 = localForm("F-ADM-12_Formulario_Evaluación_de_Riesgo_Criterios_de_Seguridad_de_Asociados_de_Negocios.xls");
 
 export type FormOrigen = "cliente" | "interno";
 
