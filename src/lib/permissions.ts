@@ -40,6 +40,7 @@ export type ModuleKey =
   | "sharedFiles"
   | "procedures"
   | "wiki"
+  | "serviceCatalog"
   | "surveys"
   | "vacations"
   | "reception"
@@ -127,6 +128,7 @@ export function canView(module: ModuleKey, user: IntranetUser | null | undefined
     case "calendar":
     case "procedures":
     case "wiki":
+    case "serviceCatalog":
     case "sharedFiles":
     case "surveys":
     case "training":
