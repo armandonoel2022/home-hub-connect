@@ -105,6 +105,7 @@ const DEPT_MULTI_ROUTES: Record<string, { label: string; route: string; icon: an
     { label: "Seguimiento Clientes", route: "/seguimiento-clientes", icon: Users },
   ],
   "Servicio al Cliente": [
+    { label: "Catálogo de Servicios", route: "/servicio-al-cliente/catalogo", icon: FileText },
     { label: "Registro Mercantil", route: "/servicio-al-cliente/registro-mercantil", icon: Building2 },
     { label: "Expediente de Asociados", route: "/servicio-al-cliente/registro-mercantil", icon: FileText },
   ],

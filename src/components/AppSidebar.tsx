@@ -27,6 +27,7 @@ import {
   KeyRound,
   Monitor,
   Radar,
+  LibraryBig,
   GraduationCap,
   Shirt,
   ClipboardCheck,
@@ -67,6 +68,7 @@ const navItems: NavItem[] = [
   { title: "Encuestas", url: "/encuestas", icon: ClipboardList, module: "surveys" },
   { title: "Mi Nómina", url: "/mi-nomina", icon: Wallet, module: "myPayroll" },
   { title: "Gastos Menores", url: "/gastos-menores", icon: Wallet, module: "minorPurchases" },
+  { title: "Catálogo de Servicios", url: "/servicio-al-cliente/catalogo", icon: LibraryBig, module: "serviceCatalog" },
   { title: "Seguimiento Clientes Monitoreo", url: "/seguimiento-clientes", icon: Radar, module: "clientTracking" },
   { title: "Recepción", url: "/recepcion", icon: UserPlus, module: "reception" },
 ];
