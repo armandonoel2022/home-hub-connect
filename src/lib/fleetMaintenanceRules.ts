@@ -27,7 +27,9 @@ export function findUnitByPlaca<T extends { placa: unknown }>(units: T[], placa:
   return units.find((u) => normalizePlaca(u.placa) === key);
 }
 
-export type PlacaCheck<T> = { ok: true; placa: string; unit: T } | { ok: false; error: string };
+export type PlacaCheck<T> =
+  | { ok: true; placa: string; unit: T; error?: undefined }
+  | { ok: false; error: string; placa?: undefined; unit?: undefined };
 
 /** Un gasto solo se acepta si la placa existe en la flotilla registrada. */
 export function validateExpensePlaca<T extends { placa: unknown }>(units: T[], placa: unknown): PlacaCheck<T> {
