@@ -633,6 +633,8 @@ export const fleetMaintenanceApi = {
     apiFetch<void>(`/fleet-maintenance/fleet/${encodeURIComponent(placa)}`, { method: "DELETE" }),
   normalizeTalleres: () =>
     apiFetch<{ changed: number }>("/fleet-maintenance/normalize-talleres", { method: "POST" }),
+  addTaller: (nombre: string) =>
+    apiFetch<{ nombre: string; talleres: string[] }>("/fleet-maintenance/talleres", { method: "POST", body: JSON.stringify({ nombre }) }),
 };
 
 // ─── Flotilla Vehicular (registro completo) ───

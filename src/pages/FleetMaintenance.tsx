@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import Navbar from "@/components/Navbar";
@@ -24,17 +24,26 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
+} from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Bike, Car, Wrench, DollarSign, Search, ShieldAlert,
   TrendingUp, Calendar, Filter, X, Plus, Edit2, Trash2, Link2, Cloud, CloudOff,
+  Check, ChevronsUpDown, RefreshCw, AlertTriangle, Upload,
 } from "lucide-react";
 import {
-  getFleet, getAnnualCost, getMaintenanceEntries, getTotals, formatRD,
+  getFleet, getSheetAnnualCost, getMaintenanceEntries, getTotals, formatRD,
   addMaintenanceEntry, updateMaintenanceEntry, deleteMaintenanceEntry,
   addFleetUnit, updateFleetUnit, deleteFleetUnit,
-  refreshFromServer, isServerMode,
+  refreshFromServer, getRegisteredUnits, getTalleres, addTaller,
+  getLocalOnlyEntries, uploadLocalEntries, getLastSync,
 } from "@/lib/fleetMaintenanceData";
+import {
+  buildAnnualMatrix, availableYears, reconcileWithSheet, monthLabel, monthKeyOf,
+  normalizePlaca, findUnitByPlaca, validateExpensePlaca, unitKind, TIPOS_MANT, MONTH_KEYS,
+} from "@/lib/fleetMaintenanceRules";
 import type { MaintenanceEntry, FleetUnit } from "@/lib/fleetMaintenanceTypes";
 import { getAssetsByPlaca, type LinkedAsset } from "@/lib/fleetAssetLink";
 import { isApiConfigured } from "@/lib/api";
@@ -44,7 +53,8 @@ const MONTH_LABELS: Record<string, string> = {
   mayo: "May", junio: "Jun", julio: "Jul", agosto: "Ago",
   septiembre: "Sep", octubre: "Oct", noviembre: "Nov", diciembre: "Dic",
 };
-const MONTHS = Object.keys(MONTH_LABELS);
+const SHEET_YEAR = 2026; // año de la hoja Excel original (Control_gastos_...xlsx)
+const AUTO_REFRESH_MS = 60_000;
 
 const ALLOWED_USER_IDS = new Set(["USR-001", "USR-100", "USR-101"]);
 const ALLOWED_DEPARTMENTS = new Set(["Administración", "Gerencia General", "Tecnología y Monitoreo"]);
@@ -70,21 +80,55 @@ export default function FleetMaintenance() {
   const [serverOnline, setServerOnline] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    (async () => {
-      if (isApiConfigured()) {
-        const ok = await refreshFromServer();
-        setServerOnline(ok);
-      }
-      setLoading(false);
-      setRefresh(r => r + 1);
-    })();
+  const [syncing, setSyncing] = useState(false);
+  const sync = useCallback(async () => {
+    if (!isApiConfigured()) { setServerOnline(false); return; }
+    setSyncing(true);
+    const ok = await refreshFromServer();
+    setServerOnline(ok);
+    setSyncing(false);
+    setRefresh(r => r + 1);
   }, []);
 
+  useEffect(() => {
+    (async () => {
+      await sync();
+      setLoading(false);
+    })();
+  }, [sync]);
+
+  // Mantener el tablero al día: refresca cada minuto y al volver a la pestaña.
+  useEffect(() => {
+    if (!isApiConfigured()) return;
+    const id = window.setInterval(() => { if (document.visibilityState === "visible") sync(); }, AUTO_REFRESH_MS);
+    const onFocus = () => sync();
+    window.addEventListener("focus", onFocus);
+    return () => { window.clearInterval(id); window.removeEventListener("focus", onFocus); };
+  }, [sync]);
+
   const fleet = useMemo(() => getFleet(), [refresh]);
-  const annual = useMemo(() => getAnnualCost(), [refresh]);
+  const registeredUnits = useMemo(() => getRegisteredUnits(), [refresh]);
+  const talleres = useMemo(() => getTalleres(), [refresh]);
   const entries = useMemo(() => getMaintenanceEntries(), [refresh]);
-  const totals = useMemo(() => getTotals(), [refresh]);
+  const totals = useMemo(() => getTotals(entries), [entries]);
+  const localOnly = useMemo(() => (serverOnline ? getLocalOnlyEntries() : []), [refresh, serverOnline]);
+
+  const currentYear = new Date().getFullYear();
+  const years = useMemo(() => availableYears(entries, currentYear), [entries, currentYear]);
+  const [annualYear, setAnnualYear] = useState<number>(currentYear);
+  const annual = useMemo(() => buildAnnualMatrix(entries, fleet, annualYear), [entries, fleet, annualYear]);
+  const annualTotal = useMemo(() => annual.reduce((s, r) => s + r.total, 0), [annual]);
+  const sheetDiffs = useMemo(
+    () => (annualYear === SHEET_YEAR ? reconcileWithSheet(getSheetAnnualCost(), buildAnnualMatrix(entries, fleet, SHEET_YEAR)) : []),
+    [entries, fleet, annualYear, refresh],
+  );
+  const [showDiffs, setShowDiffs] = useState(false);
+
+  // Entry dialog helpers
+  const [placaOpen, setPlacaOpen] = useState(false);
+  const [newTaller, setNewTaller] = useState<string | null>(null);
+  const [entryError, setEntryError] = useState<string | null>(null);
+  const [originalPlaca, setOriginalPlaca] = useState<string | undefined>(undefined);
 
   const [tab, setTab] = useState<"dashboard" | "log" | "annual" | "fleet">("dashboard");
   const [search, setSearch] = useState("");
@@ -116,12 +160,12 @@ export default function FleetMaintenance() {
     let list = entries;
     if (filterKind !== "all") list = list.filter((e) => e.kind === filterKind);
     if (filterPlaca !== "all") list = list.filter((e) => e.placa === filterPlaca);
-    if (filterMes !== "all") list = list.filter((e) => (e.mes || "").toLowerCase() === filterMes);
+    if (filterMes !== "all") list = list.filter((e) => monthKeyOf(e.fecha) === filterMes);
     if (search.trim()) {
       const t = search.toLowerCase();
       list = list.filter(
         (e) =>
-          e.placa.toLowerCase().includes(t) ||
+          e.placa.toLowerCase().includes(t.replace(/[\s\-.]/g, "")) ||
           (e.taller || "").toLowerCase().includes(t) ||
           (e.detalle || "").toLowerCase().includes(t) ||
           (e.tipoMant || "").toLowerCase().includes(t),
@@ -143,32 +187,68 @@ export default function FleetMaintenance() {
   };
 
   // ── CRUD handlers ──
-  const openCreateEntry = () => setEntryDialog({ open: true, data: emptyEntry(), mode: "create" });
-  const openEditEntry = (e: MaintenanceEntry & { id?: string }) => setEntryDialog({ open: true, data: { ...e }, mode: "edit" });
+  const resetEntryHelpers = (placa?: string) => {
+    setEntryError(null); setNewTaller(null); setPlacaOpen(false); setOriginalPlaca(placa);
+  };
+  const openCreateEntry = () => {
+    resetEntryHelpers();
+    const d = emptyEntry();
+    if (filterPlaca !== "all") {
+      const u = findUnitByPlaca(registeredUnits, filterPlaca);
+      if (u) { d.placa = normalizePlaca(u.placa); d.kind = unitKind(u); }
+    }
+    setEntryDialog({ open: true, data: d, mode: "create" });
+  };
+  const openEditEntry = (e: MaintenanceEntry & { id?: string }) => {
+    resetEntryHelpers(e.placa);
+    setEntryDialog({ open: true, data: { ...e }, mode: "edit" });
+  };
+  const entryKeyOf = (e: MaintenanceEntry) => `${e.placa}|${e.fecha}|${e.costo}|${e.detalle ?? ""}`;
+  const selectedUnit = entryDialog.data ? findUnitByPlaca(registeredUnits, entryDialog.data.placa) : undefined;
+  const placaIsLegacy = !!entryDialog.data?.placa && !selectedUnit && entryDialog.mode === "edit"
+    && normalizePlaca(entryDialog.data.placa) === normalizePlaca(originalPlaca);
+
   const saveEntry = async () => {
     if (!entryDialog.data) return;
-    const d = entryDialog.data;
-    if (!d.placa || !d.fecha || !d.costo) {
-      toast({ title: "Datos incompletos", description: "Placa, fecha y costo son requeridos.", variant: "destructive" });
-      return;
+    const d = { ...entryDialog.data };
+    // Taller nuevo escrito en el formulario → se agrega al catálogo estandarizado
+    if (newTaller !== null) {
+      if (!newTaller.trim()) { setEntryError("Escriba el nombre del nuevo taller o elija uno de la lista."); return; }
+      try { d.taller = await addTaller(newTaller); } catch (err: any) { setEntryError(err.message); return; }
     }
-    // derive mes from fecha
-    const monthIdx = new Date(d.fecha + "T00:00:00").getMonth();
-    const mes = MONTHS[monthIdx];
-    const payload = { ...d, mes, costo: Number(d.costo) };
+    const placaCheck = validateExpensePlaca(registeredUnits, d.placa);
+    if (!placaCheck.ok && !placaIsLegacy) { setEntryError(placaCheck.error); return; }
+    if (!d.fecha) { setEntryError("La fecha es obligatoria."); return; }
+    if (!(Number(d.costo) > 0)) { setEntryError("El costo debe ser mayor que cero."); return; }
+    if (!d.taller) { setEntryError("Debe seleccionar el taller."); return; }
+    const payload = { ...d, costo: Number(d.costo) };
     try {
       if (entryDialog.mode === "create") {
         await addMaintenanceEntry(payload);
-        toast({ title: "Registro creado", description: `${d.placa} — ${formatRD(payload.costo)}` });
+        toast({ title: "Registro creado", description: `${normalizePlaca(d.placa)} — ${formatRD(payload.costo)}` });
       } else {
-        await updateMaintenanceEntry((d as any).id, payload);
+        await updateMaintenanceEntry((d as any).id || entryKeyOf(entryDialog.data), payload, originalPlaca);
         toast({ title: "Registro actualizado" });
       }
-      if (isApiConfigured()) await refreshFromServer();
       setEntryDialog({ open: false, data: null, mode: "create" });
-      setRefresh(r => r + 1);
+      resetEntryHelpers();
+      await sync();
     } catch (err: any) {
-      toast({ title: "Error al guardar", description: err.message, variant: "destructive" });
+      setEntryError(err.message);
+    }
+  };
+
+  const doUploadLocal = async () => {
+    try {
+      const r = await uploadLocalEntries();
+      toast({
+        title: `${r.uploaded} registro(s) subidos al servidor`,
+        description: r.failed.length ? `${r.failed.length} no se pudieron subir: ${r.failed[0].error}` : undefined,
+        variant: r.failed.length ? "destructive" : undefined,
+      });
+      setRefresh(x => x + 1);
+    } catch (err: any) {
+      toast({ title: "No se pudo subir", description: err.message, variant: "destructive" });
     }
   };
 
@@ -189,9 +269,8 @@ export default function FleetMaintenance() {
         await updateFleetUnit(String(u.placa), u);
         toast({ title: "Unidad actualizada" });
       }
-      if (isApiConfigured()) await refreshFromServer();
       setUnitDialog({ open: false, data: null, mode: "create" });
-      setRefresh(r => r + 1);
+      await sync();
     } catch (err: any) {
       toast({ title: "Error al guardar", description: err.message, variant: "destructive" });
     }
@@ -205,10 +284,9 @@ export default function FleetMaintenance() {
       } else {
         await deleteFleetUnit(confirmDelete.id);
       }
-      if (isApiConfigured()) await refreshFromServer();
       toast({ title: "Eliminado", description: confirmDelete.label });
       setConfirmDelete(null);
-      setRefresh(r => r + 1);
+      await sync();
     } catch (err: any) {
       toast({ title: "Error al eliminar", description: err.message, variant: "destructive" });
     }
@@ -218,7 +296,9 @@ export default function FleetMaintenance() {
   const motoCount = fleet.filter((u) => u.tipo.toUpperCase().includes("MOTO")).length;
   const vehCount = fleet.length - motoCount;
   const topUnits = useMemo(() => Object.entries(totals.byPlaca).sort((a, b) => b[1] - a[1]).slice(0, 8), [totals]);
-  const monthBreakdown = useMemo(() => Object.entries(totals.byMes).sort((a, b) => b[1] - a[1]), [totals]);
+  // Últimos 12 meses con gasto, en orden cronológico
+  const monthBreakdown = useMemo(() => totals.byMonth.slice(-12), [totals]);
+  const monthMax = useMemo(() => Math.max(1, ...monthBreakdown.map(m => m.total)), [monthBreakdown]);
   const topTalleres = useMemo(() => Object.entries(totals.byTaller).sort((a, b) => b[1] - a[1]).slice(0, 6), [totals]);
 
   if (!hasAccess) {
