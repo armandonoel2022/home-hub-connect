@@ -8,3 +8,9 @@
 - [x] Adaptar resumen, duplicación, reportes y correos.
 - [x] Validar solicitudes de uniformes en cliente y servidor.
 - [x] Verificar compilación y presentación adaptable; la vista autenticada requiere sesión del servidor local.
+
+- [x] Flotilla: placas solo de unidades registradas (lista de selección) y taller desde catálogo único.
+- [x] Flotilla: gráfica y filtro por mes corregidos; tablero se refresca al guardar.
+- [x] Flotilla: Costo Anual con selector de año y diferencias con la hoja Excel.
+- [x] Flotilla: aviso de modo local y botón para subir gastos locales al servidor.
+- [ ] Flotilla: copiar `backend/routes/fleet-maintenance.js` al servidor y reiniciar `node server.js` (lo hace el equipo de TI).

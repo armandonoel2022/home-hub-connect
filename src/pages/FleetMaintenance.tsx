@@ -42,7 +42,7 @@ import {
 } from "@/lib/fleetMaintenanceData";
 import {
   buildAnnualMatrix, availableYears, reconcileWithSheet, monthLabel, monthKeyOf,
-  normalizePlaca, findUnitByPlaca, validateExpensePlaca, unitKind, TIPOS_MANT, MONTH_KEYS,
+  normalizePlaca, findUnitByPlaca, validateExpensePlaca, unitKind, TIPOS_MANT, MONTH_KEYS, tallerKey,
 } from "@/lib/fleetMaintenanceRules";
 import type { MaintenanceEntry, FleetUnit } from "@/lib/fleetMaintenanceTypes";
 import { getAssetsByPlaca, type LinkedAsset } from "@/lib/fleetAssetLink";
@@ -82,7 +82,7 @@ export default function FleetMaintenance() {
 
   const [syncing, setSyncing] = useState(false);
   const sync = useCallback(async () => {
-    if (!isApiConfigured()) { setServerOnline(false); return; }
+    if (!isApiConfigured()) { setServerOnline(false); setRefresh(r => r + 1); return; }
     setSyncing(true);
     const ok = await refreshFromServer();
     setServerOnline(ok);
@@ -397,6 +397,16 @@ export default function FleetMaintenance() {
                     <CloudOff className="h-3 w-3" /> Modo local (sin servidor)
                   </span>
                 )}
+                {serverOnline && getLastSync() && (
+                  <span className="text-[11px] text-muted-foreground">
+                    · Actualizado {new Date(getLastSync()!).toLocaleTimeString("es-DO", { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                )}
+                {isApiConfigured() && (
+                  <Button variant="ghost" size="sm" className="h-6 px-2 gap-1 text-[11px]" onClick={sync} disabled={syncing}>
+                    <RefreshCw className={`h-3 w-3 ${syncing ? "animate-spin" : ""}`} /> Actualizar
+                  </Button>
+                )}
               </p>
             </div>
             <div className="text-right">
@@ -405,6 +415,29 @@ export default function FleetMaintenance() {
               <p className="text-[11px] text-muted-foreground">{totals.entriesCount} registros</p>
             </div>
           </div>
+
+          {!loading && !serverOnline && (
+            <div className="mb-4 flex items-start gap-3 rounded-lg border border-accent/50 bg-accent/10 p-3 text-sm">
+              <AlertTriangle className="h-4 w-4 mt-0.5 text-accent-foreground shrink-0" />
+              <p className="text-foreground">
+                <strong>Sin conexión con el servidor.</strong>{" "}
+                Los gastos que registre ahora se guardan solo en este navegador y no los verán otros equipos.
+                Cuando vuelva la conexión podrá subirlos desde aquí.
+              </p>
+            </div>
+          )}
+          {serverOnline && localOnly.length > 0 && (
+            <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-primary/40 bg-primary/5 p-3 text-sm">
+              <Upload className="h-4 w-4 text-primary shrink-0" />
+              <p className="flex-1 min-w-[240px] text-foreground">
+                Hay <strong>{localOnly.length}</strong> gasto(s) guardado(s) solo en este navegador
+                ({formatRD(localOnly.reduce((s, e) => s + (Number(e.costo) || 0), 0))}). Súbalos para que aparezcan en el tablero de todos.
+              </p>
+              <Button size="sm" onClick={doUploadLocal} className="gap-1">
+                <Upload className="h-4 w-4" /> Subir al servidor
+              </Button>
+            </div>
+          )}
 
           <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
             <TabsList className="grid grid-cols-4 w-full max-w-2xl">
@@ -478,14 +511,18 @@ export default function FleetMaintenance() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
-                    {monthBreakdown.map(([mes, value]) => {
-                      const max = monthBreakdown[0][1] || 1;
-                      const pct = (value / max) * 100;
+                    {monthBreakdown.length === 0 && (
+                      <p className="text-xs text-muted-foreground">Sin gastos registrados todavía.</p>
+                    )}
+                    {monthBreakdown.map((m) => {
+                      const pct = (m.total / monthMax) * 100;
                       return (
-                        <button key={mes} onClick={() => goToLog({ mes: mes.toLowerCase() })} className="w-full text-left group">
+                        <button key={m.key} onClick={() => goToLog({ mes: m.key })} className="w-full text-left group">
                           <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="font-medium capitalize group-hover:text-primary">{mes}</span>
-                            <span className="text-muted-foreground">{formatRD(value)}</span>
+                            <span className="font-medium group-hover:text-primary">
+                              {m.label} <span className="text-muted-foreground font-normal">· {m.count} reg.</span>
+                            </span>
+                            <span className="text-muted-foreground tabular-nums">{formatRD(m.total)}</span>
                           </div>
                           <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
                             <div className="h-full bg-accent group-hover:opacity-80 transition-all" style={{ width: `${pct}%` }} />
@@ -534,7 +571,7 @@ export default function FleetMaintenance() {
                 <select value={filterMes} onChange={(e) => setFilterMes(e.target.value)}
                   className="border rounded-md px-3 py-2 text-sm bg-background">
                   <option value="all">Todos los meses</option>
-                  {Object.keys(totals.byMes).map((m) => (<option key={m} value={m.toLowerCase()}>{m}</option>))}
+                  {[...totals.byMonth].reverse().map((m) => (<option key={m.key} value={m.key}>{m.label}</option>))}
                 </select>
                 {hasActiveFilter && (
                   <Button variant="outline" size="sm" onClick={clearFilters} className="gap-1">
@@ -580,7 +617,7 @@ export default function FleetMaintenance() {
                         <TableRow key={e.id || i}>
                           <TableCell className="whitespace-nowrap text-xs">{e.fecha}</TableCell>
                           <TableCell><PlacaCell placa={e.placa} /></TableCell>
-                          <TableCell className="text-xs capitalize">{e.mes || "—"}</TableCell>
+                          <TableCell className="text-xs whitespace-nowrap">{(() => { const k = monthKeyOf(e.fecha); return k ? monthLabel(k) : "—"; })()}</TableCell>
                           <TableCell className="text-xs">{e.tipoMant || "—"}</TableCell>
                           <TableCell className="text-xs">{e.taller || "—"}</TableCell>
                           <TableCell className="text-xs">{e.detalle || "—"}</TableCell>
@@ -609,17 +646,75 @@ export default function FleetMaintenance() {
               <Card>
                 <CardHeader className="flex flex-row items-start justify-between gap-4 flex-wrap">
                   <div>
-                    <CardTitle className="text-base">Costo de mantenimiento anual {new Date().getFullYear()}</CardTitle>
-                    <p className="text-xs text-muted-foreground mt-1">Acumulado al {new Date().toLocaleDateString("es-DO")}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Total año en curso</p>
-                    <p className="text-2xl font-bold text-primary tabular-nums">
-                      {formatRD(annual.reduce((s, r) => s + r.total, 0))}
+                    <CardTitle className="text-base flex items-center gap-2 flex-wrap">
+                      Costo de mantenimiento anual
+                      <select value={annualYear} onChange={(e) => setAnnualYear(Number(e.target.value))}
+                        aria-label="Año" className="border rounded-md px-2 py-1 text-sm bg-background font-semibold">
+                        {years.map((y) => (<option key={y} value={y}>{y}</option>))}
+                      </select>
+                    </CardTitle>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Calculado a partir de los gastos registrados
+                      {annualYear === currentYear ? ` · acumulado al ${new Date().toLocaleDateString("es-DO")}` : ""}
                     </p>
                   </div>
+                  <div className="text-right">
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Total {annualYear}</p>
+                    <p className="text-2xl font-bold text-primary tabular-nums">{formatRD(annualTotal)}</p>
+                  </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
+                  {sheetDiffs.length > 0 && (
+                    <div className="rounded-lg border border-accent/50 bg-accent/10 p-3 text-sm">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-accent-foreground shrink-0" />
+                        <p className="flex-1 min-w-[240px]">
+                          La hoja Excel original tiene <strong>{sheetDiffs.length}</strong> diferencia(s) con los gastos registrados
+                          (neto {formatRD(sheetDiffs.reduce((s, d) => s + d.diferencia, 0))}). Registre los gastos faltantes para que el total coincida.
+                        </p>
+                        <Button variant="outline" size="sm" onClick={() => setShowDiffs(v => !v)}>
+                          {showDiffs ? "Ocultar detalle" : "Ver detalle"}
+                        </Button>
+                      </div>
+                      {showDiffs && (
+                        <div className="mt-3 overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Placa</TableHead>
+                                <TableHead>Descripción</TableHead>
+                                <TableHead>Mes</TableHead>
+                                <TableHead className="text-right">Hoja Excel</TableHead>
+                                <TableHead className="text-right">Registrado</TableHead>
+                                <TableHead className="text-right">Falta registrar</TableHead>
+                                <TableHead />
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {sheetDiffs.map((d, i) => (
+                                <TableRow key={i}>
+                                  <TableCell className="font-mono text-xs">{d.placa}</TableCell>
+                                  <TableCell className="text-xs">{d.descripcion}</TableCell>
+                                  <TableCell className="text-xs">{MONTH_LABELS[d.mes]}</TableCell>
+                                  <TableCell className="text-right text-xs tabular-nums">{formatRD(d.hoja)}</TableCell>
+                                  <TableCell className="text-right text-xs tabular-nums">{formatRD(d.registros)}</TableCell>
+                                  <TableCell className={`text-right text-xs tabular-nums font-semibold ${d.diferencia < 0 ? "text-destructive" : "text-primary"}`}>
+                                    {formatRD(d.diferencia)}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <Button variant="ghost" size="sm" className="h-7 text-xs"
+                                      onClick={() => goToLog({ placa: d.placa, mes: `${SHEET_YEAR}-${String(MONTH_KEYS.indexOf(d.mes) + 1).padStart(2, "0")}` })}>
+                                      Ver gastos
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
@@ -632,8 +727,13 @@ export default function FleetMaintenance() {
                       </TableHeader>
                       <TableBody>
                         {annual.map((row, i) => (
-                          <TableRow key={i}>
-                            <TableCell className="text-xs">{row.descripcion}</TableCell>
+                          <TableRow key={i} className={row.registered ? undefined : "bg-destructive/5"}>
+                            <TableCell className="text-xs">
+                              {row.descripcion}
+                              {!row.registered && (
+                                <Badge variant="outline" className="ml-2 text-[10px] border-destructive/50 text-destructive">No registrada en Flotilla</Badge>
+                              )}
+                            </TableCell>
                             <TableCell>{row.placa ? <PlacaCell placa={row.placa} /> : <Badge variant="outline" className="font-mono text-[11px]">—</Badge>}</TableCell>
                             {Object.keys(MONTH_LABELS).map((m) => {
                               const v = row.monthly[m as keyof typeof row.monthly] || 0;
@@ -643,13 +743,13 @@ export default function FleetMaintenance() {
                           </TableRow>
                         ))}
                         <TableRow className="bg-muted/60 border-t-2 border-primary/40 font-bold">
-                          <TableCell className="text-sm font-bold">TOTAL GENERAL {new Date().getFullYear()}</TableCell>
+                          <TableCell className="text-sm font-bold">TOTAL GENERAL {annualYear}</TableCell>
                           <TableCell />
                           {Object.keys(MONTH_LABELS).map((m) => {
                             const monthTotal = annual.reduce((s, r) => s + (r.monthly[m as keyof typeof r.monthly] || 0), 0);
                             return (<TableCell key={m} className="text-right text-xs tabular-nums font-bold text-primary">{monthTotal ? monthTotal.toLocaleString("es-DO", { maximumFractionDigits: 0 }) : "—"}</TableCell>);
                           })}
-                          <TableCell className="text-right text-sm font-bold text-primary tabular-nums">{formatRD(annual.reduce((s, r) => s + r.total, 0))}</TableCell>
+                          <TableCell className="text-right text-sm font-bold text-primary tabular-nums">{formatRD(annualTotal)}</TableCell>
                         </TableRow>
                       </TableBody>
                     </Table>
@@ -688,7 +788,7 @@ export default function FleetMaintenance() {
                       <TableBody>
                         {fleet.map((u) => {
                           const placaStr = String(u.placa);
-                          const spend = totals.byPlaca[placaStr] || 0;
+                          const spend = totals.byPlaca[normalizePlaca(placaStr)] || 0;
                           return (
                             <TableRow key={`${u.no}-${placaStr}`}>
                               <TableCell className="text-xs">{u.no}</TableCell>
@@ -701,7 +801,7 @@ export default function FleetMaintenance() {
                               <TableCell><PlacaCell placa={placaStr} /></TableCell>
                               <TableCell className="text-xs">{u.aseguradora}</TableCell>
                               <TableCell className="text-right text-xs tabular-nums font-medium cursor-pointer hover:text-primary"
-                                onClick={() => spend > 0 && goToLog({ placa: placaStr })}>
+                                onClick={() => spend > 0 && goToLog({ placa: normalizePlaca(placaStr) })}>
                                 {spend > 0 ? formatRD(spend) : "—"}
                               </TableCell>
                               <TableCell className="text-right">
@@ -733,22 +833,74 @@ export default function FleetMaintenance() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{entryDialog.mode === "create" ? "Nuevo gasto de mantenimiento" : "Editar gasto"}</DialogTitle>
-            <DialogDescription>Los datos se guardan {serverOnline ? "en el servidor SafeOne" : "localmente"}.</DialogDescription>
+            <DialogDescription>
+              {serverOnline ? "Se guarda en el servidor de la intranet." : "Sin servidor: se guardará solo en este navegador."}
+              {" "}Solo se aceptan placas registradas en la Flotilla.
+            </DialogDescription>
           </DialogHeader>
           {entryDialog.data && (
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs">Categoría</Label>
-                <select value={entryDialog.data.kind}
-                  onChange={(e) => setEntryDialog(s => ({ ...s, data: { ...s.data!, kind: e.target.value as any } }))}
-                  className="w-full border rounded-md px-3 py-2 text-sm bg-background">
-                  <option value="vehiculo">Vehículo</option>
-                  <option value="motocicleta">Motocicleta</option>
-                </select>
-              </div>
-              <div>
-                <Label className="text-xs">Placa *</Label>
-                <Input value={entryDialog.data.placa} onChange={(e) => setEntryDialog(s => ({ ...s, data: { ...s.data!, placa: e.target.value } }))} />
+              <div className="col-span-2">
+                <Label className="text-xs">Unidad (placa) *</Label>
+                <Popover open={placaOpen} onOpenChange={setPlacaOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" role="combobox" aria-expanded={placaOpen} aria-label="Placa"
+                      className="w-full justify-between font-normal h-auto min-h-10 py-2">
+                      {selectedUnit ? (
+                        <span className="flex items-center gap-2 text-left min-w-0">
+                          {unitKind(selectedUnit) === "motocicleta" ? <Bike className="h-4 w-4 shrink-0" /> : <Car className="h-4 w-4 shrink-0" />}
+                          <span className="font-mono font-semibold">{normalizePlaca(selectedUnit.placa)}</span>
+                          <span className="text-muted-foreground text-xs truncate">{selectedUnit.marca} {selectedUnit.modelo} {selectedUnit.color}</span>
+                        </span>
+                      ) : placaIsLegacy ? (
+                        <span className="font-mono">{normalizePlaca(entryDialog.data.placa)}</span>
+                      ) : (
+                        <span className="text-muted-foreground">Seleccione una unidad registrada…</span>
+                      )}
+                      <ChevronsUpDown className="h-4 w-4 opacity-50 shrink-0" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Buscar placa, marca o modelo…" />
+                      <CommandList>
+                        <CommandEmpty>
+                          Esa placa no está registrada. Agréguela primero en la pestaña Flotilla.
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {registeredUnits.map((u) => {
+                            const pk = normalizePlaca(u.placa);
+                            return (
+                              <CommandItem key={`${u.fuente}-${pk}`} value={`${pk} ${u.marca} ${u.modelo} ${u.tipo}`}
+                                onSelect={() => {
+                                  setEntryDialog(s => ({ ...s, data: { ...s.data!, placa: pk, kind: unitKind(u) } }));
+                                  setEntryError(null);
+                                  setPlacaOpen(false);
+                                }}>
+                                <Check className={`h-4 w-4 mr-2 ${selectedUnit && normalizePlaca(selectedUnit.placa) === pk ? "opacity-100" : "opacity-0"}`} />
+                                <span className="font-mono font-semibold mr-2">{pk}</span>
+                                <span className="text-xs text-muted-foreground truncate flex-1">{u.tipo} {u.marca} {u.modelo}</span>
+                                {u.fuente && u.fuente !== "Flotilla" && (
+                                  <Badge variant="secondary" className="text-[10px] ml-2">{u.fuente}</Badge>
+                                )}
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                {placaIsLegacy && (
+                  <p className="text-[11px] text-destructive mt-1">
+                    Este gasto antiguo usa una placa que no está en la Flotilla. Puede guardarlo así o elegir una unidad registrada.
+                  </p>
+                )}
+                {selectedUnit && (
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Categoría: {unitKind(selectedUnit) === "motocicleta" ? "Motocicleta" : "Vehículo"}
+                  </p>
+                )}
               </div>
               <div>
                 <Label className="text-xs">Fecha *</Label>
@@ -762,15 +914,40 @@ export default function FleetMaintenance() {
                 <Label className="text-xs">Tipo de mantenimiento</Label>
                 <select value={entryDialog.data.tipoMant || ""} onChange={(e) => setEntryDialog(s => ({ ...s, data: { ...s.data!, tipoMant: e.target.value } }))}
                   className="w-full border rounded-md px-3 py-2 text-sm bg-background">
-                  <option value="Mantenimiento">Mantenimiento</option>
-                  <option value="Reparación">Reparación</option>
-                  <option value="Compra de piezas">Compra de piezas</option>
-                  <option value="Otros">Otros</option>
+                  {TIPOS_MANT.map((t) => (<option key={t} value={t}>{t}</option>))}
                 </select>
               </div>
               <div>
-                <Label className="text-xs">Taller</Label>
-                <Input value={entryDialog.data.taller || ""} onChange={(e) => setEntryDialog(s => ({ ...s, data: { ...s.data!, taller: e.target.value } }))} />
+                <Label className="text-xs">Taller *</Label>
+                {newTaller === null ? (
+                  <select aria-label="Taller" value={entryDialog.data.taller || ""}
+                    onChange={(e) => {
+                      if (e.target.value === "__new__") { setNewTaller(""); return; }
+                      setEntryDialog(s => ({ ...s, data: { ...s.data!, taller: e.target.value } }));
+                    }}
+                    className="w-full border rounded-md px-3 py-2 text-sm bg-background">
+                    <option value="" disabled>Seleccione el taller…</option>
+                    {entryDialog.data.taller && !talleres.includes(entryDialog.data.taller) && (
+                      <option value={entryDialog.data.taller}>{entryDialog.data.taller}</option>
+                    )}
+                    {talleres.map((t) => (<option key={t} value={t}>{t}</option>))}
+                    <option value="__new__">+ Agregar taller nuevo…</option>
+                  </select>
+                ) : (
+                  <div className="flex gap-1">
+                    <Input autoFocus aria-label="Nombre del taller nuevo" placeholder="Nombre del taller nuevo" value={newTaller}
+                      onChange={(e) => setNewTaller(e.target.value)} />
+                    <Button variant="ghost" size="icon" aria-label="Cancelar taller nuevo" onClick={() => setNewTaller(null)}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                {newTaller !== null && newTaller.trim() && (() => {
+                  const match = talleres.find((t) => tallerKey(t) === tallerKey(newTaller));
+                  return match ? (
+                    <p className="text-[11px] text-muted-foreground mt-1">Ya existe como «{match}»; se usará ese nombre.</p>
+                  ) : null;
+                })()}
               </div>
               <div>
                 <Label className="text-xs">Kilometraje</Label>
@@ -784,6 +961,11 @@ export default function FleetMaintenance() {
                 <Label className="text-xs">Detalle</Label>
                 <Textarea rows={2} value={entryDialog.data.detalle || ""} onChange={(e) => setEntryDialog(s => ({ ...s, data: { ...s.data!, detalle: e.target.value } }))} />
               </div>
+            </div>
+          )}
+          {entryError && (
+            <div role="alert" className="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-2 text-sm text-destructive">
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" /> {entryError}
             </div>
           )}
           <DialogFooter>
