@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -31,7 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Bike, Car, Wrench, DollarSign, Search, ShieldAlert,
   TrendingUp, Calendar, Filter, X, Plus, Edit2, Trash2, Link2, Cloud, CloudOff,
-  Check, ChevronsUpDown, RefreshCw, AlertTriangle, Upload,
+  Check, ChevronsUpDown, RefreshCw, AlertTriangle, Upload, Unlink, Camera, UserCheck, Loader2,
 } from "lucide-react";
 import {
   getFleet, getSheetAnnualCost, getMaintenanceEntries, getTotals, formatRD,
@@ -45,7 +45,12 @@ import {
   normalizePlaca, findUnitByPlaca, validateExpensePlaca, unitKind, TIPOS_MANT, MONTH_KEYS, tallerKey,
 } from "@/lib/fleetMaintenanceRules";
 import type { MaintenanceEntry, FleetUnit } from "@/lib/fleetMaintenanceTypes";
-import { getAssetsByPlaca, type LinkedAsset } from "@/lib/fleetAssetLink";
+import VehicleAvatar from "@/components/fleet/VehicleAvatar";
+import VehicleMaintenanceDossier from "@/components/fleet/VehicleMaintenanceDossier";
+import { listVehicles, createVehicle, updateVehicle, makeHistory, compressImage, isVehicleServerMode } from "@/lib/vehicleFleetData";
+import type { Vehiculo } from "@/lib/vehicleTypes";
+import { buildVehicleIndex, matchVehicle, linkageStats, toVehicleType, unitToVehicleDraft, vehicleAssignee } from "@/lib/fleetVehicleLink";
+import { canAccessFleetMaintenance } from "@/lib/fleetMaintenanceAccess";
 import { isApiConfigured } from "@/lib/api";
 
 const MONTH_LABELS: Record<string, string> = {
@@ -56,8 +61,6 @@ const MONTH_LABELS: Record<string, string> = {
 const SHEET_YEAR = 2026; // año de la hoja Excel original (Control_gastos_...xlsx)
 const AUTO_REFRESH_MS = 60_000;
 
-const ALLOWED_USER_IDS = new Set(["USR-001", "USR-100", "USR-101"]);
-const ALLOWED_DEPARTMENTS = new Set(["Administración", "Gerencia General", "Tecnología y Monitoreo"]);
 
 function emptyEntry(): MaintenanceEntry & { id?: string } {
   return {
@@ -75,13 +78,20 @@ export default function FleetMaintenance() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const userName = user?.fullName || "Sistema";
 
   const [refresh, setRefresh] = useState(0);
   const [serverOnline, setServerOnline] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const [syncing, setSyncing] = useState(false);
+  const [vehicles, setVehicles] = useState<Vehiculo[]>([]);
+  const loadVehicles = useCallback(async () => {
+    try { setVehicles(await listVehicles()); } catch { /* Flotilla Vehicular no disponible */ }
+  }, []);
   const sync = useCallback(async () => {
+    loadVehicles();
     if (!isApiConfigured()) { setServerOnline(false); setRefresh(r => r + 1); return; }
     setSyncing(true);
     const ok = await refreshFromServer();
@@ -106,11 +116,26 @@ export default function FleetMaintenance() {
     return () => { window.clearInterval(id); window.removeEventListener("focus", onFocus); };
   }, [sync]);
 
+  // ── Vínculo con Flotilla Vehicular (fotos, asignación, historial) ──
+  const vehicleIndex = useMemo(() => buildVehicleIndex(vehicles), [vehicles]);
+
   const fleet = useMemo(() => getFleet(), [refresh]);
   const registeredUnits = useMemo(() => getRegisteredUnits(), [refresh]);
   const talleres = useMemo(() => getTalleres(), [refresh]);
   const entries = useMemo(() => getMaintenanceEntries(), [refresh]);
   const totals = useMemo(() => getTotals(entries), [entries]);
+  const unitByPlaca = useMemo(() => {
+    const m = new Map<string, FleetUnit>();
+    for (const u of registeredUnits) { const k = normalizePlaca(u.placa); if (k && !m.has(k)) m.set(k, u); }
+    return m;
+  }, [registeredUnits]);
+  const matchFor = useCallback((placa: string) => {
+    const k = normalizePlaca(placa);
+    return matchVehicle(vehicleIndex, k, unitByPlaca.get(k)?.chasis);
+  }, [vehicleIndex, unitByPlaca]);
+  const linkStats = useMemo(() => linkageStats(fleet, vehicleIndex), [fleet, vehicleIndex]);
+  const [dossierPlaca, setDossierPlaca] = useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const localOnly = useMemo(() => (serverOnline ? getLocalOnlyEntries() : []), [refresh, serverOnline]);
 
   const currentYear = new Date().getFullYear();
@@ -145,15 +170,17 @@ export default function FleetMaintenance() {
   });
   const [confirmDelete, setConfirmDelete] = useState<{ kind: "entry" | "unit"; id: string; label: string } | null>(null);
 
-  // Asset linkage popover state
-  const [assetCache, setAssetCache] = useState<Record<string, LinkedAsset[]>>({});
-  const fetchAssetsForPlaca = async (placa: string) => {
-    if (assetCache[placa] !== undefined) return;
-    const found = await getAssetsByPlaca(placa);
-    setAssetCache(prev => ({ ...prev, [placa]: found }));
-  };
+  const hasAccess = canAccessFleetMaintenance(user);
 
-  const hasAccess = !!user && (user.isAdmin || ALLOWED_USER_IDS.has(user.id) || ALLOWED_DEPARTMENTS.has(user.department));
+  // ?placa=XXX abre la ficha de la unidad (enlaces desde Flotilla Vehicular)
+  useEffect(() => {
+    const p = searchParams.get("placa");
+    if (p) setDossierPlaca(normalizePlaca(p));
+  }, [searchParams]);
+  const closeDossier = () => {
+    setDossierPlaca(null);
+    if (searchParams.get("placa")) { searchParams.delete("placa"); setSearchParams(searchParams, { replace: true }); }
+  };
 
   // Filtering
   const filteredEntries = useMemo(() => {
@@ -190,12 +217,20 @@ export default function FleetMaintenance() {
   const resetEntryHelpers = (placa?: string) => {
     setEntryError(null); setNewTaller(null); setPlacaOpen(false); setOriginalPlaca(placa);
   };
-  const openCreateEntry = () => {
+  const applyUnitToEntry = (d: MaintenanceEntry, u: FleetUnit) => {
+    const pk = normalizePlaca(u.placa);
+    d.placa = pk; d.kind = unitKind(u);
+    const v = matchFor(pk)?.vehicle;
+    if (!d.asignacion && v) d.asignacion = vehicleAssignee(v);
+    return d;
+  };
+  const openCreateEntry = (forPlaca?: string) => {
     resetEntryHelpers();
     const d = emptyEntry();
-    if (filterPlaca !== "all") {
-      const u = findUnitByPlaca(registeredUnits, filterPlaca);
-      if (u) { d.placa = normalizePlaca(u.placa); d.kind = unitKind(u); }
+    const target = typeof forPlaca === "string" ? forPlaca : filterPlaca !== "all" ? filterPlaca : null;
+    if (target) {
+      const u = findUnitByPlaca(registeredUnits, target);
+      if (u) applyUnitToEntry(d, u);
     }
     setEntryDialog({ open: true, data: d, mode: "create" });
   };
@@ -205,6 +240,7 @@ export default function FleetMaintenance() {
   };
   const entryKeyOf = (e: MaintenanceEntry) => `${e.placa}|${e.fecha}|${e.costo}|${e.detalle ?? ""}`;
   const selectedUnit = entryDialog.data ? findUnitByPlaca(registeredUnits, entryDialog.data.placa) : undefined;
+  const selectedVehicle = selectedUnit ? matchFor(selectedUnit.placa)?.vehicle : undefined;
   const placaIsLegacy = !!entryDialog.data?.placa && !selectedUnit && entryDialog.mode === "edit"
     && normalizePlaca(entryDialog.data.placa) === normalizePlaca(originalPlaca);
 
@@ -230,6 +266,17 @@ export default function FleetMaintenance() {
         await updateMaintenanceEntry((d as any).id || entryKeyOf(entryDialog.data), payload, originalPlaca);
         toast({ title: "Registro actualizado" });
       }
+      // Sin servidor, la trazabilidad en Flotilla Vehicular se anota aquí (con servidor la hace el backend).
+      if (!serverOnline && !isVehicleServerMode()) {
+        const v = matchFor(d.placa)?.vehicle;
+        if (v) {
+          const km = Number(payload.kilometraje) || 0;
+          await updateVehicle(v.id, {
+            ultimoMantenimiento: !v.ultimoMantenimiento || v.ultimoMantenimiento < payload.fecha ? payload.fecha : v.ultimoMantenimiento,
+            kilometraje: Math.max(Number(v.kilometraje) || 0, km),
+          }, [makeHistory("mantenimiento", `Gasto ${entryDialog.mode === "create" ? "registrado" : "actualizado"}: ${payload.tipoMant || "Gasto"} en ${payload.taller} — ${formatRD(payload.costo)} (${payload.fecha})`, userName)]).catch(() => {});
+        }
+      }
       setEntryDialog({ open: false, data: null, mode: "create" });
       resetEntryHelpers();
       await sync();
@@ -249,6 +296,42 @@ export default function FleetMaintenance() {
       setRefresh(x => x + 1);
     } catch (err: any) {
       toast({ title: "No se pudo subir", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const registerInFleet = async (u: FleetUnit) => {
+    try {
+      const v = await createVehicle(unitToVehicleDraft(u), userName);
+      toast({ title: "Registrada en Flotilla Vehicular", description: `${v.id} — ${v.placa}. Ya puede agregarle foto y asignación.` });
+      await loadVehicles();
+    } catch (err: any) {
+      toast({ title: "No se pudo registrar", description: err.message, variant: "destructive" });
+    }
+  };
+  const registerAllMissing = async () => {
+    setBulkBusy(true);
+    let ok = 0; const errors: string[] = [];
+    for (const u of linkStats.unlinked) {
+      try { await createVehicle(unitToVehicleDraft(u), userName); ok++; }
+      catch (err: any) { errors.push(`${normalizePlaca(u.placa)}: ${err.message}`); }
+    }
+    await loadVehicles();
+    setBulkBusy(false);
+    toast({
+      title: `${ok} unidad(es) registradas en Flotilla Vehicular`,
+      description: errors.length ? `${errors.length} con error. ${errors[0]}` : "Ahora puede cargar sus fotos y asignaciones.",
+      variant: errors.length ? "destructive" : undefined,
+    });
+  };
+  const savePhoto = async (v: Vehiculo, file: File) => {
+    try {
+      const dataUrl = await compressImage(file);
+      await updateVehicle(v.id, { documentos: { ...(v.documentos || {}), fotoVehiculo: dataUrl } },
+        [makeHistory("documento", "Foto del vehículo actualizada desde Flotilla — Mantenimiento", userName)]);
+      toast({ title: "Foto guardada", description: `${v.placa} — visible también en Flotilla Vehicular.` });
+      await loadVehicles();
+    } catch (err: any) {
+      toast({ title: "No se pudo guardar la foto", description: err.message, variant: "destructive" });
     }
   };
 
@@ -327,47 +410,18 @@ export default function FleetMaintenance() {
     );
   }
 
-  // Reusable placa cell with asset-link popover
-  const PlacaCell = ({ placa }: { placa: string }) => {
-    const linked = assetCache[placa];
+  // Placa con miniatura del vehículo: abre la ficha de trazabilidad
+  const PlacaCell = ({ placa, showThumb = true }: { placa: string; showThumb?: boolean }) => {
+    const m = matchFor(placa);
+    const u = unitByPlaca.get(normalizePlaca(placa));
     return (
-      <Popover onOpenChange={(o) => o && fetchAssetsForPlaca(placa)}>
-        <PopoverTrigger asChild>
-          <button className="inline-flex items-center gap-1 hover:opacity-80">
-            <Badge variant="outline" className="font-mono text-[11px] cursor-pointer">{placa}</Badge>
-            <Link2 className="h-3 w-3 text-muted-foreground" />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent className="w-80" side="right">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold flex items-center gap-1">
-              <Link2 className="h-3 w-3" /> Activo Fijo vinculado
-            </p>
-            {linked === undefined && <p className="text-xs text-muted-foreground">Buscando...</p>}
-            {linked && linked.length === 0 && (
-              <p className="text-xs text-muted-foreground">
-                Sin coincidencia en Activo Fijo. Verifica que la placa <strong>{placa}</strong> aparezca en el serial o descripción del activo.
-              </p>
-            )}
-            {linked && linked.map(({ asset, matchedBy }) => (
-              <div key={asset.id} className="border rounded-md p-2 bg-muted/30 text-xs space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono font-semibold text-primary">{asset.id}</span>
-                  <Badge variant="secondary" className="text-[10px]">{asset.tipo}</Badge>
-                </div>
-                <p className="font-medium">{asset.descripcion}</p>
-                <p className="text-muted-foreground">{asset.marca} {asset.modelo}</p>
-                {asset.serial && <p className="text-[10px] text-muted-foreground">Serial: {asset.serial}</p>}
-                <div className="flex items-center justify-between pt-1">
-                  <span className="text-[10px] text-muted-foreground">Estado: {asset.estado}</span>
-                  <span className="text-[10px] text-muted-foreground">📍 {asset.ubicacion}</span>
-                </div>
-                <p className="text-[10px] text-muted-foreground italic">Coincidencia por: {matchedBy}</p>
-              </div>
-            ))}
-          </div>
-        </PopoverContent>
-      </Popover>
+      <button type="button" onClick={() => setDossierPlaca(normalizePlaca(placa))}
+        className="inline-flex items-center gap-2 hover:opacity-80 text-left" title="Ver ficha del vehículo">
+        {showThumb && <VehicleAvatar tipo={m?.vehicle.tipo || toVehicleType(u?.tipo)} photo={m?.vehicle.documentos?.fotoVehiculo} size="sm" />}
+        <Badge variant="outline" className="font-mono text-[11px] cursor-pointer">{placa}</Badge>
+        {m ? <Link2 className="h-3 w-3 text-primary" aria-label="Vinculada con Flotilla Vehicular" />
+          : <Unlink className="h-3 w-3 text-muted-foreground" aria-label="Sin ficha en Flotilla Vehicular" />}
+      </button>
     );
   };
 
@@ -483,6 +537,32 @@ export default function FleetMaintenance() {
                 </div>
               </div>
 
+              <Card>
+                <CardContent className="p-4 flex flex-wrap items-center gap-4">
+                  <div className="flex -space-x-2">
+                    {fleet.slice(0, 6).map((u) => {
+                      const m = matchFor(String(u.placa));
+                      return (
+                        <span key={`${u.no}-${u.placa}`} className="rounded-lg ring-2 ring-background">
+                          <VehicleAvatar tipo={m?.vehicle.tipo || toVehicleType(u.tipo)} photo={m?.vehicle.documentos?.fotoVehiculo} size="sm" />
+                        </span>
+                      );
+                    })}
+                  </div>
+                  <div className="flex-1 min-w-[220px]">
+                    <p className="text-sm font-semibold flex items-center gap-2"><Link2 className="h-4 w-4 text-primary" /> Vínculo con Flotilla Vehicular</p>
+                    <p className="text-xs text-muted-foreground">
+                      {linkStats.linked} de {linkStats.total} unidades vinculadas · {linkStats.withPhoto} con foto
+                      {linkStats.unlinked.length > 0 && <> · <span className="text-destructive">{linkStats.unlinked.length} sin ficha</span></>}
+                    </p>
+                    <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden mt-2 max-w-md">
+                      <div className="h-full bg-primary" style={{ width: `${linkStats.total ? (linkStats.linked / linkStats.total) * 100 : 0}%` }} />
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => setTab("fleet")}>Ver unidades</Button>
+                </CardContent>
+              </Card>
+
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card>
                   <CardHeader><CardTitle className="text-base">Top unidades por gasto</CardTitle></CardHeader>
@@ -490,14 +570,21 @@ export default function FleetMaintenance() {
                     {topUnits.map(([placa, value]) => {
                       const max = topUnits[0][1] || 1;
                       const pct = (value / max) * 100;
+                      const m = matchFor(placa);
+                      const u = unitByPlaca.get(placa);
                       return (
-                        <button key={placa} onClick={() => goToLog({ placa })} className="w-full text-left group">
-                          <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="font-medium group-hover:text-primary">{placa}</span>
-                            <span className="text-muted-foreground">{formatRD(value)}</span>
-                          </div>
-                          <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                            <div className="h-full bg-primary group-hover:bg-primary/80 transition-all" style={{ width: `${pct}%` }} />
+                        <button key={placa} onClick={() => setDossierPlaca(placa)} className="w-full text-left group flex items-center gap-3">
+                          <VehicleAvatar tipo={m?.vehicle.tipo || toVehicleType(u?.tipo)} photo={m?.vehicle.documentos?.fotoVehiculo} size="sm" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between text-xs mb-1 gap-2">
+                              <span className="font-medium group-hover:text-primary truncate">
+                                {placa} <span className="text-muted-foreground font-normal">{u ? `· ${u.marca} ${u.modelo}` : ""}</span>
+                              </span>
+                              <span className="text-muted-foreground shrink-0">{formatRD(value)}</span>
+                            </div>
+                            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                              <div className="h-full bg-primary group-hover:bg-primary/80 transition-all" style={{ width: `${pct}%` }} />
+                            </div>
                           </div>
                         </button>
                       );
@@ -578,7 +665,7 @@ export default function FleetMaintenance() {
                     <X className="h-3 w-3" /> Limpiar
                   </Button>
                 )}
-                <Button size="sm" onClick={openCreateEntry} className="gap-1 ml-auto">
+                <Button size="sm" onClick={() => openCreateEntry()} className="gap-1 ml-auto">
                   <Plus className="h-4 w-4" /> Nuevo gasto
                 </Button>
               </div>
@@ -734,7 +821,7 @@ export default function FleetMaintenance() {
                                 <Badge variant="outline" className="ml-2 text-[10px] border-destructive/50 text-destructive">No registrada en Flotilla</Badge>
                               )}
                             </TableCell>
-                            <TableCell>{row.placa ? <PlacaCell placa={row.placa} /> : <Badge variant="outline" className="font-mono text-[11px]">—</Badge>}</TableCell>
+                            <TableCell>{row.placa ? <PlacaCell placa={row.placa} showThumb={false} /> : <Badge variant="outline" className="font-mono text-[11px]">—</Badge>}</TableCell>
                             {Object.keys(MONTH_LABELS).map((m) => {
                               const v = row.monthly[m as keyof typeof row.monthly] || 0;
                               return (<TableCell key={m} className="text-right text-xs tabular-nums">{v ? v.toLocaleString("es-DO", { maximumFractionDigits: 0 }) : "—"}</TableCell>);
@@ -761,11 +848,24 @@ export default function FleetMaintenance() {
             {/* FLEET */}
             <TabsContent value="fleet" className="mt-6">
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-base">Listado de Flotilla — {fleet.length} unidades</CardTitle>
-                  <Button size="sm" onClick={openCreateUnit} className="gap-1">
-                    <Plus className="h-4 w-4" /> Nueva unidad
-                  </Button>
+                <CardHeader className="flex flex-row items-center justify-between gap-3 flex-wrap">
+                  <div>
+                    <CardTitle className="text-base">Listado de Flotilla — {fleet.length} unidades</CardTitle>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {linkStats.linked} vinculadas con Flotilla Vehicular · {linkStats.withPhoto} con foto
+                    </p>
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    {linkStats.unlinked.length > 0 && (
+                      <Button size="sm" variant="outline" onClick={registerAllMissing} disabled={bulkBusy} className="gap-1">
+                        {bulkBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+                        Registrar {linkStats.unlinked.length} sin ficha en Flotilla Vehicular
+                      </Button>
+                    )}
+                    <Button size="sm" onClick={openCreateUnit} className="gap-1">
+                      <Plus className="h-4 w-4" /> Nueva unidad
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
@@ -773,13 +873,14 @@ export default function FleetMaintenance() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>#</TableHead>
+                          <TableHead>Placa</TableHead>
                           <TableHead>Tipo</TableHead>
                           <TableHead>Marca</TableHead>
                           <TableHead>Modelo</TableHead>
                           <TableHead>Año</TableHead>
                           <TableHead>Color</TableHead>
                           <TableHead>Chasis</TableHead>
-                          <TableHead>Placa</TableHead>
+                          <TableHead>Asignado a</TableHead>
                           <TableHead>Aseguradora</TableHead>
                           <TableHead className="text-right">Gasto Mant.</TableHead>
                           <TableHead className="text-right w-[100px]">Acciones</TableHead>
@@ -789,16 +890,23 @@ export default function FleetMaintenance() {
                         {fleet.map((u) => {
                           const placaStr = String(u.placa);
                           const spend = totals.byPlaca[normalizePlaca(placaStr)] || 0;
+                          const vm = matchVehicle(vehicleIndex, placaStr, u.chasis);
                           return (
                             <TableRow key={`${u.no}-${placaStr}`}>
                               <TableCell className="text-xs">{u.no}</TableCell>
+                              <TableCell><PlacaCell placa={placaStr} /></TableCell>
                               <TableCell className="text-xs">{u.tipo}</TableCell>
                               <TableCell className="text-xs">{u.marca}</TableCell>
                               <TableCell className="text-xs">{u.modelo}</TableCell>
                               <TableCell className="text-xs">{u.anio}</TableCell>
                               <TableCell className="text-xs">{u.color}</TableCell>
                               <TableCell className="text-[11px] font-mono">{u.chasis}</TableCell>
-                              <TableCell><PlacaCell placa={placaStr} /></TableCell>
+                              <TableCell className="text-xs">
+                                {vm ? (vehicleAssignee(vm.vehicle) || <span className="text-muted-foreground">Disponible</span>)
+                                  : <button type="button" className="text-destructive hover:underline inline-flex items-center gap-1" onClick={() => registerInFleet(u)}>
+                                      <Unlink className="h-3 w-3" /> Registrar ficha
+                                    </button>}
+                              </TableCell>
                               <TableCell className="text-xs">{u.aseguradora}</TableCell>
                               <TableCell className="text-right text-xs tabular-nums font-medium cursor-pointer hover:text-primary"
                                 onClick={() => spend > 0 && goToLog({ placa: normalizePlaca(placaStr) })}>
@@ -848,7 +956,7 @@ export default function FleetMaintenance() {
                       className="w-full justify-between font-normal h-auto min-h-10 py-2">
                       {selectedUnit ? (
                         <span className="flex items-center gap-2 text-left min-w-0">
-                          {unitKind(selectedUnit) === "motocicleta" ? <Bike className="h-4 w-4 shrink-0" /> : <Car className="h-4 w-4 shrink-0" />}
+                          <VehicleAvatar tipo={selectedVehicle?.tipo || toVehicleType(selectedUnit.tipo)} photo={selectedVehicle?.documentos?.fotoVehiculo} size="sm" />
                           <span className="font-mono font-semibold">{normalizePlaca(selectedUnit.placa)}</span>
                           <span className="text-muted-foreground text-xs truncate">{selectedUnit.marca} {selectedUnit.modelo} {selectedUnit.color}</span>
                         </span>
@@ -870,14 +978,16 @@ export default function FleetMaintenance() {
                         <CommandGroup>
                           {registeredUnits.map((u) => {
                             const pk = normalizePlaca(u.placa);
+                            const vm = matchFor(pk);
                             return (
-                              <CommandItem key={`${u.fuente}-${pk}`} value={`${pk} ${u.marca} ${u.modelo} ${u.tipo}`}
+                              <CommandItem key={`${u.fuente}-${pk}`} value={`${pk} ${u.marca} ${u.modelo} ${u.tipo} ${vehicleAssignee(vm?.vehicle) || ""}`}
                                 onSelect={() => {
-                                  setEntryDialog(s => ({ ...s, data: { ...s.data!, placa: pk, kind: unitKind(u) } }));
+                                  setEntryDialog(s => ({ ...s, data: applyUnitToEntry({ ...s.data!, asignacion: s.mode === "create" ? null : s.data!.asignacion }, u) }));
                                   setEntryError(null);
                                   setPlacaOpen(false);
                                 }}>
-                                <Check className={`h-4 w-4 mr-2 ${selectedUnit && normalizePlaca(selectedUnit.placa) === pk ? "opacity-100" : "opacity-0"}`} />
+                                <Check className={`h-4 w-4 mr-2 shrink-0 ${selectedUnit && normalizePlaca(selectedUnit.placa) === pk ? "opacity-100" : "opacity-0"}`} />
+                                <span className="mr-2 shrink-0"><VehicleAvatar tipo={vm?.vehicle.tipo || toVehicleType(u.tipo)} photo={vm?.vehicle.documentos?.fotoVehiculo} size="sm" /></span>
                                 <span className="font-mono font-semibold mr-2">{pk}</span>
                                 <span className="text-xs text-muted-foreground truncate flex-1">{u.tipo} {u.marca} {u.modelo}</span>
                                 {u.fuente && u.fuente !== "Flotilla" && (
@@ -897,9 +1007,21 @@ export default function FleetMaintenance() {
                   </p>
                 )}
                 {selectedUnit && (
-                  <p className="text-[11px] text-muted-foreground mt-1">
-                    Categoría: {unitKind(selectedUnit) === "motocicleta" ? "Motocicleta" : "Vehículo"}
-                  </p>
+                  <div className="mt-2 flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-2 text-[11px]">
+                    <VehicleAvatar tipo={selectedVehicle?.tipo || toVehicleType(selectedUnit.tipo)} photo={selectedVehicle?.documentos?.fotoVehiculo} size="md" />
+                    <div className="flex-1 min-w-0 space-y-0.5">
+                      <p className="font-medium">{unitKind(selectedUnit) === "motocicleta" ? "Motocicleta" : "Vehículo"} · {selectedUnit.marca} {selectedUnit.modelo} {selectedUnit.anio}</p>
+                      {selectedVehicle ? (
+                        <p className="text-muted-foreground flex items-center gap-1 flex-wrap">
+                          <UserCheck className="h-3 w-3" /> {vehicleAssignee(selectedVehicle) || "Disponible"}
+                          {selectedVehicle.kilometraje ? <> · Último km: {Number(selectedVehicle.kilometraje).toLocaleString("es-DO")}</> : null}
+                          <> · {selectedVehicle.id}</>
+                        </p>
+                      ) : (
+                        <p className="text-destructive flex items-center gap-1"><Unlink className="h-3 w-3" /> Sin ficha en Flotilla Vehicular (sin foto ni asignación)</p>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
               <div>
@@ -952,6 +1074,9 @@ export default function FleetMaintenance() {
               <div>
                 <Label className="text-xs">Kilometraje</Label>
                 <Input type="number" value={entryDialog.data.kilometraje || ""} onChange={(e) => setEntryDialog(s => ({ ...s, data: { ...s.data!, kilometraje: e.target.value ? Number(e.target.value) : null } }))} />
+                {selectedVehicle && Number(entryDialog.data.kilometraje) > 0 && Number(entryDialog.data.kilometraje) < Number(selectedVehicle.kilometraje || 0) && (
+                  <p className="text-[11px] text-destructive mt-1">Es menor al último registrado en Flotilla Vehicular ({Number(selectedVehicle.kilometraje).toLocaleString("es-DO")} km).</p>
+                )}
               </div>
               <div>
                 <Label className="text-xs">Asignación</Label>
@@ -1042,6 +1167,20 @@ export default function FleetMaintenance() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <VehicleMaintenanceDossier
+        placa={dossierPlaca}
+        onOpenChange={(o) => !o && closeDossier()}
+        unit={dossierPlaca ? unitByPlaca.get(dossierPlaca) : undefined}
+        match={dossierPlaca ? matchFor(dossierPlaca) : null}
+        entries={entries}
+        canManageVehicles={!!user}
+        onRegisterInFleet={registerInFleet}
+        onPhotoSelected={savePhoto}
+        onNewExpense={(p) => { closeDossier(); openCreateEntry(p); }}
+        onViewLog={(p) => { closeDossier(); clearFilters(); goToLog({ placa: p }); }}
+        onOpenFleet={(p) => navigate(`/flotilla?placa=${encodeURIComponent(p)}`)}
+      />
 
       <Footer />
     </AppLayout>

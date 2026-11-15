@@ -78,7 +78,7 @@ export interface VehicleInsurance {
 export interface VehicleHistoryEntry {
   id: string;
   fecha: string;
-  tipo: "creacion" | "actualizacion" | "asignacion" | "devolucion" | "estado" | "documento" | "baja";
+  tipo: "creacion" | "actualizacion" | "asignacion" | "devolucion" | "estado" | "documento" | "baja" | "mantenimiento";
   descripcion: string;
   usuario: string;
 }

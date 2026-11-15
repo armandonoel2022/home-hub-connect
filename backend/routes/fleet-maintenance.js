@@ -96,6 +96,45 @@ function registryUnits() {
       fuente: 'Flotilla Vehicular',
     }));
 }
+/**
+ * Trazabilidad: refleja cada gasto en la ficha de Flotilla Vehicular
+ * (último mantenimiento, kilometraje e historial de movimientos).
+ */
+function touchVehicle(entry, usuario, accion) {
+  try {
+    const items = readData('fleet-vehicles.json');
+    if (!Array.isArray(items)) return null;
+    const idx = items.findIndex(v => v.activo !== false && normalizePlaca(v.placa) === normalizePlaca(entry.placa));
+    if (idx === -1) return null;
+    const v = items[idx];
+    const fecha = parseFecha(entry.fecha);
+    if (accion !== 'eliminado') {
+      if (fecha && (!v.ultimoMantenimiento || String(v.ultimoMantenimiento) < fecha)) v.ultimoMantenimiento = fecha;
+      const km = Number(entry.kilometraje) || 0;
+      if (km > (Number(v.kilometraje) || 0)) v.kilometraje = km;
+    }
+    const monto = `RD$ ${(Number(entry.costo) || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}`;
+    const partes = [entry.tipoMant || 'Gasto', entry.taller ? `en ${entry.taller}` : '', `— ${monto}`, fecha ? `(${fecha})` : ''];
+    v.historial = [
+      ...(v.historial || []),
+      {
+        id: `H-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        fecha: new Date().toISOString(),
+        tipo: 'mantenimiento',
+        descripcion: `Gasto ${entry.id || ''} ${accion}: ${partes.filter(Boolean).join(' ')}`.replace(/\s+/g, ' ').trim(),
+        usuario: usuario || 'Sistema',
+      },
+    ];
+    v.actualizadoEn = new Date().toISOString();
+    items[idx] = v;
+    writeData('fleet-vehicles.json', items);
+    return v.id;
+  } catch (err) {
+    console.error('[fleet-maintenance] No se pudo actualizar Flotilla Vehicular:', err.message);
+    return null;
+  }
+}
+
 function allRegisteredUnits(data) {
   const out = [...(data.fleet || [])];
   for (const r of registryUnits()) {
@@ -204,6 +243,8 @@ router.post('/maintenance', auth, (req, res) => {
   entry.id = req.body.id || generateId('FM', data.maintenance);
   entry.createdAt = new Date().toISOString();
   entry.createdBy = req.user?.name || req.user?.email || undefined;
+  const vehId = touchVehicle(entry, entry.createdBy, 'registrado');
+  if (vehId) entry.vehiculoId = vehId;
   data.maintenance.unshift(entry);
   writeData(FILENAME, data);
   res.status(201).json(entry);
@@ -218,6 +259,8 @@ router.put('/maintenance/:id', auth, (req, res) => {
   const { error, entry } = prepareEntry(data, req.body, prev);
   if (error) return res.status(400).json({ message: error });
   data.maintenance[idx] = { ...entry, id: prev.id, updatedAt: new Date().toISOString() };
+  const vehId = touchVehicle(data.maintenance[idx], req.user?.name || req.user?.email, 'actualizado');
+  if (vehId) data.maintenance[idx].vehiculoId = vehId;
   writeData(FILENAME, data);
   res.json(data.maintenance[idx]);
 });
@@ -227,8 +270,9 @@ router.delete('/maintenance/:id', auth, (req, res) => {
   const data = ensureSeed();
   const idx = data.maintenance.findIndex(e => e.id === req.params.id);
   if (idx === -1) return res.status(404).json({ message: 'Registro no encontrado' });
-  data.maintenance.splice(idx, 1);
+  const [removed] = data.maintenance.splice(idx, 1);
   writeData(FILENAME, data);
+  touchVehicle(removed, req.user?.name || req.user?.email, 'eliminado');
   res.status(204).send();
 });
 
