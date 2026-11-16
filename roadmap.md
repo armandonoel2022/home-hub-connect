@@ -14,3 +14,7 @@
 - [x] Flotilla: Costo Anual con selector de año y diferencias con la hoja Excel.
 - [x] Flotilla: aviso de modo local y botón para subir gastos locales al servidor.
 - [ ] Flotilla: copiar `backend/routes/fleet-maintenance.js` al servidor y reiniciar `node server.js` (lo hace el equipo de TI).
+
+- [x] Flotilla: vincular Mantenimiento con Flotilla Vehicular (fotos, ficha de trazabilidad, asignación, registro de unidades sin ficha).
+- [ ] Flotilla: copiar `backend/routes/fleet-maintenance.js` actualizado al servidor y reiniciar (lo hace TI).
+- [ ] Conciliación intranet vs base de datos con opción de registrar, solo para cfabian@safeone.com.do y su designado (espera la indicación del usuario para empezar).

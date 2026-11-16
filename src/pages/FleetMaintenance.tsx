@@ -301,7 +301,7 @@ export default function FleetMaintenance() {
 
   const registerInFleet = async (u: FleetUnit) => {
     try {
-      const v = await createVehicle(unitToVehicleDraft(u), userName);
+      const v = await createVehicle({ ...unitToVehicleDraft(u), creadoPor: userName }, userName);
       toast({ title: "Registrada en Flotilla Vehicular", description: `${v.id} — ${v.placa}. Ya puede agregarle foto y asignación.` });
       await loadVehicles();
     } catch (err: any) {
@@ -312,7 +312,7 @@ export default function FleetMaintenance() {
     setBulkBusy(true);
     let ok = 0; const errors: string[] = [];
     for (const u of linkStats.unlinked) {
-      try { await createVehicle(unitToVehicleDraft(u), userName); ok++; }
+      try { await createVehicle({ ...unitToVehicleDraft(u), creadoPor: userName }, userName); ok++; }
       catch (err: any) { errors.push(`${normalizePlaca(u.placa)}: ${err.message}`); }
     }
     await loadVehicles();
@@ -903,7 +903,7 @@ export default function FleetMaintenance() {
                               <TableCell className="text-[11px] font-mono">{u.chasis}</TableCell>
                               <TableCell className="text-xs">
                                 {vm ? (vehicleAssignee(vm.vehicle) || <span className="text-muted-foreground">Disponible</span>)
-                                  : <button type="button" className="text-destructive hover:underline inline-flex items-center gap-1" onClick={() => registerInFleet(u)}>
+                                  : <button type="button" className="text-destructive hover:underline inline-flex items-center gap-1 whitespace-nowrap" onClick={() => registerInFleet(u)}>
                                       <Unlink className="h-3 w-3" /> Registrar ficha
                                     </button>}
                               </TableCell>

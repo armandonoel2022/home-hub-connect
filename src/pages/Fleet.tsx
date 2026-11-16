@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import { useSearchParams } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import ExportMenu from "@/components/ExportMenu";
@@ -11,6 +12,11 @@ import {
 } from "@/lib/vehicleTypes";
 import type { Vehiculo } from "@/lib/vehicleTypes";
 import { listVehicles, deleteVehicle, isVehicleServerMode } from "@/lib/vehicleFleetData";
+import { refreshFromServer, getMaintenanceEntries } from "@/lib/fleetMaintenanceData";
+import type { MaintenanceEntry } from "@/lib/fleetMaintenanceTypes";
+import { canAccessFleetMaintenance } from "@/lib/fleetMaintenanceAccess";
+import { normalizePlaca } from "@/lib/fleetMaintenanceRules";
+import { isApiConfigured } from "@/lib/api";
 import { Search, Plus, Trash2, Cloud, CloudOff, AlertTriangle, Car, UserCheck, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -55,6 +61,28 @@ const FleetPage = () => {
   const [editing, setEditing] = useState<Vehiculo | null>(null);
   const [detail, setDetail] = useState<Vehiculo | null>(null);
   const [toDelete, setToDelete] = useState<Vehiculo | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const canSeeMaintenance = canAccessFleetMaintenance(user);
+  const [maintenance, setMaintenance] = useState<MaintenanceEntry[]>([]);
+
+  // Gastos de mantenimiento por placa (solo para quienes tienen acceso a ese módulo)
+  useEffect(() => {
+    if (!canSeeMaintenance) return;
+    (async () => {
+      if (isApiConfigured()) await refreshFromServer();
+      setMaintenance(getMaintenanceEntries());
+    })();
+  }, [canSeeMaintenance]);
+
+  // ?placa=XXX abre la ficha (enlace desde Flotilla — Mantenimiento)
+  useEffect(() => {
+    const p = normalizePlaca(searchParams.get("placa"));
+    if (!p || loading) return;
+    const v = vehicles.find((x) => normalizePlaca(x.placa) === p);
+    if (v) setDetail(v);
+    searchParams.delete("placa");
+    setSearchParams(searchParams, { replace: true });
+  }, [searchParams, vehicles, loading, setSearchParams]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -325,6 +353,7 @@ const FleetPage = () => {
         vehicle={detail}
         onOpenChange={(o) => !o && setDetail(null)}
         canEdit={canEdit}
+        maintenance={canSeeMaintenance ? maintenance : undefined}
         onEdit={(v) => { setDetail(null); setEditing(v); setFormOpen(true); }}
       />
 
