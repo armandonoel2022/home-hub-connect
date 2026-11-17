@@ -28,6 +28,8 @@ export interface MaintenanceEntry {
   kilometraje: number | null;
   costo: number;              // RD$
   detalle: string | null;
+  tallerOid?: number | null;      // OID del suplidor en Adonis (SafeOne.dbo.Suplidor)
+  tallerOriginal?: string | null; // nombre escrito antes de unificar con el suplidor oficial
 }
 
 export interface AnnualCostRow {

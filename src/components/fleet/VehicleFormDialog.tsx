@@ -191,7 +191,7 @@ const VehicleFormDialog = ({ open, onOpenChange, vehicle, usuario, onSaved }: Pr
                     set("asignacion", {
                       ...(form.asignacion || {}),
                       tipo: e.target.value || null,
-                      empleadoId: null, empleadoNombre: null, departamento: null,
+                      empleadoId: null, empleadoNombre: null, departamento: null, empleados: [],
                     })
                   }
                 >
@@ -209,7 +209,10 @@ const VehicleFormDialog = ({ open, onOpenChange, vehicle, usuario, onSaved }: Pr
                       value={form.asignacion?.empleadoId || ""}
                       onChange={(e) => {
                         const emp = employees.find((x) => x.codigo === e.target.value);
-                        set("asignacion", { ...form.asignacion, empleadoId: emp?.codigo || null, empleadoNombre: emp?.nombre || null });
+                        // El primer empleado es el principal; los demás (por turnos) se conservan.
+                        const rest = (form.asignacion?.empleados || []).slice(1);
+                        const empleados = emp ? [{ id: emp.codigo, nombre: emp.nombre, turno: form.asignacion?.empleados?.[0]?.turno ?? null }, ...rest] : rest;
+                        set("asignacion", { ...form.asignacion, empleadoId: emp?.codigo || null, empleadoNombre: emp?.nombre || null, empleados });
                       }}
                     >
                       <option value="">Seleccione...</option>
@@ -219,7 +222,11 @@ const VehicleFormDialog = ({ open, onOpenChange, vehicle, usuario, onSaved }: Pr
                     <Input
                       placeholder="Nombre del empleado"
                       value={form.asignacion?.empleadoNombre || ""}
-                      onChange={(e) => set("asignacion", { ...form.asignacion, empleadoNombre: e.target.value })}
+                      onChange={(e) => {
+                        const rest = (form.asignacion?.empleados || []).slice(1);
+                        const nombre = e.target.value;
+                        set("asignacion", { ...form.asignacion, empleadoNombre: nombre, empleados: nombre ? [{ id: null, nombre, turno: form.asignacion?.empleados?.[0]?.turno ?? null }, ...rest] : rest });
+                      }}
                     />
                   )}
                 </div>

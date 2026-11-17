@@ -192,6 +192,43 @@ export function monthlySeries(entries: MaintenanceEntry[]) {
     .map(([key, v]) => ({ key, label: monthLabel(key), ...v }));
 }
 
+/** Gastos de un año y/o mes (mes 1-12). null = todos. */
+export function filterByPeriod<T extends Pick<MaintenanceEntry, "fecha">>(entries: T[], year: number | null, month: number | null): T[] {
+  if (year == null && month == null) return entries;
+  return entries.filter((e) => {
+    const k = monthKeyOf(e.fecha);
+    if (!k) return false;
+    if (year != null && Number(k.slice(0, 4)) !== year) return false;
+    if (month != null && Number(k.slice(5, 7)) !== month) return false;
+    return true;
+  });
+}
+export function periodLabel(year: number | null, month: number | null): string {
+  if (year == null && month == null) return "Todo el historial";
+  const m = month != null ? MONTH_KEYS[month - 1] : null;
+  const mName = m ? m.charAt(0).toUpperCase() + m.slice(1) : null;
+  if (year != null && mName) return `${mName} ${year}`;
+  if (year != null) return `Año ${year}`;
+  return `${mName} (todos los años)`;
+}
+
+/** Unidades ordenadas por gasto (mayor primero) en el período indicado. */
+export function topUnitsBySpend(entries: MaintenanceEntry[], year: number | null, month: number | null, limit = 8) {
+  const by = new Map<string, { total: number; count: number }>();
+  for (const e of filterByPeriod(entries, year, month)) {
+    const k = normalizePlaca(e.placa);
+    if (!k) continue;
+    const cur = by.get(k) || { total: 0, count: 0 };
+    cur.total += Number(e.costo) || 0;
+    cur.count += 1;
+    by.set(k, cur);
+  }
+  return [...by.entries()]
+    .map(([placa, v]) => ({ placa, ...v }))
+    .sort((a, b) => b.total - a.total || a.placa.localeCompare(b.placa))
+    .slice(0, limit);
+}
+
 export function availableYears(entries: MaintenanceEntry[], currentYear: number): number[] {
   const ys = new Set<number>([currentYear]);
   for (const e of entries) {

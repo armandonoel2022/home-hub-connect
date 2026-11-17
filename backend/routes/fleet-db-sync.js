@@ -86,7 +86,7 @@ router.get('/compare', auth, syncGuard, async (req, res) => {
   if (!sql.isConfigured()) return res.status(503).json({ message: 'La conexión a SafeOne no está configurada en el servidor.' });
   try {
     const data = fleetData();
-    const entries = data.maintenance || [];
+    const entries = (data.maintenance || []).filter((e) => !e.anulado);
     const desde = sinceDate(entries);
     const rows = await sql.query(
       `SELECT ${INVOICE_COLUMNS}
@@ -111,9 +111,9 @@ router.post('/link', auth, syncGuard, async (req, res) => {
        WHERE c.OID = @oid AND c.GCRecord IS NULL`, { oid });
     if (!rows.length) return res.status(404).json({ message: `La factura ${oid} no existe en Adonis.` });
     const data = fleetData();
-    const entry = (data.maintenance || []).find((e) => String(e.id) === entryId);
+    const entry = (data.maintenance || []).find((e) => String(e.id) === entryId && !e.anulado);
     if (!entry) return res.status(404).json({ message: 'El gasto ya no existe en la intranet.' });
-    const other = data.maintenance.find((e) => Number(e.adonisOid) === oid && String(e.id) !== entryId);
+    const other = data.maintenance.find((e) => !e.anulado && Number(e.adonisOid) === oid && String(e.id) !== entryId);
     if (other) return res.status(409).json({ message: `Esa factura ya está vinculada al gasto ${other.id}.` });
     const inv = rules.summarizeInvoice(rows[0], [entry.placa]);
     entry.adonisOid = oid;

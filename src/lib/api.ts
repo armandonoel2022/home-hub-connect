@@ -617,14 +617,28 @@ export const processesApi = {
 };
 
 // ─── Fleet Maintenance API ───
+export interface FleetSupplier { oid: number; nombre: string; documento: string | null }
+export interface FleetSuppliersResponse { connected: boolean; items: FleetSupplier[]; message: string | null; actualizado: string | null }
+export interface FleetSupplierMatch { oid: number; nombre: string; score: number; exacto: boolean }
+export interface FleetTallerGroup {
+  clave: string; nombre: string; variantes: string[]; cantidad: number; monto: number;
+  tallerOid: number | null; sugerencia: FleetSupplierMatch | null;
+}
+export interface FleetTallerGroupsResponse { connected: boolean; message: string | null; grupos: FleetTallerGroup[] }
 export const fleetMaintenanceApi = {
   getAll: () => apiFetch<any>("/fleet-maintenance"),
   createEntry: (entry: any) =>
     apiFetch<any>("/fleet-maintenance/maintenance", { method: "POST", body: JSON.stringify(entry) }),
   updateEntry: (id: string, data: any) =>
     apiFetch<any>(`/fleet-maintenance/maintenance/${id}`, { method: "PUT", body: JSON.stringify(data) }),
-  deleteEntry: (id: string) =>
-    apiFetch<void>(`/fleet-maintenance/maintenance/${id}`, { method: "DELETE" }),
+  deleteEntry: (id: string, motivo: string) =>
+    apiFetch<void>(`/fleet-maintenance/maintenance/${id}`, { method: "DELETE", body: JSON.stringify({ motivo }) }),
+  suppliers: (refresh = false) =>
+    apiFetch<FleetSuppliersResponse>(`/fleet-maintenance/suplidores${refresh ? "?refresh=1" : ""}`),
+  tallerGroups: () => apiFetch<FleetTallerGroupsResponse>("/fleet-maintenance/talleres/unificacion"),
+  unifyTalleres: (items: { variantes: string[]; oid: number }[]) =>
+    apiFetch<{ cambiados: number; respaldo: string | null; detalle: { variantes: string[]; oid: number; nombre: string; gastos: number }[] }>(
+      "/fleet-maintenance/talleres/unificar", { method: "POST", body: JSON.stringify({ items }) }),
   createUnit: (u: any) =>
     apiFetch<any>("/fleet-maintenance/fleet", { method: "POST", body: JSON.stringify(u) }),
   updateUnit: (placa: string, data: any) =>

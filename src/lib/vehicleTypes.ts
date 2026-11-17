@@ -60,8 +60,16 @@ export const DOCUMENT_FIELDS: { key: keyof VehicleDocuments; label: string; slug
   { key: "fotoCotizacion", label: "Cotización", slug: "cotizacion" },
 ];
 
+/** Empleado que usa el vehículo (uno o varios si se usa por turnos). */
+export interface VehicleDriver {
+  id?: string | null;      // código del empleado
+  nombre: string;
+  turno?: string | null;   // Día, Noche, 24x24…
+}
+
 export interface VehicleAssignment {
   tipo: "Empleado" | "Departamento" | null;
+  empleados?: VehicleDriver[] | null;
   empleadoId?: string | null;
   empleadoNombre?: string | null;
   departamento?: string | null;

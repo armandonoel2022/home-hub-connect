@@ -32,7 +32,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Bike, Car, Wrench, DollarSign, Search, ShieldAlert,
   TrendingUp, Calendar, Filter, X, Plus, Edit2, Trash2, Link2, Cloud, CloudOff,
-  Check, ChevronsUpDown, RefreshCw, AlertTriangle, Upload, Unlink, Camera, UserCheck, Loader2,
+  Check, ChevronsUpDown, RefreshCw, AlertTriangle, Upload, Unlink, Camera, UserCheck, Loader2, Merge, Download, Building2,
 } from "lucide-react";
 import {
   getFleet, getSheetAnnualCost, getMaintenanceEntries, getTotals, formatRD,
@@ -44,7 +44,12 @@ import {
 import {
   buildAnnualMatrix, availableYears, reconcileWithSheet, monthLabel, monthKeyOf,
   normalizePlaca, findUnitByPlaca, validateExpensePlaca, unitKind, TIPOS_MANT, MONTH_KEYS, tallerKey,
+  filterByPeriod, topUnitsBySpend, periodLabel,
 } from "@/lib/fleetMaintenanceRules";
+import TallerSupplierPicker from "@/components/fleet/TallerSupplierPicker";
+import TallerUnifyDialog from "@/components/fleet/TallerUnifyDialog";
+import VehicleDriversEditor from "@/components/fleet/VehicleDriversEditor";
+import type { VehicleDriver } from "@/lib/vehicleTypes";
 import type { MaintenanceEntry, FleetUnit } from "@/lib/fleetMaintenanceTypes";
 import VehicleAvatar from "@/components/fleet/VehicleAvatar";
 import VehicleMaintenanceDossier from "@/components/fleet/VehicleMaintenanceDossier";
@@ -52,7 +57,7 @@ import { listVehicles, createVehicle, updateVehicle, makeHistory, compressImage,
 import type { Vehiculo } from "@/lib/vehicleTypes";
 import { buildVehicleIndex, matchVehicle, linkageStats, toVehicleType, unitToVehicleDraft, vehicleAssignee } from "@/lib/fleetVehicleLink";
 import { canAccessFleetMaintenance } from "@/lib/fleetMaintenanceAccess";
-import { isApiConfigured, fleetDbSyncApi } from "@/lib/api";
+import { isApiConfigured, fleetDbSyncApi, fleetMaintenanceApi, type FleetSupplier } from "@/lib/api";
 
 const MONTH_LABELS: Record<string, string> = {
   enero: "Ene", febrero: "Feb", marzo: "Mar", abril: "Abr",
@@ -91,6 +96,23 @@ export default function FleetMaintenance() {
   const loadVehicles = useCallback(async () => {
     try { setVehicles(await listVehicles()); } catch { /* Flotilla Vehicular no disponible */ }
   }, []);
+  // Suplidores de Adonis (SafeOne, solo lectura) para elegir el taller
+  const [suppliers, setSuppliers] = useState<FleetSupplier[]>([]);
+  const [suppliersMsg, setSuppliersMsg] = useState<string | null>(null);
+  const loadSuppliers = useCallback(async (refresh = false) => {
+    if (!isApiConfigured()) return;
+    try {
+      const r = await fleetMaintenanceApi.suppliers(refresh);
+      setSuppliers(r.items || []);
+      setSuppliersMsg(r.connected ? null : r.message || "No se pudo leer la lista de suplidores de SafeOne.");
+    } catch (err: any) {
+      setSuppliersMsg(err.message);
+    }
+  }, []);
+  useEffect(() => { loadSuppliers(); }, [loadSuppliers]);
+  const [unifyOpen, setUnifyOpen] = useState(false);
+  const [driversFor, setDriversFor] = useState<Vehiculo | null>(null);
+
   const sync = useCallback(async () => {
     loadVehicles();
     if (!isApiConfigured()) { setServerOnline(false); setRefresh(r => r + 1); return; }
@@ -167,6 +189,12 @@ export default function FleetMaintenance() {
   const [filterPlaca, setFilterPlaca] = useState<string>("all");
   const [filterKind, setFilterKind] = useState<"all" | "motocicleta" | "vehiculo">("all");
   const [filterMes, setFilterMes] = useState<string>("all");
+  const [filterYear, setFilterYear] = useState<string>("all");
+  const [filterTaller, setFilterTaller] = useState<string>("all");
+  // Período del tablero (Top unidades por gasto)
+  const [topYear, setTopYear] = useState<number | null>(null);
+  const [topMonth, setTopMonth] = useState<number | null>(null);
+  const [dossierPeriod, setDossierPeriod] = useState<{ year: number | null; month: number | null }>({ year: null, month: null });
 
   // CRUD dialogs
   const [entryDialog, setEntryDialog] = useState<{ open: boolean; data: (MaintenanceEntry & { id?: string }) | null; mode: "create" | "edit" }>({
@@ -176,6 +204,7 @@ export default function FleetMaintenance() {
     open: false, data: null, mode: "create",
   });
   const [confirmDelete, setConfirmDelete] = useState<{ kind: "entry" | "unit"; id: string; label: string } | null>(null);
+  const [deleteMotivo, setDeleteMotivo] = useState("");
 
   const hasAccess = canAccessFleetMaintenance(user);
 
@@ -195,6 +224,8 @@ export default function FleetMaintenance() {
     if (filterKind !== "all") list = list.filter((e) => e.kind === filterKind);
     if (filterPlaca !== "all") list = list.filter((e) => e.placa === filterPlaca);
     if (filterMes !== "all") list = list.filter((e) => monthKeyOf(e.fecha) === filterMes);
+    if (filterYear !== "all") list = filterByPeriod(list, Number(filterYear), null);
+    if (filterTaller !== "all") list = list.filter((e) => (e.taller || "") === filterTaller);
     if (search.trim()) {
       const t = search.toLowerCase();
       list = list.filter(
@@ -206,15 +237,34 @@ export default function FleetMaintenance() {
       );
     }
     return list;
-  }, [entries, filterKind, filterPlaca, filterMes, search]);
+  }, [entries, filterKind, filterPlaca, filterMes, filterYear, filterTaller, search]);
 
   const filteredTotal = useMemo(() => filteredEntries.reduce((s, e) => s + e.costo, 0), [filteredEntries]);
-  const hasActiveFilter = filterKind !== "all" || filterPlaca !== "all" || filterMes !== "all" || !!search.trim();
+  const hasActiveFilter = filterKind !== "all" || filterPlaca !== "all" || filterMes !== "all" || filterYear !== "all" || filterTaller !== "all" || !!search.trim();
 
-  const clearFilters = () => { setFilterKind("all"); setFilterPlaca("all"); setFilterMes("all"); setSearch(""); };
+  const clearFilters = () => { setFilterKind("all"); setFilterPlaca("all"); setFilterMes("all"); setFilterYear("all"); setFilterTaller("all"); setSearch(""); };
+  const usedTalleres = useMemo(() => [...new Set(entries.map((e) => e.taller || "").filter(Boolean))].sort((a, b) => a.localeCompare(b, "es")), [entries]);
+  const openDossier = (placa: string, period: { year: number | null; month: number | null } = { year: null, month: null }) => {
+    setDossierPeriod(period);
+    setDossierPlaca(normalizePlaca(placa));
+  };
 
-  const goToLog = (filters: Partial<{ placa: string; kind: "motocicleta" | "vehiculo"; mes: string; }>) => {
+  // Copia descargable de los gastos filtrados (respaldo en Excel/CSV)
+  const exportCsv = () => {
+    const cols = ["id", "fecha", "placa", "tipoMant", "taller", "tallerOid", "tallerOriginal", "kilometraje", "costo", "asignacion", "detalle", "adonisNcf"];
+    const esc = (v: unknown) => { const t = v == null ? "" : String(v); return /[",\n;]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+    const rows = [cols.join(","), ...filteredEntries.map((e: any) => cols.map((c) => esc(e[c])).join(","))];
+    const blob = new Blob(["\ufeff" + rows.join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `gastos-flotilla-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const goToLog = (filters: Partial<{ placa: string; kind: "motocicleta" | "vehiculo"; mes: string; year: number | null }>) => {
     if (filters.placa) setFilterPlaca(filters.placa);
+    if (filters.year != null) setFilterYear(String(filters.year));
     if (filters.kind) setFilterKind(filters.kind);
     if (filters.mes) setFilterMes(filters.mes);
     setTab("log");
@@ -264,6 +314,9 @@ export default function FleetMaintenance() {
     if (!d.fecha) { setEntryError("La fecha es obligatoria."); return; }
     if (!(Number(d.costo) > 0)) { setEntryError("El costo debe ser mayor que cero."); return; }
     if (!d.taller) { setEntryError("Debe seleccionar el taller."); return; }
+    if (suppliers.length > 0 && entryDialog.mode === "create" && d.tallerOid == null) {
+      setEntryError("Seleccione el taller de la lista de suplidores de Adonis."); return;
+    }
     const payload = { ...d, costo: Number(d.costo) };
     try {
       if (entryDialog.mode === "create") {
@@ -342,6 +395,25 @@ export default function FleetMaintenance() {
     }
   };
 
+  const saveDrivers = async (v: Vehiculo, drivers: VehicleDriver[]) => {
+    try {
+      const prev = v.asignacion || { tipo: null };
+      const asignacion = drivers.length
+        ? { ...prev, tipo: "Empleado" as const, empleados: drivers, empleadoId: drivers[0].id ?? null, empleadoNombre: drivers[0].nombre,
+            departamento: null, fechaAsignacion: prev.fechaAsignacion || new Date().toISOString().slice(0, 10), fechaDevolucion: null }
+        : { ...prev, tipo: prev.departamento ? "Departamento" as const : null, empleados: [], empleadoId: null, empleadoNombre: null };
+      const desc = drivers.length
+        ? `Empleados asignados: ${drivers.map((d) => (d.turno ? `${d.nombre} (${d.turno})` : d.nombre)).join(", ")}`
+        : "Empleados retirados: vehículo disponible";
+      await updateVehicle(v.id, { asignacion }, [makeHistory(drivers.length ? "asignacion" : "devolucion", `${desc} — desde Flotilla — Mantenimiento`, userName)]);
+      toast({ title: "Asignación guardada", description: `${v.placa} — visible también en Flotilla Vehicular.` });
+      await loadVehicles();
+    } catch (err: any) {
+      toast({ title: "No se pudo guardar la asignación", description: err.message, variant: "destructive" });
+      throw err;
+    }
+  };
+
   const openCreateUnit = () => setUnitDialog({ open: true, data: emptyUnit(), mode: "create" });
   const openEditUnit = (u: FleetUnit) => setUnitDialog({ open: true, data: { ...u }, mode: "edit" });
   const saveUnit = async () => {
@@ -370,12 +442,17 @@ export default function FleetMaintenance() {
     if (!confirmDelete) return;
     try {
       if (confirmDelete.kind === "entry") {
-        await deleteMaintenanceEntry(confirmDelete.id);
+        if (serverOnline && deleteMotivo.trim().length < 5) {
+          toast({ title: "Escriba el motivo", description: "El motivo debe tener al menos 5 caracteres.", variant: "destructive" });
+          return;
+        }
+        await deleteMaintenanceEntry(confirmDelete.id, deleteMotivo.trim());
       } else {
         await deleteFleetUnit(confirmDelete.id);
       }
-      toast({ title: "Eliminado", description: confirmDelete.label });
+      toast({ title: confirmDelete.kind === "entry" && serverOnline ? "Gasto anulado" : "Eliminado", description: confirmDelete.label });
       setConfirmDelete(null);
+      setDeleteMotivo("");
       await sync();
     } catch (err: any) {
       toast({ title: "Error al eliminar", description: err.message, variant: "destructive" });
@@ -385,7 +462,8 @@ export default function FleetMaintenance() {
   // Aggregations for dashboard
   const motoCount = fleet.filter((u) => u.tipo.toUpperCase().includes("MOTO")).length;
   const vehCount = fleet.length - motoCount;
-  const topUnits = useMemo(() => Object.entries(totals.byPlaca).sort((a, b) => b[1] - a[1]).slice(0, 8), [totals]);
+  const topUnits = useMemo(() => topUnitsBySpend(entries, topYear, topMonth, 8), [entries, topYear, topMonth]);
+  const topTotal = useMemo(() => filterByPeriod(entries, topYear, topMonth).reduce((s, e) => s + (Number(e.costo) || 0), 0), [entries, topYear, topMonth]);
   // Últimos 12 meses con gasto, en orden cronológico
   const monthBreakdown = useMemo(() => totals.byMonth.slice(-12), [totals]);
   const monthMax = useMemo(() => Math.max(1, ...monthBreakdown.map(m => m.total)), [monthBreakdown]);
@@ -422,7 +500,7 @@ export default function FleetMaintenance() {
     const m = matchFor(placa);
     const u = unitByPlaca.get(normalizePlaca(placa));
     return (
-      <button type="button" onClick={() => setDossierPlaca(normalizePlaca(placa))}
+      <button type="button" onClick={() => openDossier(placa)}
         className="inline-flex items-center gap-2 hover:opacity-80 text-left" title="Ver ficha del vehículo">
         {showThumb && <VehicleAvatar tipo={m?.vehicle.tipo || toVehicleType(u?.tipo)} photo={m?.vehicle.documentos?.fotoVehiculo} size="sm" />}
         <Badge variant="outline" className="font-mono text-[11px] cursor-pointer">{placa}</Badge>
@@ -573,22 +651,42 @@ export default function FleetMaintenance() {
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card>
-                  <CardHeader><CardTitle className="text-base">Top unidades por gasto</CardTitle></CardHeader>
+                  <CardHeader className="space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <CardTitle className="text-base">Top unidades por gasto</CardTitle>
+                      <div className="flex gap-2">
+                      <select aria-label="Año del top de unidades" value={topYear ?? ""} onChange={(e) => setTopYear(e.target.value ? Number(e.target.value) : null)}
+                        className="border rounded-md px-2 py-1 text-xs bg-background">
+                        <option value="">Todos los años</option>
+                        {years.map((y) => <option key={y} value={y}>{y}</option>)}
+                      </select>
+                      <select aria-label="Mes del top de unidades" value={topMonth ?? ""} onChange={(e) => setTopMonth(e.target.value ? Number(e.target.value) : null)}
+                        className="border rounded-md px-2 py-1 text-xs bg-background">
+                        <option value="">Todos los meses</option>
+                        {MONTH_KEYS.map((m, i) => <option key={m} value={i + 1}>{m.charAt(0).toUpperCase() + m.slice(1)}</option>)}
+                      </select>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{periodLabel(topYear, topMonth)} · {formatRD(topTotal)}</p>
+                  </CardHeader>
                   <CardContent className="space-y-2">
-                    {topUnits.map(([placa, value]) => {
-                      const max = topUnits[0][1] || 1;
+                    {topUnits.length === 0 && (
+                      <p className="text-xs text-muted-foreground">Sin gastos en {periodLabel(topYear, topMonth).toLowerCase()}.</p>
+                    )}
+                    {topUnits.map(({ placa, total: value, count }) => {
+                      const max = topUnits[0].total || 1;
                       const pct = (value / max) * 100;
                       const m = matchFor(placa);
                       const u = unitByPlaca.get(placa);
                       return (
-                        <button key={placa} onClick={() => setDossierPlaca(placa)} className="w-full text-left group flex items-center gap-3">
+                        <button key={placa} onClick={() => openDossier(placa, { year: topYear, month: topMonth })} className="w-full text-left group flex items-center gap-3">
                           <VehicleAvatar tipo={m?.vehicle.tipo || toVehicleType(u?.tipo)} photo={m?.vehicle.documentos?.fotoVehiculo} size="sm" />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between text-xs mb-1 gap-2">
                               <span className="font-medium group-hover:text-primary truncate">
                                 {placa} <span className="text-muted-foreground font-normal">{u ? `· ${u.marca} ${u.modelo}` : ""}</span>
                               </span>
-                              <span className="text-muted-foreground shrink-0">{formatRD(value)}</span>
+                              <span className="text-muted-foreground shrink-0 tabular-nums">{formatRD(value)} <span className="text-[10px]">· {count} reg.</span></span>
                             </div>
                             <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
                               <div className="h-full bg-primary group-hover:bg-primary/80 transition-all" style={{ width: `${pct}%` }} />
@@ -630,7 +728,14 @@ export default function FleetMaintenance() {
               </div>
 
               <Card>
-                <CardHeader><CardTitle className="text-base">Talleres más utilizados</CardTitle></CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between gap-2 flex-wrap">
+                  <CardTitle className="text-base">Talleres más utilizados</CardTitle>
+                  {serverOnline && suppliers.length > 0 && (
+                    <Button variant="outline" size="sm" className="gap-1" onClick={() => setUnifyOpen(true)}>
+                      <Merge className="h-4 w-4" /> Unificar nombres de talleres
+                    </Button>
+                  )}
+                </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {topTalleres.map(([name, value]) => (
@@ -663,19 +768,39 @@ export default function FleetMaintenance() {
                   <option value="all">Todas las placas</option>
                   {Object.keys(totals.byPlaca).sort().map((p) => (<option key={p} value={p}>{p}</option>))}
                 </select>
-                <select value={filterMes} onChange={(e) => setFilterMes(e.target.value)}
+                <select aria-label="Año" value={filterYear} onChange={(e) => { setFilterYear(e.target.value); setFilterMes("all"); }}
+                  className="border rounded-md px-3 py-2 text-sm bg-background">
+                  <option value="all">Todos los años</option>
+                  {years.map((y) => (<option key={y} value={y}>{y}</option>))}
+                </select>
+                <select aria-label="Taller" value={filterTaller} onChange={(e) => setFilterTaller(e.target.value)}
+                  className="border rounded-md px-3 py-2 text-sm bg-background max-w-[220px]">
+                  <option value="all">Todos los talleres</option>
+                  {usedTalleres.map((t) => (<option key={t} value={t}>{t}</option>))}
+                </select>
+                <select aria-label="Mes" value={filterMes} onChange={(e) => setFilterMes(e.target.value)}
                   className="border rounded-md px-3 py-2 text-sm bg-background">
                   <option value="all">Todos los meses</option>
-                  {[...totals.byMonth].reverse().map((m) => (<option key={m.key} value={m.key}>{m.label}</option>))}
+                  {[...totals.byMonth].reverse().filter((m) => filterYear === "all" || m.key.startsWith(filterYear)).map((m) => (<option key={m.key} value={m.key}>{m.label}</option>))}
                 </select>
                 {hasActiveFilter && (
                   <Button variant="outline" size="sm" onClick={clearFilters} className="gap-1">
                     <X className="h-3 w-3" /> Limpiar
                   </Button>
                 )}
-                <Button size="sm" onClick={() => openCreateEntry()} className="gap-1 ml-auto">
-                  <Plus className="h-4 w-4" /> Nuevo gasto
-                </Button>
+                <div className="flex gap-2 ml-auto">
+                  {serverOnline && suppliers.length > 0 && (
+                    <Button size="sm" variant="outline" onClick={() => setUnifyOpen(true)} className="gap-1">
+                      <Merge className="h-4 w-4" /> Unificar talleres
+                    </Button>
+                  )}
+                  <Button size="sm" variant="outline" onClick={exportCsv} className="gap-1" disabled={!filteredEntries.length}>
+                    <Download className="h-4 w-4" /> Exportar
+                  </Button>
+                  <Button size="sm" onClick={() => openCreateEntry()} className="gap-1">
+                    <Plus className="h-4 w-4" /> Nuevo gasto
+                  </Button>
+                </div>
               </div>
 
               <div className="flex items-center justify-between text-sm">
@@ -714,7 +839,13 @@ export default function FleetMaintenance() {
                           <TableCell><PlacaCell placa={e.placa} /></TableCell>
                           <TableCell className="text-xs whitespace-nowrap">{(() => { const k = monthKeyOf(e.fecha); return k ? monthLabel(k) : "—"; })()}</TableCell>
                           <TableCell className="text-xs">{e.tipoMant || "—"}</TableCell>
-                          <TableCell className="text-xs">{e.taller || "—"}</TableCell>
+                          <TableCell className="text-xs">
+                            <span className="inline-flex items-center gap-1">
+                              {e.tallerOid != null && <Building2 className="h-3 w-3 text-primary shrink-0" aria-label="Suplidor de Adonis" />}
+                              {e.taller || "—"}
+                            </span>
+                            {e.tallerOriginal && e.tallerOriginal !== e.taller && <p className="text-[10px] text-muted-foreground">Antes: {e.tallerOriginal}</p>}
+                          </TableCell>
                           <TableCell className="text-xs">{e.detalle || "—"}</TableCell>
                           <TableCell className="text-right font-medium tabular-nums">{formatRD(e.costo)}</TableCell>
                           <TableCell className="text-right">
@@ -1054,8 +1185,14 @@ export default function FleetMaintenance() {
                 </select>
               </div>
               <div>
-                <Label className="text-xs">Taller *</Label>
-                {newTaller === null ? (
+                <Label className="text-xs">Taller (suplidor) *</Label>
+                {suppliers.length > 0 ? (
+                  <>
+                    <TallerSupplierPicker suppliers={suppliers} value={entryDialog.data.taller} valueOid={entryDialog.data.tallerOid}
+                      onSelect={(sup) => { setEntryDialog(s => ({ ...s, data: { ...s.data!, taller: sup.nombre, tallerOid: sup.oid } })); setEntryError(null); }} />
+                    <p className="text-[10px] text-muted-foreground mt-1">Lista de suplidores registrados en Adonis.</p>
+                  </>
+                ) : newTaller === null ? (
                   <select aria-label="Taller" value={entryDialog.data.taller || ""}
                     onChange={(e) => {
                       if (e.target.value === "__new__") { setNewTaller(""); return; }
@@ -1078,7 +1215,10 @@ export default function FleetMaintenance() {
                     </Button>
                   </div>
                 )}
-                {newTaller !== null && newTaller.trim() && (() => {
+                {suppliers.length === 0 && suppliersMsg && serverOnline && (
+                  <p className="text-[10px] text-muted-foreground mt-1">No se pudo leer la lista de suplidores de Adonis; se usa la lista de la intranet.</p>
+                )}
+                {suppliers.length === 0 && newTaller !== null && newTaller.trim() && (() => {
                   const match = talleres.find((t) => tallerKey(t) === tallerKey(newTaller));
                   return match ? (
                     <p className="text-[11px] text-muted-foreground mt-1">Ya existe como «{match}»; se usará ese nombre.</p>
@@ -1165,17 +1305,26 @@ export default function FleetMaintenance() {
       </Dialog>
 
       {/* DELETE CONFIRM */}
-      <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
+      <AlertDialog open={!!confirmDelete} onOpenChange={(o) => { if (!o) { setConfirmDelete(null); setDeleteMotivo(""); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción eliminará: <strong>{confirmDelete?.label}</strong>. No se puede deshacer.
+              {confirmDelete?.kind === "entry" && serverOnline
+                ? <>El gasto <strong>{confirmDelete?.label}</strong> quedará anulado: deja de sumar en los totales, pero se conserva con el motivo para auditoría.</>
+                : <>Esta acción eliminará: <strong>{confirmDelete?.label}</strong>. No se puede deshacer.</>}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {confirmDelete?.kind === "entry" && serverOnline && (
+            <div className="space-y-1">
+              <Label className="text-xs">Motivo *</Label>
+              <Textarea rows={2} aria-label="Motivo de la eliminación" value={deleteMotivo} onChange={(e) => setDeleteMotivo(e.target.value)}
+                placeholder="Ej.: registrado dos veces" />
+            </div>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={performDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction onClick={(ev) => { ev.preventDefault(); performDelete(); }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1192,9 +1341,18 @@ export default function FleetMaintenance() {
         onRegisterInFleet={registerInFleet}
         onPhotoSelected={savePhoto}
         onNewExpense={(p) => { closeDossier(); openCreateEntry(p); }}
-        onViewLog={(p) => { closeDossier(); clearFilters(); goToLog({ placa: p }); }}
+        onViewLog={(p) => { const per = dossierPeriod; closeDossier(); clearFilters(); goToLog({ placa: p, year: per.year }); }}
         onOpenFleet={(p) => navigate(`/flotilla?placa=${encodeURIComponent(p)}`)}
+        onEditDrivers={(v) => setDriversFor(v)}
+        initialYear={dossierPeriod.year}
+        initialMonth={dossierPeriod.month}
       />
+
+      <VehicleDriversEditor vehicle={driversFor} onOpenChange={(o) => !o && setDriversFor(null)} onSave={saveDrivers} />
+
+      {serverOnline && suppliers.length > 0 && (
+        <TallerUnifyDialog open={unifyOpen} onOpenChange={setUnifyOpen} suppliers={suppliers} onDone={sync} />
+      )}
 
       <Footer />
     </AppLayout>

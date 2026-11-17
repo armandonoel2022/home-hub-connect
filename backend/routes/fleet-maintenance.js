@@ -6,12 +6,18 @@
  *  - Un gasto solo se acepta si la placa existe en la Flotilla (o en Flotilla Vehicular).
  *  - El taller se estandariza contra el catálogo.
  *  - El mes se deriva siempre de la fecha.
+ *  - El taller puede vincularse a un suplidor de Adonis (SafeOne.dbo.Suplidor, SOLO LECTURA):
+ *    se guarda tallerOid y el nombre oficial; el nombre escrito antes queda en tallerOriginal.
+ *  - Nada se borra: un gasto eliminado queda anulado con motivo, usuario y fecha.
+ *  - Antes de cualquier cambio masivo se guarda un respaldo en data/backups/.
  */
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const { readData, writeData, generateId } = require('../config/database');
+const { readData, writeData, generateId, DATA_DIR } = require('../config/database');
 const auth = require('../middleware/auth');
+const safeoneSql = require('../config/sqlServerSafeOne');
+const suppliersLib = require('../lib/fleetSuppliers');
 
 const router = express.Router();
 const FILENAME = 'fleet-maintenance.json';
@@ -22,6 +28,54 @@ const DEFAULT_TALLERES = [
   'Grupo Cometa', 'Movilidad Inteligente Marti', 'Taller ambulante (caja chica)',
 ];
 const DATE_FIXES = [{ placa: 'K2546252', from: '2016-03-30', to: '2026-03-30' }];
+
+// ── Respaldo: copia íntegra del archivo antes de cambios automáticos o masivos ──
+function backupFile(reason) {
+  try {
+    const src = path.join(DATA_DIR, FILENAME);
+    if (!fs.existsSync(src)) return null;
+    const dir = path.join(DATA_DIR, 'backups', 'fleet-maintenance');
+    fs.mkdirSync(dir, { recursive: true });
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const dest = path.join(dir, `fleet-maintenance-${stamp}-${String(reason || 'cambio').replace(/[^a-z0-9-]/gi, '')}.json`);
+    fs.copyFileSync(src, dest);
+    return path.basename(dest);
+  } catch (err) {
+    console.error('[fleet-maintenance] No se pudo crear el respaldo:', err.message);
+    return null;
+  }
+}
+
+// ── Suplidores de Adonis (SafeOne.dbo.Suplidor) — SOLO LECTURA, en caché 10 min ──
+const SUPPLIER_TTL_MS = 10 * 60 * 1000;
+let supplierCache = { at: 0, items: null, message: null };
+async function loadSuppliers(force) {
+  if (!force && supplierCache.items && Date.now() - supplierCache.at < SUPPLIER_TTL_MS) return supplierCache;
+  if (!safeoneSql.isConfigured()) {
+    supplierCache = { at: Date.now(), items: null, message: 'La conexión a SafeOne no está configurada en el servidor.' };
+    return supplierCache;
+  }
+  try {
+    const cols = (await safeoneSql.query(
+      `SELECT COLUMN_NAME AS c FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'Suplidor'`,
+    )).map(r => String(r.c));
+    const has = c => cols.some(x => x.toLowerCase() === c.toLowerCase());
+    if (!has('OID') || !has('Nombre')) throw new Error('La tabla Suplidor no tiene las columnas OID y Nombre.');
+    const idCol = ['RNC', 'Rnc', 'Cedula', 'TaxId'].find(has);
+    const rows = await safeoneSql.query(
+      `SELECT OID, Nombre${idCol ? `, ${idCol} AS Documento` : ''} FROM dbo.Suplidor` +
+      `${has('GCRecord') ? ' WHERE GCRecord IS NULL' : ''} ORDER BY Nombre`,
+    );
+    const items = rows
+      .filter(r => r.OID != null && String(r.Nombre || '').trim())
+      .map(r => ({ oid: Number(r.OID), nombre: String(r.Nombre).replace(/\s+/g, ' ').trim(), documento: r.Documento == null ? null : String(r.Documento).trim() || null }));
+    supplierCache = { at: Date.now(), items, message: null };
+  } catch (err) {
+    supplierCache = { at: Date.now() - SUPPLIER_TTL_MS + 60 * 1000, items: supplierCache.items, message: err.message };
+  }
+  return supplierCache;
+}
+const activeEntries = data => (data.maintenance || []).filter(e => !e.anulado);
 
 // ── Reglas ──
 const normalizePlaca = p => String(p == null ? '' : p).toUpperCase().replace(/[\s\-.]/g, '');
@@ -58,12 +112,16 @@ function normalizeEntry(e, catalog) {
   const fix = DATE_FIXES.find(f => f.placa === placa && f.from === fecha);
   if (fix) fecha = fix.to;
   const idx = Number(String(parseFecha(fecha) || '').slice(5, 7)) - 1;
+  const rawTaller = String(e.taller == null ? '' : e.taller).replace(/\s+/g, ' ').trim();
+  const taller = e.tallerOid != null ? (rawTaller || null) : canonicalTaller(e.taller, catalog);
   return {
     ...e,
     placa,
     fecha,
     mes: MONTHS[idx] || e.mes || null,
-    taller: canonicalTaller(e.taller, catalog),
+    // El nombre que se escribió originalmente nunca se pierde
+    tallerOriginal: e.tallerOriginal || (rawTaller && taller && rawTaller !== taller ? rawTaller : undefined),
+    taller,
     tipoMant: normalizeTipoMant(e.tipoMant),
     costo: Number(e.costo) || 0,
   };
@@ -160,7 +218,7 @@ function migrate(data) {
   data.talleres = buildCatalog(data.talleres, data.maintenance.map(e => e.taller));
   data.maintenance = data.maintenance.map(e => normalizeEntry(e, data.talleres));
   data.fleet = data.fleet.map(u => ({ ...u, placa: normalizePlaca(u.placa) || u.placa }));
-  if (JSON.stringify(data) !== before) writeData(FILENAME, data);
+  if (JSON.stringify(data) !== before) { backupFile('auto-limpieza'); writeData(FILENAME, data); }
   return data;
 }
 
@@ -201,8 +259,23 @@ function ensureSeed() {
 }
 
 /** Valida y completa un gasto. Devuelve { error } o { entry }. */
-function prepareEntry(data, body, prev) {
+function prepareEntry(data, body, prev, suppliers) {
   const merged = { ...(prev || {}), ...body };
+  // Taller elegido de la lista de suplidores de Adonis → nombre oficial y OID
+  const oid = merged.tallerOid == null || merged.tallerOid === '' ? null : Number(merged.tallerOid);
+  if (oid != null) {
+    if (!Number.isFinite(oid)) return { error: 'El suplidor seleccionado no es válido.' };
+    if (Array.isArray(suppliers)) {
+      const sup = suppliers.find(x => x.oid === oid);
+      if (!sup) return { error: `El suplidor ${oid} no existe en Adonis. Actualice la lista e intente de nuevo.` };
+      merged.taller = sup.nombre;
+    }
+    merged.tallerOid = oid;
+  } else {
+    const alias = data.tallerAliases && data.tallerAliases[suppliersLib.nameKey(merged.taller)];
+    if (alias) { merged.tallerOid = Number(alias.oid); merged.taller = alias.nombre; }
+    else merged.tallerOid = null;
+  }
   const units = allRegisteredUnits(data);
   const placa = normalizePlaca(merged.placa);
   if (!placa) return { error: 'Debe seleccionar la placa de una unidad registrada.' };
@@ -217,6 +290,7 @@ function prepareEntry(data, body, prev) {
   if (!String(merged.taller || '').trim()) return { error: 'Debe seleccionar el taller.' };
 
   const entry = normalizeEntry(merged, data.talleres);
+  if (entry.tallerOid != null) entry.taller = merged.taller; // nombre oficial de Adonis, sin cambios
   if (unit) {
     entry.placa = normalizePlaca(unit.placa);
     entry.kind = unitKind(unit);
@@ -232,13 +306,15 @@ function prepareEntry(data, body, prev) {
 router.get('/', auth, (req, res) => {
   const data = ensureSeed();
   const own = new Set((data.fleet || []).map(u => normalizePlaca(u.placa)));
-  res.json({ ...data, registryUnits: registryUnits().filter(r => !own.has(r.placa)) });
+  const anulados = (data.maintenance || []).filter(e => e.anulado).length;
+  res.json({ ...data, maintenance: activeEntries(data), anulados, registryUnits: registryUnits().filter(r => !own.has(r.placa)) });
 });
 
 // POST new maintenance entry
-router.post('/maintenance', auth, (req, res) => {
+router.post('/maintenance', auth, async (req, res) => {
+  const { items: suppliers } = await loadSuppliers();
   const data = ensureSeed();
-  const { error, entry } = prepareEntry(data, req.body, null);
+  const { error, entry } = prepareEntry(data, req.body, null, suppliers);
   if (error) return res.status(400).json({ message: error });
   entry.id = req.body.id || generateId('FM', data.maintenance);
   entry.createdAt = new Date().toISOString();
@@ -251,29 +327,90 @@ router.post('/maintenance', auth, (req, res) => {
 });
 
 // PUT update maintenance entry
-router.put('/maintenance/:id', auth, (req, res) => {
+router.put('/maintenance/:id', auth, async (req, res) => {
+  const { items: suppliers } = await loadSuppliers();
   const data = ensureSeed();
-  const idx = data.maintenance.findIndex(e => e.id === req.params.id);
+  const idx = data.maintenance.findIndex(e => e.id === req.params.id && !e.anulado);
   if (idx === -1) return res.status(404).json({ message: 'Registro no encontrado' });
   const prev = data.maintenance[idx];
-  const { error, entry } = prepareEntry(data, req.body, prev);
+  const { error, entry } = prepareEntry(data, req.body, prev, suppliers);
   if (error) return res.status(400).json({ message: error });
-  data.maintenance[idx] = { ...entry, id: prev.id, updatedAt: new Date().toISOString() };
+  data.maintenance[idx] = { ...entry, id: prev.id, updatedAt: new Date().toISOString(), updatedBy: req.user?.name || req.user?.email || undefined };
   const vehId = touchVehicle(data.maintenance[idx], req.user?.name || req.user?.email, 'actualizado');
   if (vehId) data.maintenance[idx].vehiculoId = vehId;
   writeData(FILENAME, data);
   res.json(data.maintenance[idx]);
 });
 
-// DELETE maintenance entry
+// DELETE maintenance entry → se ANULA (no se borra) con motivo obligatorio
 router.delete('/maintenance/:id', auth, (req, res) => {
+  const motivo = String(req.body?.motivo || '').trim();
+  if (motivo.length < 5) return res.status(400).json({ message: 'Escriba el motivo de la eliminación (mínimo 5 caracteres).' });
   const data = ensureSeed();
-  const idx = data.maintenance.findIndex(e => e.id === req.params.id);
+  const idx = data.maintenance.findIndex(e => e.id === req.params.id && !e.anulado);
   if (idx === -1) return res.status(404).json({ message: 'Registro no encontrado' });
-  const [removed] = data.maintenance.splice(idx, 1);
+  const who = req.user?.name || req.user?.email || 'Intranet';
+  data.maintenance[idx] = { ...data.maintenance[idx], anulado: true, anuladoMotivo: motivo, anuladoPor: who, anuladoEn: new Date().toISOString() };
   writeData(FILENAME, data);
-  touchVehicle(removed, req.user?.name || req.user?.email, 'eliminado');
+  touchVehicle(data.maintenance[idx], who, `anulado (${motivo})`);
   res.status(204).send();
+});
+
+// ── Suplidores de Adonis para elegir el taller (solo lectura) ──
+router.get('/suplidores', auth, async (req, res) => {
+  const r = await loadSuppliers(req.query.refresh === '1');
+  res.json({ connected: Array.isArray(r.items), items: r.items || [], message: r.message, actualizado: r.at ? new Date(r.at).toISOString() : null });
+});
+
+// ── Unificar talleres escritos de distintas formas en un mismo suplidor ──
+router.get('/talleres/unificacion', auth, async (req, res) => {
+  const r = await loadSuppliers();
+  const data = ensureSeed();
+  res.json({
+    connected: Array.isArray(r.items),
+    message: r.message,
+    grupos: suppliersLib.groupTalleres(activeEntries(data), r.items || [], data.tallerAliases || {}),
+  });
+});
+
+router.post('/talleres/unificar', auth, async (req, res) => {
+  const items = Array.isArray(req.body?.items) ? req.body.items : [];
+  if (!items.length) return res.status(400).json({ message: 'No hay talleres para unificar.' });
+  const r = await loadSuppliers();
+  if (!Array.isArray(r.items)) return res.status(503).json({ message: `No se pudo leer la lista de suplidores de SafeOne. ${r.message || ''}`.trim() });
+  const byOid = new Map(r.items.map(x => [x.oid, x]));
+  const data = ensureSeed();
+  const respaldo = backupFile('unificar-talleres');
+  const who = req.user?.name || req.user?.email || 'Intranet';
+  data.tallerAliases = data.tallerAliases || {};
+  data.tallerUnificaciones = Array.isArray(data.tallerUnificaciones) ? data.tallerUnificaciones : [];
+  let cambiados = 0;
+  const detalle = [];
+  for (const it of items) {
+    const sup = byOid.get(Number(it.oid));
+    const variantes = (Array.isArray(it.variantes) ? it.variantes : [it.nombre]).map(v => String(v || '').trim()).filter(Boolean);
+    if (!sup || !variantes.length) continue;
+    const keys = new Set(variantes.map(v => suppliersLib.nameKey(v) || v.toLowerCase()));
+    let n = 0;
+    for (const e of data.maintenance) {
+      if (e.anulado) continue;
+      const k = suppliersLib.nameKey(e.taller) || String(e.taller || '').toLowerCase();
+      if (!keys.has(k)) continue;
+      if (e.tallerOid === sup.oid && e.taller === sup.nombre) continue;
+      if (!e.tallerOriginal && e.taller !== sup.nombre) e.tallerOriginal = e.taller;
+      e.taller = sup.nombre;
+      e.tallerOid = sup.oid;
+      n++;
+    }
+    for (const k of keys) data.tallerAliases[k] = { oid: sup.oid, nombre: sup.nombre };
+    data.talleres = buildCatalog(data.talleres, [sup.nombre]);
+    cambiados += n;
+    detalle.push({ variantes, oid: sup.oid, nombre: sup.nombre, gastos: n });
+  }
+  data.tallerUnificaciones.unshift({ at: new Date().toISOString(), by: who, respaldo, detalle });
+  data.tallerUnificaciones = data.tallerUnificaciones.slice(0, 500);
+  writeData(FILENAME, data);
+  res.json({ cambiados, respaldo, detalle });
 });
 
 // POST new fleet unit (placa con formato válido y sin duplicados)

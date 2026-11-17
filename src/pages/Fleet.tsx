@@ -16,6 +16,7 @@ import { refreshFromServer, getMaintenanceEntries } from "@/lib/fleetMaintenance
 import type { MaintenanceEntry } from "@/lib/fleetMaintenanceTypes";
 import { canAccessFleetMaintenance } from "@/lib/fleetMaintenanceAccess";
 import { normalizePlaca } from "@/lib/fleetMaintenanceRules";
+import { vehicleAssignee, vehicleDrivers } from "@/lib/fleetVehicleLink";
 import { isApiConfigured } from "@/lib/api";
 import { Search, Plus, Trash2, Cloud, CloudOff, AlertTriangle, Car, UserCheck, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -100,21 +101,22 @@ const FleetPage = () => {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return vehicles.filter((v) => {
-      const asignado = v.asignacion?.empleadoNombre || v.asignacion?.departamento || "";
+      const asignado = vehicleAssignee(v) || "";
+      const nombres = [...vehicleDrivers(v).map((d) => d.nombre), v.asignacion?.departamento].filter(Boolean);
       if (q && !`${v.placa} ${v.marca} ${v.modelo} ${v.vin} ${v.matricula} ${asignado}`.toLowerCase().includes(q)) return false;
       if (fType && v.tipo !== fType) return false;
       if (fState && v.estado !== fState) return false;
       if (fMarbete && v.marbete?.estado !== fMarbete) return false;
       if (fAsign === "asignado" && !asignado) return false;
       if (fAsign === "disponible" && asignado) return false;
-      if (fAsign && fAsign !== "asignado" && fAsign !== "disponible" && asignado !== fAsign) return false;
+      if (fAsign && fAsign !== "asignado" && fAsign !== "disponible" && !nombres.includes(fAsign)) return false;
       return true;
     });
   }, [vehicles, search, fType, fState, fAsign, fMarbete]);
 
   const kpis = useMemo(() => {
     const activos = vehicles.filter((v) => v.estado === "Activo").length;
-    const asignados = vehicles.filter((v) => v.asignacion?.empleadoNombre || v.asignacion?.departamento).length;
+    const asignados = vehicles.filter((v) => vehicleAssignee(v)).length;
     const mantenimiento = vehicles.filter((v) => v.estado === "En Mantenimiento").length;
     return { activos, asignados, disponibles: vehicles.length - asignados, mantenimiento };
   }, [vehicles]);
@@ -130,8 +132,8 @@ const FleetPage = () => {
   const asignables = useMemo(() => {
     const set = new Set<string>();
     vehicles.forEach((v) => {
-      const a = v.asignacion?.empleadoNombre || v.asignacion?.departamento;
-      if (a) set.add(a);
+      vehicleDrivers(v).forEach((d) => set.add(d.nombre));
+      if (v.asignacion?.departamento) set.add(v.asignacion.departamento);
     });
     return [...set].sort();
   }, [vehicles]);
@@ -195,7 +197,7 @@ const FleetPage = () => {
                 ]}
                 data={filtered.map((v) => ({
                   ...v,
-                  asignado: v.asignacion?.empleadoNombre || v.asignacion?.departamento || "—",
+                  asignado: vehicleAssignee(v) || "—",
                 }))}
 
                 filename="flotilla-vehicular"
@@ -319,7 +321,7 @@ const FleetPage = () => {
                         <span className={`text-xs font-semibold px-2 py-1 rounded-full ${stateTone[v.estado] || ""}`}>{v.estado}</span>
                       </td>
 
-                      <td className="px-4 py-3">{v.asignacion?.empleadoNombre || v.asignacion?.departamento || <span className="text-muted-foreground">Disponible</span>}</td>
+                      <td className="px-4 py-3">{vehicleAssignee(v) || <span className="text-muted-foreground">Disponible</span>}</td>
                       <td className="px-4 py-3">{(v.kilometraje || 0).toLocaleString()}</td>
                       <td className="px-4 py-3 text-right">
                         {user?.isAdmin && (

@@ -2,7 +2,7 @@
 // La identidad del vehículo (foto, asignación, documentos, historial) vive en
 // Flotilla Vehicular; Mantenimiento la enlaza por placa normalizada (VIN/chasis como respaldo).
 import type { FleetUnit, MaintenanceEntry } from "./fleetMaintenanceTypes";
-import type { Vehiculo, VehicleType } from "./vehicleTypes";
+import type { Vehiculo, VehicleType, VehicleDriver } from "./vehicleTypes";
 import { emptyVehicle } from "./vehicleTypes";
 import { normalizePlaca, parseFecha } from "./fleetMaintenanceRules";
 
@@ -92,9 +92,20 @@ export function maintenanceSummary(entries: MaintenanceEntry[], placa: unknown):
   };
 }
 
-/** Responsable actual del vehículo según Flotilla Vehicular. */
+/** Empleados que usan el vehículo (varios si se usa por turnos). */
+export function vehicleDrivers(v: Vehiculo | undefined | null): VehicleDriver[] {
+  const a = v?.asignacion;
+  if (!a) return [];
+  const list = (a.empleados || []).filter((d) => d && String(d.nombre || "").trim());
+  if (list.length) return list;
+  return a.empleadoNombre ? [{ id: a.empleadoId ?? null, nombre: a.empleadoNombre, turno: null }] : [];
+}
+
+/** Responsable actual del vehículo según Flotilla Vehicular (todos los empleados por turno). */
 export function vehicleAssignee(v: Vehiculo | undefined | null): string | null {
-  return v?.asignacion?.empleadoNombre || v?.asignacion?.departamento || null;
+  const drivers = vehicleDrivers(v);
+  if (drivers.length) return drivers.map((d) => (d.turno ? `${d.nombre} (${d.turno})` : d.nombre)).join(" · ");
+  return v?.asignacion?.departamento || null;
 }
 
 export interface LinkageStats {

@@ -18,3 +18,10 @@
 - [x] Flotilla: vincular Mantenimiento con Flotilla Vehicular (fotos, ficha de trazabilidad, asignación, registro de unidades sin ficha).
 - [ ] Flotilla: copiar `backend/routes/fleet-maintenance.js` actualizado al servidor y reiniciar (lo hace TI).
 - [ ] Conciliación intranet vs base de datos con opción de registrar, solo para cfabian@safeone.com.do y su designado (espera la indicación del usuario para empezar).
+
+- [x] Flotilla: talleres desde la lista de suplidores de Adonis y unificación de nombres parecidos (con respaldo).
+- [x] Flotilla: ficha del vehículo con filtros por año y mes; top de unidades con año y mes.
+- [x] Flotilla: vehículo con uno o varios empleados por turnos (en Flotilla Vehicular).
+- [x] Flotilla: gastos eliminados quedan anulados con motivo (no se borran) y exportación CSV.
+- [ ] Flotilla: copiar `backend/routes/fleet-maintenance.js`, `backend/routes/fleet-db-sync.js`, `backend/lib/fleetSuppliers.js` y `backend/lib/fleetDbSync.js` al servidor y reiniciar (lo hace TI).
+- [ ] Registro de facturas en Adonis desde la intranet: espera las 5 consultas del Explorador (TransCargosCP, CargosCP606, Usuario, ClasificacionCyG, CajaChica/CajaChicaD) y una copia de prueba de SafeOne.

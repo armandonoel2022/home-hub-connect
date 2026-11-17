@@ -7,8 +7,9 @@
  *    comparar y vincular. Solo Chrisnel puede designar.
  *  - Contabilidad escribe la placa en las Notas de la factura
  *    (ej. "Reparacion de motocicleta placa k2528728"); con eso se cruza.
- *  - Coincidencia automática: misma placa, monto igual al Valor o al Valor+ITBIS
- *    (±1 peso) y fecha a no más de MAX_DAYS días.
+ *  - Coincidencia automática: misma placa (o mismo suplidor, si el taller del gasto está
+ *    vinculado a un suplidor de Adonis), monto igual al Valor o al Valor+ITBIS (±1 peso)
+ *    y fecha a no más de MAX_DAYS días.
  */
 const OWNER_EMAIL = 'cfabian@safeone.com.do';
 const MAX_DAYS = 20;
@@ -94,8 +95,15 @@ function summarizeEntry(e) {
     tipoMant: str(e.tipoMant),
     detalle: str(e.detalle),
     adonisOid: e.adonisOid == null ? null : Number(e.adonisOid),
+    tallerOid: e.tallerOid == null ? null : Number(e.tallerOid),
   };
 }
+/**
+ * La factura corresponde al gasto si menciona su placa, o si es del mismo suplidor (taller vinculado)
+ * y no menciona ninguna otra placa.
+ */
+const sameUnitOrSupplier = (e, i) => i.placas.includes(e.placa)
+  || (i.placas.length === 0 && e.tallerOid != null && i.suplidorOid === e.tallerOid);
 const amountMatches = (costo, inv) => Math.abs(costo - inv.valor) <= 1 || Math.abs(costo - inv.total) <= 1;
 
 /**
@@ -122,7 +130,7 @@ function compareWithAdonis(entries, invoiceRows, knownPlates) {
   const rest = [];
   for (const e of pending) {
     const cands = invoices
-      .filter((i) => !used.has(i.oid) && i.placas.includes(e.placa) && amountMatches(e.costo, i) && dayDiff(i.fecha, e.fecha) <= MAX_DAYS)
+      .filter((i) => !used.has(i.oid) && sameUnitOrSupplier(e, i) && amountMatches(e.costo, i) && dayDiff(i.fecha, e.fecha) <= MAX_DAYS)
       .sort((a, b) => dayDiff(a.fecha, e.fecha) - dayDiff(b.fecha, e.fecha));
     if (cands.length) { used.add(cands[0].oid); items.push({ estado: 'vinculado', modo: 'automatico', intranet: e, adonis: cands[0], sugerencias: [] }); }
     else rest.push(e);
@@ -130,7 +138,7 @@ function compareWithAdonis(entries, invoiceRows, knownPlates) {
   // 3) Sin factura: sugerir facturas de la misma placa en fechas cercanas
   for (const e of rest) {
     const sugerencias = invoices
-      .filter((i) => !used.has(i.oid) && i.placas.includes(e.placa) && dayDiff(i.fecha, e.fecha) <= SUGGEST_DAYS)
+      .filter((i) => !used.has(i.oid) && sameUnitOrSupplier(e, i) && dayDiff(i.fecha, e.fecha) <= SUGGEST_DAYS)
       .sort((a, b) => dayDiff(a.fecha, e.fecha) - dayDiff(b.fecha, e.fecha))
       .slice(0, 3);
     items.push({ estado: 'solo_intranet', modo: null, intranet: e, adonis: null, sugerencias });

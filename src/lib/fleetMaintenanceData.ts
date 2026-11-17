@@ -208,11 +208,12 @@ export async function updateMaintenanceEntry(id: string, patch: MaintenanceEntry
   }
 }
 
-export async function deleteMaintenanceEntry(idOrEntry: string | MaintenanceEntry): Promise<void> {
+/** En el servidor el gasto no se borra: queda anulado con el motivo. */
+export async function deleteMaintenanceEntry(idOrEntry: string | MaintenanceEntry, motivo = ""): Promise<void> {
   if (serverMode) {
     const id = typeof idOrEntry === "string" ? idOrEntry : (idOrEntry as any).id;
     if (id) {
-      await fleetMaintenanceApi.deleteEntry(id);
+      await fleetMaintenanceApi.deleteEntry(id, motivo);
       await refreshFromServer();
       return;
     }

@@ -11,6 +11,7 @@ import type { MaintenanceEntry } from "@/lib/fleetMaintenanceTypes";
 import { maintenanceSummary } from "@/lib/fleetVehicleLink";
 import { normalizePlaca } from "@/lib/fleetMaintenanceRules";
 import { formatRD } from "@/lib/fleetMaintenanceData";
+import { vehicleAssignee } from "@/lib/fleetVehicleLink";
 
 
 interface Props {
@@ -78,7 +79,7 @@ const VehicleDetailDialog = ({ vehicle, onOpenChange, onEdit, canEdit, maintenan
           <div>
             <Row
               label="Asignado a"
-              value={vehicle.asignacion?.empleadoNombre || vehicle.asignacion?.departamento || "Disponible"}
+              value={vehicleAssignee(vehicle) || "Disponible"}
             />
             <Row label="Fecha asignación" value={vehicle.asignacion?.fechaAsignacion} />
             <Row label="Fecha devolución" value={vehicle.asignacion?.fechaDevolucion} />

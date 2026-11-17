@@ -3,13 +3,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Camera, Car, CarFront, ClipboardList, ExternalLink, Gauge, History, Link2, Loader2, Package, Plus, Unlink, UserCheck, Wrench,
+  Camera, Car, CarFront, ClipboardList, ExternalLink, Gauge, History, Link2, Loader2, Package, Plus, Unlink, UserCheck, Users, Wrench, X,
 } from "lucide-react";
 import VehicleAvatar from "./VehicleAvatar";
 import type { FleetUnit, MaintenanceEntry } from "@/lib/fleetMaintenanceTypes";
 import type { VehicleMatch } from "@/lib/fleetVehicleLink";
-import { maintenanceSummary, toVehicleType, vehicleAssignee } from "@/lib/fleetVehicleLink";
-import { normalizePlaca, parseFecha } from "@/lib/fleetMaintenanceRules";
+import { maintenanceSummary, toVehicleType, vehicleDrivers } from "@/lib/fleetVehicleLink";
+import { normalizePlaca, parseFecha, filterByPeriod, periodLabel, monthKeyOf, MONTH_SHORT, MONTH_KEYS } from "@/lib/fleetMaintenanceRules";
 import { formatRD } from "@/lib/fleetMaintenanceData";
 import { DOCUMENT_FIELDS } from "@/lib/vehicleTypes";
 import type { Vehiculo } from "@/lib/vehicleTypes";
@@ -27,6 +27,10 @@ interface Props {
   onNewExpense: (placa: string) => void;
   onViewLog: (placa: string) => void;
   onOpenFleet: (placa: string) => void;
+  onEditDrivers?: (v: Vehiculo) => void;
+  /** Período con el que se abre la ficha (p. ej. el elegido en el tablero). */
+  initialYear?: number | null;
+  initialMonth?: number | null;
 }
 
 type TimelineItem = { key: string; fecha: string; kind: "gasto" | "movimiento"; title: string; detail?: string; amount?: number; who?: string };
@@ -40,7 +44,8 @@ const Field = ({ label, value }: { label: string; value: React.ReactNode }) => (
 
 export default function VehicleMaintenanceDossier({
   placa, onOpenChange, unit, match, entries, canManageVehicles,
-  onRegisterInFleet, onPhotoSelected, onNewExpense, onViewLog, onOpenFleet,
+  onRegisterInFleet, onPhotoSelected, onNewExpense, onViewLog, onOpenFleet, onEditDrivers,
+  initialYear = null, initialMonth = null,
 }: Props) {
   const vehicle = match?.vehicle;
   const [assets, setAssets] = useState<LinkedAsset[] | null>(null);
@@ -57,8 +62,41 @@ export default function VehicleMaintenanceDossier({
   }, [placa]);
 
   const key = normalizePlaca(placa);
-  const own = useMemo(() => entries.filter((e) => normalizePlaca(e.placa) === key), [entries, key]);
-  const summary = useMemo(() => maintenanceSummary(entries, key), [entries, key]);
+  const [year, setYear] = useState<number | null>(initialYear);
+  const [month, setMonth] = useState<number | null>(initialMonth);
+  useEffect(() => { setYear(initialYear); setMonth(initialMonth); }, [placa, initialYear, initialMonth]);
+
+  const allOwn = useMemo(() => entries.filter((e) => normalizePlaca(e.placa) === key), [entries, key]);
+  const own = useMemo(() => filterByPeriod(allOwn, year, month), [allOwn, year, month]);
+  const lifetime = useMemo(() => maintenanceSummary(allOwn, key), [allOwn, key]);
+  const summary = useMemo(() => maintenanceSummary(own, key), [own, key]);
+  const filtered = year != null || month != null;
+
+  // Gasto por año (todo el historial) y por mes del año elegido
+  const byYear = useMemo(() => {
+    const m = new Map<number, { total: number; count: number }>();
+    for (const e of allOwn) {
+      const k = monthKeyOf(e.fecha);
+      if (!k) continue;
+      const y = Number(k.slice(0, 4));
+      const cur = m.get(y) || { total: 0, count: 0 };
+      cur.total += Number(e.costo) || 0; cur.count += 1;
+      m.set(y, cur);
+    }
+    return [...m.entries()].sort((a, b) => b[0] - a[0]);
+  }, [allOwn]);
+  const byMonth = useMemo(() => {
+    if (year == null) return null;
+    const arr = MONTH_KEYS.map(() => ({ total: 0, count: 0 }));
+    for (const e of filterByPeriod(allOwn, year, null)) {
+      const k = monthKeyOf(e.fecha);
+      if (!k) continue;
+      const i = Number(k.slice(5, 7)) - 1;
+      arr[i].total += Number(e.costo) || 0; arr[i].count += 1;
+    }
+    return arr;
+  }, [allOwn, year]);
+  const monthMax = byMonth ? Math.max(1, ...byMonth.map((x) => x.total)) : 1;
 
   const timeline = useMemo<TimelineItem[]>(() => {
     const items: TimelineItem[] = own.map((e: any, i) => ({
@@ -70,19 +108,19 @@ export default function VehicleMaintenanceDossier({
       amount: Number(e.costo) || 0,
       who: e.createdBy,
     }));
-    for (const h of vehicle?.historial || []) {
-      if (h.tipo === "mantenimiento") continue; // ya se muestra como gasto
+    const movs = filterByPeriod((vehicle?.historial || []).filter((h) => h.tipo !== "mantenimiento"), year, month); // gastos ya se muestran arriba
+    for (const h of movs) {
       items.push({ key: `h-${h.id}`, fecha: h.fecha, kind: "movimiento", title: h.descripcion, who: h.usuario });
     }
     return items.sort((a, b) => (String(a.fecha) < String(b.fecha) ? 1 : -1));
-  }, [own, vehicle]);
+  }, [own, vehicle, year, month]);
 
   if (!placa) return null;
   const title = vehicle ? `${vehicle.marca} ${vehicle.modelo}` : unit ? `${unit.marca} ${unit.modelo}` : "Unidad";
   const tipo = vehicle?.tipo || toVehicleType(unit?.tipo);
   const photo = vehicle?.documentos?.fotoVehiculo;
   const docs = vehicle ? DOCUMENT_FIELDS.filter((d) => d.key !== "fotoVehiculo" && vehicle.documentos?.[d.key]) : [];
-  const assignee = vehicleAssignee(vehicle);
+  const drivers = vehicleDrivers(vehicle);
 
   const register = async () => {
     if (!unit) return;
@@ -194,7 +232,7 @@ export default function VehicleMaintenanceDossier({
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               {[
-                { icon: Wrench, label: "Gastado", value: formatRD(summary.total) },
+                { icon: Wrench, label: filtered ? "Gastado en el período" : "Gastado (total)", value: formatRD(summary.total) },
                 { icon: ClipboardList, label: "Registros", value: String(summary.count) },
                 { icon: History, label: "Último servicio", value: summary.lastFecha || "—" },
                 { icon: Gauge, label: "Kilometraje", value: (vehicle?.kilometraje || summary.lastKm) ? `${Number(vehicle?.kilometraje || summary.lastKm).toLocaleString("es-DO")} km` : "—" },
@@ -214,7 +252,20 @@ export default function VehicleMaintenanceDossier({
                 <Field label="Matrícula" value={vehicle?.matricula} />
               </div>
               <div>
-                <Field label="Asignado a" value={assignee ? <span className="inline-flex items-center gap-1"><UserCheck className="h-3.5 w-3.5" />{assignee}</span> : vehicle ? "Disponible" : null} />
+                <Field label="Asignado a" value={
+                  <span className="inline-flex flex-col items-end gap-0.5">
+                    {drivers.length ? drivers.map((d, i) => (
+                      <span key={`${d.id || d.nombre}-${i}`} className="inline-flex items-center gap-1">
+                        <UserCheck className="h-3.5 w-3.5" />{d.nombre}{d.turno ? <Badge variant="outline" className="text-[10px] px-1 py-0">{d.turno}</Badge> : null}
+                      </span>
+                    )) : (vehicle?.asignacion?.departamento || (vehicle ? "Disponible" : "—"))}
+                    {vehicle && onEditDrivers && (
+                      <button type="button" onClick={() => onEditDrivers(vehicle)} className="text-[11px] text-primary hover:underline inline-flex items-center gap-1">
+                        <Users className="h-3 w-3" /> {drivers.length ? "Cambiar empleados / turnos" : "Asignar empleados"}
+                      </button>
+                    )}
+                  </span>
+                } />
                 <Field label="Seguro" value={vehicle?.seguro?.compania || unit?.aseguradora} />
                 <Field label="Marbete" value={vehicle?.marbete ? `${vehicle.marbete.estado}${vehicle.marbete.fechaVencimiento ? ` · ${vehicle.marbete.fechaVencimiento}` : ""}` : null} />
                 <Field label="Próximo mantenimiento" value={vehicle?.proximoMantenimiento} />
@@ -231,10 +282,60 @@ export default function VehicleMaintenanceDossier({
               )}
             </div>
 
+            {/* Inversión por período */}
+            <div className="rounded-lg border border-border p-3 space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <h4 className="text-sm font-semibold mr-auto">Inversión en reparaciones</h4>
+                <select aria-label="Año de la trazabilidad" value={year ?? ""} onChange={(e) => setYear(e.target.value ? Number(e.target.value) : null)}
+                  className="border rounded-md px-2 py-1 text-xs bg-background">
+                  <option value="">Todos los años</option>
+                  {byYear.map(([y]) => <option key={y} value={y}>{y}</option>)}
+                </select>
+                <select aria-label="Mes de la trazabilidad" value={month ?? ""} onChange={(e) => setMonth(e.target.value ? Number(e.target.value) : null)}
+                  className="border rounded-md px-2 py-1 text-xs bg-background">
+                  <option value="">Todos los meses</option>
+                  {MONTH_KEYS.map((m, i) => <option key={m} value={i + 1}>{m.charAt(0).toUpperCase() + m.slice(1)}</option>)}
+                </select>
+                {filtered && (
+                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1" onClick={() => { setYear(null); setMonth(null); }}>
+                    <X className="h-3 w-3" /> Ver todo
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {periodLabel(year, month)}: <strong className="text-foreground">{formatRD(summary.total)}</strong> en {summary.count} gasto(s)
+                {filtered && <> · Total histórico {formatRD(lifetime.total)}</>}
+              </p>
+              {byYear.length > 0 && year == null && (
+                <div className="flex flex-wrap gap-2">
+                  {byYear.map(([y, v]) => (
+                    <button key={y} type="button" onClick={() => setYear(y)}
+                      className="rounded-md border border-border px-2.5 py-1.5 text-left hover:border-primary hover:bg-primary/5 transition-colors">
+                      <p className="text-[11px] text-muted-foreground">{y} · {v.count} reg.</p>
+                      <p className="text-xs font-semibold tabular-nums">{formatRD(v.total)}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {byMonth && (
+                <div className="grid grid-cols-12 gap-1 items-end h-20" aria-label={`Gasto por mes de ${year}`}>
+                  {byMonth.map((m, i) => (
+                    <button key={i} type="button" onClick={() => setMonth(month === i + 1 ? null : i + 1)}
+                      title={`${MONTH_SHORT[i]} ${year}: ${formatRD(m.total)} (${m.count} reg.)`}
+                      className="flex flex-col items-center justify-end h-full gap-1 group">
+                      <span className={`w-full rounded-t ${month === i + 1 ? "bg-primary" : "bg-primary/40 group-hover:bg-primary/70"}`}
+                        style={{ height: `${m.total ? Math.max(6, (m.total / monthMax) * 100) : 2}%` }} />
+                      <span className={`text-[9px] ${month === i + 1 ? "font-bold text-primary" : "text-muted-foreground"}`}>{MONTH_SHORT[i]}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div>
               <h4 className="text-sm font-semibold mb-2 flex items-center gap-2"><History className="h-4 w-4" /> Trazabilidad</h4>
               {timeline.length === 0 ? (
-                <p className="text-xs text-muted-foreground">Sin gastos ni movimientos registrados.</p>
+                <p className="text-xs text-muted-foreground">{filtered ? `Sin gastos ni movimientos en ${periodLabel(year, month).toLowerCase()}.` : "Sin gastos ni movimientos registrados."}</p>
               ) : (
                 <ol className="relative border-l-2 border-border ml-2 space-y-3 max-h-[320px] overflow-y-auto pr-2">
                   {timeline.map((t) => (
