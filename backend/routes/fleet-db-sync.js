@@ -78,7 +78,7 @@ async function loadSuplidorMatcher() {
 async function requireTable(res) {
   if (!sql.isConfigured()) { res.status(503).json({ message: 'La conexión a SafeOne no está configurada en el servidor.' }); return false; }
   if (!(await sql.fleetTableExists())) {
-    res.status(409).json({ message: 'La tabla de gastos de flotilla todavía no existe en SafeOne. Chrisnel debe pulsar "Preparar base de datos".', code: 'TABLE_MISSING' });
+    res.status(409).json({ message: 'La tabla de gastos de flotilla todavía no existe en SafeOne. La conexión con las facturas de Adonis está en preparación.', code: 'TABLE_MISSING' });
     return false;
   }
   return true;
@@ -97,15 +97,10 @@ router.get('/status', auth, syncGuard, async (req, res) => {
   res.json({ ...st, table: rules.TABLE, tableExists });
 });
 
-router.post('/setup', auth, ownerGuard, async (req, res) => {
-  try {
-    const ok = await sql.createFleetTable();
-    audit(req, 'preparar_tabla', { detalle: `Tabla ${rules.TABLE} lista` });
-    res.json({ tableExists: ok });
-  } catch (e) {
-    res.status(500).json({ message: `No se pudo crear la tabla: ${e.message}` });
-  }
-});
+// Deshabilitado: no se crean ni alteran tablas en SafeOne porque Adonis comparte esa base.
+router.post('/setup', auth, (req, res) => res.status(410).json({
+  message: 'Deshabilitado: la intranet no crea tablas en SafeOne. Los gastos se registrarán en las tablas existentes de Adonis.',
+}));
 
 router.get('/compare', auth, syncGuard, async (req, res) => {
   try {

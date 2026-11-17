@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  AlertTriangle, CheckCircle2, Database, DatabaseZap, History, Loader2, RefreshCw, Search, ShieldCheck, UserPlus, X,
+  AlertTriangle, CheckCircle2, Database, History, Loader2, RefreshCw, Search, ShieldCheck, UserPlus, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -54,7 +54,6 @@ export default function FleetDbSyncPanel({ isOwner, initialDelegates, onRegister
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [setupOpen, setSetupOpen] = useState(false);
   const [voidTarget, setVoidTarget] = useState<FleetDbItem | null>(null);
   const [voidReason, setVoidReason] = useState("");
   const [audit, setAudit] = useState<FleetDbAuditEntry[]>([]);
@@ -127,18 +126,6 @@ export default function FleetDbSyncPanel({ isOwner, initialDelegates, onRegister
     } finally { setBusy(false); }
   };
 
-  const doSetup = async () => {
-    setBusy(true);
-    try {
-      await fleetDbSyncApi.setup();
-      toast({ title: "Base de datos lista", description: "Ya puede comparar y registrar los gastos." });
-      setSetupOpen(false);
-      await load();
-    } catch (e) {
-      toast({ title: "No se pudo preparar", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
-    } finally { setBusy(false); }
-  };
-
   const doVoid = async () => {
     if (!voidTarget?.baseDatos) return;
     setBusy(true);
@@ -179,23 +166,22 @@ export default function FleetDbSyncPanel({ isOwner, initialDelegates, onRegister
               {loading ? "Consultando…"
                 : error ? error
                 : !status?.connected ? `Sin conexión con SafeOne${status?.message ? `: ${status.message}` : ""}.`
-                : !status.tableExists ? "La base de datos todavía no tiene el espacio para estos gastos."
+                : !status.tableExists ? "Conectado a SafeOne en modo consulta."
                 : `Conectado. Última comparación: ${fmtDate(data?.generadoEn)}.`}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Se guardan aparte de la contabilidad (caja chica y compras no se modifican). Nada se borra: lo eliminado en la intranet se anula con motivo.
+              La intranet no crea ni modifica tablas de SafeOne. Nada se borra: lo eliminado en la intranet se anula con motivo.
             </p>
           </div>
           <div className="flex gap-2">
-            {status?.connected && !status.tableExists && isOwner && (
-              <Button onClick={() => setSetupOpen(true)} className="gap-2"><DatabaseZap className="h-4 w-4" /> Preparar base de datos</Button>
-            )}
             <Button variant="outline" onClick={load} disabled={loading} className="gap-2">
               <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} /> Comparar de nuevo
             </Button>
           </div>
-          {status?.connected && !status.tableExists && !isOwner && (
-            <p className="w-full rounded-md bg-muted p-3 text-sm text-muted-foreground">Chrisnel Fabián debe preparar la base de datos antes del primer registro.</p>
+          {status?.connected && !status.tableExists && (
+            <p className="w-full rounded-md bg-muted p-3 text-sm text-muted-foreground">
+              En preparación: los gastos se registrarán directamente como facturas de Adonis, sin cambiar la base de datos. Mientras tanto no se escribe nada en SafeOne.
+            </p>
           )}
         </CardContent>
       </Card>
@@ -394,24 +380,6 @@ export default function FleetDbSyncPanel({ isOwner, initialDelegates, onRegister
             <AlertDialogCancel disabled={busy}>Cancelar</AlertDialogCancel>
             <AlertDialogAction disabled={busy} onClick={(e) => { e.preventDefault(); doRegister(); }}>
               {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Registrar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Preparar tabla */}
-      <AlertDialog open={setupOpen} onOpenChange={(o) => !busy && setSetupOpen(o)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Preparar la base de datos</AlertDialogTitle>
-            <AlertDialogDescription>
-              Se creará en SafeOne un espacio nuevo, solo para los gastos de mantenimiento de flotilla. No se cambia ni se borra nada de lo que ya existe (contabilidad, caja chica, compras o suplidores).
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={busy}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction disabled={busy} onClick={(e) => { e.preventDefault(); doSetup(); }}>
-              {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Preparar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

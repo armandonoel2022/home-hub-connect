@@ -657,7 +657,6 @@ export interface FleetDbAuditEntry { id: string; at: string; by: string; email: 
 export const fleetDbSyncApi = {
   access: () => apiFetch<{ canSync: boolean; isOwner: boolean; delegates: string[] }>("/fleet-db-sync/access"),
   status: () => apiFetch<{ connected: boolean; message?: string; database?: string; table: string; tableExists: boolean }>("/fleet-db-sync/status"),
-  setup: () => apiFetch<{ tableExists: boolean }>("/fleet-db-sync/setup", { method: "POST" }),
   compare: () => apiFetch<FleetDbCompare>("/fleet-db-sync/compare"),
   register: (ids: string[]) =>
     apiFetch<{ registrados: number; actualizados: number; sinCambios: number; errores: string[] }>("/fleet-db-sync/register", { method: "POST", body: JSON.stringify({ ids }) }),
