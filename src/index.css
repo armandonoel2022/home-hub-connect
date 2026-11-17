@@ -56,6 +56,18 @@
     --operations-soft: 207 55% 95%;
     --operations-border: 210 24% 90%;
 
+    /* Billing analysis chart series (one per service category) */
+    --chart-1: 42 100% 50%;
+    --chart-2: 207 64% 40%;
+    --chart-3: 220 15% 30%;
+    --chart-4: 160 50% 38%;
+    --chart-5: 12 75% 52%;
+    --chart-6: 265 35% 52%;
+    --chart-7: 190 60% 42%;
+    --chart-8: 32 70% 42%;
+    --chart-9: 220 10% 60%;
+    --chart-10: 0 0% 78%;
+
     --font-heading: 'Montserrat', sans-serif;
     --font-body: 'Open Sans', sans-serif;
 
@@ -87,6 +99,8 @@
     --border: 220 15% 22%;
     --input: 220 15% 22%;
     --ring: 42 100% 50%;
+    --chart-3: 220 10% 70%;
+    --chart-10: 0 0% 40%;
   }
 }
 

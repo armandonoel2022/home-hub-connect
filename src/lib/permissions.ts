@@ -41,6 +41,7 @@ export type ModuleKey =
   | "procedures"
   | "wiki"
   | "serviceCatalog"
+  | "billingAnalysis"
   | "surveys"
   | "vacations"
   | "reception"
@@ -129,6 +130,9 @@ export function canView(module: ModuleKey, user: IntranetUser | null | undefined
     case "procedures":
     case "wiki":
     case "serviceCatalog":
+    // Análisis de facturación: abierto a todos; el servidor aplica la restricción
+    // que el super administrador configure.
+    case "billingAnalysis":
     case "sharedFiles":
     case "surveys":
     case "training":

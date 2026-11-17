@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,7 @@ import {
 } from "@/lib/serviceCatalog";
 import {
   Home, Plus, Search, Package, Radio, ShieldCheck, Video, KeyRound, Sparkles, BellRing,
-  UserRound, Pencil, Trash2, Power, Clock, Layers, Tag, CheckCircle2, AlertTriangle,
+  UserRound, ChartNoAxesCombined, Pencil, Trash2, Power, Clock, Layers, Tag, CheckCircle2, AlertTriangle,
 } from "lucide-react";
 
 const CAT_ICON: Record<CatalogCategory, any> = {
@@ -206,6 +207,7 @@ export default function ServiceCatalog() {
                 { header: "Estado", key: "estado" }, { header: "Cobertura", key: "cobertura" }, { header: "Precio", key: "precio" },
                 { header: "Alcances", key: "alcances", width: 40 },
               ]} data={exportData} />
+            <Button asChild variant="outline" size="sm"><Link to="/servicio-al-cliente/analisis-facturacion"><ChartNoAxesCombined className="mr-1.5 h-4 w-4" /> Análisis de facturación</Link></Button>
             {admin && (
               <>
                 <Button variant="outline" size="sm" onClick={() => openNew("paquete")}><Layers className="mr-1.5 h-4 w-4" /> Nuevo paquete</Button>

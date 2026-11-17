@@ -713,6 +713,16 @@ export const safeOneExplorerApi = {
   compareSnapshot: (id: string) => apiFetch<SafeOneSnapshotCompare>(`/safeone-explorer/snapshots/${encodeURIComponent(id)}/compare`),
 };
 
+// ─── Análisis de facturación de clientes (SafeOne, solo lectura) ───
+import type { BillingReport, BillingAccess } from "./billingAnalysisTypes";
+export const billingAnalysisApi = {
+  report: (desde: string, hasta: string, refresh = false) =>
+    apiFetch<BillingReport>(`/billing-analysis?${new URLSearchParams({ desde, hasta, ...(refresh ? { refresh: "1" } : {}) })}`),
+  access: () => apiFetch<BillingAccess>("/billing-analysis/access"),
+  saveAccess: (a: { restringido: boolean; emails: string[] }) =>
+    apiFetch<BillingAccess>("/billing-analysis/access", { method: "PUT", body: JSON.stringify(a) }),
+};
+
 // ─── Flotilla Vehicular (registro completo) ───
 export const fleetVehiclesApi = {
   getAll: (includeInactive = false) =>

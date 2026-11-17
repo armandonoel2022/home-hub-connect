@@ -79,6 +79,7 @@ app.use('/api/audit-log', require('./routes/audit-log'));
 app.use('/api/fleet-maintenance', require('./routes/fleet-maintenance'));
 app.use('/api/fleet-db-sync', require('./routes/fleet-db-sync'));
 app.use('/api/safeone-explorer', require('./routes/safeone-explorer'));
+app.use('/api/billing-analysis', require('./routes/billing-analysis'));
 app.use('/api/keys', require('./routes/keys'));
 app.use('/api/petty-cash', require('./routes/petty-cash'));
 app.use('/api/corporate-cards', require('./routes/corporate-cards'));

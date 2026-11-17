@@ -25,3 +25,8 @@
 - [x] Flotilla: gastos eliminados quedan anulados con motivo (no se borran) y exportación CSV.
 - [ ] Flotilla: copiar `backend/routes/fleet-maintenance.js`, `backend/routes/fleet-db-sync.js`, `backend/lib/fleetSuppliers.js` y `backend/lib/fleetDbSync.js` al servidor y reiniciar (lo hace TI).
 - [ ] Registro de facturas en Adonis desde la intranet: espera las 5 consultas del Explorador (TransCargosCP, CargosCP606, Usuario, ClasificacionCyG, CajaChica/CajaChicaD) y una copia de prueba de SafeOne.
+
+- [x] Análisis de facturación de clientes (SafeOne, solo lectura): resumen, clientes, precios por servicio, calidad de datos y exportación Excel.
+- [x] Acceso al análisis: abierto a todos los usuarios de la intranet; el super administrador puede limitarlo a una lista de correos.
+- [ ] Análisis de facturación: copiar `backend/routes/billing-analysis.js`, `backend/lib/billingAnalysis.js` y `backend/server.js` al servidor y reiniciar (lo hace TI).
+- [ ] Siguiente fase: cruce con cuentas Kronos y paquetes Monitoreo + Video + VideoPortero en el catálogo (espera revisar los resultados reales).

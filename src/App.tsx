@@ -40,6 +40,7 @@ import VacationProvisioning from "./pages/VacationProvisioning";
 import Reception from "./pages/Reception";
 import MercantileRegistry from "./pages/MercantileRegistry";
 import ServiceCatalog from "./pages/ServiceCatalog";
+import BillingAnalysis from "./pages/BillingAnalysis";
 import Wiki from "./pages/Wiki";
 import TaskInbox from "./pages/TaskInbox";
 import MonitoringCenter from "./pages/MonitoringCenter";
@@ -259,6 +260,7 @@ function ProtectedRoutes() {
         <Route path="/activo/:code" element={<AssetLookup />} />
         <Route path="/provisionamiento-vacaciones" element={<RouteGuard module="vacations"><VacationProvisioning /></RouteGuard>} />
         <Route path="/servicio-al-cliente/catalogo" element={<ServiceCatalog />} />
+        <Route path="/servicio-al-cliente/analisis-facturacion" element={<RouteGuard module="billingAnalysis"><BillingAnalysis /></RouteGuard>} />
         <Route path="/servicio-al-cliente/registro-mercantil" element={<MercantileRegistry />} />
         <Route path="/recepcion" element={<RouteGuard module="reception"><Reception /></RouteGuard>} />
         <Route path="/kpis" element={<RouteGuard module="kpis"><KPIDashboard /></RouteGuard>} />
