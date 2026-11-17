@@ -668,6 +668,28 @@ export const fleetDbSyncApi = {
   audit: () => apiFetch<FleetDbAuditEntry[]>("/fleet-db-sync/audit"),
 };
 
+// ─── Explorador SafeOne (solo lectura) ───
+export type SafeOneRow = Record<string, string | number | boolean | null>;
+export interface SafeOneTable { tabla: string; registros: number; ultimoNumero: number | null; modificada: string | null }
+export interface SafeOneColumn { orden: number; columna: string; tipo: string; largo: number; permiteVacio: boolean; autonumerico: boolean; porDefecto: string | null }
+export interface SafeOneRelation { tablaOrigen: string; columnaOrigen: string; tablaDestino: string; columnaDestino: string }
+export interface SafeOneTableDetail { tabla: string; columnas: SafeOneColumn[]; relaciones: SafeOneRelation[]; registros: SafeOneRow[]; ordenadoPor: string | null }
+export interface SafeOneSnapshot { id: string; at: string; by: string | null; nota: string | null; tablas: number }
+export interface SafeOneSnapshotCompare {
+  foto: { id: string; at: string; nota: string | null };
+  comparadoEn: string;
+  cambios: { tabla: string; antes: number | null; actual: number; nuevos: number | null; registros?: SafeOneRow[]; error?: string }[];
+}
+export const safeOneExplorerApi = {
+  status: () => apiFetch<{ connected: boolean; message?: string; database?: string; host?: string }>("/safeone-explorer/status"),
+  tables: () => apiFetch<SafeOneTable[]>("/safeone-explorer/tables"),
+  table: (name: string, limit = 25) => apiFetch<SafeOneTableDetail>(`/safeone-explorer/tables/${encodeURIComponent(name)}?limit=${limit}`),
+  fleetDiagnostic: () => apiFetch<Record<string, unknown>>("/safeone-explorer/diagnostico/flotilla"),
+  snapshots: () => apiFetch<SafeOneSnapshot[]>("/safeone-explorer/snapshots"),
+  takeSnapshot: (nota: string) => apiFetch<SafeOneSnapshot>("/safeone-explorer/snapshots", { method: "POST", body: JSON.stringify({ nota }) }),
+  compareSnapshot: (id: string) => apiFetch<SafeOneSnapshotCompare>(`/safeone-explorer/snapshots/${encodeURIComponent(id)}/compare`),
+};
+
 // ─── Flotilla Vehicular (registro completo) ───
 export const fleetVehiclesApi = {
   getAll: (includeInactive = false) =>

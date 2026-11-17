@@ -1,4 +1,5 @@
 import logo from "@/assets/safeone-logo.png";
+import { canExploreSafeOne } from "@/lib/safeoneExplorerAccess";
 import { useState } from "react";
 import {
   LayoutDashboard,
@@ -26,6 +27,7 @@ import {
   Wallet,
   KeyRound,
   Monitor,
+  Database,
   Radar,
   LibraryBig,
   GraduationCap,
@@ -266,6 +268,22 @@ const AppSidebar = () => {
               {!collapsed && <span>Registro Tareas IT</span>}
             </NavLink>
           </>
+        )}
+
+        {/* Explorador SafeOne (solo lectura) */}
+        {user && canExploreSafeOne(user) && (
+          <NavLink
+            to="/admin/explorador-safeone"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
+              location.pathname === "/admin/explorador-safeone"
+                ? "bg-charcoal-light text-gold font-semibold"
+                : "text-muted-foreground hover:text-secondary-foreground hover:bg-charcoal-light/50"
+            }`}
+            activeClassName=""
+          >
+            <Database className="h-5 w-5 shrink-0" />
+            {!collapsed && <span>Explorador SafeOne</span>}
+          </NavLink>
         )}
       </nav>
 

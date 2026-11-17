@@ -58,6 +58,7 @@ import TechTasks from "./pages/TechTasks";
 import ClientTracking from "./pages/ClientTracking";
 import AdminHub from "./pages/AdminHub";
 import FleetMaintenance from "./pages/FleetMaintenance";
+import SafeOneExplorer from "./pages/SafeOneExplorer";
 import Training from "./pages/Training";
 import Kiosk from "./pages/Kiosk";
 import EmployeeDirectory from "./pages/EmployeeDirectory";
@@ -287,6 +288,7 @@ function ProtectedRoutes() {
         <Route path="/admin/formularios" element={<RouteGuard module="adminForms"><AdminForms /></RouteGuard>} />
         <Route path="/admin/hub" element={<RouteGuard module="adminHub"><AdminHub /></RouteGuard>} />
         <Route path="/admin/flotilla-mantenimiento" element={<FleetMaintenance />} />
+        <Route path="/admin/explorador-safeone" element={<SafeOneExplorer />} />
         <Route path="/monitoreo" element={<MonitoringCenter />} />
         <Route path="/operaciones/matriz-mantenimiento" element={<RouteGuard module="maintenanceMatrix"><OperationsMaintenanceMatrix /></RouteGuard>} />
         <Route path="/operaciones/expediente" element={<RouteGuard module="clientExpediente"><ClientExpediente /></RouteGuard>} />
