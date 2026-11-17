@@ -4,6 +4,7 @@ import AppLayout from "@/components/AppLayout";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
+import FleetDbSyncPanel from "@/components/fleet/FleetDbSyncPanel";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -51,7 +52,7 @@ import { listVehicles, createVehicle, updateVehicle, makeHistory, compressImage,
 import type { Vehiculo } from "@/lib/vehicleTypes";
 import { buildVehicleIndex, matchVehicle, linkageStats, toVehicleType, unitToVehicleDraft, vehicleAssignee } from "@/lib/fleetVehicleLink";
 import { canAccessFleetMaintenance } from "@/lib/fleetMaintenanceAccess";
-import { isApiConfigured } from "@/lib/api";
+import { isApiConfigured, fleetDbSyncApi } from "@/lib/api";
 
 const MONTH_LABELS: Record<string, string> = {
   enero: "Ene", febrero: "Feb", marzo: "Mar", abril: "Abr",
@@ -155,7 +156,13 @@ export default function FleetMaintenance() {
   const [entryError, setEntryError] = useState<string | null>(null);
   const [originalPlaca, setOriginalPlaca] = useState<string | undefined>(undefined);
 
-  const [tab, setTab] = useState<"dashboard" | "log" | "annual" | "fleet">("dashboard");
+  const [tab, setTab] = useState<"dashboard" | "log" | "annual" | "fleet" | "db">("dashboard");
+  // Llevar gastos a la base SafeOne: solo Chrisnel Fabián y quien ella designe (lo decide el servidor).
+  const [dbAccess, setDbAccess] = useState<{ canSync: boolean; isOwner: boolean; delegates: string[] } | null>(null);
+  useEffect(() => {
+    if (!isApiConfigured()) return;
+    fleetDbSyncApi.access().then(setDbAccess).catch(() => setDbAccess(null));
+  }, [user?.email]);
   const [search, setSearch] = useState("");
   const [filterPlaca, setFilterPlaca] = useState<string>("all");
   const [filterKind, setFilterKind] = useState<"all" | "motocicleta" | "vehiculo">("all");
@@ -494,11 +501,12 @@ export default function FleetMaintenance() {
           )}
 
           <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
-            <TabsList className="grid grid-cols-4 w-full max-w-2xl">
+            <TabsList className={`grid w-full ${dbAccess?.canSync ? "grid-cols-5 max-w-3xl" : "grid-cols-4 max-w-2xl"}`}>
               <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
               <TabsTrigger value="log">Registro de Gastos</TabsTrigger>
               <TabsTrigger value="annual">Costo Anual</TabsTrigger>
               <TabsTrigger value="fleet">Flotilla</TabsTrigger>
+              {dbAccess?.canSync && <TabsTrigger value="db">Base de datos</TabsTrigger>}
             </TabsList>
 
             {/* DASHBOARD */}
@@ -932,6 +940,12 @@ export default function FleetMaintenance() {
                 </CardContent>
               </Card>
             </TabsContent>
+
+            {dbAccess?.canSync && (
+              <TabsContent value="db" className="mt-6">
+                <FleetDbSyncPanel isOwner={dbAccess.isOwner} initialDelegates={dbAccess.delegates} onRegistered={sync} />
+              </TabsContent>
+            )}
           </Tabs>
         </div>
       </main>
