@@ -67,6 +67,10 @@
     --chart-8: 32 70% 42%;
     --chart-9: 220 10% 60%;
     --chart-10: 0 0% 78%;
+    --chart-11: 340 55% 50%;
+    --chart-12: 90 40% 42%;
+    --chart-13: 220 8% 70%;
+    --chart-14: 0 0% 86%;
 
     --font-heading: 'Montserrat', sans-serif;
     --font-body: 'Open Sans', sans-serif;
@@ -101,6 +105,8 @@
     --ring: 42 100% 50%;
     --chart-3: 220 10% 70%;
     --chart-10: 0 0% 40%;
+    --chart-13: 220 8% 45%;
+    --chart-14: 0 0% 32%;
   }
 }
 

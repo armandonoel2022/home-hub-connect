@@ -160,16 +160,34 @@ export default function BillingAnalysis() {
                   <Kpi label="Facturas" value={r.resumen.facturas.toLocaleString("es-DO")} hint={`Promedio ${money(r.resumen.promedio)} · Mediana ${money(r.resumen.mediana)}`} />
                   <Kpi label="Clientes facturados" value={r.resumen.clientes} hint={`${r.resumen.clientesRecurrentes} recurrentes · ${r.resumen.clientesOcasionales} ocasionales · ${r.resumen.clientesAislados} aislados`} />
                   <Kpi label="Top 10 clientes" value={pct(r.resumen.top10Participacion)} hint="de la facturación bruta" />
-                  <Kpi label="Recurrente (estimado)" value={money(r.resumen.recurrenteEstimado)} hint="Monitoreo, VideoPortero, GPS y vigilancia" />
-                  <Kpi label="Extraordinario (estimado)" value={money(r.resumen.extraordinarioEstimado)} hint="Instalaciones, mantenimiento, equipos y otros" />
-                  <Kpi label="Monitoreo (estimado)" value={money(r.resumen.monitoreoEstimado)} hint={`${r.resumen.clientesMonitoreo} clientes`} />
+                  <Kpi label="Recurrente (estimado)" value={money(r.resumen.recurrenteEstimado)} hint="Mensualidades de vigilancia, monitoreo y seguridad electrónica" />
+                  <Kpi label="Extraordinario (estimado)" value={money(r.resumen.extraordinarioEstimado)} hint="Servicios técnicos, instalaciones, eventos y equipos" />
+                  <Kpi label="Monitoreo (estimado)" value={money(r.resumen.monitoreoEstimado)}
+                    hint={`${r.resumen.clientesMonitoreo} clientes · mensualidad típica ${money(r.resumen.mensualidadMonitoreoMediana)}${r.resumen.clientesPorValidar ? ` · ${r.resumen.clientesPorValidar} por validar` : ""}`} />
                   <Kpi label="Datos por revisar" value={r.resumen.problemasCalidad} hint="ver Calidad de datos" />
                 </div>
 
                 <p className="flex gap-2 rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
-                  <Info className="h-4 w-4 shrink-0" />El tipo de servicio se estima por las palabras del concepto de cada factura y está pendiente de validación.
+                  <Info className="h-4 w-4 shrink-0" />El servicio se toma del concepto cuando lo describe (servicios técnicos, instalación, eventos) y, si la factura solo dice el mes, de la clasificación del cliente en SafeOne. Pendiente de validación.
                   {r.excluidos.length > 0 && ` Excluidos de monitoreo: ${r.excluidos.map((e) => e.nombre).join(", ")}.`}
                 </p>
+
+                {r.porLinea && r.porLinea.length > 0 && (
+                  <div className="rounded-2xl border bg-card p-4">
+                    <h2 className="mb-3 font-heading text-sm font-bold">Por línea de negocio (clasificación del cliente en SafeOne)</h2>
+                    <div className="space-y-2">
+                      {r.porLinea.map((l) => (
+                        <div key={l.clasificacion} className="flex items-center gap-3 text-xs">
+                          <span className="w-56 truncate font-medium">{l.clasificacion}</span>
+                          <div className="h-2 flex-1 rounded-full bg-muted"><div className="h-2 rounded-full bg-primary" style={{ width: `${Math.max(l.participacion, 0.5)}%` }} /></div>
+                          <span className="w-20 text-right text-muted-foreground">{l.clientes} clientes</span>
+                          <span className="w-14 text-right text-muted-foreground">{pct(l.participacion)}</span>
+                          <span className="w-32 text-right font-semibold">{money(l.bruto)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="rounded-2xl border bg-card p-4">
                   <h2 className="mb-3 font-heading text-sm font-bold">Facturación mensual por servicio</h2>
@@ -244,7 +262,7 @@ export default function BillingAnalysis() {
                       {clients.map((c) => (
                         <tr key={c.cliente} className="cursor-pointer border-t hover:bg-muted/50" onClick={() => setSelected(c)}>
                           <td className="p-2"><div className="font-medium">{c.nombre}</div><div className="text-muted-foreground">{[c.codigo, c.rnc].filter(Boolean).join(" · ")}</div></td>
-                          <td className="p-2"><span className="mr-1 inline-block h-2 w-2 rounded-full" style={{ background: categoryColor(c.categoriaPrincipal) }} />{labels[c.categoriaPrincipal]}{c.excluidoMonitoreo && <Badge variant="outline" className="ml-1">Excluido</Badge>}</td>
+                          <td className="p-2"><span className="mr-1 inline-block h-2 w-2 rounded-full" style={{ background: categoryColor(c.categoriaPrincipal) }} />{labels[c.categoriaPrincipal]}{c.excluidoMonitoreo && <Badge variant="outline" className="ml-1">Excluido</Badge>}{c.clasificacionPorValidar && <Badge variant="outline" className="ml-1 border-primary text-primary" title={c.clasificacionPorValidar}>Por validar</Badge>}</td>
                           <td className="p-2 text-right">{c.facturas}</td>
                           <td className="p-2 text-right">{c.meses}</td>
                           <td className="p-2">{FREQ_LABEL[c.frecuencia]}</td>

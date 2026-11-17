@@ -26,6 +26,12 @@ export default function BillingClientSheet({ client, labels, onClose }: { client
               </div>
             )}
 
+            {c.clasificacionPorValidar && (
+              <div className="mt-3 flex gap-2 rounded-xl border border-primary/40 bg-primary/10 p-3 text-xs">
+                <AlertTriangle className="h-4 w-4 shrink-0 text-primary" /> Clasificación por validar: {c.clasificacionPorValidar} No suma a monitoreo hasta confirmarlo.
+              </div>
+            )}
+
             <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
               {[
                 ["Bruto", money(c.bruto)], ["Facturas", c.facturas], ["Meses", c.meses], ["Participación", pct(c.participacion)],

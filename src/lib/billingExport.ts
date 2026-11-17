@@ -24,6 +24,7 @@ export function exportBillingWorkbook(r: BillingReport) {
     { Indicador: "Participación top 10 (%)", Valor: r.resumen.top10Participacion },
     { Indicador: "Nota", Valor: "Clasificación por palabras del concepto: pendiente de validación." },
   ]);
+  if (r.porLinea) add("Líneas de negocio", r.porLinea.map((l) => ({ "Línea (clasificación SafeOne)": l.clasificacion, Clientes: l.clientes, Facturas: l.facturas, Bruto: l.bruto, "Participación %": l.participacion })));
   add("Clientes", r.porCliente.map((c) => ({
     Cliente: c.nombre, Codigo: c.codigo, RNC: c.rnc, Clasificacion: c.clasificacion, Facturas: c.facturas, Meses: c.meses,
     Frecuencia: FREQ_LABEL[c.frecuencia], Primera: c.primera, Ultima: c.ultima, Bruto: c.bruto, ITBIS: c.itbis, Neto: c.neto,
@@ -33,6 +34,7 @@ export function exportBillingWorkbook(r: BillingReport) {
     "Penúltima": c.ultimas[1] ? `${c.ultimas[1].numero} · ${c.ultimas[1].fecha} · ${c.ultimas[1].bruto}` : "",
     "Antepenúltima": c.ultimas[2] ? `${c.ultimas[2].numero} · ${c.ultimas[2].fecha} · ${c.ultimas[2].bruto}` : "",
     "Excluido de monitoreo": c.excluidoMonitoreo || "",
+    "Clasificación por validar": c.clasificacionPorValidar || "",
   })));
   add("Precios por servicio", r.porCategoria.flatMap((g) => g.detalle.map((d) => ({
     Servicio: g.label, Cliente: d.nombre, Facturas: d.facturas, Meses: d.meses, "Importe típico": d.tipico, "Último importe": d.ultimo, "Total bruto": d.bruto,

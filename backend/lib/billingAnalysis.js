@@ -12,6 +12,8 @@
 
 const CATEGORIES = {
   monitoreo: { label: 'Monitoreo de alarmas', recurrente: true },
+  electronica_monitoreo: { label: 'Seguridad electrónica y monitoreo', recurrente: true },
+  electronica: { label: 'Seguridad electrónica', recurrente: true },
   videoportero: { label: 'VideoPortero', recurrente: true },
   video: { label: 'Videovigilancia / CCTV', recurrente: false },
   gps: { label: 'GPS / Rastreo', recurrente: true },
@@ -19,6 +21,7 @@ const CATEGORIES = {
   vigilancia: { label: 'Vigilancia física', recurrente: true },
   instalacion: { label: 'Instalaciones', recurrente: false },
   mantenimiento: { label: 'Mantenimiento / servicio técnico', recurrente: false },
+  adicionales: { label: 'Servicios adicionales / eventos', recurrente: false },
   equipos: { label: 'Venta de equipos', recurrente: false },
   otros: { label: 'Otros conceptos', recurrente: false },
   sin_concepto: { label: 'Sin concepto', recurrente: false },
@@ -27,7 +30,9 @@ const CATEGORIES = {
 // Orden = prioridad. La primera regla que coincide define la categoría.
 const RULES = [
   ['instalacion', /\binstala/],
-  ['mantenimiento', /\bmanten|\breparaci|\bsoporte\b|\bvisita tecnica|\bservicio tecnico|\bchequeo|\brevision tecnica|\bcambio de bateria/],
+  ['equipos', /\bsistemas? de (alarma|camaras|cctv|video)|\bkit\b/],
+  ['mantenimiento', /\bmanten|\breparaci|\bsoporte\b|\bvisitas? tecnicas?|\bservicios? tecnicos?|\bchequeo|\brevision tecnica|\bcambio de bateria/],
+  ['adicionales', /\badicional|\bevento|\bhoras faltantes/],
   ['videoportero', /video\s*-?\s*portero|\bportero\b|\bintercom/],
   ['gps', /\bgps\b|\brastreo|\blocalizador/],
   ['monitoreo', /\bmonitore|\balarma|\bpanel\b|\bsenal(es)?\b|\bboton de panico|\bcentral de monitoreo|\brespuesta armada/],
@@ -55,6 +60,31 @@ function classifyConcept(text) {
     if (m) return { categoria: cat, palabra: m[0].trim() };
   }
   return { categoria: 'otros', palabra: null };
+}
+
+// Conceptos que describen el servicio por sí mismos; el resto ("Factura mes de abril")
+// toma la línea de negocio de la clasificación del cliente en SafeOne.
+const SPECIFIC = new Set(['instalacion', 'mantenimiento', 'adicionales', 'videoportero', 'gps', 'video', 'acceso', 'equipos']);
+const MONITORING = new Set(['monitoreo', 'electronica_monitoreo']);
+
+/** Línea de negocio según Cliente.ClasificacionCliente (SafeOne). */
+function categoryFromClient(clasificacion) {
+  const t = fold(clasificacion);
+  if (!t) return null;
+  if (/vigilancia|fisica/.test(t)) return 'vigilancia';
+  if (/electronic/.test(t) && /monitore/.test(t)) return 'electronica_monitoreo';
+  if (/monitore|alarma/.test(t)) return 'monitoreo';
+  if (/electronic/.test(t)) return 'electronica';
+  return null;
+}
+
+/** Categoría final de una factura: concepto específico primero, luego la clasificación del cliente. */
+function invoiceCategory(comentario, clasificacion) {
+  const c = classifyConcept(comentario);
+  if (SPECIFIC.has(c.categoria)) return { ...c, origen: 'concepto' };
+  const byClient = categoryFromClient(clasificacion);
+  if (byClient) return { categoria: byClient, palabra: null, origen: 'clasificacion' };
+  return { ...c, origen: 'concepto' };
 }
 
 function exclusionFor(nombre) {
@@ -172,12 +202,12 @@ function analyze({ facturas = [], clientes = [], lineas = null, desde = null, ha
     const cli = clientById.get(String(f.cliente));
     if (!cli) issue('Cliente no encontrado', `La factura apunta al cliente ${f.cliente ?? '—'} que no existe o está eliminado.`, ref);
     const comentario = f.comentario == null ? '' : String(f.comentario).trim();
-    const { categoria, palabra } = classifyConcept(comentario);
-    if (categoria === 'sin_concepto') issue('Sin concepto', 'La factura no tiene comentario/concepto para identificar el servicio.', ref);
+    const { categoria, palabra, origen } = invoiceCategory(comentario, cli && cli.clasificacion);
+    if (!comentario) issue('Sin concepto', 'La factura no tiene comentario/concepto para identificar el servicio.', ref);
     invoices.push({
       oid: f.oid ?? null, numero: ref, ncf: f.ncf ?? null, fecha: isoDay(fecha), mes: monthKey(fecha),
       bruto: r2(bruto), itbis: r2(itbis || 0), neto: r2(neto != null ? neto : bruto + (itbis || 0)),
-      cliente: f.cliente == null ? null : String(f.cliente), comentario, categoria, palabra,
+      cliente: f.cliente == null ? null : String(f.cliente), comentario, categoria, palabra, origen,
     });
   }
 
@@ -211,7 +241,7 @@ function analyze({ facturas = [], clientes = [], lineas = null, desde = null, ha
     const bruto = list.reduce((a, i) => a + i.bruto, 0);
     const categorias = {};
     for (const i of list) {
-      const cat = excluido && (i.categoria === 'monitoreo' || i.categoria === 'videoportero') ? 'vigilancia' : i.categoria;
+      const cat = excluido && (MONITORING.has(i.categoria) || i.categoria === 'videoportero') ? 'vigilancia' : i.categoria;
       categorias[cat] = r2((categorias[cat] || 0) + i.bruto);
     }
     const principal = Object.entries(categorias).sort((a, b) => b[1] - a[1])[0]?.[0] || 'sin_concepto';
@@ -236,7 +266,38 @@ function analyze({ facturas = [], clientes = [], lineas = null, desde = null, ha
   }
   porCliente.sort((a, b) => b.bruto - a.bruto);
   const excluded = new Set(porCliente.filter((c) => c.excluidoMonitoreo).map((c) => c.cliente));
-  const catOf = (i) => (excluded.has(i.cliente) && (i.categoria === 'monitoreo' || i.categoria === 'videoportero') ? 'vigilancia' : i.categoria);
+  const catOf = (i) => (excluded.has(i.cliente) && (MONITORING.has(i.categoria) || i.categoria === 'videoportero') ? 'vigilancia' : i.categoria);
+
+  // Clientes de monitoreo cuya mensualidad típica es muy superior a la del resto (p. ej. RD$130k vs RD$1,653):
+  // probablemente tienen puestos de vigilancia u otra línea. No suman a monitoreo hasta validarlos.
+  const monthlyTypical = (c, cats) => {
+    const byMonth = {};
+    c.historial.filter((i) => cats.has(i.categoria)).forEach((i) => { byMonth[i.fecha.slice(0, 7)] = (byMonth[i.fecha.slice(0, 7)] || 0) + i.bruto; });
+    return median(Object.values(byMonth));
+  };
+  const monClients = porCliente.filter((c) => !c.excluidoMonitoreo && MONITORING.has(c.categoriaPrincipal));
+  monClients.forEach((c) => { c.mensualTipica = r2(monthlyTypical(c, MONITORING)); });
+  const segMedian = median(monClients.map((c) => c.mensualTipica).filter((v) => v > 0)) || 0;
+  const porValidar = new Set();
+  monClients.forEach((c) => {
+    if (segMedian && c.mensualTipica >= 20000 && c.mensualTipica > segMedian * 10) {
+      c.clasificacionPorValidar = `Mensualidad típica ${'RD$'}${Math.round(c.mensualTipica).toLocaleString('en-US')} frente a ${'RD$'}${Math.round(segMedian).toLocaleString('en-US')} del resto de monitoreo; confirmar si es monitoreo o vigilancia.`;
+      porValidar.add(c.cliente);
+      issue('Clasificación por validar', `${c.nombre}: ${c.clasificacionPorValidar}`, c.codigo || c.cliente);
+    }
+  });
+  const isMonitoring = (i) => MONITORING.has(catOf(i)) && !porValidar.has(i.cliente);
+
+  // Por línea de negocio (clasificación del cliente en SafeOne).
+  const lineMap = new Map();
+  porCliente.forEach((c) => {
+    const k = c.clasificacion ? String(c.clasificacion).trim() : '(sin clasificación)';
+    const l = lineMap.get(k) || { clasificacion: k, clientes: 0, facturas: 0, bruto: 0 };
+    l.clientes += 1; l.facturas += c.facturas; l.bruto += c.bruto;
+    lineMap.set(k, l);
+  });
+  const porLinea = [...lineMap.values()].map((l) => ({ ...l, bruto: r2(l.bruto), participacion: totalBruto ? r2((l.bruto / totalBruto) * 100) : 0 }))
+    .sort((a, b) => b.bruto - a.bruto);
 
   // ── Mensual ──
   const mesesAll = [...new Set(invoices.map((i) => i.mes))].sort();
@@ -332,8 +393,10 @@ function analyze({ facturas = [], clientes = [], lineas = null, desde = null, ha
       mediana: r2(median(invoices.map((i) => i.bruto))),
       recurrenteEstimado: recurrente,
       extraordinarioEstimado: r2(totalBruto - recurrente),
-      monitoreoEstimado: brutoCat((i) => catOf(i) === 'monitoreo'),
-      clientesMonitoreo: new Set(invoices.filter((i) => catOf(i) === 'monitoreo').map((i) => i.cliente)).size,
+      monitoreoEstimado: brutoCat(isMonitoring),
+      clientesMonitoreo: new Set(invoices.filter(isMonitoring).map((i) => i.cliente)).size,
+      mensualidadMonitoreoMediana: r2(segMedian),
+      clientesPorValidar: porValidar.size,
       clientesRecurrentes: freqCount('recurrente'),
       clientesOcasionales: freqCount('ocasional'),
       clientesAislados: freqCount('aislada'),
@@ -344,6 +407,7 @@ function analyze({ facturas = [], clientes = [], lineas = null, desde = null, ha
     categorias: Object.fromEntries(Object.entries(CATEGORIES).map(([k, v]) => [k, v.label])),
     excluidos: porCliente.filter((c) => c.excluidoMonitoreo).map((c) => ({ cliente: c.cliente, nombre: c.nombre, motivo: c.excluidoMonitoreo })),
     mensual,
+    porLinea,
     porCliente,
     porCategoria,
     porDescripcion,
@@ -351,7 +415,7 @@ function analyze({ facturas = [], clientes = [], lineas = null, desde = null, ha
   };
 }
 
-module.exports = { CATEGORIES, classifyConcept, exclusionFor, frequencyOf, estimateTariffs, distribution, median, analyze, fold };
+module.exports = { CATEGORIES, classifyConcept, categoryFromClient, invoiceCategory, exclusionFor, frequencyOf, estimateTariffs, distribution, median, analyze, fold };
 
 // ── Acceso ──
 // Por defecto lo ven todos los usuarios de la intranet. El super administrador

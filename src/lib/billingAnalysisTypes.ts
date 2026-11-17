@@ -8,6 +8,7 @@ export interface BillingClient {
   facturas: number; meses: number; primera: string | null; ultima: string | null; facturasPorMes: number | null;
   frecuencia: BillingFrequency; bruto: number; itbis: number; neto: number; promedio: number; mediana: number; participacion: number;
   categorias: Record<string, number>; categoriaPrincipal: string; excluidoMonitoreo: string | null;
+  mensualTipica?: number; clasificacionPorValidar?: string;
   tarifas: BillingTariff[]; ultimas: BillingInvoice[]; porMes: { mes: string; bruto: number; facturas: number }[]; historial: BillingInvoice[];
 }
 export interface BillingCategory {
@@ -24,11 +25,13 @@ export interface BillingReport {
   resumen: {
     facturas: number; clientes: number; bruto: number; itbis: number; neto: number; promedio: number; mediana: number;
     recurrenteEstimado: number; extraordinarioEstimado: number; monitoreoEstimado: number; clientesMonitoreo: number;
+    mensualidadMonitoreoMediana?: number; clientesPorValidar?: number;
     clientesRecurrentes: number; clientesOcasionales: number; clientesAislados: number; top10Participacion: number; hhi: number; problemasCalidad: number;
   };
   categorias: Record<string, string>;
   excluidos: { cliente: string; nombre: string; motivo: string }[];
   mensual: ({ mes: string; bruto: number; neto: number; facturas: number; clientes: number; variacion: number | null } & Record<string, number | string | null>)[];
+  porLinea?: { clasificacion: string; clientes: number; facturas: number; bruto: number; participacion: number }[];
   porCliente: BillingClient[];
   porCategoria: BillingCategory[];
   porDescripcion: BillingLineGroup[] | null;
@@ -38,8 +41,8 @@ export interface BillingReport {
 }
 export interface BillingAccess { restringido: boolean; emails: string[]; puedeEditar: boolean }
 
-export const CATEGORY_ORDER = ["monitoreo", "videoportero", "video", "gps", "acceso", "vigilancia", "instalacion", "mantenimiento", "equipos", "otros", "sin_concepto"];
-export const categoryColor = (cat: string) => `hsl(var(--chart-${Math.min(CATEGORY_ORDER.indexOf(cat) + 1 || 10, 10)}))`;
+export const CATEGORY_ORDER = ["monitoreo", "electronica_monitoreo", "electronica", "videoportero", "video", "gps", "acceso", "vigilancia", "instalacion", "mantenimiento", "adicionales", "equipos", "otros", "sin_concepto"];
+export const categoryColor = (cat: string) => `hsl(var(--chart-${Math.min(CATEGORY_ORDER.indexOf(cat) + 1 || 14, 14)}))`;
 export const FREQ_LABEL: Record<BillingFrequency, string> = { recurrente: "Recurrente", ocasional: "Ocasional", aislada: "Aislada" };
 export const money = (n: number | null | undefined) =>
   n == null ? "—" : `RD$${Number(n).toLocaleString("es-DO", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;

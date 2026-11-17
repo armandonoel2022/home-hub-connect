@@ -29,4 +29,6 @@
 - [x] Análisis de facturación de clientes (SafeOne, solo lectura): resumen, clientes, precios por servicio, calidad de datos y exportación Excel.
 - [x] Acceso al análisis: abierto a todos los usuarios de la intranet; el super administrador puede limitarlo a una lista de correos.
 - [ ] Análisis de facturación: copiar `backend/routes/billing-analysis.js`, `backend/lib/billingAnalysis.js` y `backend/server.js` al servidor y reiniciar (lo hace TI).
+- [x] Análisis con datos reales: servicio según clasificación del cliente, clientes por validar, Excel de diagnóstico.
+- [ ] Copiar de nuevo `backend/lib/billingAnalysis.js` al servidor y reiniciar (lo hace TI).
 - [ ] Siguiente fase: cruce con cuentas Kronos y paquetes Monitoreo + Video + VideoPortero en el catálogo (espera revisar los resultados reales).

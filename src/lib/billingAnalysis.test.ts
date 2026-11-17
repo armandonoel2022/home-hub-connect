@@ -57,6 +57,34 @@ describe("clasificación de servicios", () => {
   });
 });
 
+describe("línea de negocio desde la clasificación del cliente", () => {
+  it("«Factura mes de abril 2026» de un cliente Monitoreo Alarma cuenta como monitoreo", () => {
+    expect(b.invoiceCategory("FACTURA MES DE ABRIL 2026", "Monitoreo Alarma ").categoria).toBe("monitoreo");
+  });
+  it("«Factura servicios técnicos» es servicio técnico aunque el cliente sea de monitoreo", () => {
+    expect(b.invoiceCategory("FACTURA SERVICIOS TECNICOS", "Monitoreo Alarma").categoria).toBe("mantenimiento");
+  });
+  it("«Factura sistema de alarma» es venta de equipos, no mensualidad de monitoreo", () => {
+    expect(b.invoiceCategory("FACTURA SISTEMA DE ALARMA", "Seguridad Electronica y Monitoreo").categoria).toBe("equipos");
+  });
+  it("cliente Seguridad Vigilancia Fisica cuenta como vigilancia física", () => {
+    expect(b.invoiceCategory("ENERO 2026", "Seguridad Vigilancia Fisica").categoria).toBe("vigilancia");
+  });
+  it("un cliente de monitoreo que paga RD$130,000 al mes queda por validar y no suma a monitoreo", () => {
+    const facturas: any[] = [];
+    const clientes: any[] = [];
+    for (let k = 1; k <= 5; k++) {
+      clientes.push({ oid: k, nombre: `Residencial ${k}`, clasificacion: "Monitoreo Alarma" });
+      for (const m of ["01", "02", "03"]) facturas.push(fac(`${k}-${m}`, `2026-${m}-10`, 1653, k, `FACTURA MES ${m}`));
+    }
+    clientes.push({ oid: 99, nombre: "JOSE ARMENTEROS", clasificacion: "Monitoreo Alarma" });
+    for (const m of ["01", "02", "03"]) facturas.push(fac(`99-${m}`, `2026-${m}-10`, 130000, 99, `FACTURA MES ${m}`));
+    const r = b.analyze({ facturas, clientes });
+    expect(r.resumen.clientesPorValidar).toBe(1);
+    expect(r.resumen.monitoreoEstimado).toBe(1653 * 15);
+  });
+});
+
 describe("acceso al análisis de facturación", () => {
   it("por defecto lo ve cualquier usuario de la intranet", () => {
     expect(b.canViewBilling({ email: "agente@safeone.com.do" }, { restringido: false, emails: [] })).toBe(true);
