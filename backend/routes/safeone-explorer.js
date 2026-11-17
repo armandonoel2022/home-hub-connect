@@ -57,11 +57,20 @@ function orderColumn(cols) {
   const id = cols.find((c) => c.autonumerico) || cols.find((c) => String(c.columna).toLowerCase() === 'oid');
   return id ? id.columna : null;
 }
-async function lastRows(table, cols, limit, afterValue) {
+async function lastRows(table, cols, limit, afterValue, filter) {
   const list = selectList(cols);
   if (!list) return [];
   const ord = orderColumn(cols);
   const n = Math.max(1, Math.min(Number(limit) || 25, 200));
+  if (filter) {
+    const where = filter.like
+      ? `CAST(${lib.bracket(filter.col)} AS nvarchar(max)) LIKE @val`
+      : `${lib.bracket(filter.col)} = @val`;
+    return lib.serializeRows(await sql.query(
+      `SELECT TOP (${n}) ${list} FROM dbo.${lib.bracket(table)} WHERE ${where}${ord ? ` ORDER BY ${lib.bracket(ord)} DESC` : ''}`,
+      { val: filter.like ? `%${filter.val}%` : filter.val },
+    ));
+  }
   if (afterValue != null && ord) {
     return lib.serializeRows(await sql.query(
       `SELECT TOP (${n}) ${list} FROM dbo.${lib.bracket(table)} WHERE ${lib.bracket(ord)} > @after ORDER BY ${lib.bracket(ord)}`,
@@ -104,8 +113,15 @@ router.get('/tables/:name', async (req, res) => {
     const table = lib.resolveName(req.params.name, await tableNames());
     if (!table) return res.status(404).json({ message: 'La tabla no existe en SafeOne.' });
     const columnas = await columnsOf(table);
-    const [relaciones, registros] = await Promise.all([relationsOf(table), lastRows(table, columnas, req.query.limit)]);
-    res.json({ tabla: table, columnas, relaciones, registros, ordenadoPor: orderColumn(columnas) });
+    let filtro = null;
+    if (req.query.col && req.query.val != null && String(req.query.val).trim() !== '') {
+      const usable = columnas.filter((c) => !lib.BINARY_TYPES.has(String(c.tipo).toLowerCase())).map((c) => c.columna);
+      const col = lib.resolveName(req.query.col, usable);
+      if (!col) return res.status(400).json({ message: 'La columna no existe en esa tabla.' });
+      filtro = { col, val: String(req.query.val).trim().slice(0, 200), like: String(req.query.op) === 'like' };
+    }
+    const [relaciones, registros] = await Promise.all([relationsOf(table), lastRows(table, columnas, req.query.limit, null, filtro)]);
+    res.json({ tabla: table, columnas, relaciones, registros, ordenadoPor: orderColumn(columnas), filtro });
   } catch (e) { fail(res, e); }
 });
 

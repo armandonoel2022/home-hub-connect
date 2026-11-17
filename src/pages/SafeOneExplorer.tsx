@@ -14,10 +14,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import {
   isApiConfigured, safeOneExplorerApi,
-  type SafeOneRow, type SafeOneSnapshot, type SafeOneSnapshotCompare, type SafeOneTable, type SafeOneTableDetail,
+  type SafeOneFilter, type SafeOneRow, type SafeOneSnapshot, type SafeOneSnapshotCompare, type SafeOneTable, type SafeOneTableDetail,
 } from "@/lib/api";
 import { canExploreSafeOne } from "@/lib/safeoneExplorerAccess";
 import { cn } from "@/lib/utils";
@@ -93,6 +94,10 @@ export default function SafeOneExplorer() {
   const [snapNote, setSnapNote] = useState("");
   const [comparison, setComparison] = useState<SafeOneSnapshotCompare | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [filterCol, setFilterCol] = useState("");
+  const [filterVal, setFilterVal] = useState("");
+  const [filterLike, setFilterLike] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<SafeOneFilter | null>(null);
 
   const loadList = useCallback(async () => {
     setLoadingList(true); setError(null);
@@ -107,9 +112,11 @@ export default function SafeOneExplorer() {
   }, []);
   useEffect(() => { if (allowed && isApiConfigured()) loadList(); else setLoadingList(false); }, [allowed, loadList]);
 
-  const openTable = useCallback(async (name: string, n = limit) => {
+  const openTable = useCallback(async (name: string, n = limit, filter: SafeOneFilter | null = null) => {
+    if (!filter) { setFilterCol(""); setFilterVal(""); setFilterLike(false); }
+    setActiveFilter(filter);
     setSelected(name); setLoadingDetail(true); setDetail(null);
-    try { setDetail(await safeOneExplorerApi.table(name, n)); }
+    try { setDetail(await safeOneExplorerApi.table(name, n, filter)); }
     catch (e) { toast({ title: "No se pudo abrir la tabla", description: e instanceof Error ? e.message : String(e), variant: "destructive" }); }
     finally { setLoadingDetail(false); }
   }, [limit, toast]);
@@ -261,14 +268,39 @@ export default function SafeOneExplorer() {
                               <div className="flex flex-wrap items-center gap-2 text-sm">
                                 <span className="text-muted-foreground">Mostrar</span>
                                 {[25, 100, 200].map((n) => (
-                                  <Button key={n} size="sm" variant={limit === n ? "default" : "outline"} onClick={() => { setLimit(n); openTable(detail.tabla, n); }}>{n}</Button>
+                                  <Button key={n} size="sm" variant={limit === n ? "default" : "outline"} onClick={() => { setLimit(n); openTable(detail.tabla, n, activeFilter); }}>{n}</Button>
                                 ))}
                                 <span className="text-xs text-muted-foreground">{detail.ordenadoPor ? `más recientes primero (por ${detail.ordenadoPor})` : "sin orden"}</span>
                                 <Button size="sm" variant="outline" className="ml-auto gap-2" disabled={!detail.registros.length}
-                                  onClick={() => download(`${detail.tabla}.csv`, toCsv(detail.registros), "text/csv;charset=utf-8")}>
+                                  onClick={() => download(`${detail.tabla}${activeFilter ? `_${activeFilter.col}-${activeFilter.val}` : ""}.csv`, toCsv(detail.registros), "text/csv;charset=utf-8")}>
                                   <Download className="h-4 w-4" /> CSV
                                 </Button>
                               </div>
+                              <form
+                                className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/30 p-2"
+                                onSubmit={(e) => { e.preventDefault(); if (filterCol && filterVal.trim()) openTable(detail.tabla, limit, { col: filterCol, val: filterVal, like: filterLike }); }}
+                              >
+                                <span className="text-sm text-muted-foreground">Filtrar donde</span>
+                                <Select value={filterCol} onValueChange={setFilterCol}>
+                                  <SelectTrigger className="h-8 w-48"><SelectValue placeholder="columna" /></SelectTrigger>
+                                  <SelectContent className="max-h-72">
+                                    {detail.columnas.filter((c) => !["image", "varbinary", "binary", "timestamp"].includes(c.tipo)).map((c) => (
+                                      <SelectItem key={c.columna} value={c.columna}>{c.columna}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <label className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  <input type="checkbox" checked={filterLike} onChange={(e) => setFilterLike(e.target.checked)} /> contiene
+                                </label>
+                                <Input value={filterVal} onChange={(e) => setFilterVal(e.target.value)} placeholder={filterLike ? "texto" : "valor exacto"} className="h-8 w-48" />
+                                <Button type="submit" size="sm" disabled={!filterCol || !filterVal.trim()}>Filtrar</Button>
+                                {activeFilter && (
+                                  <>
+                                    <Badge variant="secondary">{activeFilter.col} {activeFilter.like ? "contiene" : "="} {activeFilter.val}</Badge>
+                                    <Button type="button" size="sm" variant="ghost" onClick={() => openTable(detail.tabla, limit)}>Quitar filtro</Button>
+                                  </>
+                                )}
+                              </form>
                               <RowsTable rows={detail.registros} />
                             </TabsContent>
                             <TabsContent value="columnas" className="mt-3">
