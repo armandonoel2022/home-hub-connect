@@ -1,27 +1,25 @@
 /**
- * Reglas puras para llevar los gastos de Flotilla — Mantenimiento (intranet)
- * a la base SafeOne, tabla propia dbo.IntranetGastosFlotilla.
- * Sin dependencias de Express ni SQL para poder probarlas.
+ * Reglas puras para comparar los gastos de Flotilla — Mantenimiento (intranet)
+ * con las facturas que contabilidad asienta en Adonis (SafeOne, tabla CargosCP).
+ * SOLO LECTURA sobre SafeOne: el vínculo gasto ↔ factura se guarda en la intranet.
  *
  *  - Solo Chrisnel Fabián (OWNER_EMAIL) y las personas que ella designe pueden
- *    comparar y registrar. Solo Chrisnel puede designar.
- *  - Cada gasto se identifica en la base por su ID de la intranet (FM-xxxx),
- *    así nunca se registra dos veces.
- *  - Nada se borra en la base: lo que ya no existe en la intranet se "anula".
+ *    comparar y vincular. Solo Chrisnel puede designar.
+ *  - Contabilidad escribe la placa en las Notas de la factura
+ *    (ej. "Reparacion de motocicleta placa k2528728"); con eso se cruza.
+ *  - Coincidencia automática: misma placa, monto igual al Valor o al Valor+ITBIS
+ *    (±1 peso) y fecha a no más de MAX_DAYS días.
  */
 const OWNER_EMAIL = 'cfabian@safeone.com.do';
-const TABLE = 'dbo.IntranetGastosFlotilla';
+const MAX_DAYS = 20;
+const SUGGEST_DAYS = 45;
 
 const normEmail = (e) => String(e == null ? '' : e).trim().toLowerCase();
-const normalizePlaca = (p) => String(p == null ? '' : p).toUpperCase().replace(/[\s\-.]/g, '');
-const textKey = (n) => String(n == null ? '' : n)
-  .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-  .toLowerCase().replace(/\bs\.?\s*r\.?\s*l\.?\b/g, '').replace(/[^a-z0-9]/g, '');
+const normalizePlaca = (p) => String(p == null ? '' : p).toUpperCase().replace(/[^A-Z0-9]/g, '');
+const money = (v) => Math.round((Number(v) || 0) * 100) / 100;
+const str = (v) => { const s = String(v == null ? '' : v).replace(/\s+/g, ' ').trim(); return s || null; };
 
-function isOwner(user) {
-  return normEmail(user && user.email) === OWNER_EMAIL;
-}
-
+function isOwner(user) { return normEmail(user && user.email) === OWNER_EMAIL; }
 function cleanDelegates(list) {
   const out = [];
   for (const e of Array.isArray(list) ? list : []) {
@@ -30,7 +28,6 @@ function cleanDelegates(list) {
   }
   return out;
 }
-
 function canSync(user, acl) {
   if (!user || !normEmail(user.email)) return false;
   if (isOwner(user)) return true;
@@ -47,31 +44,46 @@ function toIsoDate(v) {
   if (m) return `${m[3].length === 2 ? '20' + m[3] : m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
   return null;
 }
-const money = (v) => Math.round((Number(v) || 0) * 100) / 100;
-const str = (v) => { const s = String(v == null ? '' : v).replace(/\s+/g, ' ').trim(); return s || null; };
-const intOrNull = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? Math.round(n) : null; };
+const dayDiff = (a, b) => (a && b ? Math.abs((Date.parse(a) - Date.parse(b)) / 86400000) : Infinity);
 
-/** Campos que se comparan entre la intranet y la base. */
-const FIELDS = [
-  { key: 'placa', label: 'Placa', fromEntry: (e) => normalizePlaca(e.placa), fromRow: (r) => normalizePlaca(r.Placa) },
-  { key: 'fecha', label: 'Fecha', fromEntry: (e) => toIsoDate(e.fecha), fromRow: (r) => toIsoDate(r.Fecha) },
-  { key: 'costo', label: 'Costo', fromEntry: (e) => money(e.costo), fromRow: (r) => money(r.Costo) },
-  { key: 'taller', label: 'Taller', fromEntry: (e) => str(e.taller), fromRow: (r) => str(r.Taller) },
-  { key: 'tipoMant', label: 'Tipo', fromEntry: (e) => str(e.tipoMant), fromRow: (r) => str(r.TipoMantenimiento) },
-  { key: 'kilometraje', label: 'Kilometraje', fromEntry: (e) => intOrNull(e.kilometraje), fromRow: (r) => intOrNull(r.Kilometraje) },
-  { key: 'detalle', label: 'Detalle', fromEntry: (e) => str(e.detalle), fromRow: (r) => str(r.Detalle) },
-];
-
-function diffEntry(entry, row) {
-  const diffs = [];
-  for (const f of FIELDS) {
-    const a = f.fromEntry(entry);
-    const b = f.fromRow(row);
-    if (a !== b) diffs.push({ campo: f.key, etiqueta: f.label, intranet: a, baseDatos: b });
+/** Placas mencionadas en un texto: primero las de la flotilla, luego cualquier patrón de placa. */
+function extractPlates(text, knownPlates) {
+  const raw = String(text == null ? '' : text).toUpperCase();
+  const compact = raw.replace(/[^A-Z0-9]/g, '');
+  const found = [];
+  for (const p of knownPlates || []) {
+    const k = normalizePlaca(p);
+    if (k.length >= 6 && compact.includes(k) && !found.includes(k)) found.push(k);
   }
-  return diffs;
+  const re = /\b([A-Z]{1,3})[\s-]?(\d{5,7})\b/g;
+  let m;
+  while ((m = re.exec(raw))) {
+    const k = m[1] + m[2];
+    if (!found.includes(k) && !found.some((f) => f.includes(k) || k.includes(f))) found.push(k);
+  }
+  return found;
 }
 
+/** Normaliza una fila de CargosCP (con el nombre del suplidor ya unido). */
+function summarizeInvoice(r, knownPlates) {
+  const valor = money(r.Valor);
+  const itbis = money(r.Itbis);
+  return {
+    oid: Number(r.OID),
+    fecha: toIsoDate(r.FechaFactura) || toIsoDate(r.Fecha),
+    suplidorOid: r.Suplidor == null ? null : Number(r.Suplidor),
+    suplidor: str(r.SuplidorNombre),
+    ncf: str(r.NCF),
+    referencia: str(r.Referencia),
+    valor,
+    itbis,
+    total: money(valor + itbis),
+    notas: str(r.Notas),
+    clasificacion: str(r.ClasificacionCyG),
+    cajaChica: !!r.CajaChica,
+    placas: extractPlates(r.Notas, knownPlates),
+  };
+}
 function summarizeEntry(e) {
   return {
     id: String(e.id || ''),
@@ -80,105 +92,68 @@ function summarizeEntry(e) {
     costo: money(e.costo),
     taller: str(e.taller),
     tipoMant: str(e.tipoMant),
-    kilometraje: intOrNull(e.kilometraje),
     detalle: str(e.detalle),
-    unidad: str(e.unit),
+    adonisOid: e.adonisOid == null ? null : Number(e.adonisOid),
   };
 }
-function summarizeRow(r) {
-  return {
-    oid: Number(r.OID),
-    intranetId: str(r.IntranetId),
-    placa: normalizePlaca(r.Placa),
-    fecha: toIsoDate(r.Fecha),
-    costo: money(r.Costo),
-    taller: str(r.Taller),
-    tipoMant: str(r.TipoMantenimiento),
-    suplidorOid: r.SuplidorOID == null ? null : Number(r.SuplidorOID),
-    anulado: !!r.Anulado,
-    registradoPor: str(r.RegistradoPor),
-    registradoEn: r.RegistradoEn instanceof Date ? r.RegistradoEn.toISOString() : str(r.RegistradoEn),
-  };
-}
-
-/** Clave para detectar el mismo gasto digitado dos veces en la intranet. */
-const duplicateKey = (e) => [normalizePlaca(e.placa), toIsoDate(e.fecha), money(e.costo).toFixed(2), textKey(e.taller)].join('|');
+const amountMatches = (costo, inv) => Math.abs(costo - inv.valor) <= 1 || Math.abs(costo - inv.total) <= 1;
 
 /**
- * Compara los gastos de la intranet con las filas de la tabla en SafeOne.
- * Estados: pendiente (solo intranet), diferente, sincronizado, anulado_bd,
- * solo_bd (está en la base pero ya no en la intranet).
+ * Cruza gastos de la intranet con facturas de Adonis.
+ * Estados: vinculado (confirmado a mano o automático), solo_intranet (con sugerencias),
+ * solo_adonis (factura que menciona una placa de la flotilla y no tiene gasto en la intranet).
  */
-function compareRecords(entries, dbRows, suplidorMatcher) {
-  const list = Array.isArray(entries) ? entries.filter((e) => e && e.id) : [];
-  const rows = Array.isArray(dbRows) ? dbRows : [];
-  const byId = new Map();
-  for (const r of rows) if (r && r.IntranetId != null) byId.set(String(r.IntranetId), r);
-  const dupCount = new Map();
-  for (const e of list) { const k = duplicateKey(e); dupCount.set(k, (dupCount.get(k) || 0) + 1); }
+function compareWithAdonis(entries, invoiceRows, knownPlates) {
+  const plates = [...new Set([...(knownPlates || []), ...(entries || []).map((e) => e && e.placa)].map(normalizePlaca).filter(Boolean))];
+  const invoices = (invoiceRows || []).map((r) => summarizeInvoice(r, plates));
+  const byOid = new Map(invoices.map((i) => [i.oid, i]));
+  const used = new Set();
+  const list = (entries || []).filter((e) => e && e.id).map(summarizeEntry);
+  const items = [];
 
-  const seen = new Set();
-  const items = list.map((e) => {
-    const intranet = summarizeEntry(e);
-    const suplidor = suplidorMatcher ? suplidorMatcher(e.taller) : null;
-    const base = { intranet, suplidor, posibleDuplicado: (dupCount.get(duplicateKey(e)) || 0) > 1 };
-    const row = byId.get(String(e.id));
-    if (!row) return { ...base, estado: 'pendiente', baseDatos: null, diferencias: [] };
-    seen.add(String(e.id));
-    if (row.Anulado) return { ...base, estado: 'anulado_bd', baseDatos: summarizeRow(row), diferencias: [] };
-    const diferencias = diffEntry(e, row);
-    return { ...base, estado: diferencias.length ? 'diferente' : 'sincronizado', baseDatos: summarizeRow(row), diferencias };
-  });
-  for (const r of rows) {
-    if (!r || r.Anulado || seen.has(String(r.IntranetId))) continue;
-    items.push({ estado: 'solo_bd', intranet: null, baseDatos: summarizeRow(r), diferencias: [], suplidor: null, posibleDuplicado: false });
+  // 1) Vínculos confirmados a mano
+  const pending = [];
+  for (const e of list) {
+    const inv = e.adonisOid != null ? byOid.get(e.adonisOid) : null;
+    if (inv && !used.has(inv.oid)) { used.add(inv.oid); items.push({ estado: 'vinculado', modo: 'confirmado', intranet: e, adonis: inv, sugerencias: [] }); }
+    else pending.push(e);
+  }
+  // 2) Automáticos: misma placa, mismo monto, fecha cercana (el más cercano primero)
+  const rest = [];
+  for (const e of pending) {
+    const cands = invoices
+      .filter((i) => !used.has(i.oid) && i.placas.includes(e.placa) && amountMatches(e.costo, i) && dayDiff(i.fecha, e.fecha) <= MAX_DAYS)
+      .sort((a, b) => dayDiff(a.fecha, e.fecha) - dayDiff(b.fecha, e.fecha));
+    if (cands.length) { used.add(cands[0].oid); items.push({ estado: 'vinculado', modo: 'automatico', intranet: e, adonis: cands[0], sugerencias: [] }); }
+    else rest.push(e);
+  }
+  // 3) Sin factura: sugerir facturas de la misma placa en fechas cercanas
+  for (const e of rest) {
+    const sugerencias = invoices
+      .filter((i) => !used.has(i.oid) && i.placas.includes(e.placa) && dayDiff(i.fecha, e.fecha) <= SUGGEST_DAYS)
+      .sort((a, b) => dayDiff(a.fecha, e.fecha) - dayDiff(b.fecha, e.fecha))
+      .slice(0, 3);
+    items.push({ estado: 'solo_intranet', modo: null, intranet: e, adonis: null, sugerencias });
+  }
+  // 4) Facturas que mencionan una placa de la flotilla y nadie reclamó
+  const fleetSet = new Set(plates);
+  for (const i of invoices) {
+    if (used.has(i.oid) || !i.placas.some((p) => fleetSet.has(p))) continue;
+    items.push({ estado: 'solo_adonis', modo: null, intranet: null, adonis: i, sugerencias: [] });
   }
 
   const resumen = {};
-  for (const st of ['pendiente', 'diferente', 'sincronizado', 'solo_bd', 'anulado_bd']) {
-    const sel = items.filter((i) => i.estado === st);
-    resumen[st] = { cantidad: sel.length, monto: money(sel.reduce((s, i) => s + ((i.intranet || i.baseDatos).costo || 0), 0)) };
+  for (const st of ['vinculado', 'solo_intranet', 'solo_adonis']) {
+    const sel = items.filter((x) => x.estado === st);
+    resumen[st] = {
+      cantidad: sel.length,
+      monto: money(sel.reduce((s, x) => s + (x.intranet ? x.intranet.costo : x.adonis.total), 0)),
+    };
   }
   return { items, resumen };
 }
 
-/** Crea un buscador de suplidor oficial por nombre (sin acentos, sin SRL). */
-function makeSuplidorMatcher(suplidores) {
-  const map = new Map();
-  for (const s of Array.isArray(suplidores) ? suplidores : []) {
-    const k = textKey(s.Nombre);
-    if (k && !map.has(k)) map.set(k, { oid: Number(s.OID), nombre: str(s.Nombre) });
-  }
-  return (taller) => map.get(textKey(taller)) || null;
-}
-
-/** Valida un gasto antes de escribirlo y devuelve los parámetros SQL. */
-function toDbParams(entry, suplidor, userLabel) {
-  const s = summarizeEntry(entry);
-  if (!s.id) return { error: 'El gasto no tiene ID de la intranet.' };
-  if (!s.placa) return { error: `${s.id}: falta la placa.` };
-  if (!s.fecha) return { error: `${s.id}: la fecha no es válida.` };
-  if (!(s.costo > 0)) return { error: `${s.id}: el costo debe ser mayor que cero.` };
-  return {
-    params: {
-      IntranetId: s.id.slice(0, 30),
-      Placa: s.placa.slice(0, 20),
-      Unidad: s.unidad ? s.unidad.slice(0, 300) : null,
-      TipoUnidad: str(entry.kind) ? str(entry.kind).slice(0, 20) : null,
-      Asignacion: str(entry.asignacion) ? str(entry.asignacion).slice(0, 200) : null,
-      Fecha: s.fecha,
-      TipoMantenimiento: s.tipoMant ? s.tipoMant.slice(0, 60) : null,
-      Taller: s.taller ? s.taller.slice(0, 200) : null,
-      SuplidorOID: suplidor && Number.isFinite(suplidor.oid) ? suplidor.oid : null,
-      Kilometraje: s.kilometraje,
-      Costo: s.costo,
-      Detalle: s.detalle ? s.detalle.slice(0, 1000) : null,
-      Usuario: String(userLabel || 'Intranet').slice(0, 150),
-    },
-  };
-}
-
 module.exports = {
-  OWNER_EMAIL, TABLE, normEmail, isOwner, canSync, cleanDelegates,
-  compareRecords, diffEntry, makeSuplidorMatcher, toDbParams, toIsoDate, normalizePlaca,
+  OWNER_EMAIL, MAX_DAYS, normEmail, isOwner, canSync, cleanDelegates,
+  compareWithAdonis, extractPlates, summarizeInvoice, toIsoDate, normalizePlaca,
 };

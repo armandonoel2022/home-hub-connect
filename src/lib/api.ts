@@ -637,31 +637,35 @@ export const fleetMaintenanceApi = {
     apiFetch<{ nombre: string; talleres: string[] }>("/fleet-maintenance/talleres", { method: "POST", body: JSON.stringify({ nombre }) }),
 };
 
-// ─── Flotilla — Mantenimiento → base SafeOne (solo Chrisnel y su designado) ───
-export type FleetDbEstado = "pendiente" | "diferente" | "sincronizado" | "solo_bd" | "anulado_bd";
+// ─── Flotilla — Mantenimiento ↔ Adonis (solo Chrisnel y su designado; solo lectura en SafeOne) ───
+export type FleetDbEstado = "vinculado" | "solo_intranet" | "solo_adonis";
+export interface AdonisInvoice {
+  oid: number; fecha: string | null; suplidorOid: number | null; suplidor: string | null; ncf: string | null; referencia: string | null;
+  valor: number; itbis: number; total: number; notas: string | null; clasificacion: string | null; cajaChica: boolean; placas: string[];
+}
 export interface FleetDbItem {
   estado: FleetDbEstado;
-  intranet: { id: string; placa: string; fecha: string | null; costo: number; taller: string | null; tipoMant: string | null; kilometraje: number | null; detalle: string | null; unidad: string | null } | null;
-  baseDatos: { oid: number; intranetId: string | null; placa: string; fecha: string | null; costo: number; taller: string | null; tipoMant: string | null; suplidorOid: number | null; anulado: boolean; registradoPor: string | null; registradoEn: string | null } | null;
-  diferencias: { campo: string; etiqueta: string; intranet: unknown; baseDatos: unknown }[];
-  suplidor: { oid: number; nombre: string | null } | null;
-  posibleDuplicado: boolean;
+  modo: "confirmado" | "automatico" | null;
+  intranet: { id: string; placa: string; fecha: string | null; costo: number; taller: string | null; tipoMant: string | null; detalle: string | null; adonisOid: number | null } | null;
+  adonis: AdonisInvoice | null;
+  sugerencias: AdonisInvoice[];
 }
 export interface FleetDbCompare {
   items: FleetDbItem[];
   resumen: Record<FleetDbEstado, { cantidad: number; monto: number }>;
-  aviso: string | null;
+  desde: string;
+  facturasLeidas: number;
   generadoEn: string;
 }
 export interface FleetDbAuditEntry { id: string; at: string; by: string; email: string | null; accion: string; [k: string]: unknown }
 export const fleetDbSyncApi = {
   access: () => apiFetch<{ canSync: boolean; isOwner: boolean; delegates: string[] }>("/fleet-db-sync/access"),
-  status: () => apiFetch<{ connected: boolean; message?: string; database?: string; table: string; tableExists: boolean }>("/fleet-db-sync/status"),
+  status: () => apiFetch<{ connected: boolean; message?: string; database?: string }>("/fleet-db-sync/status"),
   compare: () => apiFetch<FleetDbCompare>("/fleet-db-sync/compare"),
-  register: (ids: string[]) =>
-    apiFetch<{ registrados: number; actualizados: number; sinCambios: number; errores: string[] }>("/fleet-db-sync/register", { method: "POST", body: JSON.stringify({ ids }) }),
-  voidRow: (oid: number, motivo: string) =>
-    apiFetch<{ anulado: boolean }>(`/fleet-db-sync/void/${oid}`, { method: "POST", body: JSON.stringify({ motivo }) }),
+  link: (entryId: string, oid: number) =>
+    apiFetch<{ ok: boolean }>("/fleet-db-sync/link", { method: "POST", body: JSON.stringify({ entryId, oid }) }),
+  unlink: (entryId: string) =>
+    apiFetch<{ ok: boolean }>("/fleet-db-sync/unlink", { method: "POST", body: JSON.stringify({ entryId }) }),
   setDelegates: (delegates: string[]) =>
     apiFetch<{ delegates: string[] }>("/fleet-db-sync/delegates", { method: "PUT", body: JSON.stringify({ delegates }) }),
   users: () => apiFetch<{ email: string; nombre: string; departamento: string }[]>("/fleet-db-sync/users"),

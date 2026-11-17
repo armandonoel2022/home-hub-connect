@@ -506,7 +506,7 @@ export default function FleetMaintenance() {
               <TabsTrigger value="log">Registro de Gastos</TabsTrigger>
               <TabsTrigger value="annual">Costo Anual</TabsTrigger>
               <TabsTrigger value="fleet">Flotilla</TabsTrigger>
-              {dbAccess?.canSync && <TabsTrigger value="db">Base de datos</TabsTrigger>}
+              {dbAccess?.canSync && <TabsTrigger value="db">Adonis</TabsTrigger>}
             </TabsList>
 
             {/* DASHBOARD */}
